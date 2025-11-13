@@ -1,0 +1,71 @@
+.main-header {
+    background-color: var(--charcoal-color);
+}
+
+.header-container {
+    padding-left: 100px;
+    padding-right: 100px;
+}
+
+@media (max-width: 768px) {
+    .header-container {
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+}
+
+.brand-logo {
+    font-size: 40px;
+    font-weight: 900;
+    padding: 0;
+    color: white;
+    text-decoration: none;
+}
+
+.brand-logo-container {
+    padding: 5px 0; 
+}
+
+.brand-logo .logo-highlight {
+    color: var(--dark-green-color);
+}
+
+.login-button {
+    background-color: var(--ice-white-color);
+    color: var(--charcoal-color);
+    border: none;
+    padding: 8px 25px;
+    border-radius: 25px;
+    font-weight: bold;
+    font-size: 16px;
+    transition: all 0.3s ease;
+}
+
+.login-button:hover {
+    background-color: var(--sky-whisper-color);
+    transform: scale(1.02);
+}
+
+.user-profile-icon {
+    width: 40px;
+    height: 40px;
+    background-color: var(--ice-white-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.user-profile-icon:hover {
+    background-color: var(--sky-whisper-color);
+    transform: scale(1.05);
+}
+
+.user-profile-icon svg {
+    width: 28px;
+    height: 28px;
+    fill: var(--charcoal-color);
+}
+
