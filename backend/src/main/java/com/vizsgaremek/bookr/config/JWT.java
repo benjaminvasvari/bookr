@@ -1,32 +1,288 @@
 package com.vizsgaremek.bookr.config;
 
 import com.vizsgaremek.bookr.model.Users;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.impl.TextCodec;
+import io.jsonwebtoken.UnsupportedJwtException;
+import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.SignatureException;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+import javax.crypto.SecretKey;
 
+/**
+ * JWT token kezelő osztály EnvConfig-ból tölti be a konfigurációt Kompatibilis
+ * JJWT 0.11.x és 0.12.x verziókkal
+ */
 public class JWT {
-    
-    private static final String JWT_SECRET = EnvConfig.getJwtSecret();
-    private static final long EXPIRATION_DAYS = EnvConfig.getJwtExpirationDays();
-    
-    public static String createJwt(Users u) {
+
+    // Token élettartamok EnvConfig-ból
+    private static final long ACCESS_TOKEN_VALIDITY = EnvConfig.getAccessTokenExpirationMinutes();
+    private static final long REFRESH_TOKEN_VALIDITY = EnvConfig.getRefreshTokenExpirationDays() * 24 * 60;
+
+    /**
+     * Access token létrehozása
+     */
+    public static String createAccessToken(Users user) {
+        return createToken(
+                user,
+                ACCESS_TOKEN_VALIDITY,
+                getSecretKey(EnvConfig.getJwtSecret()),
+                "access"
+        );
+    }
+
+    /**
+     * Refresh token létrehozása
+     */
+    public static String createRefreshToken(Users user) {
+        return createToken(
+                user,
+                REFRESH_TOKEN_VALIDITY,
+                getSecretKey(EnvConfig.getRefreshSecret()),
+                "refresh"
+        );
+    }
+
+    /**
+     * Token létrehozása
+     */
+    private static String createToken(Users user, long validityMinutes, SecretKey key, String tokenType) {
         Instant now = Instant.now();
 
+        Map<String, Object> claims = new HashMap<>();
+
+        // Access token: minimális szükséges adatok
+        if ("access".equals(tokenType)) {
+            claims.put("id", user.getId());
+            claims.put("email", user.getEmail());
+
+            String roleName = user.getRoleName();
+            if (roleName != null) {
+                claims.put("role_name", roleName);
+            }
+
+            // role_id megtartása (opcionális, de hasznos)
+            Integer roleId = user.getRoleIdAsInteger();
+            if (roleId != null) {
+                claims.put("role_id", roleId);
+            }
+
+            Integer companyId = user.getCompanyIdAsInteger();
+            if (companyId != null) {
+                claims.put("company_id", companyId);
+            }
+
+            claims.put("token_type", "access");
+        } // Refresh token: CSAK user ID
+        else if ("refresh".equals(tokenType)) {
+            claims.put("id", user.getId());
+            claims.put("token_type", "refresh");
+        }
+
         return Jwts.builder()
-                .setIssuer("Bookr")
-                .setSubject("appointment_booking")
-                .claim("id", u.getId())
-                .claim("phone", u.getPhone())
+                .setIssuer("bookr-api") // Konzisztens névvel
+                .setSubject(user.getId().toString()) // Subject = User ID (standard)
+                .setClaims(claims)
                 .setIssuedAt(Date.from(now))
-                .setExpiration(Date.from(now.plus(EXPIRATION_DAYS, ChronoUnit.DAYS)))
-                .signWith(
-                        SignatureAlgorithm.HS256,
-                        TextCodec.BASE64.decode(JWT_SECRET)
-                )
+                .setExpiration(Date.from(now.plus(validityMinutes, ChronoUnit.MINUTES)))
+                .setId(UUID.randomUUID().toString()) // JTI (token visszavonáshoz)
+                .signWith(key, SignatureAlgorithm.HS256) // Jobb sorrend (JJWT 0.11.x+)
                 .compact();
     }
+
+    /**
+     * Access token validálása
+     *
+     * @return Boolean - true: valid, false: invalid, null: expired
+     */
+    public static Boolean validateAccessToken(String token) {
+        return validateToken(token, getSecretKey(EnvConfig.getJwtSecret()), "access");
+    }
+
+    /**
+     * Refresh token validálása
+     *
+     * @return Boolean - true: valid, false: invalid, null: expired
+     */
+    public static Boolean validateRefreshToken(String token) {
+        return validateToken(token, getSecretKey(EnvConfig.getRefreshSecret()), "refresh");
+    }
+
+    /**
+     * Token validálása
+     */
+    private static Boolean validateToken(String token, SecretKey key, String expectedType) {
+        try {
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(key)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+
+            // Ellenőrizzük a kötelező claim-eket
+            Integer userId = claims.get("id", Integer.class);
+            String tokenType = claims.get("token_type", String.class);
+            String issuer = claims.getIssuer();
+
+            // ✅ Issuer ellenőrzés (security)
+            if (!"bookr-api".equals(issuer)) {
+                return false;
+            }
+
+            if (userId == null || tokenType == null || !tokenType.equals(expectedType)) {
+                return false;
+            }
+
+            return true;
+
+        } catch (ExpiredJwtException ex) {
+            // Lejárt token
+            return null;
+
+        } catch (SignatureException | MalformedJwtException
+                | IllegalArgumentException | UnsupportedJwtException ex) {
+            // Hibás token
+            return false;
+        }
+    }
+
+    /**
+     * User ID kinyerése access tokenből
+     */
+    public static Integer getUserIdFromAccessToken(String token) {
+        return getUserIdFromToken(token, getSecretKey(EnvConfig.getJwtSecret()));
+    }
+
+    /**
+     * User ID kinyerése refresh tokenből
+     */
+    public static Integer getUserIdFromRefreshToken(String token) {
+        return getUserIdFromToken(token, getSecretKey(EnvConfig.getRefreshSecret()));
+    }
+
+    /**
+     * User ID kinyerése tokenből
+     */
+    private static Integer getUserIdFromToken(String token, SecretKey key) {
+        try {
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(key)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+
+            return claims.get("id", Integer.class);
+
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    /**
+     * Role ID kinyerése access tokenből
+     */
+    public static Integer getRoleIdFromAccessToken(String token) {
+        try {
+            Claims claims = getClaimsFromAccessToken(token);
+            return claims != null ? claims.get("role_id", Integer.class) : null;
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    /**
+     * Company ID kinyerése access tokenből
+     */
+    public static Integer getCompanyIdFromAccessToken(String token) {
+        try {
+            Claims claims = getClaimsFromAccessToken(token);
+            return claims != null ? claims.get("company_id", Integer.class) : null;
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    /**
+     * Email kinyerése access tokenből
+     */
+    public static String getEmailFromAccessToken(String token) {
+        try {
+            Claims claims = getClaimsFromAccessToken(token);
+            return claims != null ? claims.get("email", String.class) : null;
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    /**
+     * ✅ ÚJ: JTI (JWT ID) kinyerése - token visszavonáshoz
+     */
+    public static String getJtiFromAccessToken(String token) {
+        try {
+            Claims claims = getClaimsFromAccessToken(token);
+            return claims != null ? claims.getId() : null;
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    /**
+     * Összes claim kinyerése access tokenből
+     */
+    public static Claims getClaimsFromAccessToken(String token) {
+        return getClaimsFromToken(token, getSecretKey(EnvConfig.getJwtSecret()));
+    }
+
+    /**
+     * Összes claim kinyerése refresh tokenből
+     */
+    public static Claims getClaimsFromRefreshToken(String token) {
+        return getClaimsFromToken(token, getSecretKey(EnvConfig.getRefreshSecret()));
+    }
+
+    /**
+     * Claims kinyerése tokenből
+     */
+    private static Claims getClaimsFromToken(String token, SecretKey key) {
+        try {
+            return Jwts.parserBuilder()
+                    .setSigningKey(key)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    /**
+     * Role name kinyerése access tokenből
+     */
+    public static String getRoleNameFromAccessToken(String token) {
+        try {
+            Claims claims = getClaimsFromAccessToken(token);
+            return claims != null ? claims.get("role_name", String.class) : null;
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    /**
+     * SecretKey generálása a secret stringből
+     */
+    private static SecretKey getSecretKey(String secret) {
+        return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+    }
+
+
 }

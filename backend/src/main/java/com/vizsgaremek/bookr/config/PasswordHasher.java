@@ -1,9 +1,6 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.vizsgaremek.bookr.config;
 
+import io.github.cdimascio.dotenv.Dotenv;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Base64;
@@ -16,16 +13,37 @@ import org.bouncycastle.crypto.params.Argon2Parameters;
  */
 public class PasswordHasher {
     
-    private static final int SALT_LENGTH = 16; // 16 byte salt
-    private static final int HASH_LENGTH = 32; // 32 byte hash
-    private static final int ITERATIONS = 3;
-    private static final int MEMORY = 65536; // 64 MB
-    private static final int PARALLELISM = 1;
+    private final int SALT_LENGTH;
+    private final int HASH_LENGTH;
+    private final int ITERATIONS;
+    private final int MEMORY;
+    private final int PARALLELISM;
     
     private final SecureRandom secureRandom;
     
     public PasswordHasher() {
+        // .env betöltése - KÖTELEZŐ
+        Dotenv dotenv = Dotenv.configure().load();
+        
+        // Paraméterek beolvasása .env-ből - ha hiányzik, hibát dob
+        this.SALT_LENGTH = Integer.parseInt(getRequiredEnv(dotenv, "ARGON2_SALT_LENGTH"));
+        this.HASH_LENGTH = Integer.parseInt(getRequiredEnv(dotenv, "ARGON2_HASH_LENGTH"));
+        this.ITERATIONS = Integer.parseInt(getRequiredEnv(dotenv, "ARGON2_ITERATIONS"));
+        this.MEMORY = Integer.parseInt(getRequiredEnv(dotenv, "ARGON2_MEMORY"));
+        this.PARALLELISM = Integer.parseInt(getRequiredEnv(dotenv, "ARGON2_PARALLELISM"));
+        
         this.secureRandom = new SecureRandom();
+    }
+    
+    /**
+     * Kötelező környezeti változó lekérése
+     */
+    private String getRequiredEnv(Dotenv dotenv, String key) {
+        String value = dotenv.get(key);
+        if (value == null || value.trim().isEmpty()) {
+            throw new IllegalStateException("Hiányzó kötelező környezeti változó: " + key);
+        }
+        return value;
     }
     
     /**
@@ -52,9 +70,17 @@ public class PasswordHasher {
             return false;
         }
         
+        // Paraméterek kiolvasása a hash-ből
+        String[] params = parts[3].split(",");
+        int storedMemory = Integer.parseInt(params[0].substring(2));
+        int storedIterations = Integer.parseInt(params[1].substring(2));
+        int storedParallelism = Integer.parseInt(params[2].substring(2));
+        
         byte[] salt = Base64.getDecoder().decode(parts[4]);
         byte[] expectedHash = Base64.getDecoder().decode(parts[5]);
-        byte[] actualHash = argon2Hash(password, salt);
+        
+        // Hash újraszámítása a tárolt paraméterekkel
+        byte[] actualHash = argon2Hash(password, salt, storedMemory, storedIterations, storedParallelism);
         
         return slowEquals(expectedHash, actualHash);
     }
@@ -66,11 +92,15 @@ public class PasswordHasher {
     }
     
     private byte[] argon2Hash(String password, byte[] salt) {
+        return argon2Hash(password, salt, MEMORY, ITERATIONS, PARALLELISM);
+    }
+    
+    private byte[] argon2Hash(String password, byte[] salt, int memory, int iterations, int parallelism) {
         Argon2Parameters params = new Argon2Parameters.Builder(Argon2Parameters.ARGON2_id)
                 .withSalt(salt)
-                .withIterations(ITERATIONS)
-                .withMemoryAsKB(MEMORY)
-                .withParallelism(PARALLELISM)
+                .withIterations(iterations)
+                .withMemoryAsKB(memory)
+                .withParallelism(parallelism)
                 .build();
         
         Argon2BytesGenerator generator = new Argon2BytesGenerator();

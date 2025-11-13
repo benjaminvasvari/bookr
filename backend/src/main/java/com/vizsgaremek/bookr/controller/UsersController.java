@@ -62,7 +62,7 @@ public class UsersController {
     
     
     @POST
-    @Path("clientRegister")
+    @Path("registerClient")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response clientRegister(String body) {
         JSONObject bodyObject = new JSONObject(body);
@@ -77,6 +77,51 @@ public class UsersController {
 
         JSONObject toReturn = layer.clientRegister(clientRegistered);
 
-        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString())).entity(toReturn.toString()).type(MediaType.APPLICATION_JSON).build();
+        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                .entity(toReturn.toString())
+                .type(MediaType.APPLICATION_JSON)
+                .build();
+    }
+    
+    @POST
+    @Path("registerStaff")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response staffRegister(String body) {
+        JSONObject bodyObject = new JSONObject(body);
+
+        Users staffRegistered = new Users(
+                bodyObject.getString("firstName"),
+                bodyObject.getString("lastName"),
+                bodyObject.getString("email"),
+                bodyObject.getString("password"),
+                bodyObject.getString("phone")
+        );
+
+        JSONObject toReturn = layer.staffRegister(staffRegistered);
+
+        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                .entity(toReturn.toString())
+                .type(MediaType.APPLICATION_JSON)
+                .build();
+    }
+    
+    @POST
+    @Path("login")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response login(String body) {
+        JSONObject bodyObject = new JSONObject(body);
+
+        Users loginUser = new Users(
+                bodyObject.getString("email"),
+                bodyObject.getString("password")
+        );
+
+        JSONObject toReturn = layer.login(loginUser);
+
+        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                .entity(toReturn.toString())
+                .type(MediaType.APPLICATION_JSON)
+                .build();
     }
 }

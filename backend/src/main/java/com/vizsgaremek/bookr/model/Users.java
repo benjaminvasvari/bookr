@@ -4,10 +4,14 @@
  */
 package com.vizsgaremek.bookr.model;
 
+import com.vizsgaremek.bookr.model.Staff;
+
 import java.io.Serializable;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 import javax.persistence.Basic;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
@@ -29,6 +33,7 @@ import javax.persistence.StoredProcedureQuery;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
+import javax.persistence.Transient;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import javax.xml.bind.annotation.XmlRootElement;
@@ -160,6 +165,15 @@ public class Users implements Serializable {
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "userId")
     private Collection<UserXRole> userXRoleCollection;
 
+    @Transient
+    private ArrayList<Roles> roles;
+
+    @Transient
+    private String rolesString;
+
+    @Transient
+    private String roleName;  // Az első role neve
+
     static EntityManagerFactory emf = Persistence.createEntityManagerFactory("com.vizsgaremek_bookr_war_1.0-SNAPSHOTPU");
     static SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
@@ -180,10 +194,8 @@ public class Users implements Serializable {
         this.isActive = isActive;
         this.twoFactorEnabled = twoFactorEnabled;
     }
-    
-    
-    // clientRegister request
 
+    // clientRegister request
     public Users(String firstName, String lastName, String email, String password, String phone) {
         this.firstName = firstName;
         this.lastName = lastName;
@@ -191,8 +203,35 @@ public class Users implements Serializable {
         this.password = password;
         this.phone = phone;
     }
-    
-    
+
+    // login request constructor (email + password from frontend)
+    public Users(String email, String password) {
+        this.email = email;
+        this.password = password;
+    }
+
+    // login response constructor (data from stored procedure)
+    public Users(Integer id, String firstName, String lastName, String email, String password, Integer companyId, Integer roleId, String rolesString) {
+        this.id = id;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.email = email;
+        this.password = password;
+
+        if (companyId != null) {
+            this.companyId = new Companies(companyId);
+        }
+
+        if (roleId != null) {
+            this.roleId = new Roles(roleId);
+        }
+
+        this.rolesString = rolesString;
+
+        if (rolesString != null && !rolesString.isEmpty()) {
+            this.roleName = rolesString.split(",")[0].trim();
+        }
+    }
 
     public Integer getId() {
         return id;
@@ -326,6 +365,37 @@ public class Users implements Serializable {
         this.twoFactorRecoveryCodes = twoFactorRecoveryCodes;
     }
 
+    public ArrayList<Roles> getRoles() {
+        return roles;
+    }
+
+    public void setRoles(ArrayList<Roles> roles) {
+        this.roles = roles;
+    }
+
+    public String getRolesString() {
+        return rolesString;
+    }
+
+    public void setRolesString(String rolesString) {
+        this.rolesString = rolesString;
+    }
+
+    public String getRoleName() {
+        if (roleName != null) {
+            return roleName;
+        }
+        // Ha nincs beállítva, kivesszük a rolesString első elemét
+        if (rolesString != null && !rolesString.isEmpty()) {
+            return rolesString.split(",")[0].trim();
+        }
+        return null;
+    }
+
+    public void setRoleName(String roleName) {
+        this.roleName = roleName;
+    }
+
     @XmlTransient
     public Collection<Appointments> getAppointmentsCollection() {
         return appointmentsCollection;
@@ -384,12 +454,26 @@ public class Users implements Serializable {
         return companyId;
     }
 
+    /**
+     * Helper method for JWT - returns company ID as Integer
+     */
+    public Integer getCompanyIdAsInteger() {
+        return companyId != null ? companyId.getId() : null;
+    }
+
     public void setCompanyId(Companies companyId) {
         this.companyId = companyId;
     }
 
     public Roles getRoleId() {
         return roleId;
+    }
+
+    /**
+     * Helper method for JWT - returns role ID as Integer
+     */
+    public Integer getRoleIdAsInteger() {
+        return roleId != null ? roleId.getId() : null;
     }
 
     public void setRoleId(Roles roleId) {
@@ -475,6 +559,109 @@ public class Users implements Serializable {
             spq.setParameter("emailIN", clientRegistered.getEmail());
             spq.setParameter("passwordIN", clientRegistered.getPassword());
             spq.setParameter("phoneIN", clientRegistered.getPhone());
+
+            spq.execute();
+
+            return true;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return false;
+        }
+    }
+
+    public static Boolean staffRegister(Users staffRegistered) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("registerStaff");
+            spq.registerStoredProcedureParameter("firstNameIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("lastNameIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("emailIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("passwordIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("phoneIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("companyIdIN", String.class, ParameterMode.IN);
+
+            spq.setParameter("firstNameIN", staffRegistered.getFirstName());
+            spq.setParameter("lastNameIN", staffRegistered.getLastName());
+            spq.setParameter("emailIN", staffRegistered.getEmail());
+            spq.setParameter("passwordIN", staffRegistered.getPassword());
+            spq.setParameter("phoneIN", staffRegistered.getPhone());
+            spq.setParameter("companyIdIN", staffRegistered.getCompanyId());
+
+            spq.execute();
+
+            return true;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * Login method - retrieves user data by email (password verification
+     * happens in Service layer)
+     *
+     * @param loginUser User object containing email (and password for service
+     * verification)
+     * @return Users object with all data including hashed password and roles as
+     * String
+     */
+    public static Users login(Users loginUser) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            // Call stored procedure with ONLY email parameter
+            StoredProcedureQuery loginQuery = em.createStoredProcedureQuery("login");
+            loginQuery.registerStoredProcedureParameter("emailIN", String.class, ParameterMode.IN);
+            loginQuery.setParameter("emailIN", loginUser.getEmail());
+
+            loginQuery.execute();
+
+            List<Object[]> resultList = loginQuery.getResultList();
+
+            // If no user found, return null
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            // Process the result (should be only 1 row due to LIMIT 1)
+            Object[] record = resultList.get(0);
+
+            Users user = new Users(
+                    Integer.valueOf(record[0].toString()), // user_id
+                    record[1].toString(), // first_name
+                    record[2].toString(), // last_name
+                    record[3].toString(), // email
+                    record[4].toString(), // password (hashed)
+                    record[5] == null ? null : Integer.valueOf(record[5].toString()), // company_id (can be NULL)
+                    record[6] == null ? null : Integer.valueOf(record[6].toString()), // role_id (should NOT be NULL)
+                    record[7] == null ? null : record[7].toString() // roles (GROUP_CONCAT string)
+            );
+
+            return user;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static Boolean updateLastLogin(Integer userId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("updateLastLogin");
+            spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("userIdIN", userId);
 
             spq.execute();
 
