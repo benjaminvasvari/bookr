@@ -1,0 +1,129 @@
+<div class="register-container">
+  <div class="register-content">
+    <div class="register-form-section">
+      <h1 class="register-title">REGISZTRÁCIÓ</h1>
+      
+      <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="register-form">
+        
+        <!-- Vezetéknév -->
+        <div class="form-group">
+          <input 
+            type="text" 
+            id="lastName" 
+            formControlName="lastName"
+            class="form-control"
+            placeholder="Vezetéknév"
+            [class.is-invalid]="lastName?.invalid && lastName?.touched"
+          >
+          <div class="invalid-feedback" *ngIf="lastName?.invalid && lastName?.touched">
+            <span *ngIf="lastName?.errors?.['required']">A vezetéknév megadása kötelező</span>
+            <span *ngIf="lastName?.errors?.['minlength']">A vezetéknévnek legalább 2 karakter hosszúnak kell lennie</span>
+          </div>
+        </div>
+
+        <!-- Keresztnév -->
+        <div class="form-group">
+          <input 
+            type="text" 
+            id="firstName" 
+            formControlName="firstName"
+            class="form-control"
+            placeholder="Keresztnév"
+            [class.is-invalid]="firstName?.invalid && firstName?.touched"
+          >
+          <div class="invalid-feedback" *ngIf="firstName?.invalid && firstName?.touched">
+            <span *ngIf="firstName?.errors?.['required']">A keresztnév megadása kötelező</span>
+            <span *ngIf="firstName?.errors?.['minlength']">A keresztnévnek legalább 2 karakter hosszúnak kell lennie</span>
+          </div>
+        </div>
+
+        <!-- E-mail cím -->
+        <div class="form-group">
+          <input 
+            type="email" 
+            id="email" 
+            formControlName="email"
+            class="form-control"
+            placeholder="E-mail cím"
+            [class.is-invalid]="email?.invalid && email?.touched"
+          >
+          <div class="invalid-feedback" *ngIf="email?.invalid && email?.touched">
+            <span *ngIf="email?.errors?.['required']">Az e-mail cím megadása kötelező</span>
+            <span *ngIf="email?.errors?.['email']">Érvénytelen e-mail cím</span>
+          </div>
+        </div>
+
+        <!-- Telefonszám -->
+        <div class="form-group">
+          <input 
+            type="tel" 
+            id="phone" 
+            formControlName="phone"
+            class="form-control"
+            placeholder="Telefonszám"
+            [class.is-invalid]="phone?.invalid && phone?.touched"
+          >
+          <div class="invalid-feedback" *ngIf="phone?.invalid && phone?.touched">
+            <span *ngIf="phone?.errors?.['required']">A telefonszám megadása kötelező</span>
+            <span *ngIf="phone?.errors?.['pattern']">Érvénytelen telefonszám formátum</span>
+          </div>
+        </div>
+
+        <!-- Jelszó -->
+        <div class="form-group">
+          <input 
+            type="password" 
+            id="password" 
+            formControlName="password"
+            class="form-control"
+            placeholder="Jelszó"
+            [class.is-invalid]="password?.invalid && password?.touched"
+          >
+          <div class="invalid-feedback" *ngIf="password?.invalid && password?.touched">
+            <span *ngIf="password?.errors?.['required']">A jelszó megadása kötelező</span>
+            <span *ngIf="password?.errors?.['minlength']">A jelszónak legalább 6 karakter hosszúnak kell lennie</span>
+          </div>
+        </div>
+
+        <!-- Jelszó megerősítése -->
+        <div class="form-group">
+          <input 
+            type="password" 
+            id="confirmPassword" 
+            formControlName="confirmPassword"
+            class="form-control"
+            placeholder="Jelszó megerősítése"
+            [class.is-invalid]="(confirmPassword?.invalid && confirmPassword?.touched) || (!passwordsMatch && confirmPassword?.touched)"
+          >
+          <div class="invalid-feedback" *ngIf="confirmPassword?.invalid && confirmPassword?.touched">
+            <span *ngIf="confirmPassword?.errors?.['required']">A jelszó megerősítése kötelező</span>
+          </div>
+          <div class="invalid-feedback" *ngIf="!passwordsMatch && confirmPassword?.touched && !confirmPassword?.errors?.['required']">
+            <span>A két jelszó nem egyezik meg</span>
+          </div>
+        </div>
+
+        <button 
+          type="submit" 
+          class="btn-submit"
+          [disabled]="isSubmitting"
+        >
+          {{ isSubmitting ? 'FELDOLGOZÁS...' : 'FOLYTATÁS' }}
+        </button>
+
+        <div class="register-divider"></div>
+
+        <div class="login-link-section">
+          <p class="login-question">VAN CÉGES FIÓKOD?</p>
+          <a routerLink="/login" class="login-link">REGISZTRÁCIÓ SZAKEMBERKÉNT</a>
+        </div>
+      </form>
+    </div>
+
+    <div class="register-image-section">
+      <div class="image-overlay">
+        <img src="../../assets/images/register-image.png" alt="">
+    </div>
+    </div>
+  </div>
+</div>

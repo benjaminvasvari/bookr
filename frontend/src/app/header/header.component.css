@@ -13,13 +13,24 @@
         padding-right: 20px;
     }
 }
-
 .brand-logo {
-    font-size: 40px;
+    font-size:0px;
     font-weight: 900;
     padding: 0;
     color: white;
     text-decoration: none;
+    cursor: pointer;
+}
+
+.bookr-text {
+    /* Másold ide a button stílusokat, amiket szeretnél megtartani */
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: white;
+}
+
+.logo-highlight {
+    color: var(--primary-green);
 }
 
 .brand-logo-container {

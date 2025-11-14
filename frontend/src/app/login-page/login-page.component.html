@@ -1,0 +1,46 @@
+<div class="login-container">
+  <div class="login-content">
+    <div class="login-form-wrapper">
+      <h1 class="login-title">BEJELENTKEZÉS</h1>
+      
+      <form (ngSubmit)="onSubmit()" class="login-form">
+        <div class="form-group">
+          <input 
+            type="email" 
+            [(ngModel)]="email" 
+            name="email"
+            class="form-control" 
+            placeholder="E-mail cím"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <input 
+            type="password" 
+            [(ngModel)]="password" 
+            name="password"
+            class="form-control" 
+            placeholder="Jelszó"
+            required
+          />
+        </div>
+
+        <button type="submit" class="btn-submit">
+          FOLYTATÁS
+        </button>
+
+        <div class="divider"></div>
+
+        <div class="register-section">
+          <p class="register-text">Nincs még fiókod?</p>
+          <a (click)="navigateToRegister()" class="register-link">Regisztrálj most!</a>
+        </div>
+      </form>
+    </div>
+
+    <div class="image-wrapper">
+      <div class="image-overlay"></div>
+    </div>
+  </div>
+</div>

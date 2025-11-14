@@ -1,7 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HeaderComponent } from '../header/header.component';
 
 interface Service {
   name: string;
@@ -22,7 +21,7 @@ interface Review {
 @Component({
   selector: 'app-main-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, HeaderComponent],
+  imports: [CommonModule, FormsModule],
   templateUrl: './main-page.component.html',
   styleUrls: ['./main-page.component.css']
 })
@@ -35,28 +34,28 @@ export class MainPageComponent implements OnInit {
       rating: 5.0,
       reviewCount: 21,
       address: 'Pécs, Király utca 26-28',
-      imageUrl: 'assets/images/forost.jpg'
+      imageUrl: 'assets/images/first.png'
     },
     {
       name: 'Tonsur',
       rating: 5.0,
       reviewCount: 23,
       address: 'Pécs, Király utca 26-28',
-      imageUrl: 'assets/images/tonsur.jpg'
+      imageUrl: 'assets/images/second.png'
     },
     {
       name: 'Hijeny',
       rating: 5.0,
       reviewCount: 17,
       address: 'Pécs, Király utca 26-28',
-      imageUrl: 'assets/images/hijeny.jpg'
+      imageUrl: 'assets/images/third.png'
     },
     {
       name: 'Fukره',
       rating: 5.0,
       reviewCount: 19,
       address: 'Pécs, Király utca 26-28',
-      imageUrl: 'assets/images/fukre.jpg'
+      imageUrl: 'assets/images/fourth.png'
     }
   ];
 
