@@ -1,10 +1,12 @@
 .main-header {
     background-color: var(--charcoal-color);
+    width: 100%;
 }
 
 .header-container {
     padding-left: 100px;
     padding-right: 100px;
+    max-width: 100%; /* Prevent overflow */
 }
 
 @media (max-width: 768px) {
@@ -14,12 +16,23 @@
     }
 }
 
+/* Brand logo alap */
 .brand-logo {
-    font-size: 40px;
-    font-weight: 900;
+    font-size: 0px;
+    font-weight: 800;
     padding: 0;
     color: white;
     text-decoration: none;
+    cursor: pointer;
+}
+
+.bookr-text {
+    font-size: 2.5rem;
+    color: white;
+}
+
+.logo-highlight {
+    color: var(--primary-green);
 }
 
 .brand-logo-container {
@@ -30,6 +43,22 @@
     color: var(--dark-green-color);
 }
 
+.bookr-img {
+    display: none;       /* alapból rejtve desktopon */
+    height: 70px;        /* opcionális méret */
+    vertical-align: middle;
+}
+
+@media (max-width: 768px) {
+    .bookr-img {
+        display: inline; /* mobilon látszik */
+    }
+    .bookr-text {
+        display: none;   /* mobilon eltűnik a szöveg */
+    }
+}
+
+/* Login button */
 .login-button {
     background-color: var(--ice-white-color);
     color: var(--charcoal-color);
@@ -46,6 +75,7 @@
     transform: scale(1.02);
 }
 
+/* User profile icon */
 .user-profile-icon {
     width: 40px;
     height: 40px;
@@ -68,4 +98,3 @@
     height: 28px;
     fill: var(--charcoal-color);
 }
-

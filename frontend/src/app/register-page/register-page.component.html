@@ -1,0 +1,125 @@
+<div class="register-container">
+  <div class="register-content">
+    <div class="register-form-wrapper">
+      <h1 class="register-title">REGISZTRÁCIÓ</h1>
+      
+      <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="register-form">
+        
+        <!-- Vezetéknév -->
+        <div class="input-group">
+          <input 
+            type="text" 
+            id="lastName" 
+            formControlName="lastName"
+            placeholder=" "
+            [class.invalid]="lastName.invalid && lastName.touched">
+          <label for="lastName">Vezetéknév</label>
+          <i class="fas fa-user input-icon"></i>
+        </div>
+
+        <!-- Keresztnév -->
+        <div class="input-group">
+          <input 
+            type="text" 
+            id="firstName" 
+            formControlName="firstName"
+            placeholder=" "
+            [class.invalid]="firstName.invalid && firstName.touched">
+          <label for="firstName">Keresztnév</label>
+          <i class="fas fa-user input-icon"></i>
+        </div>
+
+        <!-- Email cím -->
+        <div class="input-group">
+          <input 
+            type="email" 
+            id="email" 
+            formControlName="email"
+            placeholder=" "
+            [class.invalid]="email.invalid && email.touched">
+          <label for="email">Email cím</label>
+          <i class="fas fa-envelope input-icon"></i>
+        </div>
+
+        <!-- Telefonszám -->
+        <div class="input-group">
+          <input 
+            type="tel" 
+            id="phone" 
+            formControlName="phone"
+            placeholder=" "
+            [class.invalid]="phone.invalid && phone.touched">
+          <label for="phone">Telefonszám</label>
+          <i class="fas fa-phone input-icon"></i>
+        </div>
+
+        <!-- Jelszó -->
+        <div class="input-group">
+          <input 
+            [type]="hidePassword ? 'password' : 'text'"
+            id="password" 
+            formControlName="password"
+            placeholder=" "
+            [class.invalid]="password.invalid && password.touched">
+          <label for="password">Jelszó</label>
+          <i class="fas fa-lock input-icon"></i>
+          
+          <button 
+            type="button" 
+            class="toggle-password" 
+            (click)="togglePasswordVisibility()"
+            [attr.aria-label]="hidePassword ? 'Jelszó megjelenítése' : 'Jelszó elrejtése'">
+            <i [class]="hidePassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+          </button>
+        </div>
+
+        <!-- Jelszó megerősítése -->
+        <div class="input-group" style="margin-bottom: 0;">
+          <input 
+            [type]="hideConfirmPassword ? 'password' : 'text'"
+            id="confirmPassword" 
+            formControlName="confirmPassword"
+            placeholder=" "
+            [class.invalid]="(confirmPassword.invalid && confirmPassword.touched) || (registerForm.hasError('passwordMismatch') && confirmPassword.touched)">
+          <label for="confirmPassword">Jelszó megerősítése</label>
+          <i class="fas fa-lock input-icon"></i>
+          
+          <button 
+            type="button" 
+            class="toggle-password" 
+            (click)="toggleConfirmPasswordVisibility()"
+            [attr.aria-label]="hideConfirmPassword ? 'Jelszó megjelenítése' : 'Jelszó elrejtése'">
+            <i [class]="hideConfirmPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+          </button>
+
+          <div class="error-messages">
+            <div class="error-message" 
+                 [style.opacity]="confirmPasswordErrorMessage ? '1' : '0'">
+              {{ confirmPasswordErrorMessage || '&nbsp;' }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Submit gomb -->
+        <button 
+          type="submit" 
+          class="btn-submit"
+          [disabled]="registerForm.invalid || isSubmitting">
+          {{ isSubmitting ? 'FELDOLGOZÁS...' : 'FOLYTATÁS' }}
+        </button>
+
+        <div class="divider"></div>
+
+        <!-- Login link -->
+        <div class="login-section">
+          <p class="login-text">Van már fiókod?</p>
+          <a routerLink="/login" class="login-link">Jelentkezz be!</a>
+        </div>
+      </form>
+    </div>
+
+    <div class="image-wrapper">
+      <div class="image-overlay"></div>
+    </div>
+  </div>
+</div>
