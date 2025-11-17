@@ -1,0 +1,1788 @@
+-- phpMyAdmin SQL Dump
+-- version 5.1.2
+-- https://www.phpmyadmin.net/
+--
+-- Host: localhost:3307
+-- Generation Time: Nov 17, 2025 at 09:59 AM
+-- Server version: 5.7.24
+-- PHP Version: 8.3.1
+
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
+
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+
+--
+-- Database: `bookr`
+--
+
+DELIMITER $$
+--
+-- Procedures
+--
+CREATE DEFINER=`root`@`localhost` PROCEDURE `activateUser` (IN `userIdIN` INT)   BEGIN
+    UPDATE `users`
+    SET 
+        `is_active` = TRUE,
+        `updated_at` = NOW()
+    WHERE `id` = userIdIN
+      AND `is_deleted` = FALSE;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `assignCompanyToUser` (IN `userIdIN` INT, IN `companyIdIN` INT)   BEGIN
+    UPDATE `users`
+    SET 
+        `company_id` = companyIdIN,
+        `updated_at` = NOW()
+    WHERE `id` = userIdIN
+      AND `is_deleted` = FALSE;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `assignRole` (IN `userIdIN` INT, IN `roleIdIN` INT)   BEGIN
+    -- Régi szerepkör lezárása
+    UPDATE `user_x_role`
+    SET 
+        `un_assigned_at` = NOW(),
+        `is_un_assigned` = TRUE
+    WHERE `user_id` = userIdIN
+      AND `is_un_assigned` = FALSE;
+    
+    -- Új szerepkör hozzárendelése
+    INSERT INTO `user_x_role` (
+        `user_id`,
+        `role_id`
+    )
+    VALUES (
+        userIdIN,
+        roleIdIN
+    );
+    
+    -- Frissítés a users táblában is
+    UPDATE `users`
+    SET 
+        `role_id` = roleIdIN,
+        `updated_at` = NOW()
+    WHERE `id` = userIdIN;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `cleanExpiredTokens` ()   BEGIN
+    DELETE FROM `refresh_tokens`
+    WHERE `expires_at` < NOW()
+       OR `is_revoked` = TRUE;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `completeRegistration` (IN `regTokenIN` VARCHAR(64))   BEGIN
+    UPDATE `users`
+    SET 
+        `register_finished_at` = NOW(),
+        `is_active` = TRUE,
+        `reg_token` = NULL,
+        `updated_at` = NOW()
+    WHERE `reg_token` = regTokenIN
+      AND `is_deleted` = FALSE;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `deactivateUser` (IN `userIdIN` INT)   BEGIN
+    UPDATE `users`
+    SET 
+        `is_active` = FALSE,
+        `updated_at` = NOW()
+    WHERE `id` = userIdIN
+      AND `is_deleted` = FALSE;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `generatePasswordResetToken` (IN `emailIN` VARCHAR(100))   BEGIN
+    DECLARE newToken VARCHAR(64);
+    SET newToken = MD5(CONCAT(emailIN, NOW(), RAND()));
+    
+    UPDATE `users`
+    SET 
+        `reg_token` = newToken,
+        `updated_at` = NOW()
+    WHERE `email` = emailIN
+      AND `is_deleted` = FALSE;
+    
+    -- Token visszaadása
+    SELECT newToken AS reset_token;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getUserActiveSessions` (IN `userIdIN` INT)   BEGIN
+    SELECT 
+        `id`,
+        `token`,
+        `expires_at`,
+        `created_at`,
+        `ip_address`,
+        `user_agent`
+    FROM `refresh_tokens`
+    WHERE `user_id` = userIdIN
+      AND `is_revoked` = FALSE
+      AND `expires_at` > NOW()
+    ORDER BY `created_at` DESC;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getUserByEmail` (IN `emailIN` VARCHAR(100))   BEGIN
+    SELECT 
+        u.*,
+        r.name AS role_name,
+        r.description AS role_description
+    FROM `users` u
+    INNER JOIN `roles` r ON u.role_id = r.id
+    WHERE u.email = emailIN
+      AND u.is_deleted = FALSE;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getUserById` (IN `userIdIN` INT)   BEGIN
+    SELECT 
+        u.*,
+        r.name AS role_name,
+        r.description AS role_description,
+        c.name AS company_name
+    FROM `users` u
+    INNER JOIN `roles` r ON u.role_id = r.id
+    LEFT JOIN `companies` c ON u.company_id = c.id
+    WHERE u.id = userIdIN
+      AND u.is_deleted = FALSE;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getUserProfile` (IN `userIdIN` INT)   BEGIN
+    SELECT 
+        u.*,
+        r.name AS role_name,
+        r.description AS role_description,
+        c.name AS company_name,
+        c.address AS company_address,
+        c.city AS company_city,
+        c.country AS company_country
+    FROM `users` u
+    INNER JOIN `roles` r ON u.role_id = r.id
+    LEFT JOIN `companies` c ON u.company_id = c.id
+    WHERE u.id = userIdIN
+      AND u.is_deleted = FALSE
+      AND u.is_active = TRUE;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getUsers` (IN `companyIdIN` INT, IN `roleIdIN` INT, IN `isActiveIN` BOOLEAN, IN `limitIN` INT, IN `offsetIN` INT)   BEGIN
+    SELECT 
+        u.id,
+        u.first_name,
+        u.last_name,
+        u.email,
+        u.phone,
+        u.role_id,
+        u.company_id,
+        u.is_active,
+        u.last_login,
+        u.created_at,
+        r.name AS role_name,
+        c.name AS company_name
+    FROM `users` u
+    INNER JOIN `roles` r ON u.role_id = r.id
+    LEFT JOIN `companies` c ON u.company_id = c.id
+    WHERE u.is_deleted = FALSE
+      AND (companyIdIN IS NULL OR u.company_id = companyIdIN)
+      AND (roleIdIN IS NULL OR u.role_id = roleIdIN)
+      AND (isActiveIN IS NULL OR u.is_active = isActiveIN)
+    ORDER BY u.created_at DESC
+    LIMIT limitIN OFFSET offsetIN;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `hardDeleteUser` (IN `userIdIN` INT)   BEGIN
+    -- Figyelem: Ez véglegesen törli az adatokat!
+    -- Csak GDPR kérés vagy hasonló esetekben használd
+    DELETE FROM `users`
+    WHERE `id` = userIdIN;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `login` (IN `emailIN` VARCHAR(200))   BEGIN
+    SELECT 
+        `users`.`id`,
+        `users`.`first_name`,
+        `users`.`last_name`,
+        `users`.`email`,
+        `users`.`password`,
+        `users`.`company_id`,
+        `users`.`role_id`,
+        GROUP_CONCAT(`roles`.`name` SEPARATOR ', ') AS "roles"
+    FROM `users`
+    INNER JOIN `user_x_role` ON `user_x_role`.`user_id` = `users`.`id`
+    INNER JOIN `roles` ON `roles`.`id` = `user_x_role`.`role_id`
+    WHERE `users`.`email` = emailIN
+      AND `users`.`is_deleted` = FALSE
+    GROUP BY `users`.`id`
+    LIMIT 1;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `regenerateAuthSecret` (IN `userIdIN` INT, IN `newAuthSecretIN` VARCHAR(16))   BEGIN
+    UPDATE `users`
+    SET 
+        `auth_secret` = newAuthSecretIN,
+        `updated_at` = NOW()
+    WHERE `id` = userIdIN
+      AND `is_deleted` = FALSE;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `registerClient` (IN `firstNameIN` VARCHAR(100), IN `lastNameIN` VARCHAR(100), IN `emailIN` VARCHAR(100), IN `passwordIN` TEXT, IN `phoneIN` VARCHAR(30))   BEGIN
+    DECLARE newUserId INT;
+    DECLARE clientRoleId INT;
+    DECLARE regToken VARCHAR(64);
+    
+    -- Reg token generálása
+    SET regToken = MD5(CONCAT(emailIN, NOW()));
+    
+    -- Client role ID lekérése (feltételezve hogy a role neve 'client')
+    SELECT `id` INTO clientRoleId 
+    FROM `roles` 
+    WHERE `name` = 'client' 
+    LIMIT 1;
+    
+    -- User létrehozása
+    INSERT INTO `users` (
+        `guid`,
+        `first_name`,
+        `last_name`,
+        `email`,
+        `password`,
+        `phone`,
+        `role_id`,
+        `company_id`,
+        `reg_token`,
+        `is_active`
+    )
+    VALUES (
+        UUID(),
+        firstNameIN,
+        lastNameIN,
+        emailIN,
+        passwordIN,
+        phoneIN,
+        clientRoleId,
+        NULL,
+        regToken,
+        FALSE
+    );
+    
+    -- Új user ID lekérése
+    SET newUserId = LAST_INSERT_ID();
+    
+    -- Szerepkör hozzárendelése a user_x_role táblában
+    INSERT INTO `user_x_role` (
+        `user_id`,
+        `role_id`
+    )
+    VALUES (
+        newUserId,
+        clientRoleId
+    );
+    
+    -- Visszaadjuk az új user ID-t és a reg token-t
+    SELECT newUserId AS user_id, regToken AS reg_token;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `registerOwner` (IN `firstNameIN` VARCHAR(100), IN `lastNameIN` VARCHAR(100), IN `emailIN` VARCHAR(100), IN `passwordIN` TEXT, IN `phoneIN` VARCHAR(30), IN `authSecretIN` VARCHAR(16), IN `companyNameIN` VARCHAR(255), IN `companyDescriptionIN` TEXT, IN `companyAddressIN` TEXT, IN `companyCityIN` VARCHAR(100), IN `companyPostalCodeIN` VARCHAR(20), IN `companyCountryIN` VARCHAR(100), IN `companyPhoneIN` VARCHAR(30), IN `companyEmailIN` VARCHAR(100), IN `companyWebsiteIN` VARCHAR(255))   BEGIN
+    DECLARE newUserId INT;
+    DECLARE ownerRoleId INT;
+    DECLARE regToken VARCHAR(64);
+    DECLARE newCompanyId INT;
+    
+    -- Reg token generálása
+    SET regToken = MD5(CONCAT(emailIN, NOW()));
+    
+    -- Owner role ID lekérése
+    SELECT `id` INTO ownerRoleId 
+    FROM `roles` 
+    WHERE `name` = 'owner' 
+    LIMIT 1;
+    
+    -- User létrehozása (company_id még NULL, mert még nem létezik a cég)
+    INSERT INTO `users` (
+        `first_name`,
+        `last_name`,
+        `email`,
+        `password`,
+        `phone`,
+        `auth_secret`,
+        `role_id`,
+        `company_id`,
+        `reg_token`,
+        `is_active`
+    )
+    VALUES (
+        firstNameIN,
+        lastNameIN,
+        emailIN,
+        passwordIN,
+        phoneIN,
+        authSecretIN,
+        ownerRoleId,
+        NULL,
+        regToken,
+        FALSE
+    );
+    
+    -- Új user ID lekérése
+    SET newUserId = LAST_INSERT_ID();
+    
+    -- Szerepkör hozzárendelése a user_x_role táblában
+    INSERT INTO `user_x_role` (
+        `user_id`,
+        `role_id`
+    )
+    VALUES (
+        newUserId,
+        ownerRoleId
+    );
+    
+    -- Company létrehozása
+    INSERT INTO `companies` (
+        `name`,
+        `description`,
+        `address`,
+        `city`,
+        `postal_code`,
+        `country`,
+        `phone`,
+        `email`,
+        `website`,
+        `owner_id`,
+        `is_active`
+    )
+    VALUES (
+        companyNameIN,
+        companyDescriptionIN,
+        companyAddressIN,
+        companyCityIN,
+        companyPostalCodeIN,
+        IFNULL(companyCountryIN, 'Hungary'),
+        companyPhoneIN,
+        companyEmailIN,
+        companyWebsiteIN,
+        newUserId,
+        TRUE
+    );
+    
+    SET newCompanyId = LAST_INSERT_ID();
+    
+    -- User company_id frissítése
+    UPDATE `users`
+    SET `company_id` = newCompanyId
+    WHERE `id` = newUserId;
+    
+    -- Visszaadjuk az új user ID-t, company ID-t és a reg token-t
+    SELECT newUserId AS user_id, newCompanyId AS company_id, regToken AS reg_token;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `registerStaff` (IN `firstNameIN` VARCHAR(100), IN `lastNameIN` VARCHAR(100), IN `emailIN` VARCHAR(100), IN `passwordIN` TEXT, IN `phoneIN` VARCHAR(30), IN `companyIdIN` INT)   BEGIN
+    DECLARE newUserId INT;
+    DECLARE staffRoleId INT;
+    DECLARE regToken VARCHAR(64);
+    DECLARE newStaffId INT;
+    
+    -- Reg token generálása
+    SET regToken = MD5(CONCAT(emailIN, NOW()));
+    
+    -- Staff role ID lekérése
+    SELECT `id` INTO staffRoleId 
+    FROM `roles` 
+    WHERE `name` = 'staff' 
+    LIMIT 1;
+    
+    -- User létrehozása
+    INSERT INTO `users` (
+        `first_name`,
+        `last_name`,
+        `email`,
+        `password`,
+        `phone`,
+        `auth_secret`,
+        `role_id`,
+        `company_id`,
+        `reg_token`,
+        `is_active`
+    )
+    VALUES (
+        firstNameIN,
+        lastNameIN,
+        emailIN,
+        passwordIN,
+        phoneIN,
+        authSecretIN,
+        staffRoleId,
+        companyIdIN,
+        regToken,
+        FALSE
+    );
+    
+    -- Új user ID lekérése
+    SET newUserId = LAST_INSERT_ID();
+    
+    -- Szerepkör hozzárendelése a user_x_role táblában
+    INSERT INTO `user_x_role` (
+        `user_id`,
+        `role_id`
+    )
+    VALUES (
+        newUserId,
+        staffRoleId
+    );
+    
+    -- Staff bejegyzés létrehozása
+    INSERT INTO `staff` (
+        `staff`.`user_id`,
+        `staff`.`company_id`,
+        `staff`.`is_active`
+    )
+    VALUES (
+        newUserId,
+        companyIdIN,
+        FALSE
+    );
+    
+    SET newStaffId = LAST_INSERT_ID();
+    
+    -- Visszaadjuk az új user ID-t, staff ID-t és a reg token-t
+    SELECT newUserId AS user_id, newStaffId AS staff_id, regToken AS reg_token;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `revokeAllUserTokens` (IN `userIdIN` INT)   BEGIN
+    UPDATE `refresh_tokens`
+    SET 
+        `is_revoked` = TRUE,
+        `revoked_at` = NOW()
+    WHERE `user_id` = userIdIN
+      AND `is_revoked` = FALSE;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `revokeRefreshToken` (IN `tokenIN` VARCHAR(500))   BEGIN
+    UPDATE `refresh_tokens`
+    SET 
+        `is_revoked` = TRUE,
+        `revoked_at` = NOW()
+    WHERE `token` = tokenIN;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `saveRefreshToken` (IN `userIdIN` INT, IN `tokenIN` VARCHAR(500), IN `expiresAtIN` DATETIME, IN `ipAddressIN` VARCHAR(45), IN `userAgentIN` TEXT)   BEGIN
+    INSERT INTO `refresh_tokens` (
+        `user_id`,
+        `token`,
+        `expires_at`,
+        `ip_address`,
+        `user_agent`
+    )
+    VALUES (
+        userIdIN,
+        tokenIN,
+        expiresAtIN,
+        ipAddressIN,
+        userAgentIN
+    );
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `softDeleteUser` (IN `userIdIN` INT)   BEGIN
+    UPDATE `users`
+    SET 
+        `is_deleted` = TRUE,
+        `deleted_at` = NOW(),
+        `is_active` = FALSE
+    WHERE `id` = userIdIN;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `updateEmail` (IN `userIdIN` INT, IN `newEmailIN` VARCHAR(100))   BEGIN
+    UPDATE `users`
+    SET 
+        `email` = newEmailIN,
+        `is_active` = FALSE,
+        `reg_token` = MD5(CONCAT(newEmailIN, NOW())),
+        `updated_at` = NOW()
+    WHERE `id` = userIdIN
+      AND `is_deleted` = FALSE;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `updateLastLogin` (IN `userIdIN` INT)   BEGIN
+    UPDATE `users`
+    SET `last_login` = NOW()
+    WHERE `id` = userIdIN
+      AND `is_deleted` = FALSE;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `updatePassword` (IN `userIdIN` INT, IN `newPasswordIN` TEXT)   BEGIN
+    UPDATE `users`
+    SET 
+        `password` = newPasswordIN,
+        `updated_at` = NOW()
+    WHERE `id` = userIdIN
+      AND `is_deleted` = FALSE;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `updateUser` (IN `userIdIN` INT, IN `firstNameIN` VARCHAR(100), IN `lastNameIN` VARCHAR(100), IN `phoneIN` VARCHAR(30))   BEGIN
+    UPDATE `users`
+    SET 
+        `first_name` = firstNameIN,
+        `last_name` = lastNameIN,
+        `phone` = phoneIN,
+        `updated_at` = NOW()
+    WHERE `id` = userIdIN
+      AND `is_deleted` = FALSE;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `validateRefreshToken` (IN `tokenIN` VARCHAR(500))   BEGIN
+    SELECT *
+    FROM `refresh_tokens`
+    WHERE `token` = tokenIN
+      AND `is_revoked` = FALSE
+      AND `expires_at` > NOW();
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `verifyAuthSecret` (IN `userIdIN` INT, IN `authSecretIN` VARCHAR(16))   BEGIN
+    SELECT COUNT(*) AS is_valid
+    FROM `users`
+    WHERE `id` = userIdIN
+      AND `auth_secret` = authSecretIN
+      AND `is_deleted` = FALSE
+      AND `is_active` = TRUE;
+END$$
+
+DELIMITER ;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `appointments`
+--
+
+CREATE TABLE `appointments` (
+  `id` int(11) NOT NULL,
+  `company_id` int(11) NOT NULL,
+  `service_id` int(11) NOT NULL,
+  `staff_id` int(11) DEFAULT NULL COMMENT 'NULL = any staff can handle it',
+  `client_id` int(11) NOT NULL,
+  `start_time` datetime NOT NULL,
+  `end_time` datetime NOT NULL,
+  `status` enum('pending','confirmed','cancelled','completed','no_show','in_progress') DEFAULT 'pending',
+  `notes` text,
+  `internal_notes` text COMMENT 'Visible only to staff/admin',
+  `price` decimal(10,2) DEFAULT NULL,
+  `currency` varchar(10) NOT NULL,
+  `cancelled_by` int(11) DEFAULT NULL,
+  `cancelled_reason` text,
+  `cancelled_at` datetime DEFAULT NULL,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `audit_logs`
+--
+
+CREATE TABLE `audit_logs` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `company_id` int(11) DEFAULT NULL,
+  `email` varchar(200) DEFAULT NULL,
+  `entity_type` varchar(50) DEFAULT NULL COMMENT 'appointment, user, company, service, etc.',
+  `action` varchar(100) NOT NULL COMMENT 'create, update, delete, login, etc.',
+  `old_values` json DEFAULT NULL,
+  `new_values` json DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `companies`
+--
+
+CREATE TABLE `companies` (
+  `id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `description` text,
+  `address` text,
+  `city` varchar(100) DEFAULT NULL,
+  `postal_code` varchar(20) DEFAULT NULL,
+  `country` varchar(100) DEFAULT 'Hungary',
+  `phone` varchar(30) DEFAULT NULL,
+  `email` varchar(100) DEFAULT NULL,
+  `website` varchar(255) DEFAULT NULL,
+  `owner_id` int(11) NOT NULL,
+  `booking_advance_days` int(11) DEFAULT '30' COMMENT 'How many days in advance bookings can be made',
+  `cancellation_hours` int(11) DEFAULT '24' COMMENT 'How many hours before appointment can be canceled',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `is_deleted` tinyint(1) DEFAULT '0',
+  `is_active` tinyint(1) DEFAULT '1'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Dumping data for table `companies`
+--
+
+INSERT INTO `companies` (`id`, `name`, `description`, `address`, `city`, `postal_code`, `country`, `phone`, `email`, `website`, `owner_id`, `booking_advance_days`, `cancellation_hours`, `created_at`, `updated_at`, `deleted_at`, `is_deleted`, `is_active`) VALUES
+(1, 'Bella Szépségszalon', 'Modern szépségszalon a belvárosban, teljes körű kozmetikai szolgáltatásokkal', 'Váci utca 15.', 'Budapest', '1052', 'Hungary', '+36301234501', 'info@bella-szalon.hu', 'www.bella-szalon.hu', 2, 30, 24, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
+(2, 'Exclusive Beauty Center', 'Prémium kategóriás szépségszalon exkluzív kezelésekkel', 'Andrássy út 42.', 'Budapest', '1061', 'Hungary', '+36301234502', 'info@exclusivebeauty.hu', 'www.exclusivebeauty.hu', 3, 45, 48, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
+(3, 'Naturál Szépségstúdió', 'Természetes alapanyagokkal dolgozó családias szalon', 'Fő utca 23.', 'Győr', '9021', 'Hungary', '+36301234503', 'hello@naturalszepseg.hu', 'www.naturalszepseg.hu', 2, 21, 24, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
+(4, 'Harmónia Wellness', 'Wellness központ masszázzsal és spa kezelésekkel', 'Thermal utca 8.', 'Budapest', '1039', 'Hungary', '+36301234504', 'foglalas@harmoniawellness.hu', 'www.harmoniawellness.hu', 3, 30, 24, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
+(5, 'Relaxa Masszázsszalon', 'Professzionális masszázs szolgáltatások nyugodt környezetben', 'Kossuth utca 12.', 'Debrecen', '4024', 'Hungary', '+36301234505', 'info@relaxa.hu', 'www.relaxa.hu', 2, 14, 12, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
+(6, 'ZenSpa Központ', 'Ázsiai ihletésű spa és wellness központ', 'Dózsa György út 34.', 'Szeged', '6720', 'Hungary', '+36301234506', 'reception@zenspa.hu', 'www.zenspa.hu', 3, 60, 48, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
+(7, 'StyleCut Fodrászat', 'Trendi frizurák és hajkezelések minden korosztálynak', 'Rákóczi út 56.', 'Budapest', '1074', 'Hungary', '+36301234507', 'időpont@stylecut.hu', 'www.stylecut.hu', 2, 21, 24, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
+(8, 'Hair Art Studio', 'Kreatív fodrászat speciális színezési technikákkal', 'Bajcsy-Zsilinszky út 19.', 'Pécs', '7621', 'Hungary', '+36301234508', 'info@hairstudio.hu', 'www.hairstudio.hu', 3, 30, 24, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
+(9, 'Perfect Nails Studio', 'Professzionális körömépítés és díszítés', 'Ferenciek tere 3.', 'Budapest', '1053', 'Hungary', '+36301234509', 'booking@perfectnails.hu', 'www.perfectnails.hu', 2, 21, 12, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
+(10, 'Glamour Nails', 'Minőségi műköröm és géllakk szolgáltatások', 'Arany János utca 7.', 'Győr', '9022', 'Hungary', '+36301234510', 'info@glamournails.hu', 'www.glamournails.hu', 3, 14, 24, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
+(11, 'FitZone Edzőterem', 'Modern edzőterem személyi edzőkkel és csoportos órákkal', 'Október 6. utca 22.', 'Budapest', '1051', 'Hungary', '+36301234511', 'info@fitzone.hu', 'www.fitzone.hu', 2, 7, 6, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
+(12, 'Yoga & Balance Stúdió', 'Jóga és meditációs stúdió minden szintű gyakorlóknak', 'Bem rakpart 15.', 'Budapest', '1011', 'Hungary', '+36301234512', 'hello@yogabalance.hu', 'www.yogabalance.hu', 3, 14, 12, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
+(13, 'Vital Med Magánrendelő', 'Magán egészségügyi központ szakorvosi rendelésekkel', 'Üllői út 82.', 'Budapest', '1082', 'Hungary', '+36301234513', 'rendeles@vitalmed.hu', 'www.vitalmed.hu', 2, 30, 48, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
+(14, 'PhysioActive Gyógytorna', 'Gyógytorna és rehabilitációs központ', 'Kálvin tér 9.', 'Szeged', '6722', 'Hungary', '+36301234514', 'info@physioactive.hu', 'www.physioactive.hu', 3, 21, 24, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
+(15, 'BarberShop Budapest', 'Férfi fodrászat és borbély szolgáltatások', 'Wesselényi utca 18.', 'Budapest', '1077', 'Hungary', '+36301234515', 'booking@barbershop.hu', 'www.barbershop-bp.hu', 2, 14, 12, '2025-10-09 16:14:23', NULL, NULL, 0, 1);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `images`
+--
+
+CREATE TABLE `images` (
+  `id` int(11) NOT NULL,
+  `company_id` int(11) DEFAULT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `url` text NOT NULL,
+  `uploaded_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `notification_settings`
+--
+
+CREATE TABLE `notification_settings` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `appointment_confirmation` tinyint(1) DEFAULT '1',
+  `appointment_reminder` tinyint(1) DEFAULT '1',
+  `appointment_cancellation` tinyint(1) DEFAULT '1',
+  `marketing_emails` tinyint(1) DEFAULT '0',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Dumping data for table `notification_settings`
+--
+
+INSERT INTO `notification_settings` (`id`, `user_id`, `appointment_confirmation`, `appointment_reminder`, `appointment_cancellation`, `marketing_emails`, `created_at`, `updated_at`) VALUES
+(1, 1, 1, 1, 1, 0, '2025-10-09 14:21:25', NULL),
+(2, 2, 1, 1, 1, 1, '2025-10-09 14:21:25', NULL),
+(3, 3, 1, 1, 1, 1, '2025-10-09 14:21:25', NULL),
+(4, 4, 1, 1, 1, 0, '2025-10-09 14:21:25', NULL),
+(5, 5, 1, 1, 1, 0, '2025-10-09 14:21:25', NULL),
+(6, 6, 1, 1, 1, 1, '2025-10-09 14:21:25', NULL),
+(7, 7, 1, 1, 1, 0, '2025-10-09 14:21:25', NULL),
+(8, 8, 1, 1, 1, 1, '2025-10-09 14:21:25', NULL),
+(9, 9, 1, 1, 1, 0, '2025-10-09 14:21:25', NULL),
+(10, 10, 1, 1, 1, 1, '2025-10-09 14:21:25', NULL),
+(11, 11, 1, 1, 1, 0, '2025-10-09 14:21:25', NULL),
+(12, 12, 1, 0, 1, 0, '2025-10-09 14:21:25', NULL),
+(13, 13, 1, 1, 1, 1, '2025-10-09 14:21:25', NULL),
+(14, 14, 0, 0, 1, 0, '2025-10-09 14:21:25', NULL),
+(15, 15, 1, 1, 1, 1, '2025-10-09 14:21:25', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `opening_hours`
+--
+
+CREATE TABLE `opening_hours` (
+  `id` int(11) NOT NULL,
+  `company_id` int(11) NOT NULL,
+  `day_of_week` enum('monday','tuesday','wednesday','thursday','friday','saturday','sunday') NOT NULL,
+  `open_time` time DEFAULT NULL,
+  `close_time` time DEFAULT NULL,
+  `is_closed` tinyint(1) DEFAULT '0',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `refresh_tokens`
+--
+
+CREATE TABLE `refresh_tokens` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `token` varchar(500) NOT NULL,
+  `expires_at` datetime NOT NULL,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `is_revoked` tinyint(1) DEFAULT '0',
+  `revoked_at` datetime DEFAULT NULL,
+  `ip_address` varchar(45) DEFAULT NULL,
+  `user_agent` text
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `reviews`
+--
+
+CREATE TABLE `reviews` (
+  `id` int(11) NOT NULL,
+  `company_id` int(11) NOT NULL,
+  `client_id` int(11) NOT NULL,
+  `appointment_id` int(11) DEFAULT NULL,
+  `rating` int(11) NOT NULL COMMENT '1-5 stars',
+  `comment` text,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `deleted_at` timestamp NULL DEFAULT NULL,
+  `is_deleted` tinyint(1) DEFAULT '0'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `roles`
+--
+
+CREATE TABLE `roles` (
+  `id` int(11) NOT NULL,
+  `name` varchar(50) NOT NULL,
+  `description` text,
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `is_deleted` tinyint(1) DEFAULT '0'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Dumping data for table `roles`
+--
+
+INSERT INTO `roles` (`id`, `name`, `description`, `created_at`, `updated_at`, `deleted_at`, `is_deleted`) VALUES
+(1, 'superadmin', 'Teljes hozzáférés az összes rendszer funkcióhoz és minden céghez', '2025-10-09 16:14:23', NULL, NULL, 0),
+(2, 'admin', 'Cég szintű adminisztrátor, teljes hozzáférés a saját céghez', '2025-10-09 16:14:23', NULL, NULL, 0),
+(3, 'staff', 'Munkatárs, aki szolgáltatásokat nyújt és időpontokat kezel', '2025-10-09 16:14:23', NULL, NULL, 0),
+(4, 'client', 'Ügyfél, aki időpontokat foglal', '2025-10-09 16:14:23', NULL, NULL, 0);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `services`
+--
+
+CREATE TABLE `services` (
+  `id` int(11) NOT NULL,
+  `company_id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `description` text,
+  `duration_minutes` int(11) NOT NULL,
+  `price` decimal(10,2) DEFAULT NULL,
+  `currency` varchar(10) DEFAULT NULL,
+  `is_active` tinyint(1) DEFAULT '1',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `is_deleted` tinyint(1) DEFAULT '0'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Dumping data for table `services`
+--
+
+INSERT INTO `services` (`id`, `company_id`, `name`, `description`, `duration_minutes`, `price`, `currency`, `is_active`, `created_at`, `updated_at`, `deleted_at`, `is_deleted`) VALUES
+(1, 1, 'Basic arckezelés', 'Alapos arctisztítás, pakolás, arcmasszázs', 60, '8900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(2, 1, 'Prémium arckezelés', 'Luxus arckezelés anti-aging hatással', 90, '15900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(3, 1, 'Hialuronsavas kezelés', 'Intenzív hidratáló arckezelés', 75, '12900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(4, 1, 'Teljes testmasszázs', 'Relaxáló teljes test masszázs', 60, '9900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(5, 1, 'Cellulitkezelés', 'Cellulit csökkentő kezelés', 45, '7900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(6, 1, 'Manikűr', 'Kéz- és körömápolás', 45, '4900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(7, 1, 'Géllakk', 'Tartós géllakk kézre', 60, '6900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(8, 1, 'Pedikűr', 'Láb- és körömápolás', 60, '6900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(9, 1, 'Szempillafestés', 'Természetes szempilla festés', 30, '3900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(10, 1, 'Szemöldök formázás', 'Szemöldök igazítás és festés', 30, '3500.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(11, 2, 'Svéd masszázs', 'Klasszikus relaxáló masszázs', 60, '11900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(12, 2, 'Aromaterápiás masszázs', 'Illóolajos masszázs kezelés', 75, '13900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(13, 2, 'Hot stone masszázs', 'Forró kő masszázs', 90, '16900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(14, 2, 'Talpmasszázs', 'Reflexológiai talpmasszázs', 45, '8900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(15, 2, 'Teljes SPA csomag', 'Komplex spa élmény 3 órában', 180, '35900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(16, 2, 'Szauna és masszázs', 'Szauna használat + 60 perc masszázs', 90, '14900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(17, 2, 'Arckezelés gold maszkkal', 'Luxus arany arckezelés', 90, '24900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(18, 3, 'Bio arckezelés', 'Természetes alapanyagú arckezelés', 60, '9900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(19, 3, 'Organikus testkezelés', 'Teljes test kezelés bio termékekkel', 75, '11900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(20, 3, 'Natúr hámlasztás', 'Természetes peeling kezelés', 45, '6900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(21, 4, 'Relaxációs masszázs', 'Stresszoldó masszázs', 60, '10900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(22, 4, 'Gyógymasszázs', 'Terápiás masszázs', 60, '12900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(23, 4, 'Wellness day csomag', 'Egész napos wellness élmény', 240, '42900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(24, 4, 'Páros masszázs', 'Masszázs pároknak', 60, '21900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(25, 5, 'Svéd masszázs 60 perc', 'Klasszikus svéd masszázs', 60, '9900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(26, 5, 'Svéd masszázs 90 perc', 'Hosszú svéd masszázs', 90, '13900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(27, 5, 'Sportmasszázs', 'Sportolóknak ajánlott', 60, '11900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(28, 5, 'Talpmasszázs', 'Reflexológia', 45, '7900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(29, 6, 'Thai masszázs', 'Hagyományos thai masszázs', 90, '15900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(30, 6, 'Shiatsu masszázs', 'Japán nyomáspontos masszázs', 60, '13900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(31, 6, 'Meditációs óra', 'Vezetett meditáció', 60, '4900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(32, 6, 'Zen spa rituálé', 'Komplex ázsiai spa élmény', 120, '29900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(33, 7, 'Női hajvágás', 'Professzionális női hajvágás', 45, '6900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(34, 7, 'Férfi hajvágás', 'Modern férfi frizura', 30, '4500.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(35, 7, 'Hajfestés rövid hajra', 'Teljes hajfestés rövid hajra', 90, '12900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(36, 7, 'Hajfestés hosszú hajra', 'Teljes hajfestés hosszú hajra', 120, '17900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(37, 7, 'Melírozás', 'Melír vagy balayage', 150, '22900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(38, 7, 'Keratinos hajegyenesítés', 'Tartós egyenesítés', 180, '34900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(39, 7, 'Hajpakolás', 'Regeneráló kezelés', 30, '3900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(40, 8, 'Kreatív hajfestés', 'Különleges színezési technika', 180, '29900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(41, 8, 'Ombre festés', 'Ombre vagy balayage technika', 150, '24900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(42, 8, 'Női vágás + mosás', 'Hajvágás mosással', 60, '8900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(43, 8, 'Hajhosszabbítás', 'Tincselés keratin kapoccsal', 240, '89900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(44, 9, 'Zselés műköröm', 'Teljes zselés műköröm építés', 120, '11900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(45, 9, 'Porcelán műköröm', 'Porcelán műköröm építés', 150, '14900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(46, 9, 'Műköröm töltés', 'Műköröm karbantartás', 90, '8900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(47, 9, 'Géllakk manikűr', 'Manikűr géllakkal', 60, '6900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(48, 9, 'Körömdekoráció', 'Egyedi körömművészet', 30, '2900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(49, 9, 'SPA pedikűr', 'Luxus pedikűr kezelés', 75, '8900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(50, 10, 'Express manikűr', 'Gyors manikűr', 30, '3900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(51, 10, 'Prémium manikűr', 'Teljes manikűr kezelés', 60, '5900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(52, 10, 'Babyboomer műköröm', 'Babyboomer technika', 120, '12900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(53, 10, 'Francia műköröm', 'Klasszikus francia', 120, '11900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(54, 10, 'Gyógypedikűr', 'Gyógyászati lábápolás', 60, '7900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(55, 11, 'Személyi edzés 1 alkalom', 'Egyéni személyi edzés', 60, '8900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(56, 11, 'Személyi edzés 5 alkalom', '5 alkalmas személyi edzés bérlet', 300, '39900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(57, 11, 'Spinning óra', 'Csoportos spinning', 45, '2900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(58, 11, 'CrossFit edzés', 'Funkcionális crossfit', 60, '3900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(59, 11, 'TRX edzés', 'TRX funkcionális tréning', 45, '3500.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(60, 12, 'Hatha jóga', 'Klasszikus hatha jóga óra', 75, '3900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(61, 12, 'Vinyasa flow jóga', 'Dinamikus jóga óra', 60, '3900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(62, 12, 'Yin jóga', 'Lassú, meditatív jóga', 90, '4500.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(63, 12, 'Meditációs óra', 'Vezetett meditáció', 45, '2900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(64, 12, 'Pilates óra', 'Pilates edzés', 60, '3900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(65, 13, 'Belgyógyászati vizsgálat', 'Teljes körű belgyógyászati vizsgálat', 30, '15900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(66, 13, 'Kardiológiai vizsgálat', 'EKG-val kiegészített vizsgálat', 45, '18900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(67, 13, 'Alapvető laborvizsgálat', 'Teljes vérkép és alapvető laborok', 15, '12900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(68, 13, 'Ultrahang vizsgálat', 'Hasi ultrahang', 30, '16900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(69, 14, 'Gyógytorna 1 alkalom', 'Egyéni gyógytorna foglalkozás', 45, '7900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(70, 14, 'Gyógytorna 10 alkalom', '10 alkalmas gyógytorna bérlet', 450, '69900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(71, 14, 'Gerinctorna', 'Gerincproblémák kezelése', 45, '6900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(72, 14, 'Rehabilitációs edzés', 'Sérülés utáni rehabilitáció', 60, '8900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(73, 14, 'Masszázs terápia', 'Terápiás masszázs', 45, '7900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(74, 15, 'Klasszikus férfi vágás', 'Hagyományos férfi hajvágás', 30, '4500.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(75, 15, 'Modern férfi vágás', 'Trendi férfi frizura', 45, '5900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(76, 15, 'Borotválás', 'Hagyományos borotválás', 30, '4900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(77, 15, 'Szakáll formázás', 'Szakáll igazítás és ápolás', 30, '3900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(78, 15, 'Hajvágás + szakáll', 'Komplett csomag', 60, '7900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
+(79, 15, 'VIP csomag', 'Vágás, borotválás, masszázs', 90, '12900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `service_categories`
+--
+
+CREATE TABLE `service_categories` (
+  `id` int(11) NOT NULL,
+  `company_id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `description` text,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Dumping data for table `service_categories`
+--
+
+INSERT INTO `service_categories` (`id`, `company_id`, `name`, `description`, `created_at`, `updated_at`) VALUES
+(1, 1, 'Arckezelések', 'Professzionális arckezelések minden bőrtípusra', '2025-10-09 14:50:01', NULL),
+(2, 1, 'Testkezelések', 'Testformáló és relaxáló testkezelések', '2025-10-09 14:50:01', NULL),
+(3, 1, 'Körömápolás', 'Manikűr, pedikűr és műköröm szolgáltatások', '2025-10-09 14:50:01', NULL),
+(4, 1, 'Szempilla és szemöldök', 'Szempilla és szemöldök szépítés', '2025-10-09 14:50:01', NULL),
+(5, 2, 'Masszázsok', 'Különböző típusú masszázs kezelések', '2025-10-09 14:50:01', NULL),
+(6, 2, 'SPA kezelések', 'Luxus spa és wellness kezelések', '2025-10-09 14:50:01', NULL),
+(7, 2, 'Aromaterápia', 'Illóolajos kezelések és terápiák', '2025-10-09 14:50:01', NULL),
+(8, 2, 'Arckezelések', 'Prémium arcápoló kezelések', '2025-10-09 14:50:01', NULL),
+(9, 3, 'Bio kozmetika', 'Természetes alapanyagú kezelések', '2025-10-09 14:50:01', NULL),
+(10, 3, 'Arcápolás', 'Organikus arckezelések', '2025-10-09 14:50:01', NULL),
+(11, 3, 'Testápolás', 'Természetes testkezelések', '2025-10-09 14:50:01', NULL),
+(12, 4, 'Relaxációs masszázsok', 'Stresszoldó és pihentető masszázsok', '2025-10-09 14:50:01', NULL),
+(13, 4, 'Gyógymasszázsok', 'Terápiás és gyógyító masszázsok', '2025-10-09 14:50:01', NULL),
+(14, 4, 'Wellness csomagok', 'Komplex wellness élmények', '2025-10-09 14:50:01', NULL),
+(15, 5, 'Svéd masszázs', 'Klasszikus svéd masszázs kezelések', '2025-10-09 14:50:01', NULL),
+(16, 5, 'Sportmasszázs', 'Sportolóknak ajánlott masszázsok', '2025-10-09 14:50:01', NULL),
+(17, 5, 'Talpmasszázs', 'Reflexológia és talpmasszázs', '2025-10-09 14:50:01', NULL),
+(18, 6, 'Ázsiai masszázsok', 'Thai, Shiatsu és egyéb ázsiai technikák', '2025-10-09 14:50:01', NULL),
+(19, 6, 'Meditáció', 'Meditációs szekciók és tanfolyamok', '2025-10-09 14:50:01', NULL),
+(20, 6, 'Spa rituálék', 'Komplex spa élmények', '2025-10-09 14:50:01', NULL),
+(21, 7, 'Női hajvágás', 'Női frizurák és hajvágások', '2025-10-09 14:50:01', NULL),
+(22, 7, 'Férfi hajvágás', 'Férfi frizurák és hajvágások', '2025-10-09 14:50:01', NULL),
+(23, 7, 'Hajfestés', 'Hajszínezés és melírozás', '2025-10-09 14:50:01', NULL),
+(24, 7, 'Hajkezelések', 'Ápoló és regeneráló hajkezelések', '2025-10-09 14:50:01', NULL),
+(25, 8, 'Kreatív hajfestés', 'Különleges színezési technikák', '2025-10-09 14:50:01', NULL),
+(26, 8, 'Hajvágás', 'Professzionális hajvágások', '2025-10-09 14:50:01', NULL),
+(27, 8, 'Hajhosszabbítás', 'Tincselés és hajhosszabbítás', '2025-10-09 14:50:01', NULL),
+(28, 9, 'Műköröm', 'Zselés és porcelán műköröm', '2025-10-09 14:50:01', NULL),
+(29, 9, 'Géllakk', 'Tartós géllakk kezelések', '2025-10-09 14:50:01', NULL),
+(30, 9, 'Körömművészet', 'Körömdekorációk és díszítések', '2025-10-09 14:50:01', NULL),
+(31, 9, 'Pedikűr', 'Lábápolás és pedikűr', '2025-10-09 14:50:01', NULL),
+(32, 10, 'Manikűr', 'Professzionális manikűr szolgáltatások', '2025-10-09 14:50:01', NULL),
+(33, 10, 'Műköröm építés', 'Különböző technikájú műköröm', '2025-10-09 14:50:01', NULL),
+(34, 10, 'Lábápolás', 'Pedikűr és lábápoló kezelések', '2025-10-09 14:50:01', NULL),
+(35, 11, 'Személyi edzés', 'Egyéni edzéstervek személyi edzővel', '2025-10-09 14:50:01', NULL),
+(36, 11, 'Csoportos órák', 'Változatos csoportos edzések', '2025-10-09 14:50:01', NULL),
+(37, 11, 'Funkcionális tréning', 'Funkcionális edzések', '2025-10-09 14:50:01', NULL),
+(38, 12, 'Jóga órák', 'Különböző stílusú jóga órák', '2025-10-09 14:50:01', NULL),
+(39, 12, 'Meditáció', 'Meditációs foglalkozások', '2025-10-09 14:50:01', NULL),
+(40, 12, 'Pilates', 'Pilates edzések', '2025-10-09 14:50:01', NULL),
+(41, 13, 'Belgyógyászat', 'Belgyógyászati vizsgálatok', '2025-10-09 14:50:01', NULL),
+(42, 13, 'Kardiológia', 'Szívbetegségek vizsgálata', '2025-10-09 14:50:01', NULL),
+(43, 13, 'Laborvizsgálatok', 'Különböző labor vizsgálatok', '2025-10-09 14:50:01', NULL),
+(44, 14, 'Gyógytorna', 'Terápiás gyógytorna foglalkozások', '2025-10-09 14:50:01', NULL),
+(45, 14, 'Rehabilitáció', 'Sérülés utáni rehabilitáció', '2025-10-09 14:50:01', NULL),
+(46, 14, 'Gerinctorna', 'Gerincproblémák kezelése', '2025-10-09 14:50:01', NULL),
+(47, 15, 'Férfi hajvágás', 'Klasszikus és modern férfi frizurák', '2025-10-09 14:50:01', NULL),
+(48, 15, 'Borotválás', 'Hagyományos borotválás', '2025-10-09 14:50:01', NULL),
+(49, 15, 'Szakáll formázás', 'Szakáll nyírás és ápolás', '2025-10-09 14:50:01', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `service_category_map`
+--
+
+CREATE TABLE `service_category_map` (
+  `id` int(11) NOT NULL,
+  `service_id` int(11) NOT NULL,
+  `category_id` int(11) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Dumping data for table `service_category_map`
+--
+
+INSERT INTO `service_category_map` (`id`, `service_id`, `category_id`, `created_at`) VALUES
+(1, 1, 1, '2025-10-09 14:57:12'),
+(2, 2, 1, '2025-10-09 14:57:12'),
+(3, 3, 1, '2025-10-09 14:57:12'),
+(4, 4, 2, '2025-10-09 14:57:12'),
+(5, 5, 2, '2025-10-09 14:57:12'),
+(6, 6, 3, '2025-10-09 14:57:12'),
+(7, 7, 3, '2025-10-09 14:57:12'),
+(8, 8, 3, '2025-10-09 14:57:12'),
+(9, 9, 4, '2025-10-09 14:57:12'),
+(10, 10, 4, '2025-10-09 14:57:12'),
+(11, 11, 5, '2025-10-09 14:57:12'),
+(12, 12, 5, '2025-10-09 14:57:12'),
+(13, 13, 5, '2025-10-09 14:57:12'),
+(14, 14, 5, '2025-10-09 14:57:12'),
+(15, 12, 7, '2025-10-09 14:57:12'),
+(16, 15, 6, '2025-10-09 14:57:12'),
+(17, 16, 6, '2025-10-09 14:57:12'),
+(18, 17, 8, '2025-10-09 14:57:12'),
+(19, 18, 9, '2025-10-09 14:57:12'),
+(20, 19, 9, '2025-10-09 14:57:12'),
+(21, 20, 9, '2025-10-09 14:57:12'),
+(22, 18, 10, '2025-10-09 14:57:12'),
+(23, 20, 10, '2025-10-09 14:57:12'),
+(24, 19, 11, '2025-10-09 14:57:12'),
+(25, 21, 12, '2025-10-09 14:57:12'),
+(26, 24, 12, '2025-10-09 14:57:12'),
+(27, 22, 13, '2025-10-09 14:57:12'),
+(28, 23, 14, '2025-10-09 14:57:12'),
+(29, 25, 15, '2025-10-09 14:57:12'),
+(30, 26, 15, '2025-10-09 14:57:12'),
+(31, 27, 16, '2025-10-09 14:57:12'),
+(32, 28, 17, '2025-10-09 14:57:12'),
+(33, 29, 18, '2025-10-09 14:57:12'),
+(34, 30, 18, '2025-10-09 14:57:12'),
+(35, 31, 19, '2025-10-09 14:57:12'),
+(36, 32, 20, '2025-10-09 14:57:12'),
+(37, 33, 21, '2025-10-09 14:57:12'),
+(38, 34, 22, '2025-10-09 14:57:12'),
+(39, 35, 23, '2025-10-09 14:57:12'),
+(40, 36, 23, '2025-10-09 14:57:12'),
+(41, 37, 23, '2025-10-09 14:57:12'),
+(42, 38, 24, '2025-10-09 14:57:12'),
+(43, 39, 24, '2025-10-09 14:57:12'),
+(44, 40, 25, '2025-10-09 14:57:12'),
+(45, 41, 25, '2025-10-09 14:57:12'),
+(46, 42, 26, '2025-10-09 14:57:12'),
+(47, 43, 27, '2025-10-09 14:57:12'),
+(48, 44, 28, '2025-10-09 14:57:12'),
+(49, 45, 28, '2025-10-09 14:57:12'),
+(50, 46, 28, '2025-10-09 14:57:12'),
+(51, 47, 29, '2025-10-09 14:57:12'),
+(52, 48, 30, '2025-10-09 14:57:12'),
+(53, 49, 31, '2025-10-09 14:57:12'),
+(54, 50, 32, '2025-10-09 14:57:12'),
+(55, 51, 32, '2025-10-09 14:57:12'),
+(56, 52, 33, '2025-10-09 14:57:12'),
+(57, 53, 33, '2025-10-09 14:57:12'),
+(58, 54, 34, '2025-10-09 14:57:12'),
+(59, 55, 35, '2025-10-09 14:57:12'),
+(60, 56, 35, '2025-10-09 14:57:12'),
+(61, 57, 36, '2025-10-09 14:57:12'),
+(62, 58, 37, '2025-10-09 14:57:12'),
+(63, 59, 37, '2025-10-09 14:57:12'),
+(64, 60, 38, '2025-10-09 14:57:12'),
+(65, 61, 38, '2025-10-09 14:57:12'),
+(66, 62, 38, '2025-10-09 14:57:12'),
+(67, 63, 39, '2025-10-09 14:57:12'),
+(68, 64, 40, '2025-10-09 14:57:12'),
+(69, 65, 41, '2025-10-09 14:57:12'),
+(70, 68, 41, '2025-10-09 14:57:12'),
+(71, 66, 42, '2025-10-09 14:57:12'),
+(72, 67, 43, '2025-10-09 14:57:12'),
+(73, 69, 44, '2025-10-09 14:57:12'),
+(74, 70, 44, '2025-10-09 14:57:12'),
+(75, 72, 45, '2025-10-09 14:57:12'),
+(76, 73, 45, '2025-10-09 14:57:12'),
+(77, 71, 46, '2025-10-09 14:57:12'),
+(78, 74, 47, '2025-10-09 14:57:58'),
+(79, 75, 47, '2025-10-09 14:57:58'),
+(80, 78, 47, '2025-10-09 14:57:58'),
+(81, 76, 48, '2025-10-09 14:57:58'),
+(82, 79, 48, '2025-10-09 14:57:58'),
+(83, 77, 49, '2025-10-09 14:57:58'),
+(84, 78, 49, '2025-10-09 14:57:58');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `staff`
+--
+
+CREATE TABLE `staff` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `company_id` int(11) NOT NULL,
+  `display_name` varchar(255) DEFAULT NULL,
+  `specialties` text,
+  `bio` text,
+  `is_active` tinyint(1) DEFAULT '1',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Dumping data for table `staff`
+--
+
+INSERT INTO `staff` (`id`, `user_id`, `company_id`, `display_name`, `specialties`, `bio`, `is_active`, `created_at`, `updated_at`) VALUES
+(1, 4, 1, 'Eszter', 'Arckezelés, Anti-aging kezelések, Bőrfiatalítás', 'Több mint 8 éves tapasztalattal rendelkező kozmetikus vagyok, aki szenvedélyesen foglalkozik a bőrápolással és az arckezelésekkel.', 1, '2025-10-09 16:41:10', NULL),
+(2, 5, 1, 'Kati', 'Masszázs, Testkezelés, Cellulit kezelés', 'Testmasszázs és testformálás specialista. Segítek a tökéletes alak elérésében.', 1, '2025-10-09 16:41:10', NULL),
+(3, 6, 1, 'Zsófi', 'Manikűr, Pedikűr, Géllakk', 'Köröm specialista vagyok, aki imádja a kreatív körömdíszítéseket és a tökéletes géllakkot.', 1, '2025-10-09 16:41:10', NULL),
+(4, 7, 2, 'Márta', 'Svéd masszázs, Aromaterápia, Relaxációs masszázs', 'Certificált masszőr vagyok, aki a teljes körű ellazulást és regenerációt helyezi előtérbe.', 1, '2025-10-09 16:41:10', NULL),
+(5, 8, 2, 'Júlia', 'Talpmasszázs, Thai masszázs, Sportmasszázs', '10 éve foglalkozom masszázzsal. Sportolóknak és aktív életmódot élőknek ajánlom szolgáltatásaimat.', 1, '2025-10-09 16:41:10', NULL),
+(6, 9, 2, 'Ildikó', 'Wellness kezelések, SPA kezelések, Wellness tanácsadás', 'Wellness szakértő vagyok, aki a holisztikus megközelítést képviseli a teljes testi-lelki harmónia érdekében.', 1, '2025-10-09 16:41:10', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `staff_exceptions`
+--
+
+CREATE TABLE `staff_exceptions` (
+  `id` int(11) NOT NULL,
+  `staff_id` int(11) NOT NULL,
+  `date` date NOT NULL,
+  `start_time` time DEFAULT NULL,
+  `end_time` time DEFAULT NULL,
+  `type` enum('day_off','custom_hours') NOT NULL COMMENT 'teljes szabi vagy egyedi időablak',
+  `note` text,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `deleted_at` datetime DEFAULT NULL,
+  `is_deleted` tinyint(1) NOT NULL DEFAULT '0'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `staff_services`
+--
+
+CREATE TABLE `staff_services` (
+  `id` int(11) NOT NULL,
+  `staff_id` int(11) NOT NULL,
+  `service_id` int(11) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `staff_working_hours`
+--
+
+CREATE TABLE `staff_working_hours` (
+  `id` int(11) NOT NULL,
+  `staff_id` int(11) NOT NULL,
+  `day_of_week` enum('monday','tuesday','wednesday','thursday','friday','saturday','sunday') NOT NULL,
+  `start_time` time DEFAULT NULL,
+  `end_time` time DEFAULT NULL,
+  `is_available` tinyint(1) DEFAULT '1',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Dumping data for table `staff_working_hours`
+--
+
+INSERT INTO `staff_working_hours` (`id`, `staff_id`, `day_of_week`, `start_time`, `end_time`, `is_available`, `created_at`, `updated_at`) VALUES
+(1, 1, 'monday', '09:00:00', '17:00:00', 1, '2025-10-09 14:41:18', NULL),
+(2, 1, 'tuesday', '09:00:00', '17:00:00', 1, '2025-10-09 14:41:18', NULL),
+(3, 1, 'wednesday', '09:00:00', '17:00:00', 1, '2025-10-09 14:41:18', NULL),
+(4, 1, 'thursday', '09:00:00', '17:00:00', 1, '2025-10-09 14:41:18', NULL),
+(5, 1, 'friday', '09:00:00', '17:00:00', 1, '2025-10-09 14:41:18', NULL),
+(6, 1, 'saturday', '09:00:00', '14:00:00', 1, '2025-10-09 14:41:18', NULL),
+(7, 1, 'sunday', NULL, NULL, 0, '2025-10-09 14:41:18', NULL),
+(8, 2, 'monday', NULL, NULL, 0, '2025-10-09 14:41:18', NULL),
+(9, 2, 'tuesday', '10:00:00', '18:00:00', 1, '2025-10-09 14:41:18', NULL),
+(10, 2, 'wednesday', '10:00:00', '18:00:00', 1, '2025-10-09 14:41:18', NULL),
+(11, 2, 'thursday', '10:00:00', '18:00:00', 1, '2025-10-09 14:41:18', NULL),
+(12, 2, 'friday', '10:00:00', '18:00:00', 1, '2025-10-09 14:41:18', NULL),
+(13, 2, 'saturday', '10:00:00', '18:00:00', 1, '2025-10-09 14:41:18', NULL),
+(14, 2, 'sunday', NULL, NULL, 0, '2025-10-09 14:41:18', NULL),
+(15, 3, 'monday', '08:00:00', '16:00:00', 1, '2025-10-09 14:41:18', NULL),
+(16, 3, 'tuesday', '12:00:00', '20:00:00', 1, '2025-10-09 14:41:18', NULL),
+(17, 3, 'wednesday', '08:00:00', '16:00:00', 1, '2025-10-09 14:41:18', NULL),
+(18, 3, 'thursday', '12:00:00', '20:00:00', 1, '2025-10-09 14:41:18', NULL),
+(19, 3, 'friday', '08:00:00', '16:00:00', 1, '2025-10-09 14:41:18', NULL),
+(20, 3, 'saturday', NULL, NULL, 0, '2025-10-09 14:41:18', NULL),
+(21, 3, 'sunday', NULL, NULL, 0, '2025-10-09 14:41:18', NULL),
+(22, 4, 'monday', '09:00:00', '17:00:00', 1, '2025-10-09 14:41:18', NULL),
+(23, 4, 'tuesday', '09:00:00', '17:00:00', 1, '2025-10-09 14:41:18', NULL),
+(24, 4, 'wednesday', '09:00:00', '17:00:00', 1, '2025-10-09 14:41:18', NULL),
+(25, 4, 'thursday', '09:00:00', '17:00:00', 1, '2025-10-09 14:41:18', NULL),
+(26, 4, 'friday', '09:00:00', '17:00:00', 1, '2025-10-09 14:41:18', NULL),
+(27, 4, 'saturday', NULL, NULL, 0, '2025-10-09 14:41:18', NULL),
+(28, 4, 'sunday', NULL, NULL, 0, '2025-10-09 14:41:18', NULL),
+(29, 5, 'monday', '11:00:00', '19:00:00', 1, '2025-10-09 14:41:18', NULL),
+(30, 5, 'tuesday', '11:00:00', '19:00:00', 1, '2025-10-09 14:41:18', NULL),
+(31, 5, 'wednesday', '11:00:00', '19:00:00', 1, '2025-10-09 14:41:18', NULL),
+(32, 5, 'thursday', '11:00:00', '19:00:00', 1, '2025-10-09 14:41:18', NULL),
+(33, 5, 'friday', '11:00:00', '19:00:00', 1, '2025-10-09 14:41:18', NULL),
+(34, 5, 'saturday', '10:00:00', '15:00:00', 1, '2025-10-09 14:41:18', NULL),
+(35, 5, 'sunday', NULL, NULL, 0, '2025-10-09 14:41:18', NULL),
+(36, 6, 'monday', NULL, NULL, 0, '2025-10-09 14:41:18', NULL),
+(37, 6, 'tuesday', NULL, NULL, 0, '2025-10-09 14:41:18', NULL),
+(38, 6, 'wednesday', '10:00:00', '18:00:00', 1, '2025-10-09 14:41:18', NULL),
+(39, 6, 'thursday', '10:00:00', '18:00:00', 1, '2025-10-09 14:41:18', NULL),
+(40, 6, 'friday', '10:00:00', '18:00:00', 1, '2025-10-09 14:41:18', NULL),
+(41, 6, 'saturday', '10:00:00', '18:00:00', 1, '2025-10-09 14:41:18', NULL),
+(42, 6, 'sunday', '10:00:00', '18:00:00', 1, '2025-10-09 14:41:18', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `temporary_closed_periods`
+--
+
+CREATE TABLE `temporary_closed_periods` (
+  `id` int(11) NOT NULL,
+  `company_id` int(11) NOT NULL,
+  `start_date` date NOT NULL,
+  `end_date` date NOT NULL,
+  `open_time` time DEFAULT NULL,
+  `close_time` time DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Dumping data for table `temporary_closed_periods`
+--
+
+INSERT INTO `temporary_closed_periods` (`id`, `company_id`, `start_date`, `end_date`, `open_time`, `close_time`, `created_at`, `updated_at`) VALUES
+(1, 1, '2025-12-24', '2025-12-26', NULL, NULL, '2025-10-09 14:45:47', NULL),
+(2, 1, '2025-12-31', '2025-12-31', '09:00:00', '14:00:00', '2025-10-09 14:45:47', NULL),
+(3, 1, '2026-01-01', '2026-01-01', NULL, NULL, '2025-10-09 14:45:47', NULL),
+(4, 1, '2026-08-01', '2026-08-15', NULL, NULL, '2025-10-09 14:45:47', NULL),
+(5, 2, '2025-12-23', '2025-12-27', NULL, NULL, '2025-10-09 14:45:47', NULL),
+(6, 2, '2025-12-31', '2025-12-31', '10:00:00', '15:00:00', '2025-10-09 14:45:47', NULL),
+(7, 2, '2026-01-01', '2026-01-02', NULL, NULL, '2025-10-09 14:45:47', NULL),
+(8, 2, '2026-07-15', '2026-07-31', NULL, NULL, '2025-10-09 14:45:47', NULL),
+(9, 3, '2025-12-24', '2025-12-26', NULL, NULL, '2025-10-09 14:45:47', NULL),
+(10, 3, '2026-03-15', '2026-03-15', NULL, NULL, '2025-10-09 14:45:47', NULL),
+(11, 3, '2026-08-10', '2026-08-25', NULL, NULL, '2025-10-09 14:45:47', NULL),
+(12, 4, '2025-12-24', '2025-12-25', NULL, NULL, '2025-10-09 14:45:47', NULL),
+(13, 4, '2025-12-26', '2025-12-26', '10:00:00', '16:00:00', '2025-10-09 14:45:47', NULL),
+(14, 4, '2026-01-15', '2026-01-20', NULL, NULL, '2025-10-09 14:45:47', NULL),
+(15, 5, '2025-12-22', '2026-01-05', NULL, NULL, '2025-10-09 14:45:47', NULL),
+(16, 5, '2026-07-01', '2026-07-31', NULL, NULL, '2025-10-09 14:45:47', NULL),
+(17, 6, '2025-12-24', '2025-12-26', NULL, NULL, '2025-10-09 14:45:47', NULL),
+(18, 6, '2026-02-10', '2026-02-15', NULL, NULL, '2025-10-09 14:45:47', NULL),
+(19, 6, '2026-08-20', '2026-08-31', NULL, NULL, '2025-10-09 14:45:47', NULL),
+(20, 7, '2025-12-24', '2025-12-25', NULL, NULL, '2025-10-09 14:45:47', NULL),
+(21, 7, '2025-12-31', '2025-12-31', '08:00:00', '13:00:00', '2025-10-09 14:45:47', NULL),
+(22, 7, '2026-08-05', '2026-08-20', NULL, NULL, '2025-10-09 14:45:47', NULL),
+(23, 8, '2025-12-23', '2026-01-02', NULL, NULL, '2025-10-09 14:45:47', NULL),
+(24, 8, '2026-07-10', '2026-07-25', NULL, NULL, '2025-10-09 14:45:47', NULL),
+(25, 9, '2025-12-24', '2025-12-26', NULL, NULL, '2025-10-09 14:45:47', NULL),
+(26, 9, '2026-01-01', '2026-01-01', NULL, NULL, '2025-10-09 14:45:47', NULL),
+(27, 9, '2026-08-01', '2026-08-14', NULL, NULL, '2025-10-09 14:45:47', NULL),
+(28, 10, '2025-12-24', '2025-12-27', NULL, NULL, '2025-10-09 14:45:47', NULL),
+(29, 10, '2026-07-20', '2026-08-05', NULL, NULL, '2025-10-09 14:45:47', NULL),
+(30, 11, '2025-12-25', '2025-12-25', NULL, NULL, '2025-10-09 14:45:47', NULL),
+(31, 11, '2026-01-01', '2026-01-01', NULL, NULL, '2025-10-09 14:45:47', NULL),
+(32, 12, '2025-12-24', '2025-12-26', NULL, NULL, '2025-10-09 14:45:47', NULL),
+(33, 12, '2026-08-10', '2026-08-24', NULL, NULL, '2025-10-09 14:45:47', NULL),
+(34, 13, '2025-12-24', '2025-12-26', NULL, NULL, '2025-10-09 14:45:47', NULL),
+(35, 13, '2025-12-31', '2026-01-01', NULL, NULL, '2025-10-09 14:45:47', NULL),
+(36, 13, '2026-08-15', '2026-08-30', NULL, NULL, '2025-10-09 14:45:47', NULL),
+(37, 14, '2025-12-23', '2025-12-27', NULL, NULL, '2025-10-09 14:45:47', NULL),
+(38, 14, '2026-07-25', '2026-08-10', NULL, NULL, '2025-10-09 14:45:47', NULL),
+(39, 15, '2025-12-24', '2025-12-25', NULL, NULL, '2025-10-09 14:45:47', NULL),
+(40, 15, '2025-12-31', '2025-12-31', '09:00:00', '14:00:00', '2025-10-09 14:45:47', NULL),
+(41, 15, '2026-08-05', '2026-08-18', NULL, NULL, '2025-10-09 14:45:47', NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `two_factor_recovery_codes`
+--
+
+CREATE TABLE `two_factor_recovery_codes` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `code` varchar(64) NOT NULL COMMENT 'Hashed recovery code',
+  `used_at` datetime DEFAULT NULL,
+  `is_used` tinyint(1) NOT NULL DEFAULT '0',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `users`
+--
+
+CREATE TABLE `users` (
+  `id` int(11) NOT NULL,
+  `guid` char(36) NOT NULL DEFAULT '',
+  `first_name` varchar(100) DEFAULT NULL,
+  `last_name` varchar(100) DEFAULT NULL,
+  `email` varchar(100) NOT NULL,
+  `password` text NOT NULL,
+  `phone` varchar(30) NOT NULL,
+  `role_id` int(11) NOT NULL,
+  `company_id` int(11) DEFAULT NULL COMMENT 'NULL for superadmins or independent clients',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `is_deleted` tinyint(1) NOT NULL DEFAULT '0',
+  `last_login` datetime DEFAULT NULL,
+  `register_finished_at` datetime DEFAULT NULL,
+  `reg_token` varchar(64) DEFAULT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT '1' COMMENT 'Admins can deactivate users',
+  `two_factor_enabled` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'Whether 2FA is enabled',
+  `two_factor_secret` varchar(32) DEFAULT NULL COMMENT 'TOTP secret key (encrypted)',
+  `two_factor_confirmed_at` datetime DEFAULT NULL COMMENT 'When 2FA was confirmed/activated',
+  `two_factor_recovery_codes` text COMMENT 'Encrypted JSON array of recovery codes'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Dumping data for table `users`
+--
+
+INSERT INTO `users` (`id`, `guid`, `first_name`, `last_name`, `email`, `password`, `phone`, `role_id`, `company_id`, `created_at`, `updated_at`, `deleted_at`, `is_deleted`, `last_login`, `register_finished_at`, `reg_token`, `is_active`, `two_factor_enabled`, `two_factor_secret`, `two_factor_confirmed_at`, `two_factor_recovery_codes`) VALUES
+(1, '63f866da-a827-11f0-82be-e9727e212b75', 'Gábor', 'Nagy', 'gabor.nagy@bookr.hu', '$2y$10$abcdefghijklmnopqrstuv', '+36301234567', 1, NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
+(2, '63f892d6-a827-11f0-82be-e9727e212b75', 'Péter', 'Kovács', 'peter.kovacs@szepsegszalon.hu', '$2y$10$bcdefghijklmnopqrstuvw', '+36302345678', 2, 1, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
+(3, '63f8961e-a827-11f0-82be-e9727e212b75', 'Anna', 'Szabó', 'anna.szabo@wellness.hu', '$2y$10$cdefghijklmnopqrstuvwx', '+36303456789', 2, 2, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
+(4, '63f89772-a827-11f0-82be-e9727e212b75', 'Eszter', 'Tóth', 'eszter.toth@szepsegszalon.hu', '$2y$10$defghijklmnopqrstuvwxy', '+36304567890', 3, 1, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
+(5, '63f8988a-a827-11f0-82be-e9727e212b75', 'Katalin', 'Molnár', 'katalin.molnar@szepsegszalon.hu', '$2y$10$efghijklmnopqrstuvwxyz', '+36305678901', 3, 1, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
+(6, '63f8998e-a827-11f0-82be-e9727e212b75', 'Zsófia', 'Kiss', 'zsofia.kiss@szepsegszalon.hu', '$2y$10$fghijklmnopqrstuvwxyza', '+36306789012', 3, 1, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
+(7, '63f89a7e-a827-11f0-82be-e9727e212b75', 'Márta', 'Horváth', 'marta.horvath@wellness.hu', '$2y$10$ghijklmnopqrstuvwxyzab', '+36307890123', 3, 2, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
+(8, '63f89b6e-a827-11f0-82be-e9727e212b75', 'Júlia', 'Varga', 'julia.varga@wellness.hu', '$2y$10$hijklmnopqrstuvwxyzabc', '+36308901234', 3, 2, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
+(9, '63f89c72-a827-11f0-82be-e9727e212b75', 'Ildikó', 'Balogh', 'ildiko.balogh@wellness.hu', '$2y$10$ijklmnopqrstuvwxyzabcd', '+36309012345', 3, 2, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
+(10, '63f89d58-a827-11f0-82be-e9727e212b75', 'János', 'Farkas', 'janos.farkas@gmail.com', '$2y$10$jklmnopqrstuvwxyzabcde', '+36201234567', 4, NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
+(11, '63f89e48-a827-11f0-82be-e9727e212b75', 'Éva', 'Simon', 'eva.simon@gmail.com', '$2y$10$klmnopqrstuvwxyzabcdef', '+36202345678', 4, NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
+(12, '63f89f38-a827-11f0-82be-e9727e212b75', 'László', 'Németh', 'laszlo.nemeth@freemail.hu', '$2y$10$lmnopqrstuvwxyzabcdefg', '+36203456789', 4, NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
+(13, '63f8a06e-a827-11f0-82be-e9727e212b75', 'Mária', 'Papp', 'maria.papp@citromail.hu', '$2y$10$mnopqrstuvwxyzabcdefgh', '+36204567890', 4, NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
+(14, '63f8a15e-a827-11f0-82be-e9727e212b75', 'István', 'Takács', 'istvan.takacs@outlook.com', '$2y$10$nopqrstuvwxyzabcdefghi', '+36205678901', 4, NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
+(15, '63f8a244-a827-11f0-82be-e9727e212b75', 'Ágnes', 'Lakatos', 'agnes.lakatos@yahoo.com', '$2y$10$opqrstuvwxyzabcdefghij', '+36206789012', 4, NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
+(16, '63f8a3b6-a827-11f0-82be-e9727e212b75', 'Teszt', 'Lajos', 'teszt@teszt.com', 'Alma!123', '+367012345678', 4, NULL, '2025-10-10 16:43:02', NULL, NULL, 0, NULL, NULL, '9a03f02d65caced068fc87e0c851511e', 0, 0, NULL, NULL, NULL),
+(17, '63f8a58c-a827-11f0-82be-e9727e212b75', 'Teszt', 'Aladár', 'aladar@teszt.com', '$argon2id$v=19$m=65536,t=3,p=1$L7naGVB2eKFjndxep9p0eQ$A/j8QkNLRcL8+i+uxS53PvvNdJCBPzOpUPTuokE1WaI', '+367012345678', 4, NULL, '2025-10-10 16:49:09', NULL, NULL, 0, NULL, NULL, 'c1afe49e2c51023bfc4f0446a9609af4', 0, 0, NULL, NULL, NULL),
+(18, '-', 'Sándor', 'László', 'lacika@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$4ZcoWslloOnpOReRBkDphQ$1dJvd08oeeHN7m4tNf7hY1VjSeGv0XvJu4rgWl+SKLY', '+367013565678', 4, NULL, '2025-10-17 11:20:15', NULL, NULL, 0, NULL, NULL, 'aa6f1d723c190ecaf03c7f67f535912f', 0, 0, NULL, NULL, NULL),
+(21, '7d78c18c-ae61-11f0-b2dc-2a23318b2722', 'Sándor', 'László', 'alma@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$y1aWgzGwmDzrxviR4yxpSw$EQbDcIBHMBXYbKfALlhrKLVR1WMQ58EbNB7XZ6IYGic', '+367014565678', 4, NULL, '2025-10-21 11:36:58', NULL, NULL, 0, NULL, NULL, 'df6155689e4b2eb220253e5897873420', 0, 0, NULL, NULL, NULL),
+(22, 'eb931f32-ae61-11f0-b2dc-2a23318b2722', 'Sándor', 'László', 'almaaa@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$Mrx15QBn0fr6S4bTdcR51w$f5kj7gloDsIH+3ghUNo2o/L3iMLbOlki+gi7lANR2WE', '+367014465678', 4, NULL, '2025-10-21 11:40:03', NULL, NULL, 0, '2025-11-13 09:27:21', NULL, 'bb13f93f958948980618426e63aff729', 0, 0, NULL, NULL, NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `user_x_role`
+--
+
+CREATE TABLE `user_x_role` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `role_id` int(11) NOT NULL,
+  `assigned_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `un_assigned_at` timestamp NULL DEFAULT NULL,
+  `is_un_assigned` tinyint(1) DEFAULT '0'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Dumping data for table `user_x_role`
+--
+
+INSERT INTO `user_x_role` (`id`, `user_id`, `role_id`, `assigned_at`, `un_assigned_at`, `is_un_assigned`) VALUES
+(1, 1, 1, '2025-10-09 14:17:56', NULL, 0),
+(2, 1, 4, '2025-10-09 14:17:56', NULL, 0),
+(3, 2, 2, '2025-10-09 14:17:56', NULL, 0),
+(4, 2, 4, '2025-10-09 14:17:56', NULL, 0),
+(5, 3, 2, '2025-10-09 14:17:56', NULL, 0),
+(6, 3, 4, '2025-10-09 14:17:56', NULL, 0),
+(7, 4, 3, '2025-10-09 14:17:56', NULL, 0),
+(8, 4, 4, '2025-10-09 14:17:56', NULL, 0),
+(9, 5, 3, '2025-10-09 14:17:56', NULL, 0),
+(10, 5, 4, '2025-10-09 14:17:56', NULL, 0),
+(11, 6, 3, '2025-10-09 14:17:56', NULL, 0),
+(12, 6, 4, '2025-10-09 14:17:56', NULL, 0),
+(13, 7, 3, '2025-10-09 14:17:56', NULL, 0),
+(14, 7, 4, '2025-10-09 14:17:56', NULL, 0),
+(15, 8, 3, '2025-10-09 14:17:56', NULL, 0),
+(16, 8, 4, '2025-10-09 14:17:56', NULL, 0),
+(17, 9, 3, '2025-10-09 14:17:56', NULL, 0),
+(18, 9, 4, '2025-10-09 14:17:56', NULL, 0),
+(19, 10, 4, '2025-10-09 14:17:56', NULL, 0),
+(20, 11, 4, '2025-10-09 14:17:56', NULL, 0),
+(21, 12, 4, '2025-10-09 14:17:56', NULL, 0),
+(22, 13, 4, '2025-10-09 14:17:56', NULL, 0),
+(23, 14, 4, '2025-10-09 14:17:56', NULL, 0),
+(24, 15, 4, '2025-10-09 14:17:56', NULL, 0),
+(25, 16, 4, '2025-10-10 14:43:02', NULL, 0),
+(26, 17, 4, '2025-10-10 14:49:09', NULL, 0),
+(27, 18, 4, '2025-10-17 09:20:15', NULL, 0),
+(28, 21, 4, '2025-10-21 09:36:58', NULL, 0),
+(29, 22, 4, '2025-10-21 09:40:03', NULL, 0);
+
+--
+-- Indexes for dumped tables
+--
+
+--
+-- Indexes for table `appointments`
+--
+ALTER TABLE `appointments`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `company_id` (`company_id`),
+  ADD KEY `service_id` (`service_id`),
+  ADD KEY `staff_id` (`staff_id`),
+  ADD KEY `client_id` (`client_id`),
+  ADD KEY `cancelled_by` (`cancelled_by`);
+
+--
+-- Indexes for table `audit_logs`
+--
+ALTER TABLE `audit_logs`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `company_id` (`company_id`);
+
+--
+-- Indexes for table `companies`
+--
+ALTER TABLE `companies`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `owner_id` (`owner_id`);
+
+--
+-- Indexes for table `images`
+--
+ALTER TABLE `images`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `company_id` (`company_id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
+-- Indexes for table `notification_settings`
+--
+ALTER TABLE `notification_settings`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
+-- Indexes for table `opening_hours`
+--
+ALTER TABLE `opening_hours`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `company_id` (`company_id`);
+
+--
+-- Indexes for table `refresh_tokens`
+--
+ALTER TABLE `refresh_tokens`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_token` (`token`(255)),
+  ADD KEY `idx_user_id` (`user_id`),
+  ADD KEY `idx_expires_at` (`expires_at`);
+
+--
+-- Indexes for table `reviews`
+--
+ALTER TABLE `reviews`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `company_id` (`company_id`),
+  ADD KEY `client_id` (`client_id`),
+  ADD KEY `appointment_id` (`appointment_id`);
+
+--
+-- Indexes for table `roles`
+--
+ALTER TABLE `roles`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `name` (`name`);
+
+--
+-- Indexes for table `services`
+--
+ALTER TABLE `services`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `company_id` (`company_id`);
+
+--
+-- Indexes for table `service_categories`
+--
+ALTER TABLE `service_categories`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `company_id` (`company_id`);
+
+--
+-- Indexes for table `service_category_map`
+--
+ALTER TABLE `service_category_map`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `service_id` (`service_id`),
+  ADD KEY `category_id` (`category_id`);
+
+--
+-- Indexes for table `staff`
+--
+ALTER TABLE `staff`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `company_id` (`company_id`);
+
+--
+-- Indexes for table `staff_exceptions`
+--
+ALTER TABLE `staff_exceptions`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `staff_id` (`staff_id`);
+
+--
+-- Indexes for table `staff_services`
+--
+ALTER TABLE `staff_services`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `staff_id` (`staff_id`),
+  ADD KEY `service_id` (`service_id`);
+
+--
+-- Indexes for table `staff_working_hours`
+--
+ALTER TABLE `staff_working_hours`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `staff_id` (`staff_id`);
+
+--
+-- Indexes for table `temporary_closed_periods`
+--
+ALTER TABLE `temporary_closed_periods`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `company_id` (`company_id`);
+
+--
+-- Indexes for table `two_factor_recovery_codes`
+--
+ALTER TABLE `two_factor_recovery_codes`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `code` (`code`);
+
+--
+-- Indexes for table `users`
+--
+ALTER TABLE `users`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `email` (`email`),
+  ADD UNIQUE KEY `unique_guid` (`guid`),
+  ADD KEY `role_id` (`role_id`),
+  ADD KEY `fk_users_company_id` (`company_id`),
+  ADD KEY `idx_users_guid` (`guid`);
+
+--
+-- Indexes for table `user_x_role`
+--
+ALTER TABLE `user_x_role`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_user_role` (`user_id`,`role_id`),
+  ADD KEY `role_id` (`role_id`);
+
+--
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table `appointments`
+--
+ALTER TABLE `appointments`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `audit_logs`
+--
+ALTER TABLE `audit_logs`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `companies`
+--
+ALTER TABLE `companies`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+
+--
+-- AUTO_INCREMENT for table `images`
+--
+ALTER TABLE `images`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `notification_settings`
+--
+ALTER TABLE `notification_settings`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+
+--
+-- AUTO_INCREMENT for table `opening_hours`
+--
+ALTER TABLE `opening_hours`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `refresh_tokens`
+--
+ALTER TABLE `refresh_tokens`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `reviews`
+--
+ALTER TABLE `reviews`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `roles`
+--
+ALTER TABLE `roles`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `services`
+--
+ALTER TABLE `services`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=80;
+
+--
+-- AUTO_INCREMENT for table `service_categories`
+--
+ALTER TABLE `service_categories`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=50;
+
+--
+-- AUTO_INCREMENT for table `service_category_map`
+--
+ALTER TABLE `service_category_map`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=85;
+
+--
+-- AUTO_INCREMENT for table `staff`
+--
+ALTER TABLE `staff`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
+-- AUTO_INCREMENT for table `staff_exceptions`
+--
+ALTER TABLE `staff_exceptions`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `staff_services`
+--
+ALTER TABLE `staff_services`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `staff_working_hours`
+--
+ALTER TABLE `staff_working_hours`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=43;
+
+--
+-- AUTO_INCREMENT for table `temporary_closed_periods`
+--
+ALTER TABLE `temporary_closed_periods`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=42;
+
+--
+-- AUTO_INCREMENT for table `two_factor_recovery_codes`
+--
+ALTER TABLE `two_factor_recovery_codes`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `users`
+--
+ALTER TABLE `users`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
+
+--
+-- AUTO_INCREMENT for table `user_x_role`
+--
+ALTER TABLE `user_x_role`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=30;
+
+--
+-- Constraints for dumped tables
+--
+
+--
+-- Constraints for table `appointments`
+--
+ALTER TABLE `appointments`
+  ADD CONSTRAINT `appointments_ibfk_1` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`),
+  ADD CONSTRAINT `appointments_ibfk_2` FOREIGN KEY (`service_id`) REFERENCES `services` (`id`),
+  ADD CONSTRAINT `appointments_ibfk_3` FOREIGN KEY (`staff_id`) REFERENCES `staff` (`id`),
+  ADD CONSTRAINT `appointments_ibfk_4` FOREIGN KEY (`client_id`) REFERENCES `users` (`id`),
+  ADD CONSTRAINT `appointments_ibfk_5` FOREIGN KEY (`cancelled_by`) REFERENCES `users` (`id`);
+
+--
+-- Constraints for table `audit_logs`
+--
+ALTER TABLE `audit_logs`
+  ADD CONSTRAINT `audit_logs_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`),
+  ADD CONSTRAINT `audit_logs_ibfk_2` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`);
+
+--
+-- Constraints for table `companies`
+--
+ALTER TABLE `companies`
+  ADD CONSTRAINT `companies_ibfk_1` FOREIGN KEY (`owner_id`) REFERENCES `users` (`id`);
+
+--
+-- Constraints for table `images`
+--
+ALTER TABLE `images`
+  ADD CONSTRAINT `images_ibfk_1` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`),
+  ADD CONSTRAINT `images_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`);
+
+--
+-- Constraints for table `notification_settings`
+--
+ALTER TABLE `notification_settings`
+  ADD CONSTRAINT `notification_settings_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`);
+
+--
+-- Constraints for table `opening_hours`
+--
+ALTER TABLE `opening_hours`
+  ADD CONSTRAINT `opening_hours_ibfk_1` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`);
+
+--
+-- Constraints for table `refresh_tokens`
+--
+ALTER TABLE `refresh_tokens`
+  ADD CONSTRAINT `refresh_tokens_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `reviews`
+--
+ALTER TABLE `reviews`
+  ADD CONSTRAINT `reviews_ibfk_1` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`),
+  ADD CONSTRAINT `reviews_ibfk_2` FOREIGN KEY (`client_id`) REFERENCES `users` (`id`),
+  ADD CONSTRAINT `reviews_ibfk_3` FOREIGN KEY (`appointment_id`) REFERENCES `appointments` (`id`);
+
+--
+-- Constraints for table `services`
+--
+ALTER TABLE `services`
+  ADD CONSTRAINT `services_ibfk_1` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`);
+
+--
+-- Constraints for table `service_categories`
+--
+ALTER TABLE `service_categories`
+  ADD CONSTRAINT `service_categories_ibfk_1` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`);
+
+--
+-- Constraints for table `service_category_map`
+--
+ALTER TABLE `service_category_map`
+  ADD CONSTRAINT `service_category_map_ibfk_1` FOREIGN KEY (`service_id`) REFERENCES `services` (`id`),
+  ADD CONSTRAINT `service_category_map_ibfk_2` FOREIGN KEY (`category_id`) REFERENCES `service_categories` (`id`);
+
+--
+-- Constraints for table `staff`
+--
+ALTER TABLE `staff`
+  ADD CONSTRAINT `staff_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`),
+  ADD CONSTRAINT `staff_ibfk_2` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`);
+
+--
+-- Constraints for table `staff_exceptions`
+--
+ALTER TABLE `staff_exceptions`
+  ADD CONSTRAINT `staff_exceptions_ibfk_1` FOREIGN KEY (`staff_id`) REFERENCES `staff` (`id`);
+
+--
+-- Constraints for table `staff_services`
+--
+ALTER TABLE `staff_services`
+  ADD CONSTRAINT `staff_services_ibfk_1` FOREIGN KEY (`staff_id`) REFERENCES `staff` (`id`),
+  ADD CONSTRAINT `staff_services_ibfk_2` FOREIGN KEY (`service_id`) REFERENCES `services` (`id`);
+
+--
+-- Constraints for table `staff_working_hours`
+--
+ALTER TABLE `staff_working_hours`
+  ADD CONSTRAINT `staff_working_hours_ibfk_1` FOREIGN KEY (`staff_id`) REFERENCES `staff` (`id`);
+
+--
+-- Constraints for table `temporary_closed_periods`
+--
+ALTER TABLE `temporary_closed_periods`
+  ADD CONSTRAINT `temporary_closed_periods_ibfk_1` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`);
+
+--
+-- Constraints for table `two_factor_recovery_codes`
+--
+ALTER TABLE `two_factor_recovery_codes`
+  ADD CONSTRAINT `two_factor_recovery_codes_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `users`
+--
+ALTER TABLE `users`
+  ADD CONSTRAINT `fk_users_company_id` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`),
+  ADD CONSTRAINT `users_ibfk_1` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`);
+
+--
+-- Constraints for table `user_x_role`
+--
+ALTER TABLE `user_x_role`
+  ADD CONSTRAINT `user_x_role_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`),
+  ADD CONSTRAINT `user_x_role_ibfk_2` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`);
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
