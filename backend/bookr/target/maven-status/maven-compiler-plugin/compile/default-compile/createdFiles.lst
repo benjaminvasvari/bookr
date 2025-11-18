@@ -1,5 +1,6 @@
 com/vizsgaremek/bookr/service/AuditLogService.class
 com/vizsgaremek/bookr/model/Companies.class
+com/vizsgaremek/bookr/filter/CorsFilter.class
 com/vizsgaremek/bookr/service/EmailService$1.class
 com/vizsgaremek/bookr/service/UsersService.class
 com/vizsgaremek/bookr/model/StaffServices.class

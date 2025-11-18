@@ -283,8 +283,8 @@ public class UsersService {
 
         return toReturn;
     }
-    
-//    public JSONObject activateUser(Integer userId) {
+
+//    public JSONObject verifyEmail(String) {
 //        JSONObject toReturn = new JSONObject();
 //        String status = "success";
 //        Integer statusCode = 200;

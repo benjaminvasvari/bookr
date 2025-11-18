@@ -304,24 +304,25 @@
 @media (max-width: 576px) {
   .login-form-wrapper {
     padding: 1.5rem;
+    margin-top: 0;
   }
 
   .login-title {
     font-size: 2rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 3rem;
   }
 
   .login-form {
-    gap: 1.5rem;
+    gap: 0.3rem;
   }
 
   .input-group input {
     padding: 1.25rem 3rem 0.5rem 3rem;
     font-size: 0.95rem;
   }
-
   .input-group label {
     font-size: 0.95rem;
+    top: 1.55rem;
   }
 
   .input-group input:focus + label,
@@ -332,5 +333,13 @@
   .btn-submit {
     padding: 0.875rem;
     font-size: 1rem;
+  }
+
+  .toggle-password {
+    top: 1.5rem;
+  }
+
+  .input-icon {
+    top: 1.5rem;
   }
 }

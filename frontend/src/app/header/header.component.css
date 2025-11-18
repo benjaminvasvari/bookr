@@ -75,6 +75,13 @@
     transform: scale(1.02);
 }
 
+.welcome-text {
+    color: var(--ice-white-color);
+    font-size: 18px;
+    margin-right: 15px;
+    font-weight: 600;
+}
+
 /* User profile icon */
 .user-profile-icon {
     width: 40px;

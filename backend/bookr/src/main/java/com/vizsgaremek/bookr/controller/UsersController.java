@@ -17,6 +17,7 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
@@ -29,7 +30,7 @@ public class UsersController {
 
     @Context
     private UriInfo context;
-    
+
     private UsersService layer = new UsersService();
 
     /**
@@ -39,7 +40,9 @@ public class UsersController {
     }
 
     /**
-     * Retrieves representation of an instance of com.vizsgaremek.bookr.controller.UserController
+     * Retrieves representation of an instance of
+     * com.vizsgaremek.bookr.controller.UserController
+     *
      * @return an instance of java.lang.String
      */
     @GET
@@ -51,19 +54,17 @@ public class UsersController {
 
     /**
      * PUT method for updating or creating an instance of UserController
+     *
      * @param content representation for the resource
      */
     @PUT
     @Consumes(MediaType.APPLICATION_XML)
     public void putXml(String content) {
     }
-    
+
     // ------- MY CODE -------
-    
-    
-    
     @POST
-    @Path("registerClient")
+    @Path("register")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response clientRegister(String body) {
         JSONObject bodyObject = new JSONObject(body);
@@ -83,7 +84,7 @@ public class UsersController {
                 .type(MediaType.APPLICATION_JSON)
                 .build();
     }
-    
+
     @POST
     @Path("registerStaff")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -105,7 +106,7 @@ public class UsersController {
                 .type(MediaType.APPLICATION_JSON)
                 .build();
     }
-    
+
     @POST
     @Path("login")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -125,11 +126,34 @@ public class UsersController {
                 .type(MediaType.APPLICATION_JSON)
                 .build();
     }
-    
+
 //    @POST
-//    @Path("verify")
+//    @Path("/verify-email")
 //    @Consumes(MediaType.APPLICATION_JSON)
-//    public Response activateUser(@QueryParam("userId") Integer userId) {
-//        
+//    @Produces(MediaType.APPLICATION_JSON)
+//    public Response verifyEmail(String body) {
+//        try {
+//            JSONObject bodyObject = new JSONObject(body);
+//            String verifyToken = bodyObject.getString("token");
+//
+//            // Service layer hívás - email verification
+//            JSONObject toReturn = layer.verifyEmail(verifyToken);
+//
+//            return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+//                    .entity(toReturn.toString())
+//                    .type(MediaType.APPLICATION_JSON)
+//                    .build();
+//
+//        } catch (JSONException ex) {
+//            JSONObject error = new JSONObject();
+//            error.put("status", "error");
+//            error.put("statusCode", 400);
+//            error.put("message", "Invalid request format");
+//
+//            return Response.status(400)
+//                    .entity(error.toString())
+//                    .type(MediaType.APPLICATION_JSON)
+//                    .build();
+//        }
 //    }
 }

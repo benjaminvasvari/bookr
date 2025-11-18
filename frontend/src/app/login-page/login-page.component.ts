@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { AuthService } from '../feautures/auth/services/auth.service';
 
 @Component({
   selector: 'app-login',
@@ -13,10 +14,13 @@ import { Router } from '@angular/router';
 export class LoginPageComponent {
   loginForm: FormGroup;
   hidePassword = true;
+  isSubmitting = false;
+  errorMessage = '';
 
   constructor(
     private fb: FormBuilder,
-    private router: Router
+    private router: Router,
+    private authService: AuthService
   ) {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
@@ -49,18 +53,41 @@ export class LoginPageComponent {
       return 'A jelszó megadása kötelező';
     }
     if (this.password.hasError('minlength') && this.password.touched) {
-      return 'A jelszónak legalább 8 karakter hosszúnak kell lennie';
+      return 'A jelszó nem megfelelő';
     }
     return '';
   }
 
   onSubmit(): void {
-    if (this.loginForm.valid) {
-      const { email, password } = this.loginForm.value;
-      // TODO: Implement authentication logic
-      console.log('Login attempt:', { email, password });
-      // Navigate to dashboard after successful login
-      // this.router.navigate(['/dashboard']);
+    if (this.loginForm.valid && !this.isSubmitting) {
+      this.isSubmitting = true;
+      this.errorMessage = '';
+
+      const credentials = {
+        email: this.loginForm.value.email,
+        password: this.loginForm.value.password
+      };
+
+      this.authService.login(credentials).subscribe({
+        next: () => {
+          // AuthService automatikusan átirányít főoldalra
+          console.log('Login successful');
+        },
+        error: (error) => {
+          this.isSubmitting = false;
+          
+          // Error handling
+          if (error.status === 401) {
+            this.errorMessage = 'Hibás email vagy jelszó';
+          } else if (error.status === 0) {
+            this.errorMessage = 'Nincs kapcsolat a szerverrel';
+          } else {
+            this.errorMessage = error.message || 'Hiba történt a bejelentkezés során';
+          }
+          
+          console.error('Login failed:', error);
+        }
+      });
     } else {
       // Mark all fields as touched to show validation errors
       this.loginForm.markAllAsTouched();

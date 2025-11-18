@@ -12,13 +12,31 @@
         </a>
       </div>      
       
-
       <!-- Spacer -->
       <div class="col"></div>
 
       <!-- Right side buttons -->
       <div class="col-auto d-flex align-items-center gap-3">
-        <button routerLink="/login" class="btn login-button">Jelentkezz be</button>
+        
+        <!-- Ha NINCS bejelentkezve -->
+        @if (!isLoggedIn) {
+          <button routerLink="/login" class="btn login-button">
+            Jelentkezz be
+          </button>
+        }
+
+        <!-- Ha BE VAN jelentkezve -->
+        @if (isLoggedIn) {
+          <span class="welcome-text">
+            Üdv, {{ userFirstName }}!
+          </span>
+        }
+
+        <button class="btn login-button" (click)="logout()">
+          logout
+        </button>
+
+        <!-- User profile icon (mindig látszik) -->
         <div class="user-profile-icon">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
             <path

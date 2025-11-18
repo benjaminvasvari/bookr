@@ -6,6 +6,7 @@
 /Users/vben/Programming school/idopontfogalo_rendszer/backend/bookr/src/main/java/com/vizsgaremek/bookr/model/RegistrationResult.java
 /Users/vben/Programming school/idopontfogalo_rendszer/backend/bookr/src/main/java/com/vizsgaremek/bookr/model/NotificationSettings.java
 /Users/vben/Programming school/idopontfogalo_rendszer/backend/bookr/src/main/java/com/vizsgaremek/bookr/model/StaffExceptions.java
+/Users/vben/Programming school/idopontfogalo_rendszer/backend/bookr/src/main/java/com/vizsgaremek/bookr/filter/CorsFilter.java
 /Users/vben/Programming school/idopontfogalo_rendszer/backend/bookr/src/main/java/com/vizsgaremek/bookr/model/Appointments.java
 /Users/vben/Programming school/idopontfogalo_rendszer/backend/bookr/src/main/java/com/vizsgaremek/bookr/model/UserXRole.java
 /Users/vben/Programming school/idopontfogalo_rendszer/backend/bookr/src/main/java/com/vizsgaremek/bookr/config/ValidationUtil.java
