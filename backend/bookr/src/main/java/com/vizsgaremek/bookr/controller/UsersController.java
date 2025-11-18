@@ -86,7 +86,7 @@ public class UsersController {
     }
 
     @POST
-    @Path("registerStaff")
+    @Path("registerSta")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response staffRegister(String body) {
         JSONObject bodyObject = new JSONObject(body);
@@ -127,33 +127,33 @@ public class UsersController {
                 .build();
     }
 
-//    @POST
-//    @Path("/verify-email")
-//    @Consumes(MediaType.APPLICATION_JSON)
-//    @Produces(MediaType.APPLICATION_JSON)
-//    public Response verifyEmail(String body) {
-//        try {
-//            JSONObject bodyObject = new JSONObject(body);
-//            String verifyToken = bodyObject.getString("token");
-//
-//            // Service layer hívás - email verification
-//            JSONObject toReturn = layer.verifyEmail(verifyToken);
-//
-//            return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
-//                    .entity(toReturn.toString())
-//                    .type(MediaType.APPLICATION_JSON)
-//                    .build();
-//
-//        } catch (JSONException ex) {
-//            JSONObject error = new JSONObject();
-//            error.put("status", "error");
-//            error.put("statusCode", 400);
-//            error.put("message", "Invalid request format");
-//
-//            return Response.status(400)
-//                    .entity(error.toString())
-//                    .type(MediaType.APPLICATION_JSON)
-//                    .build();
-//        }
-//    }
+    @POST
+    @Path("/verify-email")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response verifyEmail(String body) {
+        try {
+            JSONObject bodyObject = new JSONObject(body);
+            String verifyToken = bodyObject.getString("token");
+
+            // Service layer hívás - email verification
+            JSONObject toReturn = layer.verifyEmail(verifyToken);
+
+            return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                    .entity(toReturn.toString())
+                    .type(MediaType.APPLICATION_JSON)
+                    .build();
+
+        } catch (JSONException ex) {
+            JSONObject error = new JSONObject();
+            error.put("status", "error");
+            error.put("statusCode", 400);
+            error.put("message", "Invalid request format");
+
+            return Response.status(400)
+                    .entity(error.toString())
+                    .type(MediaType.APPLICATION_JSON)
+                    .build();
+        }
+    }
 }

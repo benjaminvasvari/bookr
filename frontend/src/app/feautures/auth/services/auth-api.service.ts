@@ -56,6 +56,6 @@ export class AuthApiService {
    * POST /users/verify-email
    */
   verifyEmail(token: string): Observable<any> {
-    return this.apiService.post('/users/verify-email', { token });
+    return this.apiService.post('/verify-email', { token });
   }
 }

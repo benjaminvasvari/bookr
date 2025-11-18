@@ -233,6 +233,14 @@ public class Users implements Serializable {
         }
     }
 
+    public Users(Integer id, String email, Date registerFinishedAt, boolean isActive, Companies companyId) {
+        this.id = id;
+        this.email = email;
+        this.registerFinishedAt = registerFinishedAt;
+        this.isActive = isActive;
+        this.companyId = companyId;
+    }
+
     public Integer getId() {
         return id;
     }
@@ -704,15 +712,15 @@ public class Users implements Serializable {
         }
     }
 
-    public static Boolean activateUser(Integer userId) {
+    public static Boolean activateUserByRegToken(String token) {
         EntityManager em = emf.createEntityManager();
 
         try {
 
-            StoredProcedureQuery spq = em.createStoredProcedureQuery("activeUser");
-            spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("activateUserByRegToken");
+            spq.registerStoredProcedureParameter("tokenIN", String.class, ParameterMode.IN);
 
-            spq.setParameter("userIdIN", userId);
+            spq.setParameter("tokenIN", token);
 
             spq.execute();
 
@@ -721,6 +729,54 @@ public class Users implements Serializable {
         } catch (Exception ex) {
             ex.printStackTrace();
             return false;
+        }
+    }
+
+    public static Users getUserByRegToken(String token) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getUserByRegToken");
+
+            // Token STRING, nem Integer!
+            spq.registerStoredProcedureParameter("tokenIN", String.class, ParameterMode.IN);
+            spq.setParameter("tokenIN", token);
+
+            spq.execute();
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            // Első (és egyetlen) rekord
+            Object[] record = resultList.get(0);
+
+            // Company ID kezelése (lehet NULL)
+            Companies company = null;
+            if (record[4] != null) {
+                Integer companyId = Integer.valueOf(record[4].toString());
+                company = em.find(Companies.class, companyId);
+            }
+
+            // User objektum összeállítása
+            Users user = new Users(
+                    Integer.valueOf(record[0].toString()), // id
+                    record[1].toString(), // email
+                    record[2] == null ? null : formatter.parse(record[2].toString()), // register_finished_at (2-es index!)
+                    Boolean.parseBoolean(record[3].toString()), // isActive
+                    company // Companies objektum
+            );
+
+            return user;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
         }
     }
 }

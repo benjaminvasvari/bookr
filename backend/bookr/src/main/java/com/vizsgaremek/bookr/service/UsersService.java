@@ -284,9 +284,96 @@ public class UsersService {
         return toReturn;
     }
 
-//    public JSONObject verifyEmail(String) {
-//        JSONObject toReturn = new JSONObject();
-//        String status = "success";
-//        Integer statusCode = 200;
-//    }
+    public JSONObject verifyEmail(String token) {
+
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        // ========== 1. TOKEN FORMÁTUM VALIDÁLÁS ==========
+        if (token == null || token.trim().isEmpty()) {
+            status = "MissingToken";
+            statusCode = 400;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+            return toReturn;
+        }
+
+        // Token hossz validálás (a te regToken-ed 64 karakter)
+        if (token.length() != 32) {
+            status = "InvalidTokenFormat";
+            statusCode = 400;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+            return toReturn;
+        }
+
+        // Csak hexadecimális karakterek (ha SHA256 hash-t használsz)
+        if (!token.matches("^[a-f0-9]{32}$")) {
+            status = "InvalidTokenFormat";
+            statusCode = 400;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+            return toReturn;
+        }
+        // =================================================
+
+        try {
+            // ========== 2. USER LEKÉRÉSE TOKEN ALAPJÁN (audit log-hoz) ==========
+            Users user = Users.getUserByRegToken(token);
+
+            // Ha nincs ilyen token
+            if (user == null) {
+                status = "InvalidToken";
+                statusCode = 400;
+                toReturn.put("status", status);
+                toReturn.put("statusCode", statusCode);
+                return toReturn;
+            }
+            // ====================================================================
+
+            // ========== 3. ELLENŐRZÉS: MÁR AKTIVÁLVA VAN-E ==========
+            if (user.getIsActive() && user.getRegisterFinishedAt() != null) {
+                status = "AlreadyVerified";
+                statusCode = 400;
+                toReturn.put("status", status);
+                toReturn.put("statusCode", statusCode);
+                return toReturn;
+            }
+            // ========================================================
+
+            // ========== 4. USER AKTIVÁLÁS (DB művelet) ==========
+            Boolean isActivated = Users.activateUserByRegToken(token);
+
+            if (isActivated == null || !isActivated) {
+                status = "ActivationFailed";
+                statusCode = 500;
+            } else {
+
+                // ========== 5. AUDIT LOG ==========
+                try {
+                    auditLogService.logSimpleAction(
+                            user.getId(),
+                            user.getCompanyId() != null ? user.getCompanyId().getId() : null,
+                            user.getEmail(),
+                            "user",
+                            "email_verified"
+                    );
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+                // ==================================
+            }
+
+        } catch (Exception e) {
+            status = "serverError";
+            statusCode = 500;
+            e.printStackTrace();
+        }
+
+        toReturn.put("status", status);
+        toReturn.put("statusCode", statusCode);
+
+        return toReturn;
+    }
 }
