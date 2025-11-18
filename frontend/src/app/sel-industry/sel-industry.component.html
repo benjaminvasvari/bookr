@@ -1,0 +1,95 @@
+<div class="company-details-container" *ngIf="company">
+  <!-- Képgaléria szekció -->
+  <div class="gallery-section">
+    <div class="main-image">
+      <img [src]="company.mainImage" [alt]="company.name">
+    </div>
+    <div class="thumbnail-gallery">
+      <div class="thumbnail" *ngFor="let image of company.galleryImages">
+        <img [src]="image" [alt]="company.name">
+      </div>
+    </div>
+  </div>
+
+  <!-- Cég információk szekció -->
+  <div class="company-info-section">
+    <div class="company-header">
+      <div class="header-left">
+        <h1 class="company-name">{{ company.name }}</h1>
+        <div class="rating-section">
+          <div class="stars">
+            <span class="star" *ngFor="let star of getRatingStars()">★</span>
+          </div>
+        </div>
+        <p class="company-category">{{ company.category }}</p>
+      </div>
+      
+      <div class="header-actions">
+        <button class="icon-button favorite" 
+                [class.active]="company.isFavorite"
+                (click)="toggleFavorite()"
+                [attr.aria-label]="company.isFavorite ? 'Kedvencekből eltávolítás' : 'Kedvencekhez adás'">
+          <span class="icon">{{ company.isFavorite ? '♥' : '♡' }}</span>
+        </button>
+        <button class="icon-button share" 
+                (click)="shareCompany()"
+                aria-label="Megosztás">
+          <span class="icon">⤴</span>
+        </button>
+      </div>
+    </div>
+
+    <p class="company-description">{{ company.description }}</p>
+
+    <button class="book-now-button" (click)="bookNow()">Foglaljon most</button>
+  </div>
+
+  <!-- Szolgáltatások szekció -->
+  <div class="services-section">
+    <h2 class="section-title">Szolgáltatások</h2>
+    
+    <div class="service-tabs">
+      <button class="tab-button" 
+              [class.active]="selectedTab === 'services'"
+              (click)="selectTab('services')">
+        Hajvágás
+      </button>
+      <button class="tab-button" 
+              [class.active]="selectedTab === 'beard'"
+              (click)="selectTab('beard')">
+        Szakáll formázás
+      </button>
+      <button class="tab-button" 
+              [class.active]="selectedTab === 'facial'"
+              (click)="selectTab('facial')">
+        Fej- és arc kezelések
+      </button>
+      <button class="tab-button" 
+              [class.active]="selectedTab === 'combined'"
+              (click)="selectTab('combined')">
+        Kombinált szolgáltatások
+      </button>
+    </div>
+
+    <div class="services-list" *ngIf="selectedTab === 'services'">
+      <div class="service-card" *ngFor="let service of company.services">
+        <div class="service-info">
+          <h3 class="service-name">{{ service.name }}</h3>
+          <p class="service-duration">{{ service.duration }}</p>
+          <p class="service-price">{{ service.price }} {{ service.currency }} tól</p>
+        </div>
+        <button class="book-button" (click)="bookService(service)">
+          Foglalj
+        </button>
+      </div>
+    </div>
+
+    <div class="no-services" *ngIf="selectedTab !== 'services'">
+      <p>Jelenleg nincs elérhető szolgáltatás ebben a kategóriában.</p>
+    </div>
+  </div>
+</div>
+
+<div class="loading" *ngIf="!company">
+  <p>Betöltés...</p>
+</div>

@@ -1,0 +1,203 @@
+ 
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-image">
+        <img src="assets/images/barber-tools.png" alt="Barber tools" />
+      </div>
+      <div class="search-container">
+        <input 
+          type="text" 
+          class="search-input" 
+          placeholder="Keresés" 
+          [(ngModel)]="searchQuery"
+          (keyup.enter)="onSearch()"
+        />
+        <button class="search-icon" (click)="onSearch()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="3"/>
+            <path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </section>
+  
+  <!-- Top Recommendations Section -->
+  <section class="section">
+    <div class="container">
+      <h2 class="section-title">Legjobb ajánlatok!</h2>
+      <div class="service-grid">
+        <div class="service-card" *ngFor="let service of topRecommendations">
+          <div class="service-image">
+            <img [src]="service.imageUrl" [alt]="service.name" />
+          </div>
+          <div class="service-info">
+            <h3 class="service-name">{{ service.name }}</h3>
+            <div class="service-rating">
+              <span class="rating-value">{{ service.rating }}</span>
+              <span class="rating-stars">
+                <span *ngFor="let star of getRatingStars(service.rating)" class="star">★</span>
+              </span>
+              <span class="review-count">({{ service.reviewCount }})</span>
+            </div>
+            <p class="service-address">{{ service.address }}</p>
+            <button class="btn-book" (click)="goToService(service.id)">Foglalás</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <!-- New Services Section -->
+  <section class="section">
+    <div class="container">
+      <h2 class="section-title">Új a választékban!</h2>
+      <div class="service-grid">
+        <div class="service-card" *ngFor="let service of newServices">
+          <div class="service-image">
+            <img [src]="service.imageUrl" [alt]="service.name" />
+          </div>
+          <div class="service-info">
+            <h3 class="service-name">{{ service.name }}</h3>
+            <div class="service-rating">
+              <span class="rating-value">{{ service.rating }}</span>
+              <span class="rating-stars">
+                <span *ngFor="let star of getRatingStars(service.rating)" class="star">★</span>
+              </span>
+              <span class="review-count">({{ service.reviewCount }})</span>
+            </div>
+            <p class="service-address">{{ service.address }}</p>
+            <button class="btn-book">Foglalás</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <!-- Featured Services Section -->
+  <section class="section">
+    <div class="container">
+      <h2 class="section-title">Felkapott</h2>
+      <div class="service-grid">
+        <div class="service-card" *ngFor="let service of featuredServices">
+          <div class="service-image">
+            <img [src]="service.imageUrl" [alt]="service.name" />
+          </div>
+          <div class="service-info">
+            <h3 class="service-name">{{ service.name }}</h3>
+            <div class="service-rating">
+              <span class="rating-value">{{ service.rating }}</span>
+              <span class="rating-stars">
+                <span *ngFor="let star of getRatingStars(service.rating)" class="star">★</span>
+              </span>
+              <span class="review-count">({{ service.reviewCount }})</span>
+            </div>
+            <p class="service-address">{{ service.address }}</p>
+            <button class="btn-book">Foglalás</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <!-- Business CTA Section -->
+  <section class="cta-section">
+    <div class="container">
+      <div class="cta-card">
+        <div class="cta-content">
+          <h2 class="cta-title">
+            <span class="brand-name">Bookr</span>
+            <span class="cta-subtitle">Cégeknek</span>
+          </h2>
+          <button class="btn-secondary" (click)="learnMore()">Tudj meg többet</button>
+        </div>
+        <div class="cta-image">
+          <img src="assets/images/business-hands.jpg" alt="Business teamwork" />
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <!-- Reviews Section -->
+  <section class="section reviews-section">
+    <div class="container">
+      <h2 class="section-title">Értékelések</h2>
+      <div class="reviews-grid">
+        <div class="review-card" *ngFor="let review of reviews">
+          <div class="review-header">
+            <img [src]="review.authorImage" [alt]="review.author" class="review-avatar" />
+            <div class="review-author-info">
+              <h4 class="review-author">{{ review.author }}</h4>
+              <h5 class="review-title">{{ review.title }}</h5>
+            </div>
+          </div>
+          <p class="review-content">{{ review.content }}</p>
+          <div class="review-rating">
+            <span *ngFor="let star of getRatingStars(review.rating)" class="star">★</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-column">
+          <p>Lorem</p>
+          <p>Ipsum dolor</p>
+          <p>sit amet</p>
+          <p>consectetur</p>
+          <p>adipiscing</p>
+          <p>magna nam</p>
+          <p>volutpat</p>
+          <p>venenatis</p>
+          <p>adipiscing</p>
+          <p>et</p>
+        </div>
+        <div class="footer-column">
+          <p>Lorem</p>
+          <p>Ipsum dolor</p>
+          <p>sit amet</p>
+          <p>consectetur</p>
+          <p>adipiscing</p>
+          <p>magna nam</p>
+          <p>volutpat</p>
+          <p>venenatis</p>
+          <p>adipiscing</p>
+          <p>et</p>
+        </div>
+        <div class="footer-column">
+          <p>Lorem</p>
+          <p>Ipsum dolor</p>
+          <p>sit amet</p>
+          <p>consectetur</p>
+          <p>adipiscing</p>
+          <p>magna nam</p>
+          <p>volutpat</p>
+          <p>venenatis</p>
+          <p>adipiscing</p>
+          <p>et</p>
+        </div>
+        <div class="footer-column">
+          <p>Lorem</p>
+          <p>Ipsum dolor</p>
+          <p>sit amet</p>
+          <p>consectetur</p>
+          <p>adipiscing</p>
+          <p>magna nam</p>
+          <p>volutpat</p>
+          <p>venenatis</p>
+          <p>adipiscing</p>
+          <p>et</p>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <div class="footer-logo">
+           B<span class="logo-highlight">oo</span>kr
+        </div>
+      </div>
+    </div>
+  </footer>

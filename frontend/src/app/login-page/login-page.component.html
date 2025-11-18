@@ -1,0 +1,76 @@
+<div class="login-container">
+  <div class="login-content">
+    <div class="login-form-wrapper">
+      <h1 class="login-title">BEJELENTKEZÉS</h1>
+      
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
+        
+        <!-- Email mező -->
+        <div class="input-group">
+          <input 
+            type="email" 
+            id="email"
+            formControlName="email"
+            placeholder=" "
+            [class.invalid]="email.invalid && email.touched">
+          <label for="email">Email cím</label>
+          <i class="fas fa-envelope input-icon"></i>
+          
+          <div class="error-messages">
+            <div class="error-message" 
+                 [style.opacity]="emailErrorMessage ? '1' : '0'">
+              {{ emailErrorMessage || '&nbsp;' }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Jelszó mező -->
+        <div class="input-group">
+          <input 
+            [type]="hidePassword ? 'password' : 'text'"
+            id="password"
+            formControlName="password"
+            placeholder=" "
+            [class.invalid]="password.invalid && password.touched">
+          <label for="password">Jelszó</label>
+          <i class="fas fa-lock input-icon"></i>
+          
+          <button 
+            type="button" 
+            class="toggle-password" 
+            (click)="togglePasswordVisibility()"
+            [attr.aria-label]="hidePassword ? 'Jelszó megjelenítése' : 'Jelszó elrejtése'">
+            <i [class]="hidePassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+          </button>
+
+          <div class="error-messages">
+            <div class="error-message" 
+                 [style.opacity]="passwordErrorMessage ? '1' : '0'">
+              {{ passwordErrorMessage || '&nbsp;' }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Submit gomb -->
+        <button 
+          type="submit" 
+          class="btn-submit"
+          [disabled]="loginForm.invalid">
+          FOLYTATÁS
+        </button>
+
+        <div class="divider"></div>
+
+        <!-- Regisztráció link -->
+        <div class="register-section">
+          <p class="register-text">Nincs még fiókod?</p>
+          <a (click)="navigateToRegister()" class="register-link">Regisztrálj most!</a>
+        </div>
+      </form>
+    </div>
+
+    <div class="image-wrapper">
+      <div class="image-overlay"></div>
+    </div>
+  </div>
+</div>
