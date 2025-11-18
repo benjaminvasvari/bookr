@@ -29,6 +29,8 @@ export function passwordMatchValidator(): ValidatorFn {
 export class RegisterComponent {
   registerForm: FormGroup;
   isSubmitting = false;
+  hidePassword = true;
+  hideConfirmPassword = true;
 
   constructor(
     private fb: FormBuilder,
@@ -39,7 +41,7 @@ export class RegisterComponent {
       firstName: ['', [Validators.required, Validators.minLength(2)]],
       email: ['', [Validators.required, Validators.email]],
       phone: ['', [Validators.required, Validators.pattern(/^[\d\s\+\-\(\)]+$/)]],
-      password: ['', [Validators.required, Validators.minLength(6)]],
+      password: ['', [Validators.required, Validators.minLength(8)]],
       confirmPassword: ['', [Validators.required]]
     }, { validators: passwordMatchValidator() });
   }
@@ -70,31 +72,96 @@ export class RegisterComponent {
 
   // Getters for form controls
   get lastName() {
-    return this.registerForm.get('lastName');
+    return this.registerForm.get('lastName')!;
   }
 
   get firstName() {
-    return this.registerForm.get('firstName');
+    return this.registerForm.get('firstName')!;
   }
 
   get email() {
-    return this.registerForm.get('email');
+    return this.registerForm.get('email')!;
   }
 
   get phone() {
-    return this.registerForm.get('phone');
+    return this.registerForm.get('phone')!;
   }
 
   get password() {
-    return this.registerForm.get('password');
+    return this.registerForm.get('password')!;
   }
 
   get confirmPassword() {
-    return this.registerForm.get('confirmPassword');
+    return this.registerForm.get('confirmPassword')!;
   }
 
-  // Helper to check if passwords match
-  get passwordsMatch(): boolean {
-    return !this.registerForm.hasError('passwordMismatch');
+  // Dynamic error message getters
+  get lastNameErrorMessage(): string {
+    if (this.lastName.hasError('required') && this.lastName.touched) {
+      return 'A vezetéknév megadása kötelező';
+    }
+    if (this.lastName.hasError('minlength') && this.lastName.touched) {
+      return 'A vezetéknévnek legalább 2 karakter hosszúnak kell lennie';
+    }
+    return '';
+  }
+
+  get firstNameErrorMessage(): string {
+    if (this.firstName.hasError('required') && this.firstName.touched) {
+      return 'A keresztnév megadása kötelező';
+    }
+    if (this.firstName.hasError('minlength') && this.firstName.touched) {
+      return 'A keresztnévnek legalább 2 karakter hosszúnak kell lennie';
+    }
+    return '';
+  }
+
+  get emailErrorMessage(): string {
+    if (this.email.hasError('required') && this.email.touched) {
+      return 'Az email cím megadása kötelező';
+    }
+    if (this.email.hasError('email') && this.email.touched) {
+      return 'Érvénytelen email formátum';
+    }
+    return '';
+  }
+
+  get phoneErrorMessage(): string {
+    if (this.phone.hasError('required') && this.phone.touched) {
+      return 'A telefonszám megadása kötelező';
+    }
+    if (this.phone.hasError('pattern') && this.phone.touched) {
+      return 'Érvénytelen telefonszám formátum';
+    }
+    return '';
+  }
+
+  get passwordErrorMessage(): string {
+    if (this.password.hasError('required') && this.password.touched) {
+      return 'A jelszó megadása kötelező';
+    }
+    if (this.password.hasError('minlength') && this.password.touched) {
+      return 'A jelszónak legalább 8 karakter hosszúnak kell lennie';
+    }
+    return '';
+  }
+
+  get confirmPasswordErrorMessage(): string {
+    if (this.confirmPassword.hasError('required') && this.confirmPassword.touched) {
+      return 'A jelszó megerősítése kötelező';
+    }
+    if (this.registerForm.hasError('passwordMismatch') && this.confirmPassword.touched && !this.confirmPassword.hasError('required')) {
+      return 'A két jelszó nem egyezik meg';
+    }
+    return '';
+  }
+
+  // Password visibility toggles
+  togglePasswordVisibility(): void {
+    this.hidePassword = !this.hidePassword;
+  }
+
+  toggleConfirmPasswordVisibility(): void {
+    this.hideConfirmPassword = !this.hideConfirmPassword;
   }
 }

@@ -1,129 +1,125 @@
 <div class="register-container">
   <div class="register-content">
-    <div class="register-form-section">
+    <div class="register-form-wrapper">
       <h1 class="register-title">REGISZTRÁCIÓ</h1>
       
       <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="register-form">
         
         <!-- Vezetéknév -->
-        <div class="form-group">
+        <div class="input-group">
           <input 
             type="text" 
             id="lastName" 
             formControlName="lastName"
-            class="form-control"
-            placeholder="Vezetéknév"
-            [class.is-invalid]="lastName?.invalid && lastName?.touched"
-          >
-          <div class="invalid-feedback" *ngIf="lastName?.invalid && lastName?.touched">
-            <span *ngIf="lastName?.errors?.['required']">A vezetéknév megadása kötelező</span>
-            <span *ngIf="lastName?.errors?.['minlength']">A vezetéknévnek legalább 2 karakter hosszúnak kell lennie</span>
-          </div>
+            placeholder=" "
+            [class.invalid]="lastName.invalid && lastName.touched">
+          <label for="lastName">Vezetéknév</label>
+          <i class="fas fa-user input-icon"></i>
         </div>
 
         <!-- Keresztnév -->
-        <div class="form-group">
+        <div class="input-group">
           <input 
             type="text" 
             id="firstName" 
             formControlName="firstName"
-            class="form-control"
-            placeholder="Keresztnév"
-            [class.is-invalid]="firstName?.invalid && firstName?.touched"
-          >
-          <div class="invalid-feedback" *ngIf="firstName?.invalid && firstName?.touched">
-            <span *ngIf="firstName?.errors?.['required']">A keresztnév megadása kötelező</span>
-            <span *ngIf="firstName?.errors?.['minlength']">A keresztnévnek legalább 2 karakter hosszúnak kell lennie</span>
-          </div>
+            placeholder=" "
+            [class.invalid]="firstName.invalid && firstName.touched">
+          <label for="firstName">Keresztnév</label>
+          <i class="fas fa-user input-icon"></i>
         </div>
 
-        <!-- E-mail cím -->
-        <div class="form-group">
+        <!-- Email cím -->
+        <div class="input-group">
           <input 
             type="email" 
             id="email" 
             formControlName="email"
-            class="form-control"
-            placeholder="E-mail cím"
-            [class.is-invalid]="email?.invalid && email?.touched"
-          >
-          <div class="invalid-feedback" *ngIf="email?.invalid && email?.touched">
-            <span *ngIf="email?.errors?.['required']">Az e-mail cím megadása kötelező</span>
-            <span *ngIf="email?.errors?.['email']">Érvénytelen e-mail cím</span>
-          </div>
+            placeholder=" "
+            [class.invalid]="email.invalid && email.touched">
+          <label for="email">Email cím</label>
+          <i class="fas fa-envelope input-icon"></i>
         </div>
 
         <!-- Telefonszám -->
-        <div class="form-group">
+        <div class="input-group">
           <input 
             type="tel" 
             id="phone" 
             formControlName="phone"
-            class="form-control"
-            placeholder="Telefonszám"
-            [class.is-invalid]="phone?.invalid && phone?.touched"
-          >
-          <div class="invalid-feedback" *ngIf="phone?.invalid && phone?.touched">
-            <span *ngIf="phone?.errors?.['required']">A telefonszám megadása kötelező</span>
-            <span *ngIf="phone?.errors?.['pattern']">Érvénytelen telefonszám formátum</span>
-          </div>
+            placeholder=" "
+            [class.invalid]="phone.invalid && phone.touched">
+          <label for="phone">Telefonszám</label>
+          <i class="fas fa-phone input-icon"></i>
         </div>
 
         <!-- Jelszó -->
-        <div class="form-group">
+        <div class="input-group">
           <input 
-            type="password" 
+            [type]="hidePassword ? 'password' : 'text'"
             id="password" 
             formControlName="password"
-            class="form-control"
-            placeholder="Jelszó"
-            [class.is-invalid]="password?.invalid && password?.touched"
-          >
-          <div class="invalid-feedback" *ngIf="password?.invalid && password?.touched">
-            <span *ngIf="password?.errors?.['required']">A jelszó megadása kötelező</span>
-            <span *ngIf="password?.errors?.['minlength']">A jelszónak legalább 6 karakter hosszúnak kell lennie</span>
-          </div>
+            placeholder=" "
+            [class.invalid]="password.invalid && password.touched">
+          <label for="password">Jelszó</label>
+          <i class="fas fa-lock input-icon"></i>
+          
+          <button 
+            type="button" 
+            class="toggle-password" 
+            (click)="togglePasswordVisibility()"
+            [attr.aria-label]="hidePassword ? 'Jelszó megjelenítése' : 'Jelszó elrejtése'">
+            <i [class]="hidePassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+          </button>
         </div>
 
         <!-- Jelszó megerősítése -->
-        <div class="form-group">
+        <div class="input-group" style="margin-bottom: 0;">
           <input 
-            type="password" 
+            [type]="hideConfirmPassword ? 'password' : 'text'"
             id="confirmPassword" 
             formControlName="confirmPassword"
-            class="form-control"
-            placeholder="Jelszó megerősítése"
-            [class.is-invalid]="(confirmPassword?.invalid && confirmPassword?.touched) || (!passwordsMatch && confirmPassword?.touched)"
-          >
-          <div class="invalid-feedback" *ngIf="confirmPassword?.invalid && confirmPassword?.touched">
-            <span *ngIf="confirmPassword?.errors?.['required']">A jelszó megerősítése kötelező</span>
-          </div>
-          <div class="invalid-feedback" *ngIf="!passwordsMatch && confirmPassword?.touched && !confirmPassword?.errors?.['required']">
-            <span>A két jelszó nem egyezik meg</span>
+            placeholder=" "
+            [class.invalid]="(confirmPassword.invalid && confirmPassword.touched) || (registerForm.hasError('passwordMismatch') && confirmPassword.touched)">
+          <label for="confirmPassword">Jelszó megerősítése</label>
+          <i class="fas fa-lock input-icon"></i>
+          
+          <button 
+            type="button" 
+            class="toggle-password" 
+            (click)="toggleConfirmPasswordVisibility()"
+            [attr.aria-label]="hideConfirmPassword ? 'Jelszó megjelenítése' : 'Jelszó elrejtése'">
+            <i [class]="hideConfirmPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+          </button>
+
+          <div class="error-messages">
+            <div class="error-message" 
+                 [style.opacity]="confirmPasswordErrorMessage ? '1' : '0'">
+              {{ confirmPasswordErrorMessage || '&nbsp;' }}
+            </div>
           </div>
         </div>
 
+        <!-- Submit gomb -->
         <button 
           type="submit" 
           class="btn-submit"
-          [disabled]="isSubmitting"
-        >
+          [disabled]="registerForm.invalid || isSubmitting">
           {{ isSubmitting ? 'FELDOLGOZÁS...' : 'FOLYTATÁS' }}
         </button>
 
-        <div class="register-divider"></div>
+        <div class="divider"></div>
 
-        <div class="login-link-section">
-          <p class="login-question">VAN CÉGES FIÓKOD?</p>
-          <a routerLink="/login" class="login-link">REGISZTRÁCIÓ SZAKEMBERKÉNT</a>
+        <!-- Login link -->
+        <div class="login-section">
+          <p class="login-text">Van már fiókod?</p>
+          <a routerLink="/login" class="login-link">Jelentkezz be!</a>
         </div>
       </form>
     </div>
 
-    <div class="register-image-section">
-      <div class="image-overlay">
-        <img src="../../assets/images/register-image.png" alt="">
-    </div>
+    <div class="image-wrapper">
+      <div class="image-overlay"></div>
     </div>
   </div>
 </div>
