@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3307
--- Generation Time: Nov 17, 2025 at 09:59 AM
+-- Generation Time: Nov 21, 2025 at 11:30 AM
 -- Server version: 5.7.24
 -- PHP Version: 8.3.1
 
@@ -55,19 +55,43 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `assignRole` (IN `userIdIN` INT, IN 
     -- Új szerepkör hozzárendelése
     INSERT INTO `user_x_role` (
         `user_id`,
-        `role_id`
+        `role_id`,
+        `assigned_at`
     )
     VALUES (
         userIdIN,
-        roleIdIN
+        roleIdIN,
+        NOW()
+    );
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `assignServiceToStaff` (IN `staffIdIN` INT, IN `serviceIdIN` INT)   BEGIN
+    -- Ellenőrzi, hogy már létezik-e a kapcsolat
+    INSERT INTO `staff_services` (
+        `staff_id`,
+        `service_id`
+    )
+    SELECT staffIdIN, serviceIdIN
+    WHERE NOT EXISTS (
+        SELECT 1 
+        FROM `staff_services` 
+        WHERE `staff_id` = staffIdIN 
+          AND `service_id` = serviceIdIN
     );
     
-    -- Frissítés a users táblában is
-    UPDATE `users`
+    -- Visszaadjuk, hogy sikeres volt-e
+    SELECT ROW_COUNT() AS rows_affected;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `cancelAppointment` (IN `appointmentIdIN` INT, IN `cancelledByIN` INT, IN `cancelReasonIN` TEXT)   BEGIN
+    UPDATE `appointments`
     SET 
-        `role_id` = roleIdIN,
+        `status` = 'cancelled',
+        `cancelled_by` = cancelledByIN,
+        `cancelled_reason` = cancelReasonIN,
+        `cancelled_at` = NOW(),
         `updated_at` = NOW()
-    WHERE `id` = userIdIN;
+    WHERE `id` = appointmentIdIN;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `cleanExpiredTokens` ()   BEGIN
@@ -85,6 +109,172 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `completeRegistration` (IN `regToken
         `updated_at` = NOW()
     WHERE `reg_token` = regTokenIN
       AND `is_deleted` = FALSE;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `createAppointment` (IN `companyIdIN` INT, IN `serviceIdIN` INT, IN `staffIdIN` INT, IN `clientIdIN` INT, IN `startTimeIN` DATETIME, IN `endTimeIN` DATETIME, IN `notesIN` TEXT, IN `priceIN` DECIMAL(10,2), IN `currencyIN` VARCHAR(10))   BEGIN
+    DECLARE newAppointmentId INT;
+    
+    -- Időpont létrehozása
+    INSERT INTO `appointments` (
+        `company_id`,
+        `service_id`,
+        `staff_id`,
+        `client_id`,
+        `start_time`,
+        `end_time`,
+        `status`,
+        `notes`,
+        `price`,
+        `currency`
+    )
+    VALUES (
+        companyIdIN,
+        serviceIdIN,
+        staffIdIN,
+        clientIdIN,
+        startTimeIN,
+        endTimeIN,
+        'pending',
+        notesIN,
+        priceIN,
+        currencyIN
+    );
+    
+    -- Új appointment ID lekérése
+    SET newAppointmentId = LAST_INSERT_ID();
+    
+    -- Visszaadjuk az új appointment ID-t
+    SELECT newAppointmentId AS appointment_id;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `createCompany` (IN `nameIN` VARCHAR(255), IN `descriptionIN` TEXT, IN `addressIN` TEXT, IN `cityIN` VARCHAR(100), IN `postalCodeIN` VARCHAR(20), IN `countryIN` VARCHAR(100), IN `phoneIN` VARCHAR(30), IN `emailIN` VARCHAR(100), IN `websiteIN` VARCHAR(255), IN `ownerIdIN` INT)   BEGIN
+    DECLARE newCompanyId INT;
+    
+    -- Cég létrehozása
+    INSERT INTO `companies` (
+        `name`,
+        `description`,
+        `address`,
+        `city`,
+        `postal_code`,
+        `country`,
+        `phone`,
+        `email`,
+        `website`,
+        `owner_id`
+    )
+    VALUES (
+        nameIN,
+        descriptionIN,
+        addressIN,
+        cityIN,
+        postalCodeIN,
+        countryIN,
+        phoneIN,
+        emailIN,
+        websiteIN,
+        ownerIdIN
+    );
+    
+    -- Új company ID lekérése
+    SET newCompanyId = LAST_INSERT_ID();
+    
+    -- Owner user company_id frissítése
+    UPDATE `users`
+    SET 
+        `company_id` = newCompanyId,
+        `updated_at` = NOW()
+    WHERE `id` = ownerIdIN;
+    
+    -- Visszaadjuk az új company ID-t
+    SELECT newCompanyId AS company_id;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `createReview` (IN `companyIdIN` INT, IN `clientIdIN` INT, IN `appointmentIdIN` INT, IN `ratingIN` INT, IN `commentIN` TEXT)   BEGIN
+    DECLARE newReviewId INT;
+    
+    -- Értékelés létrehozása
+    INSERT INTO `reviews` (
+        `company_id`,
+        `client_id`,
+        `appointment_id`,
+        `rating`,
+        `comment`
+    )
+    VALUES (
+        companyIdIN,
+        clientIdIN,
+        appointmentIdIN,
+        ratingIN,
+        commentIN
+    );
+    
+    -- Új review ID lekérése
+    SET newReviewId = LAST_INSERT_ID();
+    
+    -- Visszaadjuk az új review ID-t
+    SELECT newReviewId AS review_id;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `createService` (IN `companyIdIN` INT, IN `nameIN` VARCHAR(255), IN `descriptionIN` TEXT, IN `durationMinutesIN` INT, IN `priceIN` DECIMAL(10,2), IN `currencyIN` VARCHAR(10))   BEGIN
+    DECLARE newServiceId INT;
+    
+    -- Szolgáltatás létrehozása
+    INSERT INTO `services` (
+        `company_id`,
+        `name`,
+        `description`,
+        `duration_minutes`,
+        `price`,
+        `currency`
+    )
+    VALUES (
+        companyIdIN,
+        nameIN,
+        descriptionIN,
+        durationMinutesIN,
+        priceIN,
+        currencyIN
+    );
+    
+    -- Új service ID lekérése
+    SET newServiceId = LAST_INSERT_ID();
+    
+    -- Visszaadjuk az új service ID-t
+    SELECT newServiceId AS service_id;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `createStaff` (IN `userIdIN` INT, IN `companyIdIN` INT, IN `displayNameIN` VARCHAR(255), IN `specialtiesIN` TEXT, IN `bioIN` TEXT)   BEGIN
+    DECLARE newStaffId INT;
+    
+    -- Staff létrehozása
+    INSERT INTO `staff` (
+        `user_id`,
+        `company_id`,
+        `display_name`,
+        `specialties`,
+        `bio`
+    )
+    VALUES (
+        userIdIN,
+        companyIdIN,
+        displayNameIN,
+        specialtiesIN,
+        bioIN
+    );
+    
+    -- Új staff ID lekérése
+    SET newStaffId = LAST_INSERT_ID();
+    
+    -- User company_id frissítése
+    UPDATE `users`
+    SET 
+        `company_id` = companyIdIN,
+        `updated_at` = NOW()
+    WHERE `id` = userIdIN;
+    
+    -- Visszaadjuk az új staff ID-t
+    SELECT newStaffId AS staff_id;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `deactivateUser` (IN `userIdIN` INT)   BEGIN
@@ -111,6 +301,128 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `generatePasswordResetToken` (IN `em
     SELECT newToken AS reset_token;
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getActiveServicesByCompany` (IN `companyIdIN` INT)   BEGIN
+    SELECT 
+        s.*,
+        GROUP_CONCAT(DISTINCT sc.name SEPARATOR ', ') AS categories
+    FROM `services` s
+    LEFT JOIN `service_category_map` scm ON s.id = scm.service_id
+    LEFT JOIN `service_categories` sc ON scm.category_id = sc.id
+    WHERE s.company_id = companyIdIN
+      AND s.is_active = TRUE
+      AND s.is_deleted = FALSE
+    GROUP BY s.id
+    ORDER BY s.name;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getAppointmentsByClient` (IN `clientIdIN` INT, IN `statusFilterIN` VARCHAR(20), IN `limitIN` INT, IN `offsetIN` INT)   BEGIN
+    SELECT 
+        a.*,
+        s.name AS service_name,
+        s.duration_minutes,
+        c.name AS company_name,
+        CONCAT(u.first_name, ' ', u.last_name) AS staff_name
+    FROM `appointments` a
+    INNER JOIN `services` s ON a.service_id = s.id
+    INNER JOIN `companies` c ON a.company_id = c.id
+    LEFT JOIN `staff` st ON a.staff_id = st.id
+    LEFT JOIN `users` u ON st.user_id = u.id
+    WHERE a.client_id = clientIdIN
+      AND (statusFilterIN IS NULL OR a.status = statusFilterIN)
+    ORDER BY a.start_time DESC
+    LIMIT limitIN OFFSET offsetIN;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getAppointmentsByStaff` (IN `staffIdIN` INT, IN `dateFromIN` DATE, IN `dateToIN` DATE)   BEGIN
+    SELECT 
+        a.*,
+        s.name AS service_name,
+        s.duration_minutes,
+        CONCAT(u.first_name, ' ', u.last_name) AS client_name,
+        u.phone AS client_phone,
+        u.email AS client_email
+    FROM `appointments` a
+    INNER JOIN `services` s ON a.service_id = s.id
+    INNER JOIN `users` u ON a.client_id = u.id
+    WHERE a.staff_id = staffIdIN
+      AND DATE(a.start_time) BETWEEN dateFromIN AND dateToIN
+      AND a.status NOT IN ('cancelled')
+    ORDER BY a.start_time ASC;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getAvailableTimeSlots` (IN `companyIdIN` INT, IN `serviceIdIN` INT, IN `staffIdIN` INT, IN `dateIN` DATE)   BEGIN
+    -- Egyszerűsített verzió: visszaadja az aznapi foglalásokat
+    -- A backend logika fogja kiszámolni a szabad időpontokat
+    SELECT 
+        `start_time`,
+        `end_time`
+    FROM `appointments`
+    WHERE `company_id` = companyIdIN
+      AND (`staff_id` = staffIdIN OR staffIdIN IS NULL)
+      AND DATE(`start_time`) = dateIN
+      AND `status` NOT IN ('cancelled')
+    ORDER BY `start_time`;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getAverageRatingByCompany` (IN `companyIdIN` INT)   BEGIN
+    SELECT 
+        ROUND(AVG(rating), 2) AS average_rating,
+        COUNT(*) AS total_reviews,
+        SUM(CASE WHEN rating = 5 THEN 1 ELSE 0 END) AS five_star,
+        SUM(CASE WHEN rating = 4 THEN 1 ELSE 0 END) AS four_star,
+        SUM(CASE WHEN rating = 3 THEN 1 ELSE 0 END) AS three_star,
+        SUM(CASE WHEN rating = 2 THEN 1 ELSE 0 END) AS two_star,
+        SUM(CASE WHEN rating = 1 THEN 1 ELSE 0 END) AS one_star
+    FROM `reviews`
+    WHERE company_id = companyIdIN
+      AND is_deleted = FALSE;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getReviewsByCompany` (IN `companyIdIN` INT, IN `limitIN` INT, IN `offsetIN` INT)   BEGIN
+    SELECT 
+        r.*,
+        CONCAT(u.first_name, ' ', u.last_name) AS client_name,
+        a.start_time AS appointment_date
+    FROM `reviews` r
+    INNER JOIN `users` u ON r.client_id = u.id
+    LEFT JOIN `appointments` a ON r.appointment_id = a.id
+    WHERE r.company_id = companyIdIN
+      AND r.is_deleted = FALSE
+    ORDER BY r.created_at DESC
+    LIMIT limitIN OFFSET offsetIN;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getStaffByCompany` (IN `companyIdIN` INT, IN `isActiveIN` TINYINT(1))   BEGIN
+    SELECT 
+        s.*,
+        u.first_name,
+        u.last_name,
+        u.email,
+        u.phone,
+        u.is_active AS user_is_active
+    FROM `staff` s
+    INNER JOIN `users` u ON s.user_id = u.id
+    WHERE s.company_id = companyIdIN
+      AND (isActiveIN IS NULL OR s.is_active = isActiveIN)
+      AND u.is_deleted = FALSE
+    ORDER BY s.display_name;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getStaffServices` (IN `staffIdIN` INT)   BEGIN
+    SELECT 
+        s.*,
+        GROUP_CONCAT(DISTINCT sc.name SEPARATOR ', ') AS categories
+    FROM `staff_services` ss
+    INNER JOIN `services` s ON ss.service_id = s.id
+    LEFT JOIN `service_category_map` scm ON s.id = scm.service_id
+    LEFT JOIN `service_categories` sc ON scm.category_id = sc.id
+    WHERE ss.staff_id = staffIdIN
+      AND s.is_active = TRUE
+      AND s.is_deleted = FALSE
+    GROUP BY s.id
+    ORDER BY s.name;
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getUserActiveSessions` (IN `userIdIN` INT)   BEGIN
     SELECT 
         `id`,
@@ -129,42 +441,51 @@ END$$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getUserByEmail` (IN `emailIN` VARCHAR(100))   BEGIN
     SELECT 
         u.*,
-        r.name AS role_name,
-        r.description AS role_description
+        GROUP_CONCAT(r.name SEPARATOR ', ') AS role_names,
+        GROUP_CONCAT(r.description SEPARATOR '; ') AS role_descriptions
     FROM `users` u
-    INNER JOIN `roles` r ON u.role_id = r.id
+    INNER JOIN `user_x_role` uxr ON u.id = uxr.user_id
+    INNER JOIN `roles` r ON uxr.role_id = r.id
     WHERE u.email = emailIN
-      AND u.is_deleted = FALSE;
+      AND u.is_deleted = FALSE
+      AND uxr.is_un_assigned = FALSE
+    GROUP BY u.id;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getUserById` (IN `userIdIN` INT)   BEGIN
     SELECT 
         u.*,
-        r.name AS role_name,
-        r.description AS role_description,
+        GROUP_CONCAT(r.name SEPARATOR ', ') AS role_names,
+        GROUP_CONCAT(r.description SEPARATOR '; ') AS role_descriptions,
         c.name AS company_name
     FROM `users` u
-    INNER JOIN `roles` r ON u.role_id = r.id
+    INNER JOIN `user_x_role` uxr ON u.id = uxr.user_id
+    INNER JOIN `roles` r ON uxr.role_id = r.id
     LEFT JOIN `companies` c ON u.company_id = c.id
     WHERE u.id = userIdIN
-      AND u.is_deleted = FALSE;
+      AND u.is_deleted = FALSE
+      AND uxr.is_un_assigned = FALSE
+    GROUP BY u.id;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getUserProfile` (IN `userIdIN` INT)   BEGIN
     SELECT 
         u.*,
-        r.name AS role_name,
-        r.description AS role_description,
+        GROUP_CONCAT(r.name SEPARATOR ', ') AS role_names,
+        GROUP_CONCAT(r.description SEPARATOR '; ') AS role_descriptions,
         c.name AS company_name,
         c.address AS company_address,
         c.city AS company_city,
         c.country AS company_country
     FROM `users` u
-    INNER JOIN `roles` r ON u.role_id = r.id
+    INNER JOIN `user_x_role` uxr ON u.id = uxr.user_id
+    INNER JOIN `roles` r ON uxr.role_id = r.id
     LEFT JOIN `companies` c ON u.company_id = c.id
     WHERE u.id = userIdIN
       AND u.is_deleted = FALSE
-      AND u.is_active = TRUE;
+      AND u.is_active = TRUE
+      AND uxr.is_un_assigned = FALSE
+    GROUP BY u.id;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getUsers` (IN `companyIdIN` INT, IN `roleIdIN` INT, IN `isActiveIN` BOOLEAN, IN `limitIN` INT, IN `offsetIN` INT)   BEGIN
@@ -174,22 +495,23 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getUsers` (IN `companyIdIN` INT, IN
         u.last_name,
         u.email,
         u.phone,
-        u.role_id,
         u.company_id,
         u.is_active,
         u.last_login,
         u.created_at,
-        r.name AS role_name,
+        GROUP_CONCAT(DISTINCT r.name SEPARATOR ', ') AS role_names,
         c.name AS company_name
     FROM `users` u
-    INNER JOIN `roles` r ON u.role_id = r.id
+    INNER JOIN `user_x_role` uxr ON u.id = uxr.user_id
+    INNER JOIN `roles` r ON uxr.role_id = r.id
     LEFT JOIN `companies` c ON u.company_id = c.id
     WHERE u.is_deleted = FALSE
+      AND uxr.is_un_assigned = FALSE
       AND (companyIdIN IS NULL OR u.company_id = companyIdIN)
-      AND (roleIdIN IS NULL OR u.role_id = roleIdIN)
+      AND (roleIdIN IS NULL OR uxr.role_id = roleIdIN)
       AND (isActiveIN IS NULL OR u.is_active = isActiveIN)
-    ORDER BY u.created_at DESC
-    LIMIT limitIN OFFSET offsetIN;
+    GROUP BY u.id
+    ORDER BY u.created_at DESC;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `hardDeleteUser` (IN `userIdIN` INT)   BEGIN
@@ -207,13 +529,13 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `login` (IN `emailIN` VARCHAR(200)) 
         `users`.`email`,
         `users`.`password`,
         `users`.`company_id`,
-        `users`.`role_id`,
         GROUP_CONCAT(`roles`.`name` SEPARATOR ', ') AS "roles"
     FROM `users`
     INNER JOIN `user_x_role` ON `user_x_role`.`user_id` = `users`.`id`
     INNER JOIN `roles` ON `roles`.`id` = `user_x_role`.`role_id`
     WHERE `users`.`email` = emailIN
       AND `users`.`is_deleted` = FALSE
+      AND `user_x_role`.`is_un_assigned` = FALSE
     GROUP BY `users`.`id`
     LIMIT 1;
 END$$
@@ -227,6 +549,67 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `regenerateAuthSecret` (IN `userIdIN
       AND `is_deleted` = FALSE;
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `register` (IN `firstNameIN` VARCHAR(100), IN `lastNameIN` VARCHAR(100), IN `emailIN` VARCHAR(100), IN `passwordIN` TEXT, IN `phoneIN` VARCHAR(30), IN `roleNameIN` VARCHAR(50), IN `companyIdIN` INT)   BEGIN
+    DECLARE newUserId INT;
+    DECLARE roleId INT;
+    DECLARE regToken VARCHAR(64);
+    
+    -- Reg token generálása
+    SET regToken = MD5(CONCAT(emailIN, NOW()));
+    
+    -- Role ID lekérése a role name alapján
+    SELECT `id` INTO roleId 
+    FROM `roles` 
+    WHERE `name` = roleNameIN 
+    LIMIT 1;
+    
+    -- Ellenőrzés: létezik-e a role
+    IF roleId IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Invalid role name';
+    END IF;
+    
+    -- User létrehozása (role_id NÉLKÜL!)
+    INSERT INTO `users` (
+        `first_name`,
+        `last_name`,
+        `email`,
+        `password`,
+        `phone`,
+        `company_id`,
+        `reg_token`,
+        `is_active`
+    )
+    VALUES (
+        firstNameIN,
+        lastNameIN,
+        emailIN,
+        passwordIN,
+        phoneIN,
+        companyIdIN,
+        regToken,
+        FALSE
+    );
+    
+    -- Új user ID lekérése
+    SET newUserId = LAST_INSERT_ID();
+    
+    -- Szerepkör hozzárendelése a user_x_role táblában
+    INSERT INTO `user_x_role` (
+        `user_id`,
+        `role_id`,
+        `assigned_at`
+    )
+    VALUES (
+        newUserId,
+        roleId,
+        NOW()
+    );
+    
+    -- Visszaadjuk az új user ID-t és a reg token-t
+    SELECT newUserId AS user_id, regToken AS reg_token;
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `registerClient` (IN `firstNameIN` VARCHAR(100), IN `lastNameIN` VARCHAR(100), IN `emailIN` VARCHAR(100), IN `passwordIN` TEXT, IN `phoneIN` VARCHAR(30))   BEGIN
     DECLARE newUserId INT;
     DECLARE clientRoleId INT;
@@ -235,13 +618,13 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerClient` (IN `firstNameIN` V
     -- Reg token generálása
     SET regToken = MD5(CONCAT(emailIN, NOW()));
     
-    -- Client role ID lekérése (feltételezve hogy a role neve 'client')
+    -- Client role ID lekérése
     SELECT `id` INTO clientRoleId 
     FROM `roles` 
     WHERE `name` = 'client' 
     LIMIT 1;
     
-    -- User létrehozása
+    -- User létrehozása (role_id NÉLKÜL!)
     INSERT INTO `users` (
         `guid`,
         `first_name`,
@@ -249,7 +632,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerClient` (IN `firstNameIN` V
         `email`,
         `password`,
         `phone`,
-        `role_id`,
         `company_id`,
         `reg_token`,
         `is_active`
@@ -261,7 +643,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerClient` (IN `firstNameIN` V
         emailIN,
         passwordIN,
         phoneIN,
-        clientRoleId,
         NULL,
         regToken,
         FALSE
@@ -273,11 +654,13 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerClient` (IN `firstNameIN` V
     -- Szerepkör hozzárendelése a user_x_role táblában
     INSERT INTO `user_x_role` (
         `user_id`,
-        `role_id`
+        `role_id`,
+        `assigned_at`
     )
     VALUES (
         newUserId,
-        clientRoleId
+        clientRoleId,
+        NOW()
     );
     
     -- Visszaadjuk az új user ID-t és a reg token-t
@@ -299,7 +682,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerOwner` (IN `firstNameIN` VA
     WHERE `name` = 'owner' 
     LIMIT 1;
     
-    -- User létrehozása (company_id még NULL, mert még nem létezik a cég)
+    -- User létrehozása (role_id NÉLKÜL!)
     INSERT INTO `users` (
         `first_name`,
         `last_name`,
@@ -307,7 +690,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerOwner` (IN `firstNameIN` VA
         `password`,
         `phone`,
         `auth_secret`,
-        `role_id`,
         `company_id`,
         `reg_token`,
         `is_active`
@@ -319,7 +701,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerOwner` (IN `firstNameIN` VA
         passwordIN,
         phoneIN,
         authSecretIN,
-        ownerRoleId,
         NULL,
         regToken,
         FALSE
@@ -331,11 +712,13 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerOwner` (IN `firstNameIN` VA
     -- Szerepkör hozzárendelése a user_x_role táblában
     INSERT INTO `user_x_role` (
         `user_id`,
-        `role_id`
+        `role_id`,
+        `assigned_at`
     )
     VALUES (
         newUserId,
-        ownerRoleId
+        ownerRoleId,
+        NOW()
     );
     
     -- Company létrehozása
@@ -392,7 +775,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerStaff` (IN `firstNameIN` VA
     WHERE `name` = 'staff' 
     LIMIT 1;
     
-    -- User létrehozása
+    -- User létrehozása (role_id NÉLKÜL!)
     INSERT INTO `users` (
         `first_name`,
         `last_name`,
@@ -400,7 +783,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerStaff` (IN `firstNameIN` VA
         `password`,
         `phone`,
         `auth_secret`,
-        `role_id`,
         `company_id`,
         `reg_token`,
         `is_active`
@@ -412,7 +794,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerStaff` (IN `firstNameIN` VA
         passwordIN,
         phoneIN,
         authSecretIN,
-        staffRoleId,
         companyIdIN,
         regToken,
         FALSE
@@ -424,18 +805,20 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerStaff` (IN `firstNameIN` VA
     -- Szerepkör hozzárendelése a user_x_role táblában
     INSERT INTO `user_x_role` (
         `user_id`,
-        `role_id`
+        `role_id`,
+        `assigned_at`
     )
     VALUES (
         newUserId,
-        staffRoleId
+        staffRoleId,
+        NOW()
     );
     
     -- Staff bejegyzés létrehozása
     INSERT INTO `staff` (
-        `staff`.`user_id`,
-        `staff`.`company_id`,
-        `staff`.`is_active`
+        `user_id`,
+        `company_id`,
+        `is_active`
     )
     VALUES (
         newUserId,
@@ -492,6 +875,33 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `softDeleteUser` (IN `userIdIN` INT)
     WHERE `id` = userIdIN;
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `updateAppointmentStatus` (IN `appointmentIdIN` INT, IN `newStatusIN` ENUM('pending','confirmed','cancelled','completed','no_show','in_progress'))   BEGIN
+    UPDATE `appointments`
+    SET 
+        `status` = newStatusIN,
+        `updated_at` = NOW()
+    WHERE `id` = appointmentIdIN;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `updateCompany` (IN `companyIdIN` INT, IN `nameIN` VARCHAR(255), IN `descriptionIN` TEXT, IN `addressIN` TEXT, IN `cityIN` VARCHAR(100), IN `postalCodeIN` VARCHAR(20), IN `countryIN` VARCHAR(100), IN `phoneIN` VARCHAR(30), IN `emailIN` VARCHAR(100), IN `websiteIN` VARCHAR(255), IN `bookingAdvanceDaysIN` INT, IN `cancellationHoursIN` INT)   BEGIN
+    UPDATE `companies`
+    SET 
+        `name` = nameIN,
+        `description` = descriptionIN,
+        `address` = addressIN,
+        `city` = cityIN,
+        `postal_code` = postalCodeIN,
+        `country` = countryIN,
+        `phone` = phoneIN,
+        `email` = emailIN,
+        `website` = websiteIN,
+        `booking_advance_days` = bookingAdvanceDaysIN,
+        `cancellation_hours` = cancellationHoursIN,
+        `updated_at` = NOW()
+    WHERE `id` = companyIdIN
+      AND `is_deleted` = FALSE;
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `updateEmail` (IN `userIdIN` INT, IN `newEmailIN` VARCHAR(100))   BEGIN
     UPDATE `users`
     SET 
@@ -516,6 +926,20 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `updatePassword` (IN `userIdIN` INT,
         `password` = newPasswordIN,
         `updated_at` = NOW()
     WHERE `id` = userIdIN
+      AND `is_deleted` = FALSE;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `updateService` (IN `serviceIdIN` INT, IN `nameIN` VARCHAR(255), IN `descriptionIN` TEXT, IN `durationMinutesIN` INT, IN `priceIN` DECIMAL(10,2), IN `currencyIN` VARCHAR(10), IN `isActiveIN` TINYINT(1))   BEGIN
+    UPDATE `services`
+    SET 
+        `name` = nameIN,
+        `description` = descriptionIN,
+        `duration_minutes` = durationMinutesIN,
+        `price` = priceIN,
+        `currency` = currencyIN,
+        `is_active` = isActiveIN,
+        `updated_at` = NOW()
+    WHERE `id` = serviceIdIN
       AND `is_deleted` = FALSE;
 END$$
 
@@ -1272,7 +1696,6 @@ CREATE TABLE `users` (
   `email` varchar(100) NOT NULL,
   `password` text NOT NULL,
   `phone` varchar(30) NOT NULL,
-  `role_id` int(11) NOT NULL,
   `company_id` int(11) DEFAULT NULL COMMENT 'NULL for superadmins or independent clients',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime DEFAULT NULL,
@@ -1292,27 +1715,27 @@ CREATE TABLE `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `guid`, `first_name`, `last_name`, `email`, `password`, `phone`, `role_id`, `company_id`, `created_at`, `updated_at`, `deleted_at`, `is_deleted`, `last_login`, `register_finished_at`, `reg_token`, `is_active`, `two_factor_enabled`, `two_factor_secret`, `two_factor_confirmed_at`, `two_factor_recovery_codes`) VALUES
-(1, '63f866da-a827-11f0-82be-e9727e212b75', 'Gábor', 'Nagy', 'gabor.nagy@bookr.hu', '$2y$10$abcdefghijklmnopqrstuv', '+36301234567', 1, NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
-(2, '63f892d6-a827-11f0-82be-e9727e212b75', 'Péter', 'Kovács', 'peter.kovacs@szepsegszalon.hu', '$2y$10$bcdefghijklmnopqrstuvw', '+36302345678', 2, 1, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
-(3, '63f8961e-a827-11f0-82be-e9727e212b75', 'Anna', 'Szabó', 'anna.szabo@wellness.hu', '$2y$10$cdefghijklmnopqrstuvwx', '+36303456789', 2, 2, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
-(4, '63f89772-a827-11f0-82be-e9727e212b75', 'Eszter', 'Tóth', 'eszter.toth@szepsegszalon.hu', '$2y$10$defghijklmnopqrstuvwxy', '+36304567890', 3, 1, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
-(5, '63f8988a-a827-11f0-82be-e9727e212b75', 'Katalin', 'Molnár', 'katalin.molnar@szepsegszalon.hu', '$2y$10$efghijklmnopqrstuvwxyz', '+36305678901', 3, 1, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
-(6, '63f8998e-a827-11f0-82be-e9727e212b75', 'Zsófia', 'Kiss', 'zsofia.kiss@szepsegszalon.hu', '$2y$10$fghijklmnopqrstuvwxyza', '+36306789012', 3, 1, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
-(7, '63f89a7e-a827-11f0-82be-e9727e212b75', 'Márta', 'Horváth', 'marta.horvath@wellness.hu', '$2y$10$ghijklmnopqrstuvwxyzab', '+36307890123', 3, 2, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
-(8, '63f89b6e-a827-11f0-82be-e9727e212b75', 'Júlia', 'Varga', 'julia.varga@wellness.hu', '$2y$10$hijklmnopqrstuvwxyzabc', '+36308901234', 3, 2, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
-(9, '63f89c72-a827-11f0-82be-e9727e212b75', 'Ildikó', 'Balogh', 'ildiko.balogh@wellness.hu', '$2y$10$ijklmnopqrstuvwxyzabcd', '+36309012345', 3, 2, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
-(10, '63f89d58-a827-11f0-82be-e9727e212b75', 'János', 'Farkas', 'janos.farkas@gmail.com', '$2y$10$jklmnopqrstuvwxyzabcde', '+36201234567', 4, NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
-(11, '63f89e48-a827-11f0-82be-e9727e212b75', 'Éva', 'Simon', 'eva.simon@gmail.com', '$2y$10$klmnopqrstuvwxyzabcdef', '+36202345678', 4, NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
-(12, '63f89f38-a827-11f0-82be-e9727e212b75', 'László', 'Németh', 'laszlo.nemeth@freemail.hu', '$2y$10$lmnopqrstuvwxyzabcdefg', '+36203456789', 4, NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
-(13, '63f8a06e-a827-11f0-82be-e9727e212b75', 'Mária', 'Papp', 'maria.papp@citromail.hu', '$2y$10$mnopqrstuvwxyzabcdefgh', '+36204567890', 4, NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
-(14, '63f8a15e-a827-11f0-82be-e9727e212b75', 'István', 'Takács', 'istvan.takacs@outlook.com', '$2y$10$nopqrstuvwxyzabcdefghi', '+36205678901', 4, NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
-(15, '63f8a244-a827-11f0-82be-e9727e212b75', 'Ágnes', 'Lakatos', 'agnes.lakatos@yahoo.com', '$2y$10$opqrstuvwxyzabcdefghij', '+36206789012', 4, NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
-(16, '63f8a3b6-a827-11f0-82be-e9727e212b75', 'Teszt', 'Lajos', 'teszt@teszt.com', 'Alma!123', '+367012345678', 4, NULL, '2025-10-10 16:43:02', NULL, NULL, 0, NULL, NULL, '9a03f02d65caced068fc87e0c851511e', 0, 0, NULL, NULL, NULL),
-(17, '63f8a58c-a827-11f0-82be-e9727e212b75', 'Teszt', 'Aladár', 'aladar@teszt.com', '$argon2id$v=19$m=65536,t=3,p=1$L7naGVB2eKFjndxep9p0eQ$A/j8QkNLRcL8+i+uxS53PvvNdJCBPzOpUPTuokE1WaI', '+367012345678', 4, NULL, '2025-10-10 16:49:09', NULL, NULL, 0, NULL, NULL, 'c1afe49e2c51023bfc4f0446a9609af4', 0, 0, NULL, NULL, NULL),
-(18, '-', 'Sándor', 'László', 'lacika@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$4ZcoWslloOnpOReRBkDphQ$1dJvd08oeeHN7m4tNf7hY1VjSeGv0XvJu4rgWl+SKLY', '+367013565678', 4, NULL, '2025-10-17 11:20:15', NULL, NULL, 0, NULL, NULL, 'aa6f1d723c190ecaf03c7f67f535912f', 0, 0, NULL, NULL, NULL),
-(21, '7d78c18c-ae61-11f0-b2dc-2a23318b2722', 'Sándor', 'László', 'alma@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$y1aWgzGwmDzrxviR4yxpSw$EQbDcIBHMBXYbKfALlhrKLVR1WMQ58EbNB7XZ6IYGic', '+367014565678', 4, NULL, '2025-10-21 11:36:58', NULL, NULL, 0, NULL, NULL, 'df6155689e4b2eb220253e5897873420', 0, 0, NULL, NULL, NULL),
-(22, 'eb931f32-ae61-11f0-b2dc-2a23318b2722', 'Sándor', 'László', 'almaaa@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$Mrx15QBn0fr6S4bTdcR51w$f5kj7gloDsIH+3ghUNo2o/L3iMLbOlki+gi7lANR2WE', '+367014465678', 4, NULL, '2025-10-21 11:40:03', NULL, NULL, 0, '2025-11-13 09:27:21', NULL, 'bb13f93f958948980618426e63aff729', 0, 0, NULL, NULL, NULL);
+INSERT INTO `users` (`id`, `guid`, `first_name`, `last_name`, `email`, `password`, `phone`, `company_id`, `created_at`, `updated_at`, `deleted_at`, `is_deleted`, `last_login`, `register_finished_at`, `reg_token`, `is_active`, `two_factor_enabled`, `two_factor_secret`, `two_factor_confirmed_at`, `two_factor_recovery_codes`) VALUES
+(1, '63f866da-a827-11f0-82be-e9727e212b75', 'Gábor', 'Nagy', 'gabor.nagy@bookr.hu', '$2y$10$abcdefghijklmnopqrstuv', '+36301234567', NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
+(2, '63f892d6-a827-11f0-82be-e9727e212b75', 'Péter', 'Kovács', 'peter.kovacs@szepsegszalon.hu', '$2y$10$bcdefghijklmnopqrstuvw', '+36302345678', 1, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
+(3, '63f8961e-a827-11f0-82be-e9727e212b75', 'Anna', 'Szabó', 'anna.szabo@wellness.hu', '$2y$10$cdefghijklmnopqrstuvwx', '+36303456789', 2, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
+(4, '63f89772-a827-11f0-82be-e9727e212b75', 'Eszter', 'Tóth', 'eszter.toth@szepsegszalon.hu', '$2y$10$defghijklmnopqrstuvwxy', '+36304567890', 1, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
+(5, '63f8988a-a827-11f0-82be-e9727e212b75', 'Katalin', 'Molnár', 'katalin.molnar@szepsegszalon.hu', '$2y$10$efghijklmnopqrstuvwxyz', '+36305678901', 1, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
+(6, '63f8998e-a827-11f0-82be-e9727e212b75', 'Zsófia', 'Kiss', 'zsofia.kiss@szepsegszalon.hu', '$2y$10$fghijklmnopqrstuvwxyza', '+36306789012', 1, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
+(7, '63f89a7e-a827-11f0-82be-e9727e212b75', 'Márta', 'Horváth', 'marta.horvath@wellness.hu', '$2y$10$ghijklmnopqrstuvwxyzab', '+36307890123', 2, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
+(8, '63f89b6e-a827-11f0-82be-e9727e212b75', 'Júlia', 'Varga', 'julia.varga@wellness.hu', '$2y$10$hijklmnopqrstuvwxyzabc', '+36308901234', 2, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
+(9, '63f89c72-a827-11f0-82be-e9727e212b75', 'Ildikó', 'Balogh', 'ildiko.balogh@wellness.hu', '$2y$10$ijklmnopqrstuvwxyzabcd', '+36309012345', 2, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
+(10, '63f89d58-a827-11f0-82be-e9727e212b75', 'János', 'Farkas', 'janos.farkas@gmail.com', '$2y$10$jklmnopqrstuvwxyzabcde', '+36201234567', NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
+(11, '63f89e48-a827-11f0-82be-e9727e212b75', 'Éva', 'Simon', 'eva.simon@gmail.com', '$2y$10$klmnopqrstuvwxyzabcdef', '+36202345678', NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
+(12, '63f89f38-a827-11f0-82be-e9727e212b75', 'László', 'Németh', 'laszlo.nemeth@freemail.hu', '$2y$10$lmnopqrstuvwxyzabcdefg', '+36203456789', NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
+(13, '63f8a06e-a827-11f0-82be-e9727e212b75', 'Mária', 'Papp', 'maria.papp@citromail.hu', '$2y$10$mnopqrstuvwxyzabcdefgh', '+36204567890', NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
+(14, '63f8a15e-a827-11f0-82be-e9727e212b75', 'István', 'Takács', 'istvan.takacs@outlook.com', '$2y$10$nopqrstuvwxyzabcdefghi', '+36205678901', NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
+(15, '63f8a244-a827-11f0-82be-e9727e212b75', 'Ágnes', 'Lakatos', 'agnes.lakatos@yahoo.com', '$2y$10$opqrstuvwxyzabcdefghij', '+36206789012', NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
+(16, '63f8a3b6-a827-11f0-82be-e9727e212b75', 'Teszt', 'Lajos', 'teszt@teszt.com', 'Alma!123', '+367012345678', NULL, '2025-10-10 16:43:02', NULL, NULL, 0, NULL, NULL, '9a03f02d65caced068fc87e0c851511e', 0, 0, NULL, NULL, NULL),
+(17, '63f8a58c-a827-11f0-82be-e9727e212b75', 'Teszt', 'Aladár', 'aladar@teszt.com', '$argon2id$v=19$m=65536,t=3,p=1$L7naGVB2eKFjndxep9p0eQ$A/j8QkNLRcL8+i+uxS53PvvNdJCBPzOpUPTuokE1WaI', '+367012345678', NULL, '2025-10-10 16:49:09', NULL, NULL, 0, NULL, NULL, 'c1afe49e2c51023bfc4f0446a9609af4', 0, 0, NULL, NULL, NULL),
+(18, '-', 'Sándor', 'László', 'lacika@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$4ZcoWslloOnpOReRBkDphQ$1dJvd08oeeHN7m4tNf7hY1VjSeGv0XvJu4rgWl+SKLY', '+367013565678', NULL, '2025-10-17 11:20:15', NULL, NULL, 0, NULL, NULL, 'aa6f1d723c190ecaf03c7f67f535912f', 0, 0, NULL, NULL, NULL),
+(21, '7d78c18c-ae61-11f0-b2dc-2a23318b2722', 'Sándor', 'László', 'alma@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$y1aWgzGwmDzrxviR4yxpSw$EQbDcIBHMBXYbKfALlhrKLVR1WMQ58EbNB7XZ6IYGic', '+367014565678', NULL, '2025-10-21 11:36:58', NULL, NULL, 0, NULL, NULL, 'df6155689e4b2eb220253e5897873420', 0, 0, NULL, NULL, NULL),
+(22, 'eb931f32-ae61-11f0-b2dc-2a23318b2722', 'Sándor', 'László', 'almaaa@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$Mrx15QBn0fr6S4bTdcR51w$f5kj7gloDsIH+3ghUNo2o/L3iMLbOlki+gi7lANR2WE', '+367014465678', NULL, '2025-10-21 11:40:03', NULL, NULL, 0, '2025-11-13 09:27:21', NULL, 'bb13f93f958948980618426e63aff729', 0, 0, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -1515,7 +1938,6 @@ ALTER TABLE `users`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `email` (`email`),
   ADD UNIQUE KEY `unique_guid` (`guid`),
-  ADD KEY `role_id` (`role_id`),
   ADD KEY `fk_users_company_id` (`company_id`),
   ADD KEY `idx_users_guid` (`guid`);
 
@@ -1772,8 +2194,7 @@ ALTER TABLE `two_factor_recovery_codes`
 -- Constraints for table `users`
 --
 ALTER TABLE `users`
-  ADD CONSTRAINT `fk_users_company_id` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`),
-  ADD CONSTRAINT `users_ibfk_1` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`);
+  ADD CONSTRAINT `fk_users_company_id` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`);
 
 --
 -- Constraints for table `user_x_role`
