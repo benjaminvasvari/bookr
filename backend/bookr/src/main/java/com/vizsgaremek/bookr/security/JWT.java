@@ -1,5 +1,6 @@
-package com.vizsgaremek.bookr.config;
+package com.vizsgaremek.bookr.security;
 
+import com.vizsgaremek.bookr.config.EnvConfig;
 import com.vizsgaremek.bookr.model.Users;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;

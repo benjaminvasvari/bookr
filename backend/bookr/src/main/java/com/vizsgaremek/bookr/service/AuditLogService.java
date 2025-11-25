@@ -1,6 +1,6 @@
 package com.vizsgaremek.bookr.service;
 
-import com.vizsgaremek.bookr.model.AuditLog;
+import com.vizsgaremek.bookr.model.AuditLogs;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.ParameterMode;
@@ -22,7 +22,7 @@ public class AuditLogService {
      *
      * @param auditLog AuditLog object containing all audit information
      */
-    public void logAudit(AuditLog auditLog) {
+    public void logAudit(AuditLogs auditLog) {
         EntityManager em = emf.createEntityManager();
 
         try {
@@ -98,7 +98,7 @@ public class AuditLogService {
      * @param action The action performed (e.g., "login", "logout")
      */
     public void logSimpleAction(int userId, Integer companyId, String email, String entityType, String action) {
-        AuditLog auditLog = new AuditLog(userId, email, entityType, action)
+        AuditLogs auditLog = new AuditLogs(userId, email, entityType, action)
                 .setCompanyId(companyId);
         logAudit(auditLog);
     }

@@ -67,6 +67,7 @@ import javax.xml.bind.annotation.XmlTransient;
 public class Users implements Serializable {
 
     private static final long serialVersionUID = 1L;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Basic(optional = false)
@@ -777,6 +778,47 @@ public class Users implements Serializable {
             if (em != null && em.isOpen()) {
                 em.close();
             }
+        }
+    }
+    
+        public static Users getUserById(Integer id) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getUserById"); //ami az sql tárolt      
+            spq.registerStoredProcedureParameter("idIN", Integer.class, ParameterMode.IN); //
+            spq.setParameter("idIN", id);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+            Users toReturn = new Users();
+
+            for (Object[] record : resultList) { // thats a foreach
+
+                Users u = new Users(
+                        Integer.valueOf(record[0].toString()), //id
+                        record[1].toString(), //first_name
+                        record[2].toString(), //last_name
+                        record[4].toString(), // email
+                        record[5].toString(), // phone
+                        record[6] == null ? null : Integer.valueOf(record[6].toString()), //login_at
+                        formatter.parse(record[7].toString()), //created_at
+                        record[8] == null ? null : formatter.parse(record[8].toString()), //login_at
+                        record[8] == null ? null : formatter.parse(record[9].toString()) //register_finished_at 
+
+                );
+
+                toReturn = u;
+
+            }
+
+            return toReturn;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
         }
     }
 }
