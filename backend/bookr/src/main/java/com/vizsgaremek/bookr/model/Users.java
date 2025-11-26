@@ -49,6 +49,7 @@ import javax.xml.bind.annotation.XmlTransient;
 @NamedQueries({
     @NamedQuery(name = "Users.findAll", query = "SELECT u FROM Users u"),
     @NamedQuery(name = "Users.findById", query = "SELECT u FROM Users u WHERE u.id = :id"),
+    @NamedQuery(name = "Users.findByGuid", query = "SELECT u FROM Users u WHERE u.guid = :guid"),
     @NamedQuery(name = "Users.findByFirstName", query = "SELECT u FROM Users u WHERE u.firstName = :firstName"),
     @NamedQuery(name = "Users.findByLastName", query = "SELECT u FROM Users u WHERE u.lastName = :lastName"),
     @NamedQuery(name = "Users.findByEmail", query = "SELECT u FROM Users u WHERE u.email = :email"),
@@ -67,12 +68,16 @@ import javax.xml.bind.annotation.XmlTransient;
 public class Users implements Serializable {
 
     private static final long serialVersionUID = 1L;
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Basic(optional = false)
     @Column(name = "id")
     private Integer id;
+    @Basic(optional = false)
+    @NotNull
+    @Size(min = 1, max = 36)
+    @Column(name = "guid")
+    private String guid;
     @Size(max = 100)
     @Column(name = "first_name")
     private String firstName;
@@ -97,6 +102,8 @@ public class Users implements Serializable {
     @Size(min = 1, max = 30)
     @Column(name = "phone")
     private String phone;
+    @Column(name = "company_id", insertable = false, updatable = false)
+    private Integer companyId;
     @Basic(optional = false)
     @NotNull
     @Column(name = "created_at")
@@ -153,10 +160,7 @@ public class Users implements Serializable {
     private Collection<AuditLogs> auditLogsCollection;
     @JoinColumn(name = "company_id", referencedColumnName = "id")
     @ManyToOne
-    private Companies companyId;
-    @JoinColumn(name = "role_id", referencedColumnName = "id")
-    @ManyToOne(optional = false)
-    private Roles roleId;
+    private Companies company;
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "ownerId")
     private Collection<Companies> companiesCollection;
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "clientId")
@@ -164,10 +168,15 @@ public class Users implements Serializable {
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "userId")
     private Collection<TwoFactorRecoveryCodes> twoFactorRecoveryCodesCollection;
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "userId")
+    private Collection<Tokens> tokensCollection;
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "userId")
     private Collection<UserXRole> userXRoleCollection;
 
     @Transient
     private ArrayList<Roles> roles;
+
+    @Transient
+    private Integer roleId;
 
     @Transient
     private String rolesString;
@@ -212,21 +221,13 @@ public class Users implements Serializable {
     }
 
     // login response constructor (data from stored procedure)
-    public Users(Integer id, String firstName, String lastName, String email, String password, Integer companyId, Integer roleId, String rolesString) {
+    public Users(Integer id, String firstName, String lastName, String email, String password, Integer companyId, String rolesString) {
         this.id = id;
         this.firstName = firstName;
         this.lastName = lastName;
         this.email = email;
         this.password = password;
-
-        if (companyId != null) {
-            this.companyId = new Companies(companyId);
-        }
-
-        if (roleId != null) {
-            this.roleId = new Roles(roleId);
-        }
-
+        this.companyId = companyId;
         this.rolesString = rolesString;
 
         if (rolesString != null && !rolesString.isEmpty()) {
@@ -234,12 +235,32 @@ public class Users implements Serializable {
         }
     }
 
-    public Users(Integer id, String email, Date registerFinishedAt, boolean isActive, Companies companyId) {
+    // getUserByRegToken constructor
+    public Users(Integer id, String email, Date registerFinishedAt, boolean isActive, Integer companyId) {
         this.id = id;
         this.email = email;
         this.registerFinishedAt = registerFinishedAt;
         this.isActive = isActive;
         this.companyId = companyId;
+    }
+
+    // getUserById
+    public Users(Integer id, String guid, String firstName, String lastName, String email, String phone, Integer companyId, Date createdAt, Date updatedAt, Date deletedAt, boolean isDeleted, Date lastLogin, Date registerFinishedAt, boolean isActive) {
+        this.id = id;
+        this.guid = guid;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.email = email;
+        this.phone = phone;
+        this.companyId = companyId;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.deletedAt = deletedAt;
+        this.isDeleted = isDeleted;
+        this.lastLogin = lastLogin;
+        this.registerFinishedAt = registerFinishedAt;
+        this.isActive = isActive;
+
     }
 
     public Integer getId() {
@@ -284,6 +305,14 @@ public class Users implements Serializable {
 
     public void setPhone(String phone) {
         this.phone = phone;
+    }
+
+    public Integer getCompanyId() {
+        return companyId;
+    }
+
+    public void setCompanyId(Integer companyId) {
+        this.companyId = companyId;
     }
 
     public Date getCreatedAt() {
@@ -459,22 +488,11 @@ public class Users implements Serializable {
         this.auditLogsCollection = auditLogsCollection;
     }
 
-    public Companies getCompanyId() {
-        return companyId;
+    public Companies getCompany() {
+        return company;
     }
 
-    /**
-     * Helper method for JWT - returns company ID as Integer
-     */
-    public Integer getCompanyIdAsInteger() {
-        return companyId != null ? companyId.getId() : null;
-    }
-
-    public void setCompanyId(Companies companyId) {
-        this.companyId = companyId;
-    }
-
-    public Roles getRoleId() {
+    public Integer getRoleId() {
         return roleId;
     }
 
@@ -482,10 +500,10 @@ public class Users implements Serializable {
      * Helper method for JWT - returns role ID as Integer
      */
     public Integer getRoleIdAsInteger() {
-        return roleId != null ? roleId.getId() : null;
+        return roleId;
     }
 
-    public void setRoleId(Roles roleId) {
+    public void setRoleId(Integer roleId) {
         this.roleId = roleId;
     }
 
@@ -677,8 +695,7 @@ public class Users implements Serializable {
                     record[3].toString(), // email
                     record[4].toString(), // password (hashed)
                     record[5] == null ? null : Integer.valueOf(record[5].toString()), // company_id (can be NULL)
-                    record[6] == null ? null : Integer.valueOf(record[6].toString()), // role_id (should NOT be NULL)
-                    record[7] == null ? null : record[7].toString() // roles (GROUP_CONCAT string)
+                    record[6] == null ? null : record[6].toString() // roles (GROUP_CONCAT string)
             );
 
             return user;
@@ -739,7 +756,6 @@ public class Users implements Serializable {
         try {
             StoredProcedureQuery spq = em.createStoredProcedureQuery("getUserByRegToken");
 
-            // Token STRING, nem Integer!
             spq.registerStoredProcedureParameter("tokenIN", String.class, ParameterMode.IN);
             spq.setParameter("tokenIN", token);
 
@@ -750,23 +766,21 @@ public class Users implements Serializable {
                 return null;
             }
 
-            // Első (és egyetlen) rekord
             Object[] record = resultList.get(0);
 
-            // Company ID kezelése (lehet NULL)
-            Companies company = null;
+            // Company ID kezelése
+            Integer companyId = null;
             if (record[4] != null) {
-                Integer companyId = Integer.valueOf(record[4].toString());
-                company = em.find(Companies.class, companyId);
+                companyId = Integer.valueOf(record[4].toString());
             }
 
             // User objektum összeállítása
             Users user = new Users(
                     Integer.valueOf(record[0].toString()), // id
                     record[1].toString(), // email
-                    record[2] == null ? null : formatter.parse(record[2].toString()), // register_finished_at (2-es index!)
+                    record[2] == null ? null : formatter.parse(record[2].toString()), // register_finished_at
                     Boolean.parseBoolean(record[3].toString()), // isActive
-                    company // Companies objektum
+                    companyId
             );
 
             return user;
@@ -780,45 +794,54 @@ public class Users implements Serializable {
             }
         }
     }
-    
-        public static Users getUserById(Integer id) {
+
+    public static Users getUserById(Integer id) {
         EntityManager em = emf.createEntityManager();
 
         try {
-
-            StoredProcedureQuery spq = em.createStoredProcedureQuery("getUserById"); //ami az sql tárolt      
-            spq.registerStoredProcedureParameter("idIN", Integer.class, ParameterMode.IN); //
-            spq.setParameter("idIN", id);
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getUserById");
+            spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
+            spq.setParameter("userIdIN", id);
 
             spq.execute();
 
             List<Object[]> resultList = spq.getResultList();
-            Users toReturn = new Users();
 
-            for (Object[] record : resultList) { // thats a foreach
-
-                Users u = new Users(
-                        Integer.valueOf(record[0].toString()), //id
-                        record[1].toString(), //first_name
-                        record[2].toString(), //last_name
-                        record[4].toString(), // email
-                        record[5].toString(), // phone
-                        record[6] == null ? null : Integer.valueOf(record[6].toString()), //login_at
-                        formatter.parse(record[7].toString()), //created_at
-                        record[8] == null ? null : formatter.parse(record[8].toString()), //login_at
-                        record[8] == null ? null : formatter.parse(record[9].toString()) //register_finished_at 
-
-                );
-
-                toReturn = u;
-
+            if (resultList.isEmpty()) {
+                return null;
             }
 
-            return toReturn;
+            // Csak az első rekord kell (LIMIT 1 a stored procedure-ben)
+            Object[] record = resultList.get(0);
+
+            Users user = new Users(
+                    Integer.valueOf(record[0].toString()), // id
+                    record[1].toString(), // guid
+                    record[2].toString(), // first_name
+                    record[3].toString(), // last_name
+                    record[4].toString(), // email
+                    record[5].toString(), // phone
+                    record[6] == null ? null : Integer.valueOf(record[6].toString()), // company_id
+                    formatter.parse(record[7].toString()), // created_at
+                    record[8] == null ? null : formatter.parse(record[8].toString()), // updated_at
+                    record[9] == null ? null : formatter.parse(record[9].toString()), // deleted_at
+                    Boolean.parseBoolean(record[10].toString()), // is_deleted
+                    record[11] == null ? null : formatter.parse(record[11].toString()), // last_login
+                    record[12] == null ? null : formatter.parse(record[12].toString()), // register_finished_at
+                    Boolean.parseBoolean(record[13].toString())
+
+            );
+
+            return user;
 
         } catch (Exception ex) {
             ex.printStackTrace();
             return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
         }
     }
+
 }

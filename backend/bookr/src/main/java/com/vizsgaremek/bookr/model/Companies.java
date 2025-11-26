@@ -4,13 +4,17 @@
  */
 package com.vizsgaremek.bookr.model;
 
+import static com.vizsgaremek.bookr.model.Users.emf;
+import static com.vizsgaremek.bookr.model.Users.formatter;
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 import javax.persistence.Basic;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EntityManager;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -20,6 +24,8 @@ import javax.persistence.ManyToOne;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.OneToMany;
+import javax.persistence.ParameterMode;
+import javax.persistence.StoredProcedureQuery;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
@@ -97,6 +103,8 @@ public class Companies implements Serializable {
     private Integer bookingAdvanceDays;
     @Column(name = "cancellation_hours")
     private Integer cancellationHours;
+    @Basic(optional = false)
+    @NotNull
     @Column(name = "created_at")
     @Temporal(TemporalType.TIMESTAMP)
     private Date createdAt;
@@ -108,8 +116,10 @@ public class Companies implements Serializable {
     private Date deletedAt;
     @Column(name = "is_deleted")
     private Boolean isDeleted;
+    @Basic(optional = false)
+    @NotNull
     @Column(name = "is_active")
-    private Boolean isActive;
+    private boolean isActive;
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "companyId")
     private Collection<Appointments> appointmentsCollection;
     @OneToMany(mappedBy = "companyId")
@@ -141,9 +151,29 @@ public class Companies implements Serializable {
         this.id = id;
     }
 
-    public Companies(Integer id, String name) {
+    public Companies(Integer id, String name, Date createdAt, boolean isActive) {
         this.id = id;
         this.name = name;
+        this.createdAt = createdAt;
+        this.isActive = isActive;
+    }
+
+    public Companies(Integer id, String name, String description, String address, String city, String postalCode, String country, String phone, String email, String website, Integer bookingAdvanceDays, Integer cancellationHours, Date createdAt, Date updatedAt, boolean isActive) {
+        this.id = id;
+        this.name = name;
+        this.description = description;
+        this.address = address;
+        this.city = city;
+        this.postalCode = postalCode;
+        this.country = country;
+        this.phone = phone;
+        this.email = email;
+        this.website = website;
+        this.bookingAdvanceDays = bookingAdvanceDays;
+        this.cancellationHours = cancellationHours;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.isActive = isActive;
     }
 
     public Integer getId() {
@@ -274,11 +304,11 @@ public class Companies implements Serializable {
         this.isDeleted = isDeleted;
     }
 
-    public Boolean getIsActive() {
+    public boolean getIsActive() {
         return isActive;
     }
 
-    public void setIsActive(Boolean isActive) {
+    public void setIsActive(boolean isActive) {
         this.isActive = isActive;
     }
 
@@ -404,5 +434,54 @@ public class Companies implements Serializable {
     public String toString() {
         return "com.vizsgaremek.bookr.model.Companies[ id=" + id + " ]";
     }
-    
+
+    public static Companies getCompanyById(Integer id) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getCompanyById");
+            spq.registerStoredProcedureParameter("idIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("idIN", id);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            // Csak az első rekord kell (LIMIT 1 a stored procedure-ben)
+            Object[] record = resultList.get(0);
+
+            Companies company = new Companies(
+                    Integer.valueOf(record[0].toString()),
+                    record[1].toString(),
+                    record[2].toString(),
+                    record[3].toString(),
+                    record[4].toString(),
+                    record[5].toString(),
+                    record[6].toString(),
+                    record[7].toString(),
+                    record[8].toString(),
+                    record[9].toString(),
+                    Integer.valueOf(record[10].toString()),
+                    Integer.valueOf(record[11].toString()),
+                    formatter.parse(record[12].toString()),
+                    record[13] == null ? null : formatter.parse(record[13].toString()), // updated_at
+                    Boolean.parseBoolean(record[14].toString())
+            );
+
+            return company;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
 }

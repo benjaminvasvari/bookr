@@ -7,12 +7,14 @@ import jakarta.mail.internet.*;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import javax.enterprise.context.ApplicationScoped;
 
 /**
  * Email Service for sending emails asynchronously Uses JavaMail API with SMTP
  *
  * @author vben
  */
+@ApplicationScoped
 public class EmailService {
 
     private static final ExecutorService emailExecutor = Executors.newFixedThreadPool(5);

@@ -66,12 +66,12 @@ public class AuthService {
                             clientRegistered.getEmail(),
                             "user",
                             "register"
-                    )
-                            .addNewValue("user_id", registrationResult.getUserId())
-                            .addNewValue("email", clientRegistered.getEmail())
-                            .addNewValue("first_name", clientRegistered.getFirstName())
-                            .addNewValue("last_name", clientRegistered.getLastName())
-                            .addNewValue("role", "client");
+                    );
+                    auditLog.addNewValue("user_id", registrationResult.getUserId());
+                    auditLog.addNewValue("email", clientRegistered.getEmail());
+                    auditLog.addNewValue("first_name", clientRegistered.getFirstName());
+                    auditLog.addNewValue("last_name", clientRegistered.getLastName());
+                    auditLog.addNewValue("role", "client");
 
                     auditLogService.logAudit(auditLog);
                 } catch (Exception ex) {
@@ -141,14 +141,14 @@ public class AuthService {
                             staffRegistered.getEmail(),
                             "user",
                             "register"
-                    )
-                            .setCompanyId(staffRegistered.getCompanyId() != null ? staffRegistered.getCompanyId().getId() : null)
-                            .addNewValue("user_id", registrationResult.getUserId())
-                            .addNewValue("email", staffRegistered.getEmail())
-                            .addNewValue("first_name", staffRegistered.getFirstName())
-                            .addNewValue("last_name", staffRegistered.getLastName())
-                            .addNewValue("role", "staff")
-                            .addNewValue("company_id", staffRegistered.getCompanyId() != null ? staffRegistered.getCompanyId().getId() : null);
+                    );
+                    auditLog.setCompanyId(staffRegistered.getCompanyId() != null ? staffRegistered.getCompanyId() : null);
+                    auditLog.addNewValue("user_id", registrationResult.getUserId());
+                    auditLog.addNewValue("email", staffRegistered.getEmail());
+                    auditLog.addNewValue("first_name", staffRegistered.getFirstName());
+                    auditLog.addNewValue("last_name", staffRegistered.getLastName());
+                    auditLog.addNewValue("role", "staff");
+                    auditLog.addNewValue("company_id", staffRegistered.getCompanyId() != null ? staffRegistered.getCompanyId() : null);
 
                     auditLogService.logAudit(auditLog);
                 } catch (Exception ex) {
@@ -245,14 +245,14 @@ public class AuthService {
 
         // Company ID kezelése (lehet null)
         if (userFromDB.getCompanyId() != null) {
-            userData.put("companyId", userFromDB.getCompanyId().getId());
+            userData.put("companyId", userFromDB.getCompanyId());
         } else {
             userData.put("companyId", JSONObject.NULL);
         }
 
         // Role ID
         if (userFromDB.getRoleId() != null) {
-            userData.put("roleId", userFromDB.getRoleId().getId());
+            userData.put("roleId", userFromDB.getRoleId());
         } else {
             userData.put("roleId", JSONObject.NULL);
         }
@@ -275,7 +275,7 @@ public class AuthService {
         try {
             auditLogService.logSimpleAction(
                     userFromDB.getId(),
-                    userFromDB.getCompanyId() != null ? userFromDB.getCompanyId().getId() : null,
+                    userFromDB.getCompanyId() != null ? userFromDB.getCompanyId() : null,
                     userFromDB.getEmail(),
                     "user",
                     "login"
@@ -359,7 +359,7 @@ public class AuthService {
                 try {
                     auditLogService.logSimpleAction(
                             user.getId(),
-                            user.getCompanyId() != null ? user.getCompanyId().getId() : null,
+                            user.getCompanyId() != null ? user.getCompanyId() : null,
                             user.getEmail(),
                             "user",
                             "email_verified"
@@ -437,7 +437,6 @@ public class AuthService {
                 toReturn.put("statusCode", statusCode);
                 return toReturn;
             }
-
             // 5. ÚJ tokenek generálása
             String newAccessToken = JWT.createAccessToken(userFromDB);
             String newRefreshToken = JWT.createRefreshToken(userFromDB);
@@ -446,7 +445,6 @@ public class AuthService {
             toReturn.put("accessToken", newAccessToken);
             toReturn.put("refreshToken", newRefreshToken);
             toReturn.put("expiresIn", 900); // 15 perc másodpercben
-
         } catch (Exception e) {
             status = "ServerError";
             statusCode = 500;

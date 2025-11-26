@@ -36,8 +36,8 @@ import javax.xml.bind.annotation.XmlRootElement;
     @NamedQuery(name = "NotificationSettings.findByAppointmentReminder", query = "SELECT n FROM NotificationSettings n WHERE n.appointmentReminder = :appointmentReminder"),
     @NamedQuery(name = "NotificationSettings.findByAppointmentCancellation", query = "SELECT n FROM NotificationSettings n WHERE n.appointmentCancellation = :appointmentCancellation"),
     @NamedQuery(name = "NotificationSettings.findByMarketingEmails", query = "SELECT n FROM NotificationSettings n WHERE n.marketingEmails = :marketingEmails"),
-    @NamedQuery(name = "NotificationSettings.findByCreatedAt", query = "SELECT n FROM NotificationSettings n WHERE n.createdAt = :createdAt"),
-    @NamedQuery(name = "NotificationSettings.findByUpdatedAt", query = "SELECT n FROM NotificationSettings n WHERE n.updatedAt = :updatedAt")})
+    @NamedQuery(name = "NotificationSettings.findByUpdatedAt", query = "SELECT n FROM NotificationSettings n WHERE n.updatedAt = :updatedAt"),
+    @NamedQuery(name = "NotificationSettings.findByCreatedAt", query = "SELECT n FROM NotificationSettings n WHERE n.createdAt = :createdAt")})
 public class NotificationSettings implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -54,14 +54,14 @@ public class NotificationSettings implements Serializable {
     private Boolean appointmentCancellation;
     @Column(name = "marketing_emails")
     private Boolean marketingEmails;
+    @Column(name = "updated_at")
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date updatedAt;
     @Basic(optional = false)
     @NotNull
     @Column(name = "created_at")
     @Temporal(TemporalType.TIMESTAMP)
     private Date createdAt;
-    @Column(name = "updated_at")
-    @Temporal(TemporalType.TIMESTAMP)
-    private Date updatedAt;
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     @ManyToOne(optional = false)
     private Users userId;
@@ -118,20 +118,20 @@ public class NotificationSettings implements Serializable {
         this.marketingEmails = marketingEmails;
     }
 
-    public Date getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Date createdAt) {
-        this.createdAt = createdAt;
-    }
-
     public Date getUpdatedAt() {
         return updatedAt;
     }
 
     public void setUpdatedAt(Date updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Date getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Date createdAt) {
+        this.createdAt = createdAt;
     }
 
     public Users getUserId() {

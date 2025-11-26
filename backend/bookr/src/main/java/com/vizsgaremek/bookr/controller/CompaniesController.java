@@ -4,34 +4,42 @@
  */
 package com.vizsgaremek.bookr.controller;
 
+import com.vizsgaremek.bookr.service.CompaniesService;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.UriInfo;
-import javax.ws.rs.Consumes;
 import javax.ws.rs.Produces;
+import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PUT;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import org.json.JSONObject;
 
 /**
  * REST Web Service
  *
  * @author vben
  */
-@Path("users")
-public class UsersController {
+@Path("companies")
+public class CompaniesController {
+
+    private CompaniesService layer = new CompaniesService();
 
     @Context
     private UriInfo context;
 
     /**
-     * Creates a new instance of UsersController
+     * Creates a new instance of CompaniesController
      */
-    public UsersController() {
+    public CompaniesController() {
     }
 
     /**
-     * Retrieves representation of an instance of com.vizsgaremek.bookr.controller.UsersController
+     * Retrieves representation of an instance of
+     * com.vizsgaremek.bookr.controller.CompaniesController
+     *
      * @return an instance of java.lang.String
      */
     @GET
@@ -42,11 +50,20 @@ public class UsersController {
     }
 
     /**
-     * PUT method for updating or creating an instance of UsersController
+     * PUT method for updating or creating an instance of CompaniesController
+     *
      * @param content representation for the resource
      */
     @PUT
     @Consumes(MediaType.APPLICATION_XML)
     public void putXml(String content) {
+    }
+
+    @GET
+    @Path("getCompanyById")
+    public Response getCompanyById(@QueryParam("id") Integer id) {
+        JSONObject toReturn = layer.getCompanyById(id);
+
+        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString())).entity(toReturn.toString()).type(MediaType.APPLICATION_JSON).build();
     }
 }

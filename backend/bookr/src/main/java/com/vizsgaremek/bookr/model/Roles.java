@@ -37,10 +37,10 @@ import javax.xml.bind.annotation.XmlTransient;
     @NamedQuery(name = "Roles.findAll", query = "SELECT r FROM Roles r"),
     @NamedQuery(name = "Roles.findById", query = "SELECT r FROM Roles r WHERE r.id = :id"),
     @NamedQuery(name = "Roles.findByName", query = "SELECT r FROM Roles r WHERE r.name = :name"),
-    @NamedQuery(name = "Roles.findByCreatedAt", query = "SELECT r FROM Roles r WHERE r.createdAt = :createdAt"),
     @NamedQuery(name = "Roles.findByUpdatedAt", query = "SELECT r FROM Roles r WHERE r.updatedAt = :updatedAt"),
     @NamedQuery(name = "Roles.findByDeletedAt", query = "SELECT r FROM Roles r WHERE r.deletedAt = :deletedAt"),
-    @NamedQuery(name = "Roles.findByIsDeleted", query = "SELECT r FROM Roles r WHERE r.isDeleted = :isDeleted")})
+    @NamedQuery(name = "Roles.findByIsDeleted", query = "SELECT r FROM Roles r WHERE r.isDeleted = :isDeleted"),
+    @NamedQuery(name = "Roles.findByCreatedAt", query = "SELECT r FROM Roles r WHERE r.createdAt = :createdAt")})
 public class Roles implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -58,9 +58,6 @@ public class Roles implements Serializable {
     @Size(max = 65535)
     @Column(name = "description")
     private String description;
-    @Column(name = "created_at")
-    @Temporal(TemporalType.TIMESTAMP)
-    private Date createdAt;
     @Column(name = "updated_at")
     @Temporal(TemporalType.TIMESTAMP)
     private Date updatedAt;
@@ -69,8 +66,9 @@ public class Roles implements Serializable {
     private Date deletedAt;
     @Column(name = "is_deleted")
     private Boolean isDeleted;
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "roleId")
-    private Collection<Users> usersCollection;
+    @Column(name = "created_at")
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date createdAt;
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "roleId")
     private Collection<UserXRole> userXRoleCollection;
 
@@ -110,14 +108,6 @@ public class Roles implements Serializable {
         this.description = description;
     }
 
-    public Date getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Date createdAt) {
-        this.createdAt = createdAt;
-    }
-
     public Date getUpdatedAt() {
         return updatedAt;
     }
@@ -142,13 +132,12 @@ public class Roles implements Serializable {
         this.isDeleted = isDeleted;
     }
 
-    @XmlTransient
-    public Collection<Users> getUsersCollection() {
-        return usersCollection;
+    public Date getCreatedAt() {
+        return createdAt;
     }
 
-    public void setUsersCollection(Collection<Users> usersCollection) {
-        this.usersCollection = usersCollection;
+    public void setCreatedAt(Date createdAt) {
+        this.createdAt = createdAt;
     }
 
     @XmlTransient

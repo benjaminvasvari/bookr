@@ -34,6 +34,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 @NamedQueries({
     @NamedQuery(name = "Images.findAll", query = "SELECT i FROM Images i"),
     @NamedQuery(name = "Images.findById", query = "SELECT i FROM Images i WHERE i.id = :id"),
+    @NamedQuery(name = "Images.findByIsMain", query = "SELECT i FROM Images i WHERE i.isMain = :isMain"),
     @NamedQuery(name = "Images.findByUploadedAt", query = "SELECT i FROM Images i WHERE i.uploadedAt = :uploadedAt")})
 public class Images implements Serializable {
 
@@ -49,6 +50,10 @@ public class Images implements Serializable {
     @Size(min = 1, max = 65535)
     @Column(name = "url")
     private String url;
+    @Basic(optional = false)
+    @NotNull
+    @Column(name = "is_main")
+    private short isMain;
     @Basic(optional = false)
     @NotNull
     @Column(name = "uploaded_at")
@@ -68,9 +73,10 @@ public class Images implements Serializable {
         this.id = id;
     }
 
-    public Images(Integer id, String url, Date uploadedAt) {
+    public Images(Integer id, String url, short isMain, Date uploadedAt) {
         this.id = id;
         this.url = url;
+        this.isMain = isMain;
         this.uploadedAt = uploadedAt;
     }
 
@@ -88,6 +94,14 @@ public class Images implements Serializable {
 
     public void setUrl(String url) {
         this.url = url;
+    }
+
+    public short getIsMain() {
+        return isMain;
+    }
+
+    public void setIsMain(short isMain) {
+        this.isMain = isMain;
     }
 
     public Date getUploadedAt() {

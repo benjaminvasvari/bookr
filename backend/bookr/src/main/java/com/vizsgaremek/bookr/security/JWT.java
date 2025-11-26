@@ -77,7 +77,7 @@ public class JWT {
                 claims.put("role_id", roleId);
             }
 
-            Integer companyId = user.getCompanyIdAsInteger();
+            Integer companyId = user.getCompanyId();
             if (companyId != null) {
                 claims.put("company_id", companyId);
             }

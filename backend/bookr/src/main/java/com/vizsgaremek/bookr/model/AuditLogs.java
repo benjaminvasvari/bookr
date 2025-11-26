@@ -7,14 +7,17 @@ import java.util.Map;
 import javax.persistence.Basic;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
-import javax.persistence.ManyToOne;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
+import javax.persistence.ParameterMode;
+import javax.persistence.Persistence;
+import javax.persistence.StoredProcedureQuery;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
@@ -26,8 +29,7 @@ import org.json.JSONObject;
 
 /**
  * AuditLog entity for tracking user actions in the system
- * Uses Fluent API (builder pattern) for easy construction
- * 
+ *
  * @author vben
  */
 @Entity
@@ -44,53 +46,56 @@ import org.json.JSONObject;
 public class AuditLogs implements Serializable {
 
     private static final long serialVersionUID = 1L;
-    
+
+    // EntityManagerFactory - ugyanúgy mint a Users.java-ban
+    static EntityManagerFactory emf = Persistence.createEntityManagerFactory("com.vizsgaremek_bookr_war_1.0-SNAPSHOTPU");
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Basic(optional = false)
     @Column(name = "id")
     private Integer id;
-    
+
     @Basic(optional = false)
     @NotNull
     @Column(name = "user_id")
     private Integer userId;
-    
+
     @Column(name = "company_id")
     private Integer companyId;
-    
+
     @Size(max = 200)
     @Column(name = "email")
     private String email;
-    
+
     @Size(max = 50)
     @Column(name = "entity_type")
     private String entityType;
-    
+
     @Basic(optional = false)
     @NotNull
     @Size(min = 1, max = 100)
     @Column(name = "action")
     private String action;
-    
+
     @Lob
     @Column(name = "old_values", columnDefinition = "JSON")
     private String oldValues;
-    
+
     @Lob
     @Column(name = "new_values", columnDefinition = "JSON")
     private String newValues;
-    
+
     @Basic(optional = false)
     @NotNull
     @Column(name = "created_at")
     @Temporal(TemporalType.TIMESTAMP)
     private Date createdAt;
-    
-    // Transient fields for Fluent API (not stored in database)
+
+    // Transient fields for easier JSON handling
     @Transient
     private Map<String, Object> oldValuesMap;
-    
+
     @Transient
     private Map<String, Object> newValuesMap;
 
@@ -106,13 +111,6 @@ public class AuditLogs implements Serializable {
         this.id = id;
     }
 
-    /**
-     * Constructor with required fields
-     * @param userId The ID of the user performing the action
-     * @param email The email of the user
-     * @param entityType The type of entity (e.g., "user", "appointment", "company")
-     * @param action The action performed (e.g., "create", "update", "delete", "login")
-     */
     public AuditLogs(Integer userId, String email, String entityType, String action) {
         this();
         this.userId = userId;
@@ -121,101 +119,7 @@ public class AuditLogs implements Serializable {
         this.action = action;
     }
 
-    // Fluent API methods for building the object
-    
-    /**
-     * Set the user ID (Fluent API)
-     */
-    public AuditLogs setUserId(Integer userId) {
-        this.userId = userId;
-        return this;
-    }
-    
-    /**
-     * Set the company ID (Fluent API)
-     */
-    public AuditLogs setCompanyId(Integer companyId) {
-        this.companyId = companyId;
-        return this;
-    }
-    
-    /**
-     * Set the email (Fluent API)
-     */
-    public AuditLogs setEmail(String email) {
-        this.email = email;
-        return this;
-    }
-    
-    /**
-     * Set the entity type (Fluent API)
-     */
-    public AuditLogs setEntityType(String entityType) {
-        this.entityType = entityType;
-        return this;
-    }
-    
-    /**
-     * Set the action (Fluent API)
-     */
-    public AuditLogs setAction(String action) {
-        this.action = action;
-        return this;
-    }
-    
-    /**
-     * Add a single old value (Fluent API)
-     */
-    public AuditLogs addOldValue(String key, Object value) {
-        if (this.oldValuesMap == null) {
-            this.oldValuesMap = new HashMap<>();
-        }
-        this.oldValuesMap.put(key, value);
-        return this;
-    }
-    
-    /**
-     * Add a single new value (Fluent API)
-     */
-    public AuditLogs addNewValue(String key, Object value) {
-        if (this.newValuesMap == null) {
-            this.newValuesMap = new HashMap<>();
-        }
-        this.newValuesMap.put(key, value);
-        return this;
-    }
-    
-    /**
-     * Set all old values at once from a Map (Fluent API)
-     */
-    public AuditLogs setOldValuesMap(Map<String, Object> oldValues) {
-        this.oldValuesMap = new HashMap<>(oldValues);
-        return this;
-    }
-    
-    /**
-     * Set all new values at once from a Map (Fluent API)
-     */
-    public AuditLogs setNewValuesMap(Map<String, Object> newValues) {
-        this.newValuesMap = new HashMap<>(newValues);
-        return this;
-    }
-    
-    /**
-     * Build and finalize the audit log by converting Maps to JSON strings
-     * Call this before persisting the entity
-     */
-    public AuditLogs build() {
-        if (this.oldValuesMap != null && !this.oldValuesMap.isEmpty()) {
-            this.oldValues = new JSONObject(this.oldValuesMap).toString();
-        }
-        if (this.newValuesMap != null && !this.newValuesMap.isEmpty()) {
-            this.newValues = new JSONObject(this.newValuesMap).toString();
-        }
-        return this;
-    }
-
-    // Standard Getters
+    // ========== GETTERS ==========
     public Integer getId() {
         return id;
     }
@@ -251,7 +155,7 @@ public class AuditLogs implements Serializable {
     public Date getCreatedAt() {
         return createdAt;
     }
-    
+
     public Map<String, Object> getOldValuesMap() {
         if (oldValuesMap == null && oldValues != null && !oldValues.isEmpty()) {
             try {
@@ -263,7 +167,7 @@ public class AuditLogs implements Serializable {
         }
         return oldValuesMap;
     }
-    
+
     public Map<String, Object> getNewValuesMap() {
         if (newValuesMap == null && newValues != null && !newValues.isEmpty()) {
             try {
@@ -276,9 +180,29 @@ public class AuditLogs implements Serializable {
         return newValuesMap;
     }
 
-    // Standard Setters
+    // ========== SETTERS (normál setter-ek, nem fluent API) ==========
     public void setId(Integer id) {
         this.id = id;
+    }
+
+    public void setUserId(Integer userId) {
+        this.userId = userId;
+    }
+
+    public void setCompanyId(Integer companyId) {
+        this.companyId = companyId;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public void setEntityType(String entityType) {
+        this.entityType = entityType;
+    }
+
+    public void setAction(String action) {
+        this.action = action;
     }
 
     public void setOldValues(String oldValues) {
@@ -293,40 +217,32 @@ public class AuditLogs implements Serializable {
         this.createdAt = createdAt;
     }
 
-    /**
-     * Convert old values Map to JSONObject for database storage
-     * @return JSONObject or null if no old values
-     */
-    public JSONObject getOldValuesAsJson() {
-        if (oldValuesMap == null || oldValuesMap.isEmpty()) {
-            if (oldValues != null && !oldValues.isEmpty()) {
-                try {
-                    return new JSONObject(oldValues);
-                } catch (Exception e) {
-                    return null;
-                }
-            }
-            return null;
-        }
-        return new JSONObject(oldValuesMap);
+    public void setOldValuesMap(Map<String, Object> oldValuesMap) {
+        this.oldValuesMap = oldValuesMap;
+    }
+
+    public void setNewValuesMap(Map<String, Object> newValuesMap) {
+        this.newValuesMap = newValuesMap;
     }
 
     /**
-     * Convert new values Map to JSONObject for database storage
-     * @return JSONObject or null if no new values
+     * Add a single old value to the old values map
      */
-    public JSONObject getNewValuesAsJson() {
-        if (newValuesMap == null || newValuesMap.isEmpty()) {
-            if (newValues != null && !newValues.isEmpty()) {
-                try {
-                    return new JSONObject(newValues);
-                } catch (Exception e) {
-                    return null;
-                }
-            }
-            return null;
+    public void addOldValue(String key, Object value) {
+        if (this.oldValuesMap == null) {
+            this.oldValuesMap = new HashMap<>();
         }
-        return new JSONObject(newValuesMap);
+        this.oldValuesMap.put(key, value);
+    }
+
+    /**
+     * Add a single new value to the new values map
+     */
+    public void addNewValue(String key, Object value) {
+        if (this.newValuesMap == null) {
+            this.newValuesMap = new HashMap<>();
+        }
+        this.newValuesMap.put(key, value);
     }
 
     @Override
@@ -350,14 +266,93 @@ public class AuditLogs implements Serializable {
 
     @Override
     public String toString() {
-        return "AuditLogs{" +
-                "id=" + id +
-                ", userId=" + userId +
-                ", companyId=" + companyId +
-                ", email='" + email + '\'' +
-                ", entityType='" + entityType + '\'' +
-                ", action='" + action + '\'' +
-                ", createdAt=" + createdAt +
-                '}';
+        return "AuditLogs{"
+                + "id=" + id
+                + ", userId=" + userId
+                + ", companyId=" + companyId
+                + ", email='" + email + '\''
+                + ", entityType='" + entityType + '\''
+                + ", action='" + action + '\''
+                + ", createdAt=" + createdAt
+                + '}';
+    }
+    
+    
+    
+
+    // ========== DATABASE COMMUNICATION ==========
+    /**
+     * Logs this audit entry to the database using the logAudit stored procedure
+     */
+    public void logAudit() {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            // Convert Maps to JSON strings before saving
+            if (this.oldValuesMap != null && !this.oldValuesMap.isEmpty()) {
+                this.oldValues = new JSONObject(this.oldValuesMap).toString();
+            }
+            if (this.newValuesMap != null && !this.newValuesMap.isEmpty()) {
+                this.newValues = new JSONObject(this.newValuesMap).toString();
+            }
+
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("logAudit");
+
+            // Register parameters
+            spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("emailIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("entityTypeIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("actionIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("oldValuesIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("newValuesIN", String.class, ParameterMode.IN);
+
+            // Set parameters
+            spq.setParameter("userIdIN", this.userId);
+
+            // Handle nullable companyId
+            if (this.companyId != null) {
+                spq.setParameter("companyIdIN", this.companyId);
+            } else {
+                spq.unwrap(org.hibernate.procedure.ProcedureCall.class)
+                        .getParameterRegistration("companyIdIN")
+                        .enablePassingNulls(true);
+                spq.setParameter("companyIdIN", null);
+            }
+
+            spq.setParameter("emailIN", this.email);
+            spq.setParameter("entityTypeIN", this.entityType);
+            spq.setParameter("actionIN", this.action);
+
+            // Handle nullable oldValues
+            if (this.oldValues != null && !this.oldValues.isEmpty()) {
+                spq.setParameter("oldValuesIN", this.oldValues);
+            } else {
+                spq.unwrap(org.hibernate.procedure.ProcedureCall.class)
+                        .getParameterRegistration("oldValuesIN")
+                        .enablePassingNulls(true);
+                spq.setParameter("oldValuesIN", null);
+            }
+
+            // Handle nullable newValues
+            if (this.newValues != null && !this.newValues.isEmpty()) {
+                spq.setParameter("newValuesIN", this.newValues);
+            } else {
+                spq.unwrap(org.hibernate.procedure.ProcedureCall.class)
+                        .getParameterRegistration("newValuesIN")
+                        .enablePassingNulls(true);
+                spq.setParameter("newValuesIN", null);
+            }
+
+            spq.execute();
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            throw new RuntimeException("Failed to log audit entry", ex);
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
     }
 }
