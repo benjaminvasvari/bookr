@@ -2,11 +2,11 @@
   <!-- Képgaléria szekció -->
   <div class="gallery-section">
     <div class="main-image">
-      <img [src]="company.mainImage" [alt]="company.name">
+      <img [src]="company.mainImage" [alt]="company.name" />
     </div>
     <div class="thumbnail-gallery">
       <div class="thumbnail" *ngFor="let image of company.galleryImages">
-        <img [src]="image" [alt]="company.name">
+        <img [src]="image" [alt]="company.name" />
       </div>
     </div>
   </div>
@@ -23,17 +23,17 @@
         </div>
         <p class="company-category">{{ company.category }}</p>
       </div>
-      
+
       <div class="header-actions">
-        <button class="icon-button favorite" 
-                [class.active]="company.isFavorite"
-                (click)="toggleFavorite()"
-                [attr.aria-label]="company.isFavorite ? 'Kedvencekből eltávolítás' : 'Kedvencekhez adás'">
+        <button
+          class="icon-button favorite"
+          [class.active]="company.isFavorite"
+          (click)="toggleFavorite()"
+          [attr.aria-label]="company.isFavorite ? 'Kedvencekből eltávolítás' : 'Kedvencekhez adás'"
+        >
           <span class="icon">{{ company.isFavorite ? '♥' : '♡' }}</span>
         </button>
-        <button class="icon-button share" 
-                (click)="shareCompany()"
-                aria-label="Megosztás">
+        <button class="icon-button share" (click)="shareCompany()" aria-label="Megosztás">
           <span class="icon">⤴</span>
         </button>
       </div>
@@ -47,26 +47,34 @@
   <!-- Szolgáltatások szekció -->
   <div class="services-section">
     <h2 class="section-title">Szolgáltatások</h2>
-    
+
     <div class="service-tabs">
-      <button class="tab-button" 
-              [class.active]="selectedTab === 'services'"
-              (click)="selectTab('services')">
+      <button
+        class="tab-button"
+        [class.active]="selectedTab === 'services'"
+        (click)="selectTab('services')"
+      >
         Hajvágás
       </button>
-      <button class="tab-button" 
-              [class.active]="selectedTab === 'beard'"
-              (click)="selectTab('beard')">
+      <button
+        class="tab-button"
+        [class.active]="selectedTab === 'beard'"
+        (click)="selectTab('beard')"
+      >
         Szakáll formázás
       </button>
-      <button class="tab-button" 
-              [class.active]="selectedTab === 'facial'"
-              (click)="selectTab('facial')">
+      <button
+        class="tab-button"
+        [class.active]="selectedTab === 'facial'"
+        (click)="selectTab('facial')"
+      >
         Fej- és arc kezelések
       </button>
-      <button class="tab-button" 
-              [class.active]="selectedTab === 'combined'"
-              (click)="selectTab('combined')">
+      <button
+        class="tab-button"
+        [class.active]="selectedTab === 'combined'"
+        (click)="selectTab('combined')"
+      >
         Kombinált szolgáltatások
       </button>
     </div>
@@ -78,9 +86,7 @@
           <p class="service-duration">{{ service.duration }}</p>
           <p class="service-price">{{ service.price }} {{ service.currency }} tól</p>
         </div>
-        <button class="book-button" (click)="bookService(service)">
-          Foglalj
-        </button>
+        <button class="book-button" (click)="bookService(service)">Foglalj</button>
       </div>
     </div>
 
@@ -88,11 +94,159 @@
       <p>Jelenleg nincs elérhető szolgáltatás ebben a kategóriában.</p>
     </div>
   </div>
+  <div class="about-container">
+    <div class="content-wrapper">
+      <div class="about-content">
+        <h1 class="section-title">Rólunk</h1>
+        <!-- Térkép szekció -->
+        <div class="map-section">
+          <div class="map-container">
+            <iframe
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2695.8779896547434!2d19.062348!3d47.4979937!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x4741dc14f3f0c5b5%3A0x0!2sNépszínház%20utca%2C%20Budapest!5e0!3m2!1shu!2shu!4v1234567890"
+              width="100%"
+              height="100%"
+              style="border: 0"
+              allowfullscreen=""
+              loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade"
+              title="Bookr Térkép - Budapest, Népszínház utca"
+            >
+            </iframe>
+          </div>
+        </div>
+
+        <!-- Szöveges tartalom szekció -->
+        <div class="text-section">
+          <p class="about-text">
+            Lorem ipsum dolor sit amet consectetuer. Egestas sed diam volutpat habitant enim
+            interdum non. Pharetra nibh mauris sed dui aliquam. Facilisis tellus lectus elementum
+            habitasse ut mauris. Fermentum nunc odio blandit ultrices commodo scelerisque facilisi
+            ullamcorper neque.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="open-hours-reviews-section">
+      <div class="opening-hours-card">
+    <h1 class="title">Nyitvatartás</h1>
+
+    <div class="hours-list">
+      <div class="hours-item">
+        <span class="day">Hétfő:</span>
+        <span class="time">9:00 - 18:00</span>
+      </div>
+
+      <div class="hours-item">
+        <span class="day">Kedd:</span>
+        <span class="time">9:00 - 18:00</span>
+      </div>
+
+      <div class="hours-item closed">
+        <span class="day">Szerda:</span>
+        <span class="time">zárva</span>
+      </div>
+
+      <div class="hours-item">
+        <span class="day">Csütörtök:</span>
+        <span class="time">9:00 - 18:00</span>
+      </div>
+
+      <div class="hours-item">
+        <span class="day">Péntek:</span>
+        <span class="time">9:00 - 18:00</span>
+      </div>
+    </div>
+  </div>
+  <!-- Értékelések -->
+  <div class="reviews-container" *ngIf="company && company.reviews && company.reviews.length > 0">
+    <h1 class="title">Értékelések</h1>
+
+    <div class="reviews-list">
+      <div class="review-card" *ngFor="let review of company.reviews">
+        <div class="review-header">
+          <div class="user-avatar">
+            <img *ngIf="review.userImage" [src]="review.userImage" [alt]="review.userName" />
+            <div *ngIf="!review.userImage" class="avatar-placeholder">
+              {{ review.userName.charAt(0).toUpperCase() }}
+            </div>
+          </div>
+          <div class="user-info">
+            <h3 class="user-name">{{ review.userName }}</h3>
+            <div class="review-rating">
+              <span class="star" *ngFor="let star of getReviewStars(review.rating)">★</span>
+            </div>
+            <p class="review-date">{{ review.date }}</p>
+          </div>
+        </div>
+        <p class="review-comment">{{ review.comment }}</p>
+      </div>
+    </div>
+  </div>
+  </div>
+
 </div>
 
-<div>
-  
-</div>
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-column">
+          <p>Lorem</p>
+          <p>Ipsum dolor</p>
+          <p>sit amet</p>
+          <p>consectetur</p>
+          <p>adipiscing</p>
+          <p>magna nam</p>
+          <p>volutpat</p>
+          <p>venenatis</p>
+          <p>adipiscing</p>
+          <p>et</p>
+        </div>
+        <div class="footer-column">
+          <p>Lorem</p>
+          <p>Ipsum dolor</p>
+          <p>sit amet</p>
+          <p>consectetur</p>
+          <p>adipiscing</p>
+          <p>magna nam</p>
+          <p>volutpat</p>
+          <p>venenatis</p>
+          <p>adipiscing</p>
+          <p>et</p>
+        </div>
+        <div class="footer-column">
+          <p>Lorem</p>
+          <p>Ipsum dolor</p>
+          <p>sit amet</p>
+          <p>consectetur</p>
+          <p>adipiscing</p>
+          <p>magna nam</p>
+          <p>volutpat</p>
+          <p>venenatis</p>
+          <p>adipiscing</p>
+          <p>et</p>
+        </div>
+        <div class="footer-column">
+          <p>Lorem</p>
+          <p>Ipsum dolor</p>
+          <p>sit amet</p>
+          <p>consectetur</p>
+          <p>adipiscing</p>
+          <p>magna nam</p>
+          <p>volutpat</p>
+          <p>venenatis</p>
+          <p>adipiscing</p>
+          <p>et</p>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <div class="footer-logo">
+           B<span class="logo-highlight">oo</span>kr
+        </div>
+      </div>
+    </div>
+  </footer>
 
 <div class="loading" *ngIf="!company">
   <p>Betöltés...</p>

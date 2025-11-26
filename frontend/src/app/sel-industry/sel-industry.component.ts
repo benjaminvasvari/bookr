@@ -10,6 +10,15 @@ interface Service {
   currency: string;
 }
 
+interface Review {
+  id: number;
+  userName: string;
+  userImage?: string;
+  rating: number;
+  comment: string;
+  date: string;
+}
+
 interface CompanyDetails {
   id: number;
   name: string;
@@ -19,6 +28,7 @@ interface CompanyDetails {
   mainImage: string;
   galleryImages: string[];
   services: Service[];
+  reviews: Review[];
   isFavorite: boolean;
 }
 
@@ -76,6 +86,32 @@ export class SelIndustryComponent implements OnInit {
         currency: 'Ft'
       }
     ],
+    reviews: [
+      {
+        id: 1,
+        userName: 'Kovács Anna',
+        userImage: '',
+        rating: 5,
+        comment: 'Kiváló szolgáltatás, nagyon profik! Mindenképpen ajánlom mindenkinek, aki minőségi munkát keres.',
+        date: '2024. 11. 15.'
+      },
+      {
+        id: 2,
+        userName: 'Nagy Péter',
+        userImage: '',
+        rating: 4,
+        comment: 'Nagyon elégedett vagyok az eredménnyel. Precíz munka, barátságos kiszolgálás. Csak ajánlani tudom!',
+        date: '2024. 11. 10.'
+      },
+      {
+        id: 3,
+        userName: 'Szabó Eszter',
+        userImage: '',
+        rating: 5,
+        comment: 'Tökéletes élmény volt! A stylist pontosan azt csinálta, amit kértem. Biztos visszamegyek!',
+        date: '2024. 11. 05.'
+      }
+    ],
     isFavorite: false
   };
 
@@ -89,6 +125,7 @@ export class SelIndustryComponent implements OnInit {
       this.companyId = +params['id'];
       this.loadCompanyDetails();
     });
+    window.scrollTo(0, 0);
   }
 
   loadCompanyDetails(): void {
@@ -128,6 +165,10 @@ export class SelIndustryComponent implements OnInit {
 
   getRatingStars(): number[] {
     const rating = this.company?.rating || 0;
+    return Array(Math.floor(rating)).fill(0);
+  }
+
+  getReviewStars(rating: number): number[] {
     return Array(Math.floor(rating)).fill(0);
   }
 }
