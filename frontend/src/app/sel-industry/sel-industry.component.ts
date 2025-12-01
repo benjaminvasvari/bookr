@@ -37,7 +37,7 @@ interface CompanyDetails {
   standalone: true,
   imports: [CommonModule],
   templateUrl: './sel-industry.component.html',
-  styleUrls: ['./sel-industry.component.css']
+  styleUrls: ['./sel-industry.component.css'],
 })
 export class SelIndustryComponent implements OnInit {
   companyId: number | null = null;
@@ -48,13 +48,14 @@ export class SelIndustryComponent implements OnInit {
     id: 1,
     name: 'Future',
     category: 'Cég adatok',
-    description: 'Lorem ipsum dolor sit amet consectetur. Ut id tellus bibendum massa et tristique elit.',
+    description:
+      'Lorem ipsum dolor sit amet consectetur. Ut id tellus bibendum massa et tristique elit.',
     rating: 4.5,
     mainImage: 'assets/images/barbershop-main.jpg',
     galleryImages: [
       'assets/images/barbershop-1.jpg',
       'assets/images/barbershop-2.jpg',
-      'assets/images/barbershop-3.jpg'
+      'assets/images/barbershop-3.jpg',
     ],
     services: [
       {
@@ -62,29 +63,29 @@ export class SelIndustryComponent implements OnInit {
         name: 'Klasszikus hajvágás',
         duration: '45 p - 1 ó',
         price: 4500,
-        currency: 'Ft'
+        currency: 'Ft',
       },
       {
         id: 2,
         name: 'Modern fade',
         duration: '45 p - 1 ó',
         price: 6000,
-        currency: 'Ft'
+        currency: 'Ft',
       },
       {
         id: 3,
         name: 'Gyermek hajvágás',
         duration: '30 p - 45 p',
         price: 4000,
-        currency: 'Ft'
+        currency: 'Ft',
       },
       {
         id: 4,
         name: 'Hajformázás',
         duration: '15 p - 20 p',
         price: 3500,
-        currency: 'Ft'
-      }
+        currency: 'Ft',
+      },
     ],
     reviews: [
       {
@@ -92,36 +93,36 @@ export class SelIndustryComponent implements OnInit {
         userName: 'Kovács Anna',
         userImage: '',
         rating: 5,
-        comment: 'Kiváló szolgáltatás, nagyon profik! Mindenképpen ajánlom mindenkinek, aki minőségi munkát keres.',
-        date: '2024. 11. 15.'
+        comment:
+          'Kiváló szolgáltatás, nagyon profik! Mindenképpen ajánlom mindenkinek, aki minőségi munkát keres.',
+        date: '2024. 11. 15.',
       },
       {
         id: 2,
         userName: 'Nagy Péter',
         userImage: '',
         rating: 4,
-        comment: 'Nagyon elégedett vagyok az eredménnyel. Precíz munka, barátságos kiszolgálás. Csak ajánlani tudom!',
-        date: '2024. 11. 10.'
+        comment:
+          'Nagyon elégedett vagyok az eredménnyel. Precíz munka, barátságos kiszolgálás. Csak ajánlani tudom!',
+        date: '2024. 11. 10.',
       },
       {
         id: 3,
         userName: 'Szabó Eszter',
         userImage: '',
         rating: 5,
-        comment: 'Tökéletes élmény volt! A stylist pontosan azt csinálta, amit kértem. Biztos visszamegyek!',
-        date: '2024. 11. 05.'
-      }
+        comment:
+          'Tökéletes élmény volt! A stylist pontosan azt csinálta, amit kértem. Biztos visszamegyek!',
+        date: '2024. 11. 05.',
+      },
     ],
-    isFavorite: false
+    isFavorite: false,
   };
 
-  constructor(
-    private route: ActivatedRoute,
-    private router: Router
-  ) {}
+  constructor(private route: ActivatedRoute, private router: Router) {}
 
   ngOnInit(): void {
-    this.route.params.subscribe(params => {
+    this.route.params.subscribe((params) => {
       this.companyId = +params['id'];
       this.loadCompanyDetails();
     });
@@ -144,23 +145,31 @@ export class SelIndustryComponent implements OnInit {
 
   shareCompany(): void {
     if (navigator.share) {
-      navigator.share({
-        title: this.company?.name,
-        text: this.company?.description,
-        url: window.location.href
-      }).catch(err => console.log('Megosztás sikertelen', err));
+      navigator
+        .share({
+          title: this.company?.name,
+          text: this.company?.description,
+          url: window.location.href,
+        })
+        .catch((err) => console.log('Megosztás sikertelen', err));
     } else {
       navigator.clipboard.writeText(window.location.href);
       alert('Link másolva a vágólapra!');
     }
   }
 
-  bookService(service: Service): void {
-    this.router.navigate(['/booking', this.companyId, service.id]);
+  bookNow(): void {
+    if (this.company?.id) {
+      this.router.navigate(['/appointment', this.company.id, 'services']);
+    }
   }
 
-  bookNow(): void {
-    this.router.navigate(['/booking', this.companyId]);
+  bookService(service: any): void {
+    if (this.company?.id) {
+      this.router.navigate(['/appointment', this.company.id, 'services'], {
+        queryParams: { serviceId: service.id },
+      });
+    }
   }
 
   getRatingStars(): number[] {

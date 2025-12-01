@@ -1,0 +1,141 @@
+<div class="appointment-container">
+  <!-- Bal oldal: Szakemberek és Naptár -->
+  <div class="specialists-section">
+    <h2>Szakemberek</h2>
+    
+    <!-- Szakemberek lista -->
+    <div class="specialists-grid">
+      <div 
+        *ngFor="let specialist of specialists"
+        class="specialist-card"
+        [class.selected]="selectedSpecialist?.id === specialist.id"
+        (click)="selectSpecialist(specialist)">
+        <div class="specialist-image">
+          <img [src]="specialist.imageUrl" [alt]="specialist.name">
+        </div>
+        <h4>{{ specialist.name }}</h4>
+        <p class="specialization">{{ specialist.specialization }}</p>
+      </div>
+    </div>
+
+    <!-- Naptár (csak ha van kiválasztott szakember) -->
+    <div *ngIf="selectedSpecialist" class="calendar-section">
+      <div class="calendar-header">
+        <h3>Időpont választás</h3>
+        <button class="nav-btn" (click)="nextWeek()">
+          Következő hét <i class="fas fa-chevron-right"></i>
+        </button>
+      </div>
+
+      <!-- Heti naptár -->
+      <div class="week-calendar">
+        <div 
+          *ngFor="let day of weekDays"
+          class="day-column"
+          [class.disabled]="day.isDisabled"
+          [class.selected]="selectedDate?.getTime() === day.date.getTime()"
+          [class.today]="day.isToday"
+          (click)="selectDay(day)">
+          <div class="day-name">{{ day.dayName }}</div>
+          <div class="day-number">{{ day.dayNumber }}</div>
+        </div>
+      </div>
+
+      <!-- Időpontok (csak ha van kiválasztott nap) -->
+      <div *ngIf="selectedDate" class="time-slots-section">
+        <h4>Elérhető időpontok - {{ formatDate(selectedDate) }}</h4>
+        <div class="time-slots-grid">
+          <button
+            *ngFor="let slot of timeSlots"
+            class="time-slot-btn"
+            [class.selected]="selectedTimeSlot?.time === slot.time"
+            [class.unavailable]="!slot.available"
+            [disabled]="!slot.available"
+            (click)="selectTimeSlot(slot)">
+            {{ slot.time }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ha nincs kiválasztott szakember -->
+    <div *ngIf="!selectedSpecialist" class="no-selection">
+      <i class="fas fa-user-clock"></i>
+      <p>Válassz szakembert az időpont foglalásához</p>
+    </div>
+  </div>
+
+  <!-- Jobb oldal: Kosár -->
+  <div class="cart-section">
+    <div class="cart-card">
+      <!-- Cég info -->
+      <div class="company-info">
+        <div class="company-image">
+          <img [src]="company?.imageUrl || 'assets/placeholder.jpg'" [alt]="company?.name">
+        </div>
+        <div class="company-details">
+          <h3>{{ company?.name }}</h3>
+          <div class="rating">
+            <span>{{ company?.rating }}</span>
+            <span class="stars">
+              <i class="fas fa-star"></i>
+              <i class="fas fa-star"></i>
+              <i class="fas fa-star"></i>
+              <i class="fas fa-star"></i>
+              <i class="fas fa-star"></i>
+            </span>
+          </div>
+          <p class="address">{{ company?.address }}</p>
+        </div>
+      </div>
+
+      <!-- Kiválasztott szakember (ha van) -->
+      <div *ngIf="selectedSpecialist" class="selected-specialist-info">
+        <div class="info-row">
+          <span class="label">Szakember:</span>
+          <span class="value">{{ selectedSpecialist.name }}</span>
+        </div>
+      </div>
+
+      <!-- Kiválasztott időpont (ha van) -->
+      <div *ngIf="selectedTimeSlot && selectedDate" class="selected-appointment-info">
+        <div class="info-row">
+          <span class="label">Időpont:</span>
+          <span class="value">{{ formatDate(selectedDate) }} {{ selectedTimeSlot.time }}</span>
+        </div>
+      </div>
+
+      <!-- Összesen sor -->
+      <div class="cart-summary">
+        <span>Összesen</span>
+        <span>{{ getCartTotal() }} Ft</span>
+      </div>
+
+      <!-- Kosár tartalom -->
+      <div class="cart-items">
+        <div *ngIf="cart.length === 0" class="empty-cart">
+          <p>A kosár üres</p>
+        </div>
+
+        <div *ngFor="let item of cart" class="cart-item">
+          <div class="cart-item-info">
+            <h4>{{ item.name }}</h4>
+            <p>{{ item.duration }} perc</p>
+            <p class="cart-item-price">{{ item.price }} Ft</p>
+          </div>
+          <button class="remove-btn" (click)="removeFromCart(item.id)">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Folytatás gomb -->
+      <button 
+        class="continue-btn"
+        [disabled]="cart.length === 0 || !selectedSpecialist || !selectedTimeSlot"
+        (click)="continue()">
+        Foglalás megerősítése
+      </button>
+    </div>
+  </div>
+</div>
