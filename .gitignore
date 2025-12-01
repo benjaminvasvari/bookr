@@ -19,10 +19,41 @@
 *.tar.gz
 *.rar
 
-# Environment files
+# Environment files - MINDEN .env bárhol
+**/.env
+**/.env.*
 .env
 .env.*
 
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+# Email configuration (ha maradt)
+**/email.properties
+
+# virtual machine crash logs
 hs_err_pid*
 replay_pid*
+
+# Maven
+**/target/
+target/
+
+# NetBeans
+nbproject/private/
+build/
+nbbuild/
+dist/
+nbdist/
+.nb-gradle/
+nb-configuration.xml
+nbactions.xml
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini

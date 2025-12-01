@@ -45,10 +45,19 @@ public class EnvConfig {
     
     /**
      * Opcionális környezeti változó lekérése default értékkel
+     * PUBLIC - használható más config osztályokból is!
+     */
+    public static String get(String key, String defaultValue) {
+        String value = dotenv.get(key);
+        return (value != null && !value.trim().isEmpty()) ? value.trim() : defaultValue;
+    }
+    
+    /**
+     * Környezeti változó lekérése default érték nélkül
      */
     private static String get(String key) {
         String value = dotenv.get(key);
-        return (value != null && !value.trim().isEmpty()) ? value.trim() : "hiba a .env file-al";
+        return (value != null && !value.trim().isEmpty()) ? value.trim() : null;
     }
     
     /**
@@ -61,7 +70,7 @@ public class EnvConfig {
         String jwtSecret = getJwtSecret();
         if (jwtSecret.length() < 32) {
             throw new IllegalStateException(
-                "HIBA: JWT_SECRET túl rövid! Minimum 32 karakter szükséges. (Jelenlegi: " + jwtSecret.length() + ")"
+                "HIBA: ACCESS_SECRET túl rövid! Minimum 32 karakter szükséges. (Jelenlegi: " + jwtSecret.length() + ")"
             );
         }
         
@@ -76,7 +85,7 @@ public class EnvConfig {
         // Ugyanaz nem lehet
         if (jwtSecret.equals(refreshSecret)) {
             throw new IllegalStateException(
-                "HIBA: JWT_SECRET és REFRESH_SECRET nem lehet ugyanaz!"
+                "HIBA: ACCESS_SECRET és REFRESH_SECRET nem lehet ugyanaz!"
             );
         }
         
@@ -135,43 +144,40 @@ public class EnvConfig {
         return Long.parseLong(getRequired("REFRESH_TOKEN_EXPIRATION_DAYS"));
     }
     
-    
-    
     // ===== Argon2 Configuration =====
     
     /**
      * Argon2 salt hossz
      */
     public static int getArgon2SaltLength() {
-        return Integer.parseInt(get("ARGON2_SALT_LENGTH"));
+        return Integer.parseInt(get("ARGON2_SALT_LENGTH", "16"));
     }
     
     /**
      * Argon2 hash hossz
      */
     public static int getArgon2HashLength() {
-        return Integer.parseInt(get("ARGON2_HASH_LENGTH"));
+        return Integer.parseInt(get("ARGON2_HASH_LENGTH", "32"));
     }
     
     /**
      * Argon2 iterációk száma
      */
     public static int getArgon2Iterations() {
-        return Integer.parseInt(get("ARGON2_ITERATIONS"));
+        return Integer.parseInt(get("ARGON2_ITERATIONS", "3"));
     }
     
     /**
      * Argon2 memória KB-ban
      */
     public static int getArgon2Memory() {
-        return Integer.parseInt(get("ARGON2_MEMORY"));
+        return Integer.parseInt(get("ARGON2_MEMORY", "65536"));
     }
     
     /**
      * Argon2 párhuzamosság
      */
     public static int getArgon2Parallelism() {
-        return Integer.parseInt(get("ARGON2_PARALLELISM"));
+        return Integer.parseInt(get("ARGON2_PARALLELISM", "1"));
     }
-    
 }

@@ -1,70 +1,67 @@
 package com.vizsgaremek.bookr.config;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Properties;
-
 /**
- * Email configuration loader
- * Loads SMTP settings from email.properties
- * 
+ * Email configuration loader Loads SMTP settings from .env file via EnvConfig
+ *
  * @author vben
  */
 public class EmailConfig {
-    private static Properties properties;
-    
-    static {
-        loadProperties();
-    }
-    
-    private static void loadProperties() {
-        properties = new Properties();
-        try (InputStream input = EmailConfig.class.getClassLoader()
-                .getResourceAsStream("email.properties")) {
-            
-            if (input == null) {
-                System.err.println("Unable to find email.properties");
-                return;
-            }
-            
-            properties.load(input);
-            
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-    }
-    
+
+    /**
+     * SMTP host
+     */
     public static String getSMTPHost() {
-        return properties.getProperty("smtp.host", "sandbox.smtp.mailtrap.io");
+        return EnvConfig.get("SMTP_HOST", "sandbox.smtp.mailtrap.io");
     }
-    
+
+    /**
+     * SMTP port
+     */
     public static int getSMTPPort() {
-        return Integer.parseInt(properties.getProperty("smtp.port", "2525"));
+        String port = EnvConfig.get("SMTP_PORT", "2525");
+        return Integer.parseInt(port);
     }
-    
+
+    /**
+     * SMTP username (email address)
+     */
     public static String getSMTPUsername() {
-        return properties.getProperty("smtp.username");
+        return EnvConfig.get("SMTP_USERNAME", "");
     }
-    
+
+    /**
+     * SMTP password (app-specific password for Gmail)
+     */
     public static String getSMTPPassword() {
-        return properties.getProperty("smtp.password");
+        return EnvConfig.get("SMTP_PASSWORD", "");
     }
-    
+
+    /**
+     * From email address
+     */
     public static String getFromEmail() {
-        return properties.getProperty("email.from", "noreply@bookr.local");
+        return EnvConfig.get("EMAIL_FROM", "noreply@bookr.local");
     }
-    
+
+    /**
+     * From name (sender name)
+     */
     public static String getFromName() {
-        return properties.getProperty("email.from.name", "Bookr");
+        return EnvConfig.get("EMAIL_FROM_NAME", "Bookr");
     }
-    
+
+    /**
+     * Application base URL (for email links)
+     */
     public static String getAppBaseUrl() {
-        return properties.getProperty("app.base.url", "http://localhost:8080");
+        return EnvConfig.get("APP_BASE_URL", "http://localhost:8080");
     }
-    
+
+    /**
+     * Is email sending enabled?
+     */
     public static boolean isEmailEnabled() {
-        return Boolean.parseBoolean(
-            properties.getProperty("email.enabled", "true")
-        );
+        String enabled = EnvConfig.get("EMAIL_ENABLED", "true");
+        return Boolean.parseBoolean(enabled);
     }
 }
