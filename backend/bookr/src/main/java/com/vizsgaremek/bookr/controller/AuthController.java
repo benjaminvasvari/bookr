@@ -86,7 +86,7 @@ public class AuthController {
     }
 
     @POST
-    @Path("registerSta")
+    @Path("registerStaff")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response staffRegister(String body) {
         JSONObject bodyObject = new JSONObject(body);
@@ -184,5 +184,26 @@ public class AuthController {
                     .type(MediaType.APPLICATION_JSON)
                     .build();
         }
+    }
+    
+    @POST
+    @Path("logout")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response logout(String body) {
+        JSONObject bodyObject = new JSONObject(body);
+
+        Users loggedoutUser = new Users(
+                bodyObject.getInt("id"),
+                bodyObject.getString("email"),
+                bodyObject.getInt("companyId")
+        );
+
+        JSONObject toReturn = authService.logout(loggedoutUser);
+
+        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                .entity(toReturn.toString())
+                .type(MediaType.APPLICATION_JSON)
+                .build();
     }
 }

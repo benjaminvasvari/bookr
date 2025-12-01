@@ -108,7 +108,7 @@ public class EnvConfig {
      * KÖTELEZŐ - minimum 32 karakter
      */
     public static String getJwtSecret() {
-        return getRequired("JWT_SECRET");
+        return getRequired("ACCESS_SECRET");
     }
     
     /**

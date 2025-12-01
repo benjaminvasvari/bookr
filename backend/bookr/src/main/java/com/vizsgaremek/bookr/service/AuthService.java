@@ -401,6 +401,8 @@ public class AuthService {
 
             if (!isValid) {
                 status = "InvalidToken";
+                System.out.println("token validation");
+
                 statusCode = 401;
                 toReturn.put("status", status);
                 toReturn.put("statusCode", statusCode);
@@ -411,6 +413,8 @@ public class AuthService {
             Integer userId = JWT.getUserIdFromRefreshToken(refreshToken);
 
             if (userId == null) {
+                System.out.println("UserId");
+
                 status = "InvalidToken";
                 statusCode = 401;
                 toReturn.put("status", status);
@@ -456,4 +460,37 @@ public class AuthService {
         return toReturn;
     }
 
+    public JSONObject logout(Users loggedoutUser) {
+        JSONObject toReturn = new JSONObject();
+
+        try {
+
+//            // Input validáció
+//            if (!request.has("refreshToken") || request.getString("refreshToken").isEmpty()) {
+//                toReturn.put("status", "InvalidInput");
+//                toReturn.put("statusCode", 400);
+//                toReturn.put("message", "Refresh token is required");
+//                return toReturn;
+//            }
+            auditLogService.logSimpleAction(
+                    loggedoutUser.getId(),
+                    loggedoutUser.getCompanyId(),
+                    loggedoutUser.getEmail(),
+                    "user",
+                    "logout"
+            );
+
+            toReturn.put("status", "success");
+            toReturn.put("statusCode", 200);
+            toReturn.put("message", "Successfully logged out");
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            toReturn.put("status", "InternalServerError");
+            toReturn.put("statusCode", 500);
+            toReturn.put("message", "An unexpected error occurred: " + ex.getMessage());
+        }
+
+        return toReturn;
+    }
 }

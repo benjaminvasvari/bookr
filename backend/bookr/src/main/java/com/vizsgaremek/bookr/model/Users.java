@@ -245,7 +245,7 @@ public class Users implements Serializable {
     }
 
     // getUserById
-    public Users(Integer id, String guid, String firstName, String lastName, String email, String phone, Integer companyId, Date createdAt, Date updatedAt, Date deletedAt, boolean isDeleted, Date lastLogin, Date registerFinishedAt, boolean isActive) {
+    public Users(Integer id, String guid, String firstName, String lastName, String email, String phone, Integer companyId, Date createdAt, Date updatedAt, boolean isDeleted, Date lastLogin, Date registerFinishedAt, boolean isActive) {
         this.id = id;
         this.guid = guid;
         this.firstName = firstName;
@@ -255,13 +255,21 @@ public class Users implements Serializable {
         this.companyId = companyId;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
-        this.deletedAt = deletedAt;
         this.isDeleted = isDeleted;
         this.lastLogin = lastLogin;
         this.registerFinishedAt = registerFinishedAt;
         this.isActive = isActive;
 
     }
+    
+    // logout
+
+    public Users(Integer id, String email, Integer companyId) {
+        this.id = id;
+        this.email = email;
+        this.companyId = companyId;
+    }
+    
 
     public Integer getId() {
         return id;
@@ -824,11 +832,10 @@ public class Users implements Serializable {
                     record[6] == null ? null : Integer.valueOf(record[6].toString()), // company_id
                     formatter.parse(record[7].toString()), // created_at
                     record[8] == null ? null : formatter.parse(record[8].toString()), // updated_at
-                    record[9] == null ? null : formatter.parse(record[9].toString()), // deleted_at
-                    Boolean.parseBoolean(record[10].toString()), // is_deleted
-                    record[11] == null ? null : formatter.parse(record[11].toString()), // last_login
-                    record[12] == null ? null : formatter.parse(record[12].toString()), // register_finished_at
-                    Boolean.parseBoolean(record[13].toString())
+                    Boolean.parseBoolean(record[9].toString()), // is_deleted
+                    record[10] == null ? null : formatter.parse(record[10].toString()), // last_login
+                    record[11] == null ? null : formatter.parse(record[11].toString()), // register_finished_at
+                    Boolean.parseBoolean(record[12].toString())
 
             );
 

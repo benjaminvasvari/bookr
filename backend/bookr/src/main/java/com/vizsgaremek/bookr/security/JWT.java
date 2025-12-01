@@ -90,13 +90,13 @@ public class JWT {
         }
 
         return Jwts.builder()
-                .setIssuer("bookr-api") // Konzisztens névvel
-                .setSubject(user.getId().toString()) // Subject = User ID (standard)
                 .setClaims(claims)
+                .setIssuer("bookr-api")
+                .setSubject(user.getId().toString())
                 .setIssuedAt(Date.from(now))
                 .setExpiration(Date.from(now.plus(validityMinutes, ChronoUnit.MINUTES)))
-                .setId(UUID.randomUUID().toString()) // JTI (token visszavonáshoz)
-                .signWith(key, SignatureAlgorithm.HS256) // Jobb sorrend (JJWT 0.11.x+)
+                .setId(UUID.randomUUID().toString())
+                .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }
 
@@ -136,10 +136,15 @@ public class JWT {
 
             // ✅ Issuer ellenőrzés (security)
             if (!"bookr-api".equals(issuer)) {
+                System.out.println(issuer);
+
                 return false;
+
             }
 
             if (userId == null || tokenType == null || !tokenType.equals(expectedType)) {
+                System.out.println("valami szar");
+
                 return false;
             }
 
@@ -151,7 +156,9 @@ public class JWT {
 
         } catch (SignatureException | MalformedJwtException
                 | IllegalArgumentException | UnsupportedJwtException ex) {
-            // Hibás token
+            // Hibás token                
+            System.out.println(ex);
+
             return false;
         }
     }
@@ -284,6 +291,5 @@ public class JWT {
     private static SecretKey getSecretKey(String secret) {
         return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
-
 
 }
