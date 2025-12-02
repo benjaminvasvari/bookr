@@ -22,6 +22,9 @@
     <div *ngIf="selectedSpecialist" class="calendar-section">
       <div class="calendar-header">
         <h3>Időpont választás</h3>
+        <button class="nav-btn" (click)="previousWeek()">
+          Előző hét <i class="fas fa-chevron-left"></i>
+        </button>
         <button class="nav-btn" (click)="nextWeek()">
           Következő hét <i class="fas fa-chevron-right"></i>
         </button>

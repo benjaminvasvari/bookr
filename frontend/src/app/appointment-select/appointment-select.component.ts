@@ -147,6 +147,14 @@ export class AppointmentSelectComponent implements OnInit {
     return days[dayOfWeek];
   }
 
+  //Előző hét
+  previousWeek(): void {
+    this.currentWeekStart.setDate(this.currentWeekStart.getDate() - 7);
+    this.generateWeekDays();
+    this.selectedDate = null;
+    this.selectedTimeSlot = null;
+  }
+
   // Következő hét
   nextWeek(): void {
     this.currentWeekStart.setDate(this.currentWeekStart.getDate() + 7);
