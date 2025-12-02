@@ -1,21 +1,17 @@
 export interface Service {
   id: number;
   name: string;
-  duration: number;
-  price: number;
-  categoryId: number;
   description?: string;
+  duration: number; // percben
+  price: number; // Ft-ban
+  categoryId: number;
+  category?: ServiceCategory;
+  imageUrl?: string;
 }
 
 export interface ServiceCategory {
   id: number;
   name: string;
-}
-
-export interface Company {
-  id: number;
-  name: string;
-  address: string;
-  rating: number;
-  imageUrl: string;
+  description?: string;
+  icon?: string;
 }

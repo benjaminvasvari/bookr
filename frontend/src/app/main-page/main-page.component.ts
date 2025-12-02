@@ -171,6 +171,7 @@ export class MainPageComponent implements OnInit {
   ngOnInit(): void {
     // Initialize component
   }
+  
 
   onSearch(): void {
     console.log('Searching for:', this.searchQuery);
