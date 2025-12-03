@@ -1,18 +1,33 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.vizsgaremek.bookr.controller;
+
+import com.vizsgaremek.bookr.error.mapper.BookrExceptionMapper;
 
 import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.core.Application;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
- *
- * @author vben
+ * JAX-RS Application Configuration
+ * Explicitly registers all providers and controllers
  */
-
 @ApplicationPath("api")
 public class ApplicationConfig extends Application {
-    // Üres maradhat, az annotáció elég
+    
+    @Override
+    public Set<Class<?>> getClasses() {
+        Set<Class<?>> resources = new HashSet<>();
+        
+        // Exception Mapper
+        resources.add(BookrExceptionMapper.class);
+        
+        // Controllers
+        resources.add(AuthController.class);
+        resources.add(CompaniesController.class);
+        resources.add(ImagesController.class);
+        resources.add(UsersController.class);
+        
+        
+        return resources;
+    }
 }

@@ -66,6 +66,17 @@ public class Images implements Serializable {
     @Column(name = "uploaded_at")
     @Temporal(TemporalType.TIMESTAMP)
     private Date uploadedAt;
+    @Column(name = "deleted_at")
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date deletedAt;
+    @Basic(optional = false)
+    @NotNull
+    @Column(name = "is_deleted")
+    private boolean isDeleted;
+    @Column(name = "company_id", insertable = false, updatable = false)
+    private Integer companyIdInt;
+    @Column(name = "user_id", insertable = false, updatable = false)
+    private Integer userIdInt;
     @JoinColumn(name = "company_id", referencedColumnName = "id")
     @ManyToOne
     private Companies companyId;
@@ -80,12 +91,23 @@ public class Images implements Serializable {
         this.id = id;
     }
 
+    // getCompanyImages conttructor
     public Images(Integer id, String url, boolean isMain, Date uploadedAt) {
         this.id = id;
         this.url = url;
         this.isMain = isMain;
         this.uploadedAt = uploadedAt;
     }
+
+    public Images(Integer id, String url, Date uploadedAt, Integer companyIdInt, Integer userIdInt) {
+        this.id = id;
+        this.url = url;
+        this.uploadedAt = uploadedAt;
+        this.companyIdInt = companyIdInt;
+        this.userIdInt = userIdInt;
+    }
+    
+    
 
     public Integer getId() {
         return id;
@@ -117,6 +139,38 @@ public class Images implements Serializable {
 
     public void setUploadedAt(Date uploadedAt) {
         this.uploadedAt = uploadedAt;
+    }
+
+    public Date getDeletedAt() {
+        return deletedAt;
+    }
+
+    public void setDeletedAt(Date deletedAt) {
+        this.deletedAt = deletedAt;
+    }
+
+    public boolean getIsDeleted() {
+        return isDeleted;
+    }
+
+    public void setIsDeleted(boolean isDeleted) {
+        this.isDeleted = isDeleted;
+    }
+
+    public Integer getCompanyIdInt() {
+        return companyIdInt;
+    }
+
+    public void setCompanyIdInt(Integer companyIdInt) {
+        this.companyIdInt = companyIdInt;
+    }
+
+    public Integer getUserIdInt() {
+        return userIdInt;
+    }
+
+    public void setUserIdInt(Integer userIdInt) {
+        this.userIdInt = userIdInt;
     }
 
     public Companies getCompanyId() {
@@ -210,6 +264,43 @@ public class Images implements Serializable {
             }
         }
     }
-    
-    
+
+    public static Images getUserProfilePicture(Integer userId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getUserProfilePicture");
+            spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("userIdIN", userId);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            Object[] record = resultList.get(0);
+
+            Images image = new Images(
+                    Integer.valueOf(record[0].toString()),
+                    record[2].toString(),
+                    record[3] == null ? null : formatter.parse(record[3].toString()), // uploaded_at
+                    null, // user profile picture has no company
+                    Integer.valueOf(record[1].toString())
+            );
+
+            return image;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
 }

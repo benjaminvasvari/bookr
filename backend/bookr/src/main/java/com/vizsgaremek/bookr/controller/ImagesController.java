@@ -67,6 +67,16 @@ public class ImagesController {
     public Response getCompanyImages(@QueryParam("companyId") Integer id) {
         List<Images> toReturn = layer.getCompanyImages(id);
 
-        return Response.ok(toReturn).build(); 
-   }
+        return Response.ok(toReturn).build();
+    }
+
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Path("getUserProfilePicture")
+    public Response getUserProfilePicture(@QueryParam("userId") Integer id) {
+        Images toReturn = layer.getUserProfilePicture(id);
+
+        return Response.ok(toReturn).build();
+    }
 }
