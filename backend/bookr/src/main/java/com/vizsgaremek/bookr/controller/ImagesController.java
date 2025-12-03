@@ -17,6 +17,7 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import org.json.JSONObject;
 
 /**
  * REST Web Service
@@ -65,9 +66,9 @@ public class ImagesController {
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("getCompanyImages")
     public Response getCompanyImages(@QueryParam("companyId") Integer id) {
-        List<Images> toReturn = layer.getCompanyImages(id);
+        JSONObject toReturn = layer.getCompanyImages(id);
 
-        return Response.ok(toReturn).build();
+        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString())).entity(toReturn.toString()).type(MediaType.APPLICATION_JSON).build();
     }
 
     @GET
@@ -75,8 +76,8 @@ public class ImagesController {
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("getUserProfilePicture")
     public Response getUserProfilePicture(@QueryParam("userId") Integer id) {
-        Images toReturn = layer.getUserProfilePicture(id);
+        JSONObject toReturn = layer.getUserProfilePicture(id);
 
-        return Response.ok(toReturn).build();
+        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString())).entity(toReturn.toString()).type(MediaType.APPLICATION_JSON).build();
     }
 }

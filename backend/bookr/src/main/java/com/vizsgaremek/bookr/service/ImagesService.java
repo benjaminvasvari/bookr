@@ -1,11 +1,9 @@
 package com.vizsgaremek.bookr.service;
 
 import com.vizsgaremek.bookr.model.Images;
-import com.vizsgaremek.bookr.model.Companies;
-import com.vizsgaremek.bookr.error.exception.ValidationException;
-import com.vizsgaremek.bookr.error.exception.NotFoundException;
-import com.vizsgaremek.bookr.model.Users;
-import java.util.List;
+import java.util.ArrayList;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 /**
  * Service for image operations
@@ -14,61 +12,117 @@ import java.util.List;
  */
 public class ImagesService {
 
-    /**
-     * Get company images (max 4)
-     *
-     * @param companyId Company ID
-     * @return List of images (can be empty)
-     * @throws ValidationException if companyId is invalid
-     * @throws NotFoundException if company doesn't exist or inactive
-     */
-    public List<Images> getCompanyImages(Integer companyId) {
+    private Images layer = new Images();
 
-        // 1. Input validation
-        if (companyId == null || companyId <= 0) {
-            throw ValidationException.invalidId("Company", companyId);
+    public JSONObject getCompanyImages(Integer companyId) {
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        try {
+            // Input validáció
+            if (companyId == null || companyId <= 0) {
+                status = "InvalidParamValue";
+                statusCode = 400;
+                toReturn.put("status", status);
+                toReturn.put("statusCode", statusCode);
+                toReturn.put("message", "Invalid company ID");
+                return toReturn;
+            }
+
+            // Adatbázis lekérdezés
+            ArrayList<Images> modelResult = Images.getCompanyImages(companyId);
+
+            // NULL ELLENŐRZÉS
+            if (modelResult == null) {
+                status = "NotFound";
+                statusCode = 404;
+                toReturn.put("status", status);
+                toReturn.put("statusCode", statusCode);
+                toReturn.put("message", "Company not found with ID: " + companyId);
+                return toReturn;
+            }
+
+            // Sikeres válasz összeállítása
+            JSONArray result = new JSONArray();
+
+            for (Images actualImage : modelResult) {
+                JSONObject actualImageObject = new JSONObject();
+
+                actualImageObject.put("id", actualImage.getId());
+                actualImageObject.put("url", actualImage.getUrl());
+                actualImageObject.put("isMain", actualImage.getIsMain());
+                actualImageObject.put("uploadedAt", actualImage.getUploadedAt());
+
+                result.put(actualImageObject);
+            }
+
+            toReturn.put("result", result);
+
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            status = "InternalServerError";
+            statusCode = 500;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
         }
 
-        // 2. Company exists and active check
-        Companies company = Companies.checkCompany(companyId);
-
-        if (company == null) {
-            throw NotFoundException.entity("Company", companyId);
-        }
-
-        if (!company.getIsActive() || company.getIsDeleted()) {
-            throw NotFoundException.entityInactive("Company", companyId);
-        }
-
-        // 3. Get images (max 4, ordered by is_main DESC)
-        List<Images> images = Images.getCompanyImages(companyId);
-
-        // 4. Empty list is valid (not an error!)
-        return images;
+        return toReturn;
     }
 
-    public Images getUserProfilePicture(Integer userId) {
+    public JSONObject getUserProfilePicture(Integer userId) {
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
 
-        // 1. Input validation
-        if (userId == null || userId <= 0) {
-            throw ValidationException.invalidId("User", userId);
+        try {
+            // Input validáció
+            if (userId == null || userId <= 0) {
+                status = "InvalidParamValue";
+                statusCode = 400;
+                toReturn.put("status", status);
+                toReturn.put("statusCode", statusCode);
+                toReturn.put("message", "Invalid user ID");
+                return toReturn;
+            }
+
+            // Adatbázis lekérdezés
+            Images modelResult = Images.getUserProfilePicture(userId);
+
+            // NULL ELLENŐRZÉS
+            if (modelResult == null) {
+                status = "NotFound";
+                statusCode = 404;
+                toReturn.put("status", status);
+                toReturn.put("statusCode", statusCode);
+                toReturn.put("message", "User not found with ID: " + userId);
+                return toReturn;
+            }
+
+            // Sikeres válasz összeállítása
+            JSONObject result = new JSONObject();
+
+            result.put("id", modelResult.getId());
+            result.put("url", modelResult.getUrl());
+            result.put("uploadedAt", modelResult.getUploadedAt());
+            result.put("userId", modelResult.getUserIdInt());
+
+            toReturn.put("result", result);
+
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            status = "InternalServerError";
+            statusCode = 500;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
         }
 
-        // 2. Company exists and active check
-        Users user = Users.checkUser(userId);
-
-        if (user == null) {
-            throw NotFoundException.entity("User", userId);
-        }
-
-        if (!user.getIsActive() || user.getIsDeleted()) {
-            throw NotFoundException.entityInactive("User", userId);
-        }
-
-        // 3. Get images (max 4, ordered by is_main DESC)
-        Images image = Images.getUserProfilePicture(userId);
-
-        // 4. Empty list is valid (not an error!)
-        return image;
+        return toReturn;
     }
 }

@@ -91,7 +91,7 @@ public class Images implements Serializable {
         this.id = id;
     }
 
-    // getCompanyImages conttructor
+    // getCompanyImages constructor
     public Images(Integer id, String url, boolean isMain, Date uploadedAt) {
         this.id = id;
         this.url = url;
@@ -99,15 +99,13 @@ public class Images implements Serializable {
         this.uploadedAt = uploadedAt;
     }
 
-    public Images(Integer id, String url, Date uploadedAt, Integer companyIdInt, Integer userIdInt) {
+    // geterProfilePicture constructor
+    public Images(Integer id, Integer userIdInt, String url, Date uploadedAt) {
         this.id = id;
+        this.userIdInt = userIdInt;
         this.url = url;
         this.uploadedAt = uploadedAt;
-        this.companyIdInt = companyIdInt;
-        this.userIdInt = userIdInt;
     }
-    
-    
 
     public Integer getId() {
         return id;
@@ -221,39 +219,32 @@ public class Images implements Serializable {
      * @param companyId Company ID
      * @return List of images (can be empty)
      */
-    public static List<Images> getCompanyImages(Integer companyId) {
+    public static ArrayList<Images> getCompanyImages(Integer companyId) {
         EntityManager em = emf.createEntityManager();
 
         try {
-            // Ha van stored procedure a company képekhez:
+
             StoredProcedureQuery spq = em.createStoredProcedureQuery("getCompanyImages");
             spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+
             spq.setParameter("companyIdIN", companyId);
 
             spq.execute();
 
             List<Object[]> resultList = spq.getResultList();
-
-            // Empty list if no results
-            if (resultList.isEmpty()) {
-                return new ArrayList<>();  // Üres lista, nem null!
-            }
-
-            // Convert to Images list
-            List<Images> imagesList = new ArrayList<>();
+            ArrayList<Images> toReturn = new ArrayList();
 
             for (Object[] record : resultList) {
                 Images img = new Images(
                         Integer.valueOf(record[0].toString()), // id
                         record[1].toString(), // url
                         Boolean.parseBoolean(record[2].toString()), // is_main
-                        record[3] == null ? null : formatter.parse(record[3].toString()) // uploaded_at
+                        formatter.parse(record[3].toString())
                 );
-
-                imagesList.add(img);  // Hozzáadjuk a listához!
+                toReturn.add(img);
             }
 
-            return imagesList;  // Az ÖSSZES képet visszaadjuk!
+            return toReturn;
 
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -286,10 +277,9 @@ public class Images implements Serializable {
 
             Images image = new Images(
                     Integer.valueOf(record[0].toString()),
+                    Integer.valueOf(record[1].toString()),
                     record[2].toString(),
-                    record[3] == null ? null : formatter.parse(record[3].toString()), // uploaded_at
-                    null, // user profile picture has no company
-                    Integer.valueOf(record[1].toString())
+                    formatter.parse(record[3].toString())
             );
 
             return image;
