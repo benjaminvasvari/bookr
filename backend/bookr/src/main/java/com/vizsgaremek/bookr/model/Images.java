@@ -4,11 +4,16 @@
  */
 package com.vizsgaremek.bookr.model;
 
+import static com.vizsgaremek.bookr.model.Users.emf;
+import static com.vizsgaremek.bookr.model.Users.formatter;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import javax.persistence.Basic;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EntityManager;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -17,6 +22,8 @@ import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
+import javax.persistence.ParameterMode;
+import javax.persistence.StoredProcedureQuery;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
@@ -53,7 +60,7 @@ public class Images implements Serializable {
     @Basic(optional = false)
     @NotNull
     @Column(name = "is_main")
-    private short isMain;
+    private boolean isMain;
     @Basic(optional = false)
     @NotNull
     @Column(name = "uploaded_at")
@@ -73,7 +80,7 @@ public class Images implements Serializable {
         this.id = id;
     }
 
-    public Images(Integer id, String url, short isMain, Date uploadedAt) {
+    public Images(Integer id, String url, boolean isMain, Date uploadedAt) {
         this.id = id;
         this.url = url;
         this.isMain = isMain;
@@ -96,11 +103,11 @@ public class Images implements Serializable {
         this.url = url;
     }
 
-    public short getIsMain() {
+    public boolean getIsMain() {
         return isMain;
     }
 
-    public void setIsMain(short isMain) {
+    public void setIsMain(boolean isMain) {
         this.isMain = isMain;
     }
 
@@ -152,5 +159,57 @@ public class Images implements Serializable {
     public String toString() {
         return "com.vizsgaremek.bookr.model.Images[ id=" + id + " ]";
     }
+
+    /**
+     * Get images for a company (max 4) Returns images only from active,
+     * non-deleted companies
+     *
+     * @param companyId Company ID
+     * @return List of images (can be empty)
+     */
+    public static List<Images> getCompanyImages(Integer companyId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            // Ha van stored procedure a company képekhez:
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getCompanyImages");
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.setParameter("companyIdIN", companyId);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            // Empty list if no results
+            if (resultList.isEmpty()) {
+                return new ArrayList<>();  // Üres lista, nem null!
+            }
+
+            // Convert to Images list
+            List<Images> imagesList = new ArrayList<>();
+
+            for (Object[] record : resultList) {
+                Images img = new Images(
+                        Integer.valueOf(record[0].toString()), // id
+                        record[1].toString(), // url
+                        Boolean.parseBoolean(record[2].toString()), // is_main
+                        record[3] == null ? null : formatter.parse(record[3].toString()) // uploaded_at
+                );
+
+                imagesList.add(img);  // Hozzáadjuk a listához!
+            }
+
+            return imagesList;  // Az ÖSSZES képet visszaadjuk!
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return new ArrayList<>();  // Error esetén üres lista (nem null!)
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+    
     
 }

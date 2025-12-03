@@ -12,7 +12,7 @@ import javax.ws.rs.core.Application;
  * @author vben
  */
 
-@ApplicationPath("webresources")
+@ApplicationPath("api")
 public class ApplicationConfig extends Application {
     // Üres maradhat, az annotáció elég
 }

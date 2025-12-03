@@ -7,6 +7,7 @@ package com.vizsgaremek.bookr.model;
 import static com.vizsgaremek.bookr.model.Users.emf;
 import static com.vizsgaremek.bookr.model.Users.formatter;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
@@ -175,6 +176,13 @@ public class Companies implements Serializable {
         this.updatedAt = updatedAt;
         this.isActive = isActive;
     }
+    
+    // CheckCompany request
+    public Companies(Boolean isDeleted, boolean isActive) {
+        this.isDeleted = isDeleted;
+        this.isActive = isActive;
+    }
+    
 
     public Integer getId() {
         return id;
@@ -471,6 +479,43 @@ public class Companies implements Serializable {
                     formatter.parse(record[12].toString()),
                     record[13] == null ? null : formatter.parse(record[13].toString()), // updated_at
                     Boolean.parseBoolean(record[14].toString())
+            );
+
+            return company;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static Companies checkCompany(Integer id) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("checkCompany");
+            spq.registerStoredProcedureParameter("idIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("idIN", id);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            // Csak az első rekord kell (LIMIT 1 a stored procedure-ben)
+            Object[] record = resultList.get(0);
+
+            Companies company = new Companies(
+                    Boolean.parseBoolean(record[0].toString()),
+                    Boolean.parseBoolean(record[1].toString())
             );
 
             return company;
