@@ -1,0 +1,302 @@
+<!-- Ha betöltődött a company adat, mutasd az oldalt -->
+@if (company) {
+<div class="company-details-container">
+  <!-- Képgaléria szekció -->
+  <div class="gallery-section">
+    <div class="main-image">
+      <img [src]="company.imageUrl" [alt]="company.name" loading="lazy" />
+    </div>
+    <div class="thumbnail-gallery">
+      @if (company.galleryImages && company.galleryImages.length > 0) { @for (image of
+      company.galleryImages; track image) {
+      <div class="thumbnail">
+        <img [src]="image" [alt]="company.name" loading="lazy" />
+      </div>
+      } }
+    </div>
+  </div>
+
+  <!-- Cég információk szekció -->
+  <div class="company-info-section">
+    <div class="company-header">
+      <div class="header-left">
+        <h1 class="company-name">{{ company.name }}</h1>
+        <div class="rating-section">
+          <div class="stars">
+            @for (star of getRatingStars(); track $index) {
+            <span class="star">★</span>
+            }
+          </div>
+        </div>
+        @if (company.category) {
+        <p class="company-category">{{ company.category }}</p>
+        }
+      </div>
+
+      <div class="header-actions">
+        <button
+          class="icon-button favorite"
+          [class.active]="isFavorite"
+          (click)="toggleFavorite()"
+          [attr.aria-label]="isFavorite ? 'Kedvencekből eltávolítás' : 'Kedvencekhez adás'"
+        >
+          <span class="icon">{{ isFavorite ? '♥' : '♡' }}</span>
+        </button>
+        <button class="icon-button share" (click)="shareCompany()" aria-label="Megosztás">
+          <span class="icon">⤴</span>
+        </button>
+      </div>
+    </div>
+
+    @if (company.description) {
+    <p class="company-description">{{ company.description }}</p>
+    }
+
+    <button class="book-now-button" (click)="bookNow()">Foglaljon most</button>
+  </div>
+
+  <!-- Szolgáltatások szekció -->
+  <div class="services-section">
+    <h2 class="section-title">Szolgáltatások</h2>
+
+    <!-- TAB GOMBOK -->
+    @if (company.serviceCategories && company.serviceCategories.length > 0) {
+    <div class="service-tabs">
+      @for (category of company.serviceCategories; track category.id) {
+      <button
+        class="tab-button"
+        [class.active]="selectedCategoryId === category.id"
+        (click)="selectCategory(category.id)"
+      >
+        {{ category.name }}
+      </button>
+      }
+    </div>
+
+    <!-- KIVÁLASZTOTT KATEGÓRIA SZOLGÁLTATÁSAI -->
+    @if (selectedCategoryId !== null) { @for (category of company.serviceCategories; track
+    category.id) { @if (category.id === selectedCategoryId) { @if (category.services &&
+    category.services.length > 0) {
+    <div class="services-list">
+      @for (service of category.services; track service.id) {
+      <div class="service-card">
+        <div class="service-info">
+          <h3 class="service-name">{{ service.name }}</h3>
+          <p class="service-duration">{{ service.duration }}</p>
+          <p class="service-price">{{ service.price }} {{ service.currency }}-tól</p>
+        </div>
+        <button class="book-button" (click)="bookService(service)">Foglalj</button>
+      </div>
+      }
+    </div>
+    } @else {
+    <div class="no-services">
+      <p>Jelenleg nincs elérhető szolgáltatás ebben a kategóriában.</p>
+    </div>
+    } } } } } @else {
+    <div class="no-services">
+      <p>Jelenleg nincsenek elérhető szolgáltatások.</p>
+    </div>
+    }
+  </div>
+
+  <!-- Rólunk szekció -->
+  <div class="about-container">
+    <div class="content-wrapper">
+      <div class="about-content">
+        <h1 class="section-title">Rólunk</h1>
+
+        <!-- Térkép szekció -->
+        <div class="map-section">
+          <div class="map-container">
+            <iframe
+              [src]="getMapUrl()"
+              [title]="getMapTitle()"
+              width="100%"
+              height="100%"
+              style="border: 0"
+              allowfullscreen=""
+              loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade"
+            >
+            </iframe>
+          </div>
+        </div>
+
+        <!-- Szöveges tartalom szekció -->
+        <div class="text-section">
+          @if (company.description) {
+          <p class="about-text">{{ company.description }}</p>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Nyitvatartás és Értékelések szekció -->
+  <div class="open-hours-reviews-section">
+    <!-- Nyitvatartás -->
+    <div class="opening-hours-card">
+      <h1 class="title">Nyitvatartás</h1>
+
+      <div class="hours-list">
+        @if (company.openingHours) { @if (company.openingHours.monday) {
+        <div class="hours-item" [class.closed]="company.openingHours.monday === 'Zárva'">
+          <span class="day">Hétfő:</span>
+          <span class="time">{{ company.openingHours.monday }}</span>
+        </div>
+        } @if (company.openingHours.tuesday) {
+        <div class="hours-item" [class.closed]="company.openingHours.tuesday === 'Zárva'">
+          <span class="day">Kedd:</span>
+          <span class="time">{{ company.openingHours.tuesday }}</span>
+        </div>
+        } @if (company.openingHours.wednesday) {
+        <div class="hours-item" [class.closed]="company.openingHours.wednesday === 'Zárva'">
+          <span class="day">Szerda:</span>
+          <span class="time">{{ company.openingHours.wednesday }}</span>
+        </div>
+        } @if (company.openingHours.thursday) {
+        <div class="hours-item" [class.closed]="company.openingHours.thursday === 'Zárva'">
+          <span class="day">Csütörtök:</span>
+          <span class="time">{{ company.openingHours.thursday }}</span>
+        </div>
+        } @if (company.openingHours.friday) {
+        <div class="hours-item" [class.closed]="company.openingHours.friday === 'Zárva'">
+          <span class="day">Péntek:</span>
+          <span class="time">{{ company.openingHours.friday }}</span>
+        </div>
+        } @if (company.openingHours.saturday) {
+        <div class="hours-item" [class.closed]="company.openingHours.saturday === 'Zárva'">
+          <span class="day">Szombat:</span>
+          <span class="time">{{ company.openingHours.saturday }}</span>
+        </div>
+        } @if (company.openingHours.sunday) {
+        <div class="hours-item" [class.closed]="company.openingHours.sunday === 'Zárva'">
+          <span class="day">Vasárnap:</span>
+          <span class="time">{{ company.openingHours.sunday }}</span>
+        </div>
+        } }
+      </div>
+    </div>
+
+    <!-- Értékelések -->
+    @if (company.reviews && company.reviews.length > 0) {
+    <div class="reviews-container">
+      <h1 class="title">Értékelések</h1>
+
+      <div class="reviews-list">
+        @for (review of company.reviews; track review.id) {
+        <div class="review-card">
+          <div class="review-header">
+            <div class="user-avatar">
+              @if (review.userImage) {
+              <img [src]="review.userImage" [alt]="review.userName" loading="lazy" />
+              } @else {
+              <div class="avatar-placeholder">
+                {{ review.userName.charAt(0).toUpperCase() }}
+              </div>
+              }
+            </div>
+            <div class="user-info">
+              <h3 class="user-name">{{ review.userName }}</h3>
+              <div class="review-rating">
+                @for (star of getReviewStars(review.rating); track $index) {
+                <span class="star">★</span>
+                }
+              </div>
+              <p class="review-date">{{ review.date }}</p>
+            </div>
+          </div>
+          <p class="review-comment">{{ review.comment }}</p>
+        </div>
+        }
+      </div>
+    </div>
+    } @else {
+    <div class="reviews-container">
+      <h1 class="title">Értékelések</h1>
+      <div class="no-reviews">
+        <p>Még nincsenek értékelések.</p>
+      </div>
+    </div>
+    }
+  </div>
+</div>
+
+<!-- Footer -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-content">
+      <div class="footer-column">
+        <p>Lorem</p>
+        <p>Ipsum dolor</p>
+        <p>sit amet</p>
+        <p>consectetur</p>
+        <p>adipiscing</p>
+        <p>magna nam</p>
+        <p>volutpat</p>
+        <p>venenatis</p>
+        <p>adipiscing</p>
+        <p>et</p>
+      </div>
+      <div class="footer-column">
+        <p>Lorem</p>
+        <p>Ipsum dolor</p>
+        <p>sit amet</p>
+        <p>consectetur</p>
+        <p>adipiscing</p>
+        <p>magna nam</p>
+        <p>volutpat</p>
+        <p>venenatis</p>
+        <p>adipiscing</p>
+        <p>et</p>
+      </div>
+      <div class="footer-column">
+        <p>Lorem</p>
+        <p>Ipsum dolor</p>
+        <p>sit amet</p>
+        <p>consectetur</p>
+        <p>adipiscing</p>
+        <p>magna nam</p>
+        <p>volutpat</p>
+        <p>venenatis</p>
+        <p>adipiscing</p>
+        <p>et</p>
+      </div>
+      <div class="footer-column">
+        <p>Lorem</p>
+        <p>Ipsum dolor</p>
+        <p>sit amet</p>
+        <p>consectetur</p>
+        <p>adipiscing</p>
+        <p>magna nam</p>
+        <p>volutpat</p>
+        <p>venenatis</p>
+        <p>adipiscing</p>
+        <p>et</p>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="footer-logo">B<span class="logo-highlight">oo</span>kr</div>
+    </div>
+  </div>
+</footer>
+}
+
+<!-- Betöltési állapot -->
+@if (isLoading) {
+<div class="loading">
+  <p>Betöltés...</p>
+</div>
+}
+
+<!-- Hiba állapot -->
+@if (errorMessage && !isLoading) {
+<div class="error-container">
+  <div class="error-message">
+    <h2>Hiba történt</h2>
+    <p>{{ errorMessage }}</p>
+    <button class="btn-retry" (click)="loadCompanyDetails()">Újrapróbálás</button>
+  </div>
+</div>
+}

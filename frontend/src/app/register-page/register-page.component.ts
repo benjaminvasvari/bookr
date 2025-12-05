@@ -1,9 +1,23 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { passwordStrengthValidator, namePatternValidator, hungarianPhoneValidator, passwordMatchValidator } from '../validators/custom-validators';
-import { AuthService } from '../feautures/auth/services/auth.service';
+
+// Custom validator for password matching
+export function passwordMatchValidator(): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const password = control.get('password');
+    const confirmPassword = control.get('confirmPassword');
+
+    if (!password || !confirmPassword) {
+      return null;
+    }
+
+    return password.value === confirmPassword.value 
+      ? null 
+      : { passwordMismatch: true };
+  };
+}
 
 @Component({
   selector: 'app-register',
@@ -17,53 +31,37 @@ export class RegisterComponent {
   isSubmitting = false;
   hidePassword = true;
   hideConfirmPassword = true;
-  errorMessage = '';
 
   constructor(
     private fb: FormBuilder,
-    private router: Router,
-    private authService: AuthService
+    private router: Router
   ) {
     this.registerForm = this.fb.group({
-      lastName: ['', [Validators.required, Validators.minLength(2), namePatternValidator()]],
-      firstName: ['', [Validators.required, Validators.minLength(2), namePatternValidator()]],
+      lastName: ['', [Validators.required, Validators.minLength(2)]],
+      firstName: ['', [Validators.required, Validators.minLength(2)]],
       email: ['', [Validators.required, Validators.email]],
-      phone: ['', [Validators.required, hungarianPhoneValidator()]],
-      password: ['', [Validators.required, Validators.minLength(8), passwordStrengthValidator()]],
+      phone: ['', [Validators.required, Validators.pattern(/^[\d\s\+\-\(\)]+$/)]],
+      password: ['', [Validators.required, Validators.minLength(8)]],
       confirmPassword: ['', [Validators.required]]
     }, { validators: passwordMatchValidator() });
   }
 
   onSubmit(): void {
-    if (this.registerForm.valid && !this.isSubmitting) {
+    if (this.registerForm.valid) {
       this.isSubmitting = true;
-      this.errorMessage = '';
-
+      
+      // TODO: Implement registration logic with backend service
+      const formData = this.registerForm.value;
       // Remove confirmPassword before sending to backend
-      const { confirmPassword, ...registrationData } = this.registerForm.value;
-
-      this.authService.register(registrationData).subscribe({
-        next: (response) => {
-          console.log('Registration successful:', response);
-          // AuthService automatikusan átirányít login oldalra
-        },
-        error: (error) => {
-          this.isSubmitting = false;
-          
-          // Error handling
-          if (error.status === 400) {
-            this.errorMessage = error.message || 'Hibás adatok';
-          } else if (error.status === 409) {
-            this.errorMessage = 'Ez az email cím már regisztrálva van';
-          } else if (error.status === 0) {
-            this.errorMessage = 'Nincs kapcsolat a szerverrel';
-          } else {
-            this.errorMessage = error.message || 'Hiba történt a regisztráció során';
-          }
-          
-          console.error('Registration failed:', error);
-        }
-      });
+      const { confirmPassword, ...registrationData } = formData;
+      console.log('Registration data:', registrationData);
+      
+      // Simulate API call
+      setTimeout(() => {
+        this.isSubmitting = false;
+        // Navigate to login or dashboard after successful registration
+        this.router.navigate(['/login']);
+      }, 1000);
     } else {
       // Mark all fields as touched to show validation errors
       Object.keys(this.registerForm.controls).forEach(key => {
@@ -105,9 +103,6 @@ export class RegisterComponent {
     if (this.lastName.hasError('minlength') && this.lastName.touched) {
       return 'A vezetéknévnek legalább 2 karakter hosszúnak kell lennie';
     }
-    if (this.lastName.hasError('invalidNamePattern') && this.lastName.touched) {
-      return 'Csak betűk, szóköz és kötőjel engedélyezett';
-    }
     return '';
   }
 
@@ -117,9 +112,6 @@ export class RegisterComponent {
     }
     if (this.firstName.hasError('minlength') && this.firstName.touched) {
       return 'A keresztnévnek legalább 2 karakter hosszúnak kell lennie';
-    }
-    if (this.firstName.hasError('invalidNamePattern') && this.firstName.touched) {
-      return 'Csak betűk, szóköz és kötőjel engedélyezett';
     }
     return '';
   }
@@ -138,8 +130,8 @@ export class RegisterComponent {
     if (this.phone.hasError('required') && this.phone.touched) {
       return 'A telefonszám megadása kötelező';
     }
-    if (this.phone.hasError('invalidHungarianPhone') && this.phone.touched) {
-      return 'Érvénytelen magyar telefonszám (pl. +36 20 123 4567)';
+    if (this.phone.hasError('pattern') && this.phone.touched) {
+      return 'Érvénytelen telefonszám formátum';
     }
     return '';
   }
@@ -149,70 +141,18 @@ export class RegisterComponent {
       return 'A jelszó megadása kötelező';
     }
     if (this.password.hasError('minlength') && this.password.touched) {
-      return 'A jelszó nem megfelelő';
+      return 'A jelszónak legalább 8 karakter hosszúnak kell lennie';
     }
-    
-    // Password strength hibák összegyűjtése
-    const missingRequirements: string[] = [];
-    
-    if (this.password.hasError('missingLowercase') && this.password.touched) {
-      missingRequirements.push('kisbetű');
-    }
-    if (this.password.hasError('missingUppercase') && this.password.touched) {
-      missingRequirements.push('nagybetű');
-    }
-    if (this.password.hasError('missingNumber') && this.password.touched) {
-      missingRequirements.push('szám');
-    }
-    if (this.password.hasError('missingSpecialChar') && this.password.touched) {
-      missingRequirements.push('speciális karakter');
-    }
-    
-    if (missingRequirements.length > 0) {
-      return `A jelszó nem megfelelő`;
-    }
-    
     return '';
   }
 
   get confirmPasswordErrorMessage(): string {
-    // Először a PASSWORD mező hibáit ellenőrizzük
-    if (this.password.invalid && this.password.touched) {
-      // Password strength hibák
-      const missingRequirements: string[] = [];
-      
-      if (this.password.hasError('required')) {
-        return 'A jelszó megadása kötelező';
-      }
-      if (this.password.hasError('minlength')) {
-        return 'A jelszó nem megfelelő';
-      }
-      if (this.password.hasError('missingLowercase')) {
-        missingRequirements.push('kisbetű');
-      }
-      if (this.password.hasError('missingUppercase')) {
-        missingRequirements.push('nagybetű');
-      }
-      if (this.password.hasError('missingNumber')) {
-        missingRequirements.push('szám');
-      }
-      if (this.password.hasError('missingSpecialChar')) {
-        missingRequirements.push('speciális karakter');
-      }
-      
-      if (missingRequirements.length > 0) {
-        return `A jelszó nem megfelelő`;
-      }
-    }
-    
-    // Ha a password OK, akkor confirmPassword hibáit ellenőrizzük
     if (this.confirmPassword.hasError('required') && this.confirmPassword.touched) {
       return 'A jelszó megerősítése kötelező';
     }
     if (this.registerForm.hasError('passwordMismatch') && this.confirmPassword.touched && !this.confirmPassword.hasError('required')) {
       return 'A két jelszó nem egyezik meg';
     }
-    
     return '';
   }
 

@@ -1,0 +1,105 @@
+<div class="appointment-container">
+  <!-- Bal oldal: Szolgáltatások -->
+  <div class="services-section">
+    <h2>Szolgáltatások</h2>
+    
+    <!-- Kategória gombok -->
+    <div class="category-buttons">
+      <button 
+        class="category-btn"
+        [class.active]="selectedCategory === null"
+        (click)="filterByCategory(null)">
+        Összes
+      </button>
+      <button 
+        *ngFor="let category of categories"
+        class="category-btn"
+        [class.active]="selectedCategory === category.id"
+        (click)="filterByCategory(category.id)">
+        {{ category.name }}
+      </button>
+    </div>
+
+    <h3>Kiemelt</h3>
+    
+    <!-- Szolgáltatás lista -->
+    <div class="services-list">
+      <div *ngFor="let service of filteredServices" class="service-card">
+        <div class="service-info">
+          <h4>{{ service.name }}</h4>
+          <p class="service-duration">{{ service.duration }} p - {{ (service.duration / 60).toFixed(0) }} ó</p>
+          <p class="service-price">{{ service.price }} Ft-tól</p>
+        </div>
+        <button 
+          class="add-btn"
+          [disabled]="isInCart(service.id)"
+          (click)="addToCart(service)">
+          <i class="fas fa-plus"></i>
+        </button>
+      </div>
+
+      <!-- Ha nincs szolgáltatás -->
+      <div *ngIf="filteredServices.length === 0" class="no-services">
+        <p>Jelenleg nincs elérhető szolgáltatás ebben a kategóriában.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Jobb oldal: Kosár -->
+  <div class="cart-section">
+    <div class="cart-card">
+      <!-- Cég info -->
+      <div class="company-info">
+        <div class="company-image">
+          <img [src]="company?.imageUrl || 'assets/placeholder.jpg'" [alt]="company?.name">
+        </div>
+        <div class="company-details">
+          <h3>{{ company?.name }}</h3>
+          <div class="rating">
+            <span>{{ company?.rating }}</span>
+            <span class="stars">
+              <i class="fas fa-star"></i>
+              <i class="fas fa-star"></i>
+              <i class="fas fa-star"></i>
+              <i class="fas fa-star"></i>
+              <i class="fas fa-star"></i>
+            </span>
+          </div>
+          <p class="address">{{ company?.address }}</p>
+        </div>
+      </div>
+
+      <!-- Összesen sor -->
+      <div class="cart-summary">
+        <span>Összesen</span>
+        <span>{{ getCartTotal() }} Ft</span>
+      </div>
+
+      <!-- Kosár tartalom -->
+      <div class="cart-items">
+        <div *ngIf="cart.length === 0" class="empty-cart">
+          <p>A kosár üres</p>
+        </div>
+
+        <div *ngFor="let item of cart" class="cart-item">
+          <div class="cart-item-info">
+            <h4>{{ item.name }}</h4>
+            <p>{{ item.duration }} perc</p>
+            <p class="cart-item-price">{{ item.price }} Ft</p>
+          </div>
+          <button class="remove-btn" (click)="removeFromCart(item.id)">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Folytatás gomb -->
+      <button 
+        class="continue-btn"
+        [disabled]="cart.length === 0"
+        (click)="continue()">
+        Folytatás
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,8 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router'; 
 
 interface Service {
+  id: number;
   name: string;
   rating: number;
   reviewCount: number;
@@ -30,6 +32,7 @@ export class MainPageComponent implements OnInit {
 
   topRecommendations: Service[] = [
     {
+      id: 1,
       name: 'Forost',
       rating: 5.0,
       reviewCount: 21,
@@ -37,6 +40,7 @@ export class MainPageComponent implements OnInit {
       imageUrl: 'assets/images/first.png'
     },
     {
+      id: 2,
       name: 'Tonsur',
       rating: 5.0,
       reviewCount: 23,
@@ -44,6 +48,7 @@ export class MainPageComponent implements OnInit {
       imageUrl: 'assets/images/second.png'
     },
     {
+      id: 3,
       name: 'Hijeny',
       rating: 5.0,
       reviewCount: 17,
@@ -51,6 +56,7 @@ export class MainPageComponent implements OnInit {
       imageUrl: 'assets/images/third.png'
     },
     {
+      id: 4,
       name: 'Fukره',
       rating: 5.0,
       reviewCount: 19,
@@ -61,6 +67,7 @@ export class MainPageComponent implements OnInit {
 
   newServices: Service[] = [
     {
+      id: 5,
       name: 'Fukره',
       rating: 5.0,
       reviewCount: 19,
@@ -68,6 +75,7 @@ export class MainPageComponent implements OnInit {
       imageUrl: 'assets/images/fukre.jpg'
     },
     {
+      id: 6,
       name: 'Hijeny',
       rating: 5.0,
       reviewCount: 17,
@@ -75,6 +83,7 @@ export class MainPageComponent implements OnInit {
       imageUrl: 'assets/images/hijeny.jpg'
     },
     {
+      id: 7,
       name: 'Forost',
       rating: 5.0,
       reviewCount: 21,
@@ -82,6 +91,7 @@ export class MainPageComponent implements OnInit {
       imageUrl: 'assets/images/forost.jpg'
     },
     {
+      id: 8,
       name: 'Tonsur',
       rating: 5.0,
       reviewCount: 23,
@@ -92,6 +102,7 @@ export class MainPageComponent implements OnInit {
 
   featuredServices: Service[] = [
     {
+      id: 9,
       name: 'Tonsur',
       rating: 5.0,
       reviewCount: 23,
@@ -99,6 +110,7 @@ export class MainPageComponent implements OnInit {
       imageUrl: 'assets/images/tonsur.jpg'
     },
     {
+      id: 10,
       name: 'Forost',
       rating: 5.0,
       reviewCount: 21,
@@ -106,6 +118,7 @@ export class MainPageComponent implements OnInit {
       imageUrl: 'assets/images/forost.jpg'
     },
     {
+      id: 11,
       name: 'Fukره',
       rating: 5.0,
       reviewCount: 19,
@@ -113,6 +126,7 @@ export class MainPageComponent implements OnInit {
       imageUrl: 'assets/images/fukre.jpg'
     },
     {
+      id: 12,
       name: 'Hijeny',
       rating: 5.0,
       reviewCount: 17,
@@ -152,14 +166,21 @@ export class MainPageComponent implements OnInit {
     }
   ];
 
+  constructor(private router: Router) {}
+
   ngOnInit(): void {
     // Initialize component
   }
+  
 
   onSearch(): void {
     console.log('Searching for:', this.searchQuery);
     // Implement search logic
   }
+
+  goToService(serviceId: number): void {
+  this.router.navigate(['/sel-industry', serviceId]);
+}
 
   getRatingStars(rating: number): number[] {
     return Array(Math.floor(rating)).fill(0);

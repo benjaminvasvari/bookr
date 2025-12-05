@@ -42,7 +42,7 @@
               <span class="review-count">({{ service.reviewCount }})</span>
             </div>
             <p class="service-address">{{ service.address }}</p>
-            <button class="btn-book">Foglalás</button>
+            <button class="btn-book" (click)="goToService(service.id)">Foglalás</button>
           </div>
         </div>
       </div>
