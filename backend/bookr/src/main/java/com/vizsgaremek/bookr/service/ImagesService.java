@@ -1,7 +1,7 @@
 package com.vizsgaremek.bookr.service;
 
 import com.vizsgaremek.bookr.model.Images;
-import java.util.ArrayList;
+import java.util.List;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -31,7 +31,7 @@ public class ImagesService {
             }
 
             // Adatbázis lekérdezés
-            ArrayList<Images> modelResult = Images.getCompanyImages(companyId);
+            List<Images> modelResult = Images.getCompanyNotMainImages(companyId);
 
             // NULL ELLENŐRZÉS
             if (modelResult == null) {

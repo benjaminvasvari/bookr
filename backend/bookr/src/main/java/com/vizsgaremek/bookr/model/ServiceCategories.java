@@ -4,13 +4,18 @@
  */
 package com.vizsgaremek.bookr.model;
 
+import static com.vizsgaremek.bookr.model.Users.emf;
+import static com.vizsgaremek.bookr.model.Users.formatter;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 import javax.persistence.Basic;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EntityManager;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -20,6 +25,8 @@ import javax.persistence.ManyToOne;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.OneToMany;
+import javax.persistence.ParameterMode;
+import javax.persistence.StoredProcedureQuery;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
@@ -27,6 +34,7 @@ import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
+import org.json.JSONArray;
 
 /**
  *
@@ -72,6 +80,31 @@ public class ServiceCategories implements Serializable {
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "categoryId")
     private Collection<ServiceCategoryMap> serviceCategoryMapCollection;
 
+    // Transient fields
+    @javax.persistence.Transient
+    private int categoryId;
+
+    @javax.persistence.Transient
+    private String categoryName;
+
+    @javax.persistence.Transient
+    private String categoryDescription;
+
+    @javax.persistence.Transient
+    private Integer serviceId;
+
+    @javax.persistence.Transient
+    private String serviceName;
+
+    @javax.persistence.Transient
+    private int durationMinutes;
+
+    @javax.persistence.Transient
+    private Double price;
+
+    @javax.persistence.Transient
+    private String currency;
+
     public ServiceCategories() {
     }
 
@@ -83,6 +116,17 @@ public class ServiceCategories implements Serializable {
         this.id = id;
         this.name = name;
         this.createdAt = createdAt;
+    }
+
+    public ServiceCategories(int categoryId, String categoryName, String categoryDescription, Integer serviceId, String serviceName, Integer durationMinutes, Double price, String currency) {
+        this.categoryId = categoryId;
+        this.categoryName = categoryName;
+        this.categoryDescription = categoryDescription;
+        this.serviceId = serviceId;
+        this.serviceName = serviceName;
+        this.durationMinutes = durationMinutes;
+        this.price = price;
+        this.currency = currency;
     }
 
     public Integer getId() {
@@ -149,6 +193,71 @@ public class ServiceCategories implements Serializable {
         return hash;
     }
 
+    // Getters and setters for transient fields
+    public Integer getCategoryId() {
+        return categoryId;
+    }
+
+    public void setCategoryId(Integer categoryId) {
+        this.categoryId = categoryId;
+    }
+
+    public String getCategoryName() {
+        return categoryName;
+    }
+
+    public void setCategoryName(String categoryName) {
+        this.categoryName = categoryName;
+    }
+
+    public String getCategoryDescription() {
+        return categoryDescription;
+    }
+
+    public void setCategoryDescription(String categoryDescription) {
+        this.categoryDescription = categoryDescription;
+    }
+
+    public Integer getServiceId() {
+        return serviceId;
+    }
+
+    public void setServiceId(Integer serviceId) {
+        this.serviceId = serviceId;
+    }
+
+    public String getServiceName() {
+        return serviceName;
+    }
+
+    public void setServiceName(String serviceName) {
+        this.serviceName = serviceName;
+    }
+
+    public Integer getServiceDurationMinutes() {
+        return durationMinutes;
+    }
+
+    public void setServiceDurationMinutes(Integer durationMinutes) {
+        this.durationMinutes = durationMinutes;
+    }
+
+    public Double getServicePrice() {
+        return price;
+    }
+
+    public void setServicePrice(Double price) {
+        this.price = price;
+    }
+
+    public String getServiceCurrency() {
+        return currency;
+    }
+
+    public void setServiceCurrency(String currency) {
+        this.currency = currency;
+    }
+
     @Override
     public boolean equals(Object object) {
         // TODO: Warning - this method won't work in the case the id fields are not set
@@ -166,5 +275,51 @@ public class ServiceCategories implements Serializable {
     public String toString() {
         return "com.vizsgaremek.bookr.model.ServiceCategories[ id=" + id + " ]";
     }
-    
+
+    public static List<ServiceCategories> getServiceCategoriesWithServicesByCompanyId(Integer companyId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            // Ha van stored procedure:
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getServiceCategoriesWithServicesByCompanyId");
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.setParameter("companyIdIN", companyId);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            // Empty list if no results
+            if (resultList.isEmpty()) {
+                return new ArrayList<>();  // Üres lista, nem null!
+            }
+
+            List<ServiceCategories> serviceList = new ArrayList<>();
+
+            for (Object[] record : resultList) {
+                ServiceCategories service = new ServiceCategories(
+                        Integer.valueOf(record[0].toString()),
+                        record[1].toString(),
+                        record[2] != null ? record[2].toString() : null, // categoryDescription 
+                        Integer.valueOf(record[3].toString()),
+                        record[4].toString(),
+                        Integer.valueOf(record[5].toString()),
+                        record[6] != null ? Double.parseDouble(record[6].toString()) : null, // price
+                        record[7] != null ? record[7].toString() : null // currency
+                );
+
+                serviceList.add(service);  // Hozzáadjuk a listához!
+            }
+
+            return serviceList;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return new ArrayList<>();  // Error esetén üres lista (nem null!)
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
 }

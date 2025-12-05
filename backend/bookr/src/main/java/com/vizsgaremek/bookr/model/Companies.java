@@ -121,6 +121,8 @@ public class Companies implements Serializable {
     @NotNull
     @Column(name = "is_active")
     private boolean isActive;
+    @Column(name = "business_category_id", insertable = false, updatable = false)
+    private Integer businessCategoryIdInt;
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "companyId")
     private Collection<Appointments> appointmentsCollection;
     @OneToMany(mappedBy = "companyId")
@@ -138,12 +140,28 @@ public class Companies implements Serializable {
     @JoinColumn(name = "owner_id", referencedColumnName = "id")
     @ManyToOne(optional = false)
     private Users ownerId;
+    @JoinColumn(name = "business_category_id", referencedColumnName = "id")
+    @ManyToOne
+    private BusinessCategories businessCategoryId;
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "companyId")
     private Collection<Reviews> reviewsCollection;
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "companyId")
     private Collection<OpeningHours> openingHoursCollection;
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "companyId")
     private Collection<TemporaryClosedPeriods> temporaryClosedPeriodsCollection;
+
+    // Transient fields for calculated values from getCompanyDataById stored procedure
+    @javax.persistence.Transient
+    private String categoryName;
+
+    @javax.persistence.Transient
+    private String imageUrl;
+
+    @javax.persistence.Transient
+    private Double rating;
+
+    @javax.persistence.Transient
+    private Integer reviewCount;
 
     public Companies() {
     }
@@ -176,12 +194,31 @@ public class Companies implements Serializable {
         this.updatedAt = updatedAt;
         this.isActive = isActive;
     }
-    
+
     // CheckCompany request
     public Companies(Boolean isDeleted, boolean isActive) {
         this.isDeleted = isDeleted;
         this.isActive = isActive;
     }
+
+    public Companies(Integer id, String name, String description, String address, String city, String postalCode, String country, String phone, String email, String website, Integer businessCategoryIdInt, String categoryName, String imageUrl, Double rating, Integer reviewCount) {
+        this.id = id;
+        this.name = name;
+        this.description = description;
+        this.address = address;
+        this.city = city;
+        this.postalCode = postalCode;
+        this.country = country;
+        this.phone = phone;
+        this.email = email;
+        this.website = website;
+        this.businessCategoryIdInt = businessCategoryIdInt;
+        this.categoryName = categoryName;
+        this.imageUrl = imageUrl;
+        this.rating = rating;
+        this.reviewCount = reviewCount;
+    }
+    
     
 
     public Integer getId() {
@@ -320,6 +357,14 @@ public class Companies implements Serializable {
         this.isActive = isActive;
     }
 
+    public Integer getBusinessCategoryIdInt() {
+        return businessCategoryIdInt;
+    }
+
+    public void setBusinessCategoryIdInt(Integer businessCategoryIdInt) {
+        this.businessCategoryIdInt = businessCategoryIdInt;
+    }
+
     @XmlTransient
     public Collection<Appointments> getAppointmentsCollection() {
         return appointmentsCollection;
@@ -391,6 +436,14 @@ public class Companies implements Serializable {
         this.ownerId = ownerId;
     }
 
+    public BusinessCategories getBusinessCategoryId() {
+        return businessCategoryId;
+    }
+
+    public void setBusinessCategoryId(BusinessCategories businessCategoryId) {
+        this.businessCategoryId = businessCategoryId;
+    }
+
     @XmlTransient
     public Collection<Reviews> getReviewsCollection() {
         return reviewsCollection;
@@ -423,6 +476,39 @@ public class Companies implements Serializable {
         int hash = 0;
         hash += (id != null ? id.hashCode() : 0);
         return hash;
+    }
+
+    // Getters and setters for transient fields
+    public String getCategoryName() {
+        return categoryName;
+    }
+
+    public void setCategoryName(String categoryName) {
+        this.categoryName = categoryName;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    public Double getRating() {
+        return rating;
+    }
+
+    public void setRating(Double rating) {
+        this.rating = rating;
+    }
+
+    public Integer getReviewCount() {
+        return reviewCount;
+    }
+
+    public void setReviewCount(Integer reviewCount) {
+        this.reviewCount = reviewCount;
     }
 
     @Override
@@ -516,6 +602,67 @@ public class Companies implements Serializable {
             Companies company = new Companies(
                     Boolean.parseBoolean(record[0].toString()),
                     Boolean.parseBoolean(record[1].toString())
+            );
+
+            return company;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    /**
+     * Get complete company data with calculated fields This method calls the
+     * getCompanyDataById stored procedure which returns: - All company fields -
+     * business_category_id - category name (from business_categories table) -
+     * image_url (main image URL) - rating (average from reviews) - review_count
+     * (total reviews)
+     *
+     * @param id Company ID
+     * @return Companies object with all data or null if not found
+     */
+    public static Companies getCompanyDataById(Integer id) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getCompanyDataById");
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.setParameter("companyIdIN", id);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            Object[] record = resultList.get(0);
+
+            // Create Companies object with basic data
+            Companies company = new Companies(
+                    Integer.valueOf(record[0].toString()),
+                    record[1].toString(),
+                    record[2] != null ? record[2].toString() : null,
+                    record[3] != null ? record[3].toString() : null,
+                    record[4] != null ? record[4].toString() : null,
+                    record[5] != null ? record[5].toString() : null,
+                    record[6] != null ? record[6].toString() : null,
+                    record[7] != null ? record[7].toString() : null,
+                    record[8] != null ? record[8].toString() : null,
+                    record[9] != null ? record[9].toString() : null,
+                    // Business category ID
+                    record[10] != null ? Integer.valueOf(record[10].toString()) : null,
+                    // Calculated/joined fields (transient)
+                    record[11] != null ? record[11].toString() : null,
+                    record[12] != null ? record[12].toString() : null,
+                    record[13] != null ? Double.valueOf(record[13].toString()) : 0.0,
+                    record[14] != null ? Integer.valueOf(record[14].toString()) : 0
             );
 
             return company;
