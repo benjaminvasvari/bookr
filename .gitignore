@@ -53,6 +53,9 @@ nbactions.xml
 *.iws
 .vscode/
 
+# Image uploads
+**/uploads/
+
 # OS generated files
 .DS_Store
 **/.DS_Store
