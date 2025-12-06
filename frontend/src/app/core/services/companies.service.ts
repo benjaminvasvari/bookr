@@ -28,7 +28,7 @@ export class CompaniesService {
    */
   getCompanyById(id: number): Observable<Company> {
     return this.http.get<Company>(
-      `${this.apiUrl}companies/loadCompanyById?id=${id}`
+      `${this.apiUrl}${API_ENDPOINTS.COMPANIES.DETAIL(id)}`
     );
   }
 

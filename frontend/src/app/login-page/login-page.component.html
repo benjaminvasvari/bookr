@@ -51,12 +51,23 @@
           </div>
         </div>
 
+        <!-- Backend hibaüzenet megjelenítése -->
+        <div *ngIf="errorMessage" class="backend-error-message">
+          <i class="fas fa-exclamation-circle"></i>
+          {{ errorMessage }}
+        </div>
+
         <!-- Submit gomb -->
         <button 
           type="submit" 
           class="btn-submit"
-          [disabled]="loginForm.invalid">
-          FOLYTATÁS
+          [disabled]="loginForm.invalid || isLoading">
+          
+          <!-- Loading spinner VAGY szöveg -->
+          <span *ngIf="!isLoading">FOLYTATÁS</span>
+          <span *ngIf="isLoading">
+            <i class="fas fa-spinner fa-spin"></i> BEJELENTKEZÉS...
+          </span>
         </button>
 
         <div class="divider"></div>

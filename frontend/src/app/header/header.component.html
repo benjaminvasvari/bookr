@@ -12,14 +12,14 @@
         </a>
       </div>      
       
-
       <!-- Spacer -->
       <div class="col"></div>
 
-      <!-- Right side buttons -->
-      <div class="col-auto d-flex align-items-center gap-3">
+      <!-- Right side buttons - NEM bejelentkezett -->
+      @if (!currentUser) {
+        <div class="col-auto d-flex align-items-center gap-3">
         <button routerLink="/login" class="btn login-button">Jelentkezz be</button>
-        <div class="user-profile-icon">
+        <div class="user-profile-icon" routerLink="/login">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
             <path
               d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
@@ -27,6 +27,21 @@
           </svg>
         </div>
       </div>
+      }
+
+      <!-- Right side - BEJELENTKEZETT user -->
+      @if (currentUser) {
+        <div class="col-auto d-flex align-items-center gap-3">
+        <span class="welcome-text">Üdv, {{ currentUser.firstName }}!</span>
+        <div class="user-profile-icon" (click)="logout()">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path
+              d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+            />
+          </svg>
+        </div>
+      </div>
+      }
     </div>
   </div>
 </header>

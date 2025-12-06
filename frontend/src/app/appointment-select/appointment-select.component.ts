@@ -61,6 +61,9 @@ export class AppointmentSelectComponent implements OnInit {
     this.loadMockData();
     this.initializeWeek();
     this.loadCart();
+
+    // Oldal tetejére görgetés
+    window.scrollTo(0, 0);
   }
 
   loadMockData(): void {

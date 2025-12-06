@@ -128,7 +128,7 @@ public class AuthController {
     }
 
     @POST
-    @Path("verify-email")
+    @Path("verify")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response verifyEmail(String body) {

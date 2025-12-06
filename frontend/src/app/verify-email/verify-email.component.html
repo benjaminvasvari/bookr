@@ -1,0 +1,52 @@
+<div class="verify-container">
+  <div class="verify-content">
+    <div class="verify-wrapper">
+      <h1 class="verify-title">EMAIL MEGERŐSÍTÉS</h1>
+      
+      <!-- LOADING STATE -->
+      <div *ngIf="isVerifying" class="verify-box loading-box">
+        <div class="icon-wrapper">
+          <i class="fas fa-spinner fa-spin"></i>
+        </div>
+        <h2>Email cím megerősítése folyamatban...</h2>
+        <p>Kérlek várj, amíg megerősítjük az email címed.</p>
+      </div>
+
+      <!-- SUCCESS STATE -->
+      <div *ngIf="!isVerifying && isSuccess" class="verify-box success-box">
+        <div class="icon-wrapper success-icon">
+          <i class="fas fa-check-circle"></i>
+        </div>
+        <h2>Email cím sikeresen megerősítve!</h2>
+        <p>Mostantól be tudsz jelentkezni a fiókodba.</p>
+        <p class="redirect-text">Átirányítás a bejelentkezési oldalra...</p>
+        
+        <button (click)="navigateToLogin()" class="btn-action">
+          BEJELENTKEZÉS
+        </button>
+      </div>
+
+      <!-- ERROR STATE -->
+      <div *ngIf="!isVerifying && !isSuccess && errorMessage" class="verify-box error-box">
+        <div class="icon-wrapper error-icon">
+          <i class="fas fa-times-circle"></i>
+        </div>
+        <h2>Email megerősítése sikertelen</h2>
+        <p class="error-text">{{ errorMessage }}</p>
+        
+        <div class="action-buttons">
+          <button (click)="navigateToRegister()" class="btn-action btn-secondary">
+            ÚJ REGISZTRÁCIÓ
+          </button>
+          <button (click)="navigateToLogin()" class="btn-action">
+            BEJELENTKEZÉS
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="image-wrapper">
+      <div class="image-overlay"></div>
+    </div>
+  </div>
+</div>

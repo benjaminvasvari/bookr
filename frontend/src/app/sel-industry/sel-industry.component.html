@@ -83,7 +83,7 @@
         <div class="service-info">
           <h3 class="service-name">{{ service.name }}</h3>
           <p class="service-duration">{{ service.duration }}</p>
-          <p class="service-price">{{ service.price }} {{ service.currency }}-tól</p>
+          <p class="service-price">{{ service.price | hungarianCurrency:service.currency }}-tól</p>
         </div>
         <button class="book-button" (click)="bookService(service)">Foglalj</button>
       </div>
@@ -140,39 +140,101 @@
       <h1 class="title">Nyitvatartás</h1>
 
       <div class="hours-list">
-        @if (company.openingHours) { @if (company.openingHours.monday) {
-        <div class="hours-item" [class.closed]="company.openingHours.monday === 'Zárva'">
-          <span class="day">Hétfő:</span>
+        @if (company.openingHours) {
+        <!-- HÉTFŐ -->
+        @if (company.openingHours.monday) {
+        <div
+          class="hours-item"
+          [class.today]="isToday('monday')"
+          [class.closed]="company.openingHours.monday === 'Zárva'"
+        >
+          <span class="day">
+            Hétfő 
+          </span>
           <span class="time">{{ company.openingHours.monday }}</span>
         </div>
-        } @if (company.openingHours.tuesday) {
-        <div class="hours-item" [class.closed]="company.openingHours.tuesday === 'Zárva'">
-          <span class="day">Kedd:</span>
+        }
+
+        <!-- KEDD -->
+        @if (company.openingHours.tuesday) {
+        <div
+          class="hours-item"
+          [class.today]="isToday('tuesday')"
+          [class.closed]="company.openingHours.tuesday === 'Zárva'"
+        >
+          <span class="day">
+            Kedd
+          </span>
           <span class="time">{{ company.openingHours.tuesday }}</span>
         </div>
-        } @if (company.openingHours.wednesday) {
-        <div class="hours-item" [class.closed]="company.openingHours.wednesday === 'Zárva'">
-          <span class="day">Szerda:</span>
+        }
+
+        <!-- SZERDA -->
+        @if (company.openingHours.wednesday) {
+        <div
+          class="hours-item"
+          [class.today]="isToday('wednesday')"
+          [class.closed]="company.openingHours.wednesday === 'Zárva'"
+        >
+          <span class="day">
+            Szerda
+          </span>
           <span class="time">{{ company.openingHours.wednesday }}</span>
         </div>
-        } @if (company.openingHours.thursday) {
-        <div class="hours-item" [class.closed]="company.openingHours.thursday === 'Zárva'">
-          <span class="day">Csütörtök:</span>
+        }
+
+        <!-- CSÜTÖRTÖK -->
+        @if (company.openingHours.thursday) {
+        <div
+          class="hours-item"
+          [class.today]="isToday('thursday')"
+          [class.closed]="company.openingHours.thursday === 'Zárva'"
+        >
+          <span class="day">
+            Csütörtök
+          </span>
           <span class="time">{{ company.openingHours.thursday }}</span>
         </div>
-        } @if (company.openingHours.friday) {
-        <div class="hours-item" [class.closed]="company.openingHours.friday === 'Zárva'">
-          <span class="day">Péntek:</span>
+        }
+
+        <!-- PÉNTEK -->
+        @if (company.openingHours.friday) {
+        <div
+          class="hours-item"
+          [class.today]="isToday('friday')"
+          [class.closed]="company.openingHours.friday === 'Zárva'"
+        >
+          <span class="day">
+            Péntek
+          </span>
           <span class="time">{{ company.openingHours.friday }}</span>
         </div>
-        } @if (company.openingHours.saturday) {
-        <div class="hours-item" [class.closed]="company.openingHours.saturday === 'Zárva'">
-          <span class="day">Szombat:</span>
+        }
+
+        <!-- SZOMBAT -->
+        @if (company.openingHours.saturday) {
+        <div
+          class="hours-item"
+          [class.today]="isToday('saturday')"
+          [class.closed]="company.openingHours.saturday === 'Zárva'"
+        >
+          <span class="day">
+            Szombat
+          </span>
           <span class="time">{{ company.openingHours.saturday }}</span>
         </div>
-        } @if (company.openingHours.sunday) {
-        <div class="hours-item" [class.closed]="company.openingHours.sunday === 'Zárva'">
-          <span class="day">Vasárnap:</span>
+        }
+
+        <!-- VASÁRNAP -->
+        @if (company.openingHours.sunday) {
+        <div
+          class="hours-item"
+          [class.today]="isToday('sunday')"
+          [class.closed]="company.openingHours.sunday === 'Zárva'"
+        >
+          <span class="day">
+            Vasárnap
+          </span>
           <span class="time">{{ company.openingHours.sunday }}</span>
         </div>
         } }

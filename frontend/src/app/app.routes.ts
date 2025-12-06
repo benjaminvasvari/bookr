@@ -6,11 +6,13 @@ import { RegisterComponent } from './register-page/register-page.component';
 import { SelIndustryComponent } from './sel-industry/sel-industry.component';
 import { AppointmentComponent } from './appointment/appointment.component';
 import { AppointmentSelectComponent } from './appointment-select/appointment-select.component';
+import { VerifyEmailComponent } from './verify-email/verify-email.component';
 
 export const appRoutes: Routes = [
   { path: '', component: MainPageComponent },
   { path: 'login', component: LoginPageComponent },
   { path: 'register', component: RegisterComponent },
+  { path: 'verify-email', component: VerifyEmailComponent },
   { path: 'sel-industry/:id', component: SelIndustryComponent },
   { path: 'appointment/:companyId/services', component: AppointmentComponent },
   { path: 'appointment/:companyId/specialists', component: AppointmentSelectComponent },

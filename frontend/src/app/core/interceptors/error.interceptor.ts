@@ -1,21 +1,18 @@
 import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
-import { inject } from '@angular/core';
-import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
-import { AuthService } from '../services/auth.service';
 
 /**
  * HTTP Error Interceptor - hibakezelés
  * 
  * Automatikusan kezeli a különböző HTTP hibákat:
- * - 401: Unauthorized -> kijelentkeztetés
+ * - 400: Bad Request
  * - 403: Forbidden -> hibaüzenet
+ * - 404: Not Found
  * - 500: Server error -> hibaüzenet
+ * 
+ * FONTOS: 401 hibát NEM kezeli, azt az authInterceptor kezeli (token refresh)
  */
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
-  const authService = inject(AuthService);
-  const router = inject(Router);
-  
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
       let errorMessage = 'Ismeretlen hiba történt';
@@ -32,12 +29,7 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
           case 400:
             errorMessage = error.error?.message || 'Hibás kérés';
             break;
-          case 401:
-            errorMessage = 'Nincs jogosultságod a művelethez. Kérlek jelentkezz be újra.';
-            // Automatikus kijelentkeztetés
-            authService.logout();
-            router.navigate(['/login']);
-            break;
+          // 401-et NEM kezeljük itt! Az authInterceptor kezeli (token refresh)
           case 403:
             errorMessage = 'Nincs hozzáférésed ehhez az erőforráshoz.';
             break;

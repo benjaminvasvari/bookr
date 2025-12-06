@@ -3,16 +3,9 @@ export interface User {
   email: string;
   firstName: string;
   lastName: string;
-  phone?: string;
-  role: UserRole;
-  createdAt?: string;
-  avatar?: string;
-}
-
-export enum UserRole {
-  USER = 'USER',
-  ADMIN = 'ADMIN',
-  COMPANY_OWNER = 'COMPANY_OWNER'
+  roles: string;
+  companyId: number | null;
+  roleId: number | null;
 }
 
 export interface LoginRequest {
@@ -28,12 +21,43 @@ export interface RegisterRequest {
   phone?: string;
 }
 
-export interface AuthResponse {
-  token: string;
-  refreshToken: string;
-  user: User;
+export interface LoginResponse {
+  user: {
+    id: number;
+    firstName: string;
+    lastName: string;
+    email: string;
+    roles: string;
+    companyId: number | null;
+    roleId: number | null;
+    accessToken: string;
+    refreshToken: string;
+  };
+  status: string;
+  statusCode: number;
 }
 
 export interface TokenRefreshRequest {
+  refresh_token: string;
+}
+
+export interface RefreshTokenResponse {
   refreshToken: string;
+  accessToken: string;
+}
+
+export interface RegisterResponse {
+  regToken: string;
+  userId: number;
+  status: string;
+  statusCode: number;
+}
+
+export interface VerifyEmailResponse {
+  status: string;
+  statusCode: number;
+}
+
+export interface VerifyEmailRequest {
+  token: string;
 }

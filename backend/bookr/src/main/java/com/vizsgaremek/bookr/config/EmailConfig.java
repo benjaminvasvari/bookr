@@ -54,7 +54,7 @@ public class EmailConfig {
      * Application base URL (for email links)
      */
     public static String getAppBaseUrl() {
-        return EnvConfig.get("APP_BASE_URL", "http://localhost:8080");
+        return EnvConfig.get("APP_BASE_URL", "http://localhost:4200");
     }
 
     /**

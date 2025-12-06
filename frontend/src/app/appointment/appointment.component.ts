@@ -43,6 +43,9 @@ export class AppointmentComponent implements OnInit {
         this.addToCart(service);
       }
     }
+
+    // Oldal tetejére görgetés
+    window.scrollTo(0, 0);
   }
 
   loadMockData(): void {

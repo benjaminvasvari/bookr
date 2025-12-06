@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 
 import { Title } from '@angular/platform-browser';
+import { HungarianCurrencyPipe } from '../core/pipes/hungarian-currency.pipe';
 
 // Importáljuk a models-ből az interface-eket
 import { Company, Service, Review, ServiceCategory } from '../core/models';
@@ -13,7 +14,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 @Component({
   selector: 'app-sel-industry',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, HungarianCurrencyPipe],
   templateUrl: './sel-industry.component.html',
   styleUrls: ['./sel-industry.component.css'],
 })
@@ -158,5 +159,24 @@ export class SelIndustryComponent implements OnInit {
     if (!details) return `${this.company.name} - Térkép`;
 
     return `${this.company.name} - ${details.street}, ${details.city}`;
+  }
+
+  /**
+   * Mai nap meghatározása (lowercase)
+   * @returns 'monday' | 'tuesday' | ... | 'sunday'
+   */
+  getCurrentDay(): string {
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const today = new Date().getDay(); // 0 = vasárnap, 1 = hétfő, ...
+    return days[today];
+  }
+
+  /**
+   * Ellenőrzi hogy az adott nap ma van-e
+   * @param day 'monday' | 'tuesday' | ...
+   * @returns boolean
+   */
+  isToday(day: string): boolean {
+    return this.getCurrentDay() === day.toLowerCase();
   }
 }

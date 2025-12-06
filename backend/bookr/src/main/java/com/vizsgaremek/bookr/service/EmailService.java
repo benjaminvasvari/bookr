@@ -35,7 +35,7 @@ public class EmailService {
         // Send email asynchronously
         emailExecutor.submit(() -> {
             try {
-                String verificationLink = EmailConfig.getAppBaseUrl() + "/api/auth/verify?token=" + regToken;
+                String verificationLink = EmailConfig.getAppBaseUrl() + "/verify-email?token=" + regToken;
                 String htmlContent = createVerificationEmailHTML(firstName, verificationLink);
 
                 sendEmail(

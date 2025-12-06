@@ -21,16 +21,6 @@ public class ImageServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        String requestUri = request.getRequestURI();
-        String contextPath = request.getContextPath();
-        String servletPath = request.getServletPath();
-        String pathInfo = request.getPathInfo();
-
-        System.out.println("DEBUG ImageServlet: requestURI=" + requestUri);
-        System.out.println("DEBUG ImageServlet: contextPath=" + contextPath);
-        System.out.println("DEBUG ImageServlet: servletPath=" + servletPath);
-        System.out.println("DEBUG ImageServlet: pathInfo=" + pathInfo);
-
         // URL path: /images/companies/1/main.jpg
         String requestedPath = request.getPathInfo();  // "/companies/1/main.jpg"
 

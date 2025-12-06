@@ -75,6 +75,14 @@
     transform: scale(1.02);
 }
 
+/* Welcome text - Bejelentkezett user */
+.welcome-text {
+    color: white;
+    font-size: 1.1rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
 /* User profile icon */
 .user-profile-icon {
     width: 40px;
@@ -97,4 +105,17 @@
     width: 28px;
     height: 28px;
     fill: var(--charcoal-color);
+}
+
+/* Responsive - Welcome text mobilon */
+@media (max-width: 768px) {
+    .welcome-text {
+        font-size: 0.95rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .welcome-text {
+        display: none; /* Nagyon kicsi képernyőn eltűnik */
+    }
 }

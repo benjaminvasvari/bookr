@@ -236,12 +236,11 @@ public class Users implements Serializable {
     }
 
     // getUserByRegToken constructor
-    public Users(Integer id, String email, Date registerFinishedAt, boolean isActive, Integer companyId) {
+    public Users(Integer id, String email, Date registerFinishedAt, boolean isActive) {
         this.id = id;
         this.email = email;
         this.registerFinishedAt = registerFinishedAt;
         this.isActive = isActive;
-        this.companyId = companyId;
     }
 
     // getUserById
@@ -783,19 +782,13 @@ public class Users implements Serializable {
 
             Object[] record = resultList.get(0);
 
-            // Company ID kezelése
-            Integer companyId = null;
-            if (record[4] != null) {
-                companyId = Integer.valueOf(record[4].toString());
-            }
 
             // User objektum összeállítása
             Users user = new Users(
                     Integer.valueOf(record[0].toString()), // id
                     record[1].toString(), // email
                     record[2] == null ? null : formatter.parse(record[2].toString()), // register_finished_at
-                    Boolean.parseBoolean(record[3].toString()), // isActive
-                    companyId
+                    Boolean.parseBoolean(record[3].toString()) // isActive
             );
 
             return user;
