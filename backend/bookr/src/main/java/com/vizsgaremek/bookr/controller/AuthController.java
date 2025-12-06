@@ -193,14 +193,18 @@ public class AuthController {
     public Response logout(String body) {
         JSONObject bodyObject = new JSONObject(body);
 
+        // companyId nullable field kezelése
+        Integer companyId = bodyObject.has("companyId") && !bodyObject.isNull("companyId")
+                ? bodyObject.getInt("companyId")
+                : null;
+
         Users loggedoutUser = new Users(
                 bodyObject.getInt("id"),
                 bodyObject.getString("email"),
-                bodyObject.getInt("companyId")
+                companyId // ← null-t is elfogad
         );
 
         JSONObject toReturn = authService.logout(loggedoutUser);
-
         return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
                 .entity(toReturn.toString())
                 .type(MediaType.APPLICATION_JSON)

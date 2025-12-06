@@ -63,18 +63,26 @@ export class AuthService {
    * Kijelentkezés
    */
   logout(): void {
-    // Token törlése a szerverről (opcionális - ha van ilyen endpoint)
-    // this.http.post(`${this.apiUrl}${API_ENDPOINTS.AUTH.LOGOUT}`, {})
-    //   .subscribe({
-    //     next: () => console.log('Logged out from server'),
-    //     error: (err) => console.error('Logout error:', err)
-    //   });
+    const user = this.getCurrentUser();
 
-    // Helyi adatok törlése
-    this.clearSession();
+    if (user) {
+      this.http
+        .post(`${this.apiUrl}${API_ENDPOINTS.AUTH.LOGOUT}`, {
+          id: user.id,
+          email: user.email,
+          companyId: user.companyId,
+        })
+        .subscribe({
+          next: () => console.log('Logged out from server'),
+          error: (err) => console.error('Logout error:', err),
+        });
 
-    // Navigálás a főoldalra
-    this.router.navigate(['/']);
+      // Helyi adatok törlése
+      this.clearSession();
+
+      // Navigálás a főoldalra
+      this.router.navigate(['/']);
+    }
   }
 
   /**
@@ -158,6 +166,7 @@ export class AuthService {
       lastName: userData.lastName,
       roles: userData.roles,
       companyId: userData.companyId,
+      avatarUrl: userData.avatarUrl,
       roleId: userData.roleId,
     };
 

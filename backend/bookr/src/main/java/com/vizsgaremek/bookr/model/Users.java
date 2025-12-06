@@ -183,6 +183,9 @@ public class Users implements Serializable {
 
     @Transient
     private String roleName;  // Az első role neve
+    
+    @Transient
+    private String avatarUrl;
 
     static EntityManagerFactory emf = Persistence.createEntityManagerFactory("com.vizsgaremek_bookr_war_1.0-SNAPSHOTPU");
     static SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -221,13 +224,14 @@ public class Users implements Serializable {
     }
 
     // login response constructor (data from stored procedure)
-    public Users(Integer id, String firstName, String lastName, String email, String password, Integer companyId, String rolesString) {
+    public Users(Integer id, String firstName, String lastName, String email, String password, Integer companyId, String avatarUrl, String rolesString) {
         this.id = id;
         this.firstName = firstName;
         this.lastName = lastName;
         this.email = email;
         this.password = password;
         this.companyId = companyId;
+        this.avatarUrl = avatarUrl;
         this.rolesString = rolesString;
 
         if (rolesString != null && !rolesString.isEmpty()) {
@@ -563,6 +567,14 @@ public class Users implements Serializable {
         hash += (id != null ? id.hashCode() : 0);
         return hash;
     }
+    
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
+    
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
+    }
 
     @Override
     public boolean equals(Object object) {
@@ -709,7 +721,8 @@ public class Users implements Serializable {
                     record[3].toString(), // email
                     record[4].toString(), // password (hashed)
                     record[5] == null ? null : Integer.valueOf(record[5].toString()), // company_id (can be NULL)
-                    record[6] == null ? null : record[6].toString() // roles (GROUP_CONCAT string)
+                    record[6] == null ? null : record[6].toString(), // avatarUrl
+                    record[7] == null ? null : record[7].toString() // roles (GROUP_CONCAT string)
             );
 
             return user;

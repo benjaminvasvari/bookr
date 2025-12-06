@@ -14,10 +14,10 @@ export interface Company {
   category?: string;
   galleryImages?: string[];
   openingHours?: OpeningHours;
-  serviceCategories?: ServiceCategory[];  // ← ÚJ!
+  serviceCategories?: ServiceCategory[];
   reviews?: Review[];
   isFavorite?: boolean;
-  statusCode?: number;  // ← Ha a backend küldi
+  statusCode?: number;
 }
 
 // ÚJ INTERFACE - ServiceCategory

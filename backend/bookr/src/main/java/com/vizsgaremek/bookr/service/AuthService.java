@@ -249,6 +249,13 @@ public class AuthService {
         } else {
             userData.put("companyId", JSONObject.NULL);
         }
+        
+        // User Avatar kezelése (lehet null)
+        if (userFromDB.getAvatarUrl() != null) {
+            userData.put("avatarUrl", userFromDB.getAvatarUrl());
+        } else {
+            userData.put("avatarUrl", JSONObject.NULL);
+        }
 
         // Role ID
         if (userFromDB.getRoleId() != null) {
