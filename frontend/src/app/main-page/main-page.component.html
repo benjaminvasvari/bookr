@@ -37,27 +37,50 @@
 <section class="section">
   <div class="container">
     <h2 class="section-title">Legjobb ajánlatok!</h2>
-    <div class="service-grid">
-      @for (service of topRecommendations; track service.id) {
-      <div class="service-card">
-        <div class="service-image">
-          <img [src]="service.imageUrl" [alt]="service.name" />
-        </div>
-        <div class="service-info">
-          <h3 class="service-name">{{ service.name }}</h3>
-          <div class="service-rating">
-            <span class="rating-value">{{ service.rating }}</span>
-            <span class="rating-stars">
-              <span *ngFor="let star of getRatingStars(service.rating)" class="star">★</span>
-            </span>
-            <span class="review-count">({{ service.reviewCount }})</span>
-          </div>
-          <p class="service-address">{{ service.address }}</p>
-          <button class="btn-book" (click)="goToService(service.id)">Foglalás</button>
-        </div>
+
+    @if (isLoadingTop) {
+      <div class="loading-container">
+        <div class="spinner"></div>
+        <p class="loading-text">Betöltés...</p>
       </div>
-      }
-    </div>
+    } @else if (errorTop) {
+      <div class="error-card">
+        <div class="error-icon">⚠️</div>
+        <h3 class="error-title">Hiba történt</h3>
+        <p class="error-message">{{ errorTop }}</p>
+        <button class="btn-retry" (click)="retryLoadTop()">Újrapróbálás</button>
+      </div>
+    } @else if (topRecommendations.length === 0) {
+      <div class="empty-state">
+        <p>Jelenleg nincsenek elérhető ajánlatok.</p>
+      </div>
+    } @else {
+      <div class="service-grid">
+        @for (company of topRecommendations; track company.id) {
+          <div class="service-card" (click)="goToService(company.id)">
+            <div class="service-image">
+              <img [src]="company.imageUrl" [alt]="company.name" />
+            </div>
+            <div class="service-info">
+              <h3 class="service-name">{{ company.name }}</h3>
+              <div class="service-rating">
+                <span class="rating-value">{{ company.rating }}</span>
+                <span class="rating-stars">
+                  @for (star of getRatingStars(company.rating); track $index) {
+                    <span class="star">★</span>
+                  }
+                </span>
+                <span class="review-count">({{ company.reviewCount }})</span>
+              </div>
+              <p class="service-address">{{ company.address }}</p>
+              <button class="btn-book" (click)="$event.stopPropagation(); goToService(company.id)">
+                Foglalás
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
   </div>
 </section>
 
@@ -65,25 +88,50 @@
 <section class="section">
   <div class="container">
     <h2 class="section-title">Új a választékban!</h2>
-    <div class="service-grid">
-      <div class="service-card" *ngFor="let service of newServices">
-        <div class="service-image">
-          <img [src]="service.imageUrl" [alt]="service.name" />
-        </div>
-        <div class="service-info">
-          <h3 class="service-name">{{ service.name }}</h3>
-          <div class="service-rating">
-            <span class="rating-value">{{ service.rating }}</span>
-            <span class="rating-stars">
-              <span *ngFor="let star of getRatingStars(service.rating)" class="star">★</span>
-            </span>
-            <span class="review-count">({{ service.reviewCount }})</span>
-          </div>
-          <p class="service-address">{{ service.address }}</p>
-          <button class="btn-book">Foglalás</button>
-        </div>
+
+    @if (isLoadingNew) {
+      <div class="loading-container">
+        <div class="spinner"></div>
+        <p class="loading-text">Betöltés...</p>
       </div>
-    </div>
+    } @else if (errorNew) {
+      <div class="error-card">
+        <div class="error-icon">⚠️</div>
+        <h3 class="error-title">Hiba történt</h3>
+        <p class="error-message">{{ errorNew }}</p>
+        <button class="btn-retry" (click)="retryLoadNew()">Újrapróbálás</button>
+      </div>
+    } @else if (newServices.length === 0) {
+      <div class="empty-state">
+        <p>Jelenleg nincsenek új szolgáltatások.</p>
+      </div>
+    } @else {
+      <div class="service-grid">
+        @for (service of newServices; track service.id) {
+          <div class="service-card" (click)="goToService(service.id)">
+            <div class="service-image">
+              <img [src]="service.imageUrl" [alt]="service.name" />
+            </div>
+            <div class="service-info">
+              <h3 class="service-name">{{ service.name }}</h3>
+              <div class="service-rating">
+                <span class="rating-value">{{ service.rating }}</span>
+                <span class="rating-stars">
+                  @for (star of getRatingStars(service.rating); track $index) {
+                    <span class="star">★</span>
+                  }
+                </span>
+                <span class="review-count">({{ service.reviewCount }})</span>
+              </div>
+              <p class="service-address">{{ service.address }}</p>
+              <button class="btn-book" (click)="$event.stopPropagation(); goToService(service.id)">
+                Foglalás
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
   </div>
 </section>
 
@@ -91,25 +139,50 @@
 <section class="section">
   <div class="container">
     <h2 class="section-title">Felkapott</h2>
-    <div class="service-grid">
-      <div class="service-card" *ngFor="let service of featuredServices">
-        <div class="service-image">
-          <img [src]="service.imageUrl" [alt]="service.name" />
-        </div>
-        <div class="service-info">
-          <h3 class="service-name">{{ service.name }}</h3>
-          <div class="service-rating">
-            <span class="rating-value">{{ service.rating }}</span>
-            <span class="rating-stars">
-              <span *ngFor="let star of getRatingStars(service.rating)" class="star">★</span>
-            </span>
-            <span class="review-count">({{ service.reviewCount }})</span>
-          </div>
-          <p class="service-address">{{ service.address }}</p>
-          <button class="btn-book">Foglalás</button>
-        </div>
+
+    @if (isLoadingFeatured) {
+      <div class="loading-container">
+        <div class="spinner"></div>
+        <p class="loading-text">Betöltés...</p>
       </div>
-    </div>
+    } @else if (errorFeatured) {
+      <div class="error-card">
+        <div class="error-icon">⚠️</div>
+        <h3 class="error-title">Hiba történt</h3>
+        <p class="error-message">{{ errorFeatured }}</p>
+        <button class="btn-retry" (click)="retryLoadFeatured()">Újrapróbálás</button>
+      </div>
+    } @else if (featuredServices.length === 0) {
+      <div class="empty-state">
+        <p>Jelenleg nincsenek felkapott szolgáltatások.</p>
+      </div>
+    } @else {
+      <div class="service-grid">
+        @for (service of featuredServices; track service.id) {
+          <div class="service-card" (click)="goToService(service.id)">
+            <div class="service-image">
+              <img [src]="service.imageUrl" [alt]="service.name" />
+            </div>
+            <div class="service-info">
+              <h3 class="service-name">{{ service.name }}</h3>
+              <div class="service-rating">
+                <span class="rating-value">{{ service.rating }}</span>
+                <span class="rating-stars">
+                  @for (star of getRatingStars(service.rating); track $index) {
+                    <span class="star">★</span>
+                  }
+                </span>
+                <span class="review-count">({{ service.reviewCount }})</span>
+              </div>
+              <p class="service-address">{{ service.address }}</p>
+              <button class="btn-book" (click)="$event.stopPropagation(); goToService(service.id)">
+                Foglalás
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
   </div>
 </section>
 
@@ -136,78 +209,23 @@
   <div class="container">
     <h2 class="section-title">Értékelések</h2>
     <div class="reviews-grid">
-      <div class="review-card" *ngFor="let review of reviews">
-        <div class="review-header">
-          <img [src]="review.authorImage" [alt]="review.author" class="review-avatar" />
-          <div class="review-author-info">
-            <h4 class="review-author">{{ review.author }}</h4>
-            <h5 class="review-title">{{ review.title }}</h5>
+      @for (review of reviews; track review.author) {
+        <div class="review-card">
+          <div class="review-header">
+            <img [src]="review.authorImage" [alt]="review.author" class="review-avatar" />
+            <div class="review-author-info">
+              <h4 class="review-author">{{ review.author }}</h4>
+              <h5 class="review-title">{{ review.title }}</h5>
+            </div>
+          </div>
+          <p class="review-content">{{ review.content }}</p>
+          <div class="review-rating">
+            @for (star of getRatingStars(review.rating); track $index) {
+              <span class="star">★</span>
+            }
           </div>
         </div>
-        <p class="review-content">{{ review.content }}</p>
-        <div class="review-rating">
-          <span *ngFor="let star of getRatingStars(review.rating)" class="star">★</span>
-        </div>
-      </div>
+      }
     </div>
   </div>
 </section>
-
-<!-- Footer -->
-<footer class="footer">
-  <div class="container">
-    <div class="footer-content">
-      <div class="footer-column">
-        <p>Lorem</p>
-        <p>Ipsum dolor</p>
-        <p>sit amet</p>
-        <p>consectetur</p>
-        <p>adipiscing</p>
-        <p>magna nam</p>
-        <p>volutpat</p>
-        <p>venenatis</p>
-        <p>adipiscing</p>
-        <p>et</p>
-      </div>
-      <div class="footer-column">
-        <p>Lorem</p>
-        <p>Ipsum dolor</p>
-        <p>sit amet</p>
-        <p>consectetur</p>
-        <p>adipiscing</p>
-        <p>magna nam</p>
-        <p>volutpat</p>
-        <p>venenatis</p>
-        <p>adipiscing</p>
-        <p>et</p>
-      </div>
-      <div class="footer-column">
-        <p>Lorem</p>
-        <p>Ipsum dolor</p>
-        <p>sit amet</p>
-        <p>consectetur</p>
-        <p>adipiscing</p>
-        <p>magna nam</p>
-        <p>volutpat</p>
-        <p>venenatis</p>
-        <p>adipiscing</p>
-        <p>et</p>
-      </div>
-      <div class="footer-column">
-        <p>Lorem</p>
-        <p>Ipsum dolor</p>
-        <p>sit amet</p>
-        <p>consectetur</p>
-        <p>adipiscing</p>
-        <p>magna nam</p>
-        <p>volutpat</p>
-        <p>venenatis</p>
-        <p>adipiscing</p>
-        <p>et</p>
-      </div>
-    </div>
-    <div class="footer-bottom">
-      <div class="footer-logo">B<span class="logo-highlight">oo</span>kr</div>
-    </div>
-  </div>
-</footer>

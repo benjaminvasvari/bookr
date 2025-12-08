@@ -136,4 +136,187 @@ public class CompaniesService {
             return error;
         }
     }
+    
+    public JSONObject getTopRecommendations(Integer limit) {
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        try {
+            // Input validáció
+            if (limit == null || limit <= 0) {
+                status = "InvalidParamValue";
+                statusCode = 400;
+                toReturn.put("status", status);
+                toReturn.put("statusCode", statusCode);
+                toReturn.put("message", "Invalid limit");
+                return toReturn;
+            }
+
+            // Adatbázis lekérdezés
+            List<Companies> modelResult = Companies.getTopRecommendations(limit);
+
+            // NULL ELLENŐRZÉS
+            if (modelResult == null) {
+                status = "NotFound";
+                statusCode = 404;
+                toReturn.put("status", status);
+                toReturn.put("statusCode", statusCode);
+                toReturn.put("message", "No company found");
+                return toReturn;
+            }
+
+            // Sikeres válasz összeállítása
+            JSONArray result = new JSONArray();
+
+            for (Companies actualCompany : modelResult) {
+                JSONObject actualCompanyObject = new JSONObject();
+
+                actualCompanyObject.put("id", actualCompany.getId());
+                actualCompanyObject.put("name", actualCompany.getName());
+                actualCompanyObject.put("rating", actualCompany.getRating());
+                actualCompanyObject.put("reviewCount", actualCompany.getReviewCount());
+                actualCompanyObject.put("address", actualCompany.getAddress());
+                actualCompanyObject.put("imageUrl", IMAGE_BASE_URL + actualCompany.getImageUrl());
+
+                result.put(actualCompanyObject);
+            }
+
+            toReturn.put("result", result);
+
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            status = "InternalServerError";
+            statusCode = 500;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+        }
+
+        return toReturn;
+    }
+    
+    public JSONObject getNewCompanies(Integer limit) {
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        try {
+            // Input validáció
+            if (limit == null || limit <= 0) {
+                status = "InvalidParamValue";
+                statusCode = 400;
+                toReturn.put("status", status);
+                toReturn.put("statusCode", statusCode);
+                toReturn.put("message", "Invalid limit");
+                return toReturn;
+            }
+
+            // Adatbázis lekérdezés
+            List<Companies> modelResult = Companies.getNewCompanies(limit);
+
+            // NULL ELLENŐRZÉS
+            if (modelResult == null) {
+                status = "NotFound";
+                statusCode = 404;
+                toReturn.put("status", status);
+                toReturn.put("statusCode", statusCode);
+                toReturn.put("message", "No company found");
+                return toReturn;
+            }
+
+            // Sikeres válasz összeállítása
+            JSONArray result = new JSONArray();
+
+            for (Companies actualCompany : modelResult) {
+                JSONObject actualCompanyObject = new JSONObject();
+
+                actualCompanyObject.put("id", actualCompany.getId());
+                actualCompanyObject.put("name", actualCompany.getName());
+                actualCompanyObject.put("rating", actualCompany.getRating());
+                actualCompanyObject.put("reviewCount", actualCompany.getReviewCount());
+                actualCompanyObject.put("address", actualCompany.getAddress());
+                actualCompanyObject.put("imageUrl", IMAGE_BASE_URL + actualCompany.getImageUrl());
+
+                result.put(actualCompanyObject);
+            }
+
+            toReturn.put("result", result);
+
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            status = "InternalServerError";
+            statusCode = 500;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+        }
+
+        return toReturn;
+    }
+    
+    public JSONObject getFeaturedCompanies(Integer limit) {
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        try {
+            // Input validáció
+            if (limit == null || limit <= 0) {
+                status = "InvalidParamValue";
+                statusCode = 400;
+                toReturn.put("status", status);
+                toReturn.put("statusCode", statusCode);
+                toReturn.put("message", "Invalid limit");
+                return toReturn;
+            }
+
+            // Adatbázis lekérdezés
+            List<Companies> modelResult = Companies.getFeaturedCompanies(limit);
+
+            // NULL ELLENŐRZÉS
+            if (modelResult == null) {
+                status = "NotFound";
+                statusCode = 404;
+                toReturn.put("status", status);
+                toReturn.put("statusCode", statusCode);
+                toReturn.put("message", "No company found");
+                return toReturn;
+            }
+
+            // Sikeres válasz összeállítása
+            JSONArray result = new JSONArray();
+
+            for (Companies actualCompany : modelResult) {
+                JSONObject actualCompanyObject = new JSONObject();
+
+                actualCompanyObject.put("id", actualCompany.getId());
+                actualCompanyObject.put("name", actualCompany.getName());
+                actualCompanyObject.put("rating", actualCompany.getRating());
+                actualCompanyObject.put("reviewCount", actualCompany.getReviewCount());
+                actualCompanyObject.put("address", actualCompany.getAddress());
+                actualCompanyObject.put("imageUrl", IMAGE_BASE_URL + actualCompany.getImageUrl());
+
+                result.put(actualCompanyObject);
+            }
+
+            toReturn.put("result", result);
+
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            status = "InternalServerError";
+            statusCode = 500;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+        }
+
+        return toReturn;
+    }
 }

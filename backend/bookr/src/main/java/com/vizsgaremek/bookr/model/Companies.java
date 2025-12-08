@@ -218,8 +218,16 @@ public class Companies implements Serializable {
         this.rating = rating;
         this.reviewCount = reviewCount;
     }
-    
-    
+
+    // get Top & New & Featured recommendations
+    public Companies(Integer id, String name, Double rating, Integer reviewCount, String address, String imageUrl) {
+        this.id = id;
+        this.name = name;
+        this.rating = rating;
+        this.reviewCount = reviewCount;
+        this.address = address;
+        this.imageUrl = imageUrl;
+    }
 
     public Integer getId() {
         return id;
@@ -670,6 +678,138 @@ public class Companies implements Serializable {
         } catch (Exception ex) {
             ex.printStackTrace();
             return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static List<Companies> getTopRecommendations(Integer limit) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getTopRecommendations");
+            spq.registerStoredProcedureParameter("limitIN", Integer.class, ParameterMode.IN);
+            spq.setParameter("limitIN", limit);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            // Empty list if no results
+            if (resultList.isEmpty()) {
+                return new ArrayList<>();
+            }
+
+            List<Companies> companiesList = new ArrayList<>();
+
+            for (Object[] record : resultList) {
+                Companies company = new Companies(
+                        Integer.valueOf(record[0].toString()),
+                        record[1].toString(),
+                        Double.parseDouble(record[2].toString()),
+                        Integer.valueOf(record[3].toString()),
+                        record[4].toString(),
+                        record[5].toString()
+                );
+
+                companiesList.add(company);  // Hozzáadjuk a listához!
+            }
+
+            return companiesList;  // Az ÖSSZES képet visszaadjuk!
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return new ArrayList<>();  // Error esetén üres lista (nem null!)
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static List<Companies> getNewCompanies(Integer limit) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getNewCompanies");
+            spq.registerStoredProcedureParameter("limitIN", Integer.class, ParameterMode.IN);
+            spq.setParameter("limitIN", limit);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            // Empty list if no results
+            if (resultList.isEmpty()) {
+                return new ArrayList<>();
+            }
+
+            List<Companies> companiesList = new ArrayList<>();
+
+            for (Object[] record : resultList) {
+                Companies company = new Companies(
+                        Integer.valueOf(record[0].toString()),
+                        record[1].toString(),
+                        Double.parseDouble(record[2].toString()),
+                        Integer.valueOf(record[3].toString()),
+                        record[4].toString(),
+                        record[5].toString()
+                );
+
+                companiesList.add(company);  // Hozzáadjuk a listához!
+            }
+
+            return companiesList;  // Az ÖSSZES képet visszaadjuk!
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return new ArrayList<>();  // Error esetén üres lista (nem null!)
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static List<Companies> getFeaturedCompanies(Integer limit) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getFeaturedCompanies");
+            spq.registerStoredProcedureParameter("limitIN", Integer.class, ParameterMode.IN);
+            spq.setParameter("limitIN", limit);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            // Empty list if no results
+            if (resultList.isEmpty()) {
+                return new ArrayList<>();
+            }
+
+            List<Companies> companiesList = new ArrayList<>();
+
+            for (Object[] record : resultList) {
+                Companies company = new Companies(
+                        Integer.valueOf(record[0].toString()),
+                        record[1].toString(),
+                        Double.parseDouble(record[2].toString()),
+                        Integer.valueOf(record[3].toString()),
+                        record[4].toString(),
+                        record[5].toString()
+                );
+
+                companiesList.add(company);  // Hozzáadjuk a listához!
+            }
+
+            return companiesList;  // Az ÖSSZES képet visszaadjuk!
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return new ArrayList<>();  // Error esetén üres lista (nem null!)
         } finally {
             if (em != null && em.isOpen()) {
                 em.close();

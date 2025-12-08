@@ -4,7 +4,7 @@
 
   import { environment } from '../../../environments/environment';
   import { API_ENDPOINTS } from '../constants/api-endpoints';
-  import { Service, ServiceCategory } from '../models';
+import { Service, ServiceCategory } from '../models/service.model';
 
   @Injectable({
     providedIn: 'root'

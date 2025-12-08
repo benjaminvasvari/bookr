@@ -80,4 +80,31 @@ public class CompaniesController {
                     .build();
         }
     }
+
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("top")
+    public Response getTopRecommendations(@QueryParam("limit") Integer limit) {
+        JSONObject toReturn = layer.getTopRecommendations(limit);
+
+        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString())).entity(toReturn.toString()).type(MediaType.APPLICATION_JSON).build();
+    }
+
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("new")
+    public Response getNewCompanies(@QueryParam("limit") Integer limit) {
+        JSONObject toReturn = layer.getNewCompanies(limit);
+
+        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString())).entity(toReturn.toString()).type(MediaType.APPLICATION_JSON).build();
+    }
+
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("featured")
+    public Response getFeaturedCompanies(@QueryParam("limit") Integer limit) {
+        JSONObject toReturn = layer.getFeaturedCompanies(limit);
+
+        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString())).entity(toReturn.toString()).type(MediaType.APPLICATION_JSON).build();
+    }
 }

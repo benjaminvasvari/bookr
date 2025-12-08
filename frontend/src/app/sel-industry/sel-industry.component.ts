@@ -6,10 +6,11 @@ import { Title } from '@angular/platform-browser';
 import { HungarianCurrencyPipe } from '../core/pipes/hungarian-currency.pipe';
 
 // Importáljuk a models-ből az interface-eket
-import { Company, Service, Review, ServiceCategory } from '../core/models';
+import { Company } from '../core/models';
 // Importáljuk a service-t
 import { CompaniesService } from '../core/services/companies.service';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { Service } from '../core/models/service.model';
 
 @Component({
   selector: 'app-sel-industry',

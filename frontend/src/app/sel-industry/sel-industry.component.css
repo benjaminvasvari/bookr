@@ -582,45 +582,6 @@
   color: #7f8c8d;
 }
 
-/* Footer */
-.footer {
-  background-color: #2c3e50;
-  color: white;
-  padding: 40px 0 20px 0;
-}
-
-.footer-content {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 30px;
-  margin-bottom: 30px;
-}
-
-.footer-column p {
-  margin: 8px 0;
-  font-size: 14px;
-  color: #b0b8c0;
-}
-
-.footer-bottom {
-  padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.footer-logo {
-  font-size: 40px;
-  font-weight: 900;
-  padding: 0;
-  color: white;
-  text-decoration: none;
-}
-.footer-logo .logo-highlight {
-  color: var(--dark-green-color);
-}
-
-.brand-logo .logo-highlight {
-  color: var(--dark-green-color);
-}
 
 /* Hiba üzenet stílusok */
 .error-container {
@@ -655,29 +616,11 @@
 .error-message p {
   font-size: 1.1rem;
   color: #7f8c8d;
-  margin: 0 0 2rem 0;
+  margin: 0 0 0 0;
   line-height: 1.6;
   font-family: 'Montserrat', sans-serif;
 }
 
-.btn-retry {
-  padding: 0.75rem 2rem;
-  background-color: #2c3e50;
-  color: #ffffff;
-  border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-family: 'Montserrat', sans-serif;
-}
-
-.btn-retry:hover {
-  background-color: #34495e;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(44, 62, 80, 0.3);
-}
 
 /* Reszponzív dizájn */
 @media (max-width: 992px) {

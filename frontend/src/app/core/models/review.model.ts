@@ -1,17 +1,14 @@
 export interface Review {
   id: number;
-  author: string;
-  authorImage: string;
-  title: string;
-  content: string;
+  userName: string;
+  userImage?: string;
   rating: number;
-  companyId: number;
-  createdAt: string;
+  comment: string;
+  date: string;  // "2024. 11. 15."
 }
 
 export interface CreateReviewRequest {
   companyId: number;
-  title: string;
-  content: string;
   rating: number;
+  comment: string;
 }
