@@ -347,7 +347,7 @@ public class AuthService {
             // ========== 3. ELLENŐRZÉS: MÁR AKTIVÁLVA VAN-E ==========
             if (user.getIsActive() && user.getRegisterFinishedAt() != null) {
                 status = "AlreadyVerified";
-                statusCode = 400;
+                statusCode = 409;
                 toReturn.put("status", status);
                 toReturn.put("statusCode", statusCode);
                 return toReturn;

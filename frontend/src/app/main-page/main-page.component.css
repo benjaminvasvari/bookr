@@ -448,25 +448,6 @@
   box-shadow: 0 4px 12px rgba(231, 76, 60, 0.1);
 }
 
-.error-icon {
-  font-size: 64px;
-  margin-bottom: 20px;
-  animation: shake 0.5s ease-in-out;
-}
-
-@keyframes shake {
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-  25% {
-    transform: translateX(-10px);
-  }
-  75% {
-    transform: translateX(10px);
-  }
-}
-
 .error-title {
   font-size: 24px;
   font-weight: 700;

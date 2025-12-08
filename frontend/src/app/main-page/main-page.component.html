@@ -45,7 +45,6 @@
       </div>
     } @else if (errorTop) {
       <div class="error-card">
-        <div class="error-icon">⚠️</div>
         <h3 class="error-title">Hiba történt</h3>
         <p class="error-message">{{ errorTop }}</p>
         <button class="btn-retry" (click)="retryLoadTop()">Újrapróbálás</button>
@@ -96,7 +95,6 @@
       </div>
     } @else if (errorNew) {
       <div class="error-card">
-        <div class="error-icon">⚠️</div>
         <h3 class="error-title">Hiba történt</h3>
         <p class="error-message">{{ errorNew }}</p>
         <button class="btn-retry" (click)="retryLoadNew()">Újrapróbálás</button>
@@ -147,7 +145,6 @@
       </div>
     } @else if (errorFeatured) {
       <div class="error-card">
-        <div class="error-icon">⚠️</div>
         <h3 class="error-title">Hiba történt</h3>
         <p class="error-message">{{ errorFeatured }}</p>
         <button class="btn-retry" (click)="retryLoadFeatured()">Újrapróbálás</button>
@@ -198,7 +195,7 @@
         <button class="btn-secondary" (click)="learnMore()">Tudj meg többet</button>
       </div>
       <div class="cta-image">
-        <img src="assets/images/business-hands.jpg" alt="Business teamwork" />
+        <img src="assets/images/business-hands.png" alt="Business teamwork" />
       </div>
     </div>
   </div>

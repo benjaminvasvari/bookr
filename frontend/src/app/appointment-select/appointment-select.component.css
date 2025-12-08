@@ -160,11 +160,7 @@
   transition: all 0.2s;
 }
 
-.day-column:not(.disabled):hover {
-  border-color: #38a179;
-  background: #f0fdf7;
-  transform: translateY(-2px);
-}
+
 
 .day-column.selected {
   border-color: #38a179;
@@ -199,6 +195,13 @@
   font-size: 1.5rem;
   font-weight: 700;
   color: #2c3e50;
+}
+
+.day-column:not(.disabled):hover {
+  border-color: #38a179;
+  background: #f0fdf7;
+  transform: translateY(-2px);
+  color: black;
 }
 
 /* Időpontok szekció */

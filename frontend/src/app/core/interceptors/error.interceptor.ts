@@ -36,6 +36,9 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
           case 404:
             errorMessage = error.error?.message || 'A kért erőforrás nem található';
             break;
+          case 409:
+            errorMessage = error.error?.message || 'Az email már hitelesítve van.';
+            break;
           case 500:
             errorMessage = 'Szerverhiba történt. Kérlek próbáld újra később.';
             break;

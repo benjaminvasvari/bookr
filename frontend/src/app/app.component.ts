@@ -22,7 +22,7 @@ export class AppComponent {
       .pipe(filter((event) => event instanceof NavigationEnd))
       .subscribe((event: any) => {
         // Elrejtjük a footert login és register oldalakon
-        this.showFooter = !event.url.includes('/login') && !event.url.includes('/register');
+        this.showFooter = !event.url.includes('/login') && !event.url.includes('/register') && !event.url.includes('/verify-email');
       });
   }
 }
