@@ -1,12 +1,13 @@
 .main-header {
     background-color: var(--charcoal-color);
     width: 100%;
+    z-index: 1000;
 }
 
 .header-container {
     padding-left: 100px;
     padding-right: 100px;
-    max-width: 100%; /* Prevent overflow */
+    max-width: 100%;
 }
 
 @media (max-width: 768px) {
@@ -16,7 +17,7 @@
     }
 }
 
-/* Brand logo alap */
+/* Brand Logo */
 .brand-logo {
     font-size: 0px;
     font-weight: 800;
@@ -32,33 +33,29 @@
 }
 
 .logo-highlight {
-    color: var(--primary-green);
-}
-
-.brand-logo-container {
-    padding: 5px 0; 
-}
-
-.brand-logo .logo-highlight {
     color: var(--dark-green-color);
 }
 
+.brand-logo-container {
+    padding: 5px 0;
+}
+
 .bookr-img {
-    display: none;       /* alapból rejtve desktopon */
-    height: 70px;        /* opcionális méret */
+    display: none;
+    height: 70px;
     vertical-align: middle;
 }
 
 @media (max-width: 768px) {
     .bookr-img {
-        display: inline; /* mobilon látszik */
+        display: inline;
     }
     .bookr-text {
-        display: none;   /* mobilon eltűnik a szöveg */
+        display: none;
     }
 }
 
-/* Login button */
+/* Login Button */
 .login-button {
     background-color: var(--ice-white-color);
     color: var(--charcoal-color);
@@ -75,7 +72,7 @@
     transform: scale(1.02);
 }
 
-/* Welcome text - Bejelentkezett user */
+/* Welcome Text */
 .welcome-text {
     color: white;
     font-size: 1.1rem;
@@ -83,7 +80,12 @@
     white-space: nowrap;
 }
 
-/* User profile icon */
+/* User Dropdown Container */
+.user-dropdown-container {
+    position: relative;
+}
+
+/* Profile Icon */
 .user-profile-icon {
     width: 40px;
     height: 40px;
@@ -94,20 +96,139 @@
     justify-content: center;
     cursor: pointer;
     transition: all 0.3s ease;
+    overflow: hidden;
+    border: 2px solid transparent;
+    position: relative;
+    z-index: 1002;
 }
 
 .user-profile-icon:hover {
     background-color: var(--sky-whisper-color);
     transform: scale(1.05);
+    border-color: var(--dark-green-color);
+    box-shadow: 0 0 10px rgba(93, 189, 138, 0.3);
 }
 
 .user-profile-icon svg {
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     fill: var(--charcoal-color);
 }
 
-/* Responsive - Welcome text mobilon */
+.user-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Dropdown Backdrop */
+.dropdown-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: transparent;
+    z-index: 1000;
+}
+
+/* Dropdown Menu */
+.user-dropdown-menu {
+    position: absolute;
+    top: 50px;
+    right: 0;
+    width: 280px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.2s ease;
+    z-index: 1001;
+}
+
+.user-dropdown-menu.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+/* Dropdown Header */
+.dropdown-header {
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 12px 12px 0 0;
+}
+
+.user-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: #2c3e50;
+    margin: 0 0 4px 0;
+}
+
+.user-email {
+    font-size: 13px;
+    color: #6c757d;
+    margin: 0;
+    word-break: break-word;
+}
+
+/* Dropdown Divider */
+.dropdown-divider {
+    height: 1px;
+    background: #e9ecef;
+    margin: 8px 0;
+}
+
+/* Dropdown Items */
+.dropdown-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 15px;
+    font-weight: 500;
+    color: #2c3e50;
+    text-align: left;
+    font-family: inherit;
+}
+
+.dropdown-item:hover {
+    background-color: rgba(93, 189, 138, 0.1);
+}
+
+.item-icon {
+    width: 20px;
+    height: 20px;
+    fill: #6c757d;
+    flex-shrink: 0;
+}
+
+.dropdown-item:hover .item-icon {
+    fill: var(--dark-green-color);
+}
+
+/* Logout Item */
+.dropdown-item.logout {
+    color: #dc3545;
+}
+
+.dropdown-item.logout:hover {
+    background-color: rgba(220, 53, 69, 0.1);
+}
+
+.dropdown-item.logout .item-icon {
+    fill: #dc3545;
+}
+
+/* Responsive */
 @media (max-width: 768px) {
     .welcome-text {
         font-size: 0.95rem;
@@ -116,6 +237,11 @@
 
 @media (max-width: 480px) {
     .welcome-text {
-        display: none; /* Nagyon kicsi képernyőn eltűnik */
+        display: none;
+    }
+    
+    .user-dropdown-menu {
+        width: 260px;
+        right: -10px;
     }
 }

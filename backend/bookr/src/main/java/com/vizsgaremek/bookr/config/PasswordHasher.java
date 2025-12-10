@@ -22,7 +22,7 @@ public class PasswordHasher {
     private final SecureRandom secureRandom;
     
     public PasswordHasher() {
-        // .env betöltése - KÖTELEZŐ
+        // .env betöltése
         Dotenv dotenv = Dotenv.configure().load();
         
         // Paraméterek beolvasása .env-ből - ha hiányzik, hibát dob

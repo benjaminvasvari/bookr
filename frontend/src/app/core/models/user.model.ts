@@ -1,6 +1,7 @@
 export interface User {
   id: number;
   email: string;
+  phone: string;
   firstName: string;
   lastName: string;
   roles: string;
@@ -28,6 +29,7 @@ export interface LoginResponse {
     firstName: string;
     lastName: string;
     email: string;
+    phone: string;
     roles: string;
     companyId: number | null;
     avatarUrl: string | null;

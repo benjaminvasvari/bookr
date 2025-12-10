@@ -162,6 +162,7 @@ export class AuthService {
     const userWithoutTokens: User = {
       id: userData.id,
       email: userData.email,
+      phone: userData.phone,
       firstName: userData.firstName,
       lastName: userData.lastName,
       roles: userData.roles,
