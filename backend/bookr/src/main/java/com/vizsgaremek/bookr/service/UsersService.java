@@ -15,9 +15,19 @@ public class UsersService {
         JSONObject toReturn = new JSONObject();
         String status = "success";
         Integer statusCode = 200;
-        
+
         Integer userId = JWT.getUserIdFromAccessToken(token);
-        
+        String userRoles = JWT.getRoleNameFromAccessToken(token);
+
+        if (!userRoles.contains("client")) {
+            status = "NoPermission";
+            statusCode = 403;
+
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+            return toReturn;
+        }
+
         //code
         if (userId > 0) {
             Users modelResult = Users.getUserProfile(userId);
@@ -30,7 +40,7 @@ public class UsersService {
             result.put("phone", modelResult.getPhone());
             result.put("imageUrl", modelResult.getImageUrl());
             result.put("createdAt", modelResult.getCreatedAt());
-            
+
             toReturn.put("data", result);
 
         } else {
