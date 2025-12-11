@@ -1,10 +1,6 @@
 package com.vizsgaremek.bookr.service;
 
 import com.vizsgaremek.bookr.model.Users;
-import com.vizsgaremek.bookr.model.RegistrationResult;
-import com.vizsgaremek.bookr.model.AuditLogs;
-import com.vizsgaremek.bookr.config.PasswordHasher;
-import com.vizsgaremek.bookr.config.ValidationUtil;
 import com.vizsgaremek.bookr.security.JWT;
 import org.json.JSONObject;
 
@@ -14,16 +10,37 @@ import org.json.JSONObject;
  */
 public class UsersService {
 
-    private final PasswordHasher passwordHasher;
-    private final AuditLogService auditLogService;
-    private final EmailService emailService;
+    public JSONObject getUserProfile(String token) {
 
-    public UsersService() {
-        this.passwordHasher = new PasswordHasher();
-        this.auditLogService = new AuditLogService();
-        this.emailService = new EmailService();
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+        
+        Integer userId = JWT.getUserIdFromAccessToken(token);
+        
+        //code
+        if (userId > 0) {
+            Users modelResult = Users.getUserProfile(userId);
+
+            JSONObject result = new JSONObject();
+            result.put("id", modelResult.getId());
+            result.put("firstName", modelResult.getFirstName());
+            result.put("lastName", modelResult.getLastName());
+            result.put("email", modelResult.getEmail());
+            result.put("phone", modelResult.getPhone());
+            result.put("imageUrl", modelResult.getImageUrl());
+            result.put("createdAt", modelResult.getCreatedAt());
+            
+            toReturn.put("data", result);
+
+        } else {
+            status = "InvalidParamValue";
+            statusCode = 417;
+        }
+
+        toReturn.put("status", status);
+        toReturn.put("statusCode", statusCode);
+        return toReturn;
     }
-
-    
 
 }

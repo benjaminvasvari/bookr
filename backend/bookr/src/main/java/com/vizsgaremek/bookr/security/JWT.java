@@ -136,15 +136,10 @@ public class JWT {
 
             // Issuer ellenőrzés (security)
             if (!"bookr-api".equals(issuer)) {
-                System.out.println(issuer);
-
                 return false;
-
             }
 
             if (userId == null || tokenType == null || !tokenType.equals(expectedType)) {
-                System.out.println("valami szar");
-
                 return false;
             }
 

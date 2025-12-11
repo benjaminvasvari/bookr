@@ -263,6 +263,17 @@ public class Users implements Serializable {
         this.isActive = isActive;
 
     }
+    
+        // getUserProfile
+    public Users(Integer id, String firstName, String lastName, String email, String phone, String imageUrl, Date createdAt) {
+        this.id = id;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.email = email;
+        this.phone = phone;
+        this.imageUrl = imageUrl;
+        this.createdAt = createdAt;
+    }
 
     // logout
     public Users(Integer id, String email, Integer companyId) {
@@ -894,4 +905,44 @@ public class Users implements Serializable {
         }
     }
 
+    public static Users getUserProfile(Integer id) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getUserProfile");
+            spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
+            spq.setParameter("userIdIN", id);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            // Csak az első rekord kell (LIMIT 1 a stored procedure-ben)
+            Object[] record = resultList.get(0);
+
+            Users user = new Users(
+                    Integer.valueOf(record[0].toString()), // id
+                    record[1].toString(), // first_name
+                    record[2].toString(), // last_name
+                    record[3].toString(), // email
+                    record[4].toString(), // phone
+                    record[5] == null ? null : record[5].toString(), // imageUrl
+                    formatter.parse(record[6].toString())
+            );
+            
+            return user;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
 }

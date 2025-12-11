@@ -4,9 +4,7 @@
  */
 package com.vizsgaremek.bookr.controller;
 
-import com.vizsgaremek.bookr.model.Images;
 import com.vizsgaremek.bookr.service.ImagesService;
-import java.util.List;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.Consumes;
