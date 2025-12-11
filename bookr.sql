@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3307
--- Generation Time: Dec 02, 2025 at 09:18 AM
+-- Generation Time: Dec 11, 2025 at 08:40 AM
 -- Server version: 5.7.24
 -- PHP Version: 8.3.1
 
@@ -20,11 +20,44 @@ SET time_zone = "+00:00";
 --
 -- Database: `bookr`
 --
+CREATE DATABASE IF NOT EXISTS `bookr` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+USE `bookr`;
 
 DELIMITER $$
 --
 -- Procedures
 --
+CREATE DEFINER=`root`@`localhost` PROCEDURE `activateStaff` (IN `staffIdIN` INT)   BEGIN
+    -- Ellenőrzi, hogy a staff létezik
+    IF NOT EXISTS (
+        SELECT 1 FROM `staff` 
+        WHERE `id` = staffIdIN
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Staff not found';
+    END IF;
+    
+    -- Ellenőrzi, hogy tényleg inaktív-e
+    IF EXISTS (
+        SELECT 1 FROM `staff` 
+        WHERE `id` = staffIdIN 
+          AND `is_active` = TRUE
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Staff is already active';
+    END IF;
+    
+    -- Staff aktiválása
+    UPDATE `staff`
+    SET 
+        `is_active` = TRUE,
+        `updated_at` = NOW()
+    WHERE `id` = staffIdIN;
+    
+    -- Visszajelzés
+    SELECT 'SUCCESS' AS result, 'Staff activated successfully' AS message, staffIdIN AS staff_id;
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `activateUser` (IN `userIdIN` INT)   BEGIN
     UPDATE `users`
     SET 
@@ -32,6 +65,85 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `activateUser` (IN `userIdIN` INT)  
         `updated_at` = NOW()
     WHERE `id` = userIdIN
       AND `is_deleted` = FALSE;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `activateUserByRegToken` (IN `tokenIN` VARCHAR(100))   BEGIN
+
+	UPDATE `users`
+	SET 
+    	`users`.`is_active` = true,
+        `users`.`register_finished_at` = NOW()
+	WHERE `users`.`reg_token` = tokenIN AND `users`.`is_deleted` = false;
+
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `addFavorite` (IN `userIdIN` INT, IN `companyIdIN` INT)   BEGIN
+    DECLARE existingFavoriteId INT DEFAULT NULL;
+    DECLARE isCurrentlyDeleted TINYINT DEFAULT 0;
+    
+    -- Ellenőrzi, hogy a user létezik és aktív
+    IF NOT EXISTS (
+        SELECT 1 FROM `users` 
+        WHERE `id` = userIdIN 
+          AND `is_deleted` = FALSE 
+          AND `is_active` = TRUE
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'User not found or inactive';
+    END IF;
+    
+    -- Ellenőrzi, hogy a company létezik és aktív
+    IF NOT EXISTS (
+        SELECT 1 FROM `companies` 
+        WHERE `id` = companyIdIN 
+          AND `is_deleted` = FALSE 
+          AND `is_active` = TRUE
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Company not found or inactive';
+    END IF;
+    
+    -- Ellenőrzi, hogy van-e már favorite (akár deleted, akár aktív)
+    SELECT `id`, `is_deleted` 
+    INTO existingFavoriteId, isCurrentlyDeleted
+    FROM `favorites`
+    WHERE `user_id` = userIdIN
+      AND `company_id` = companyIdIN
+    LIMIT 1;
+    
+    -- Ha van aktív favorite, akkor error
+    IF existingFavoriteId IS NOT NULL AND isCurrentlyDeleted = FALSE THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Company is already in favorites';
+    END IF;
+    
+    -- Ha volt deleted favorite, akkor újraaktiválja
+    IF existingFavoriteId IS NOT NULL AND isCurrentlyDeleted = TRUE THEN
+        UPDATE `favorites`
+        SET 
+            `is_deleted` = FALSE,
+            `deleted_at` = NULL,
+            `created_at` = NOW()  -- Frissíti a created_at-ot újraaktiváláskor
+        WHERE `id` = existingFavoriteId;
+        
+        SELECT 'SUCCESS' AS result, 'Favorite reactivated' AS message, existingFavoriteId AS favorite_id;
+    ELSE
+        -- Új favorite létrehozása
+        INSERT INTO `favorites` (
+            `user_id`,
+            `company_id`,
+            `created_at`,
+            `is_deleted`
+        )
+        VALUES (
+            userIdIN,
+            companyIdIN,
+            NOW(),
+            FALSE
+        );
+        
+        SELECT 'SUCCESS' AS result, 'Favorite added' AS message, LAST_INSERT_ID() AS favorite_id;
+    END IF;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `assignCompanyToUser` (IN `userIdIN` INT, IN `companyIdIN` INT)   BEGIN
@@ -161,6 +273,28 @@ SELECT
     	id = idIN
         AND is_deleted = 0
         AND is_active = 1;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `checkCompany` (IN `idIN` INT)   BEGIN
+
+	SELECT 
+    	`companies`.`is_deleted`,
+        `companies`.`is_active`
+    FROM `companies`
+	WHERE `companies`.`id` = idIN
+    LIMIT 1;
+
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `checkUser` (IN `idIN` INT)   BEGIN
+
+	SELECT 
+    	`users`.`is_deleted`,
+        `users`.`is_active`
+    FROM `users`
+    WHERE `users`.`id` = idIN
+    LIMIT 1;
+
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `cleanExpiredTokens` ()   BEGIN
@@ -432,6 +566,37 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `createStaff` (IN `userIdIN` INT, IN
     SELECT newStaffId AS staff_id;
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `deactivateStaff` (IN `staffIdIN` INT)   BEGIN
+    -- Ellenőrzi, hogy a staff létezik
+    IF NOT EXISTS (
+        SELECT 1 FROM `staff` 
+        WHERE `id` = staffIdIN
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Staff not found';
+    END IF;
+    
+    -- Ellenőrzi, hogy már nem inaktív-e
+    IF EXISTS (
+        SELECT 1 FROM `staff` 
+        WHERE `id` = staffIdIN 
+          AND `is_active` = FALSE
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Staff is already inactive';
+    END IF;
+    
+    -- Staff deaktiválása
+    UPDATE `staff`
+    SET 
+        `is_active` = FALSE,
+        `updated_at` = NOW()
+    WHERE `id` = staffIdIN;
+    
+    -- Visszajelzés
+    SELECT 'SUCCESS' AS result, 'Staff deactivated successfully' AS message, staffIdIN AS staff_id;
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `deactivateUser` (IN `userIdIN` INT)   BEGIN
     UPDATE `users`
     SET 
@@ -544,6 +709,17 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getActiveServicesByCompany` (IN `co
       AND s.is_deleted = FALSE
     GROUP BY s.id
     ORDER BY s.name;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllBusinessCategories` ()   BEGIN
+    SELECT 
+        id,
+        name,
+        description,
+        icon
+    FROM business_categories
+    WHERE is_active = 1
+    ORDER BY name ASC;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getAppointmentsByClient` (IN `clientIdIN` INT, IN `statusFilterIN` VARCHAR(20), IN `limitIN` INT, IN `offsetIN` INT)   BEGIN
@@ -697,40 +873,60 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getCompanyById` (IN `idIN` INT)   B
     LIMIT 1;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getCompanyImages` (IN `companyIdIN` INT)   BEGIN
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getCompanyDataById` (IN `companyIdIN` INT)   BEGIN
+    SELECT 
+        `companies`.`id`,
+        `companies`.`name`,
+        `companies`.`description`,
+        `companies`.`address`,
+        `companies`.`city`,
+        `companies`.`postal_code`,
+        `companies`.`country`,
+        `companies`.`phone`,
+        `companies`.`email`,
+        `companies`.`website`,
+        `companies`.`business_category_id`,
+        
+        -- CATEGORY NAME a business_categories táblából
+        `business_categories`.`name` AS category,
+        
+        -- IMAGE_URL: Main image
+        COALESCE(
+            (
+                SELECT `images`.url 
+                FROM `images`
+                WHERE `images`.`company_id` = `companies`.`id` 
+                  AND `images`.`is_deleted` = 0 
+                  AND `images`.`is_main` = 1 
+                LIMIT 1
+            ),
+            'https://via.placeholder.com/400x300?text=No+Image'
+        ) AS "image_url",
+        
+        -- RATING és REVIEW_COUNT
+        ROUND(COALESCE(AVG(`reviews`.`rating`), 0), 1) AS 'rating',
+        COUNT(`reviews`.`id`) AS "review_count"
+        
+    FROM `companies`
+    LEFT JOIN `business_categories` ON `companies`.`business_category_id` = `business_categories`.`id`
+    LEFT JOIN `reviews` ON `reviews`.`company_id` = `companies`.`id` AND `reviews`.`is_deleted` = 0
+    WHERE `companies`.`id` = companyIdIN
+      AND `companies`.`is_deleted` = 0
+      AND `companies`.`is_active` = 1
+    GROUP BY `companies`.`id`, `companies`.`name`, `companies`.`description`, `companies`.`address`, 					 `companies`.`city`, `companies`.`postal_code`, 
+             `companies`.`country`, `companies`.`phone`, `companies`.`email`, `companies`.`website`, 					 `companies`.`business_category_id`, `business_categories`.`name`
+    LIMIT 1;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getCompanyNotMainImages` (IN `companyIdIN` INT)   BEGIN
     SELECT 
         id,
         url,
         is_main,
         uploaded_at
     FROM `images`
-    WHERE company_id = companyIdIN AND `is_deleted` = FALSE
+    WHERE company_id = companyIdIN AND `is_deleted` = FALSE AND `images`.`is_main` = false
     ORDER BY `is_main` DESC, `id` ASC;
-END$$
-
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getCompanyOpeningHours` (IN `companyIdIN` INT)   BEGIN
-    -- Result set 1: Heti nyitvatartás
-    SELECT 
-        day_of_week,
-        open_time,
-        close_time,
-        is_closed
-    FROM `opening_hours`
-    WHERE company_id = companyIdIN
-    ORDER BY 
-        FIELD(day_of_week, 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday');
-    
-    -- Result set 2: Aktuális és jövőbeli zárva tartások
-    SELECT 
-        id,
-        start_date,
-        end_date,
-        open_time,
-        close_time
-    FROM `temporary_closed_periods`
-    WHERE company_id = companyIdIN
-      AND end_date >= CURDATE()  -- csak aktuális/jövőbeli
-    ORDER BY start_date ASC;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getCompanyReviews` (IN `companyIdIN` INT, IN `limitIN` INT, IN `offsetIN` INT)   BEGIN
@@ -759,20 +955,86 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getCompanyReviews` (IN `companyIdIN
       AND is_deleted = FALSE;
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getFeaturedCompanies` (IN `limitIN` INT)   BEGIN
+    SELECT 
+        c.id,
+        c.name,
+        ROUND(COALESCE(AVG(r.rating), 0), 1) AS rating,
+        COUNT(r.id) AS reviewCount,
+        CONCAT(c.address, ', ', c.postal_code, ' ', c.city, ', ', c.country) AS address,
+        COALESCE(
+            (SELECT i.url 
+             FROM images i 
+             WHERE i.company_id = c.id 
+               AND i.is_deleted = 0 
+               AND i.is_main = 1 
+             LIMIT 1
+            ), 
+            'https://via.placeholder.com/400x300'
+        ) AS imageUrl
+    FROM companies c
+    LEFT JOIN reviews r ON r.company_id = c.id AND r.is_deleted = 0
+    WHERE c.is_deleted = 0 AND c.is_active = 1
+    GROUP BY c.id, c.name, c.address, c.postal_code, c.city, c.country
+    HAVING reviewCount > 0
+    ORDER BY reviewCount DESC, rating DESC
+    LIMIT limitIN;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getNewCompanies` (IN `limitIN` INT)   BEGIN
+    SELECT 
+        c.id,
+        c.name,
+        ROUND(COALESCE(AVG(r.rating), 0), 1) AS rating,
+        COUNT(r.id) AS reviewCount,
+        CONCAT(c.address, ', ', c.postal_code, ' ', c.city, ', ', c.country) AS address,
+        COALESCE(
+            (SELECT i.url 
+             FROM images i 
+             WHERE i.company_id = c.id 
+               AND i.is_deleted = 0 
+               AND i.is_main = 1 
+             LIMIT 1
+            ), 
+            'https://via.placeholder.com/400x300'
+        ) AS imageUrl
+    FROM companies c
+    LEFT JOIN reviews r ON r.company_id = c.id AND r.is_deleted = 0
+    WHERE c.is_deleted = 0 AND c.is_active = 1
+    GROUP BY c.id, c.name, c.address, c.postal_code, c.city, c.country, c.created_at
+    ORDER BY c.created_at DESC
+    LIMIT limitIN;
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getOpeningHours` (IN `companyIdIN` INT)   BEGIN
     SELECT 
-        `id`,
-        `company_id`,
         `day_of_week`,
         `open_time`,
         `close_time`,
-        `is_closed`,
-        `created_at`,
-        `updated_at`
+        `is_closed`
     FROM `opening_hours`
     WHERE `company_id` = companyIdIN
     ORDER BY 
         FIELD(`day_of_week`, 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday');
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getReviewsByCompanyId` (IN `companyIdIN` INT)   BEGIN
+    SELECT 
+        r.id,
+        CONCAT(u.first_name, " ", u.last_name) AS user_name,
+        i.url AS user_image,
+        r.rating,
+        r.comment,
+        r.created_at
+    FROM reviews r
+    INNER JOIN users u ON r.client_id = u.id
+    LEFT JOIN images i ON i.user_id = u.id 
+                       AND i.is_deleted = 0 
+                       AND i.is_main = 1
+    WHERE r.company_id = companyIdIN
+      AND r.is_deleted = 0
+    ORDER BY r.created_at DESC
+    LIMIT 10;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getServiceById` (IN `serviceIdIN` INT)   BEGIN
@@ -809,6 +1071,25 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getServiceCategories` (IN `companyI
     FROM `service_categories`
     WHERE `company_id` = companyIdIN
     ORDER BY `name` ASC;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getServiceCategoriesWithServicesByCompanyId` (IN `companyIdIN` INT)   BEGIN
+    SELECT 
+        sc.id AS category_id,
+        sc.name AS category_name,
+        sc.description AS category_description,
+        s.id AS service_id,
+        s.name AS service_name,
+        s.duration_minutes,
+        s.price,
+        s.currency
+    FROM service_categories sc
+    LEFT JOIN service_category_map scm ON sc.id = scm.category_id
+    LEFT JOIN services s ON scm.service_id = s.id 
+        AND s.is_deleted = 0 
+        AND s.is_active = 1
+    WHERE sc.company_id = companyIdIN
+    ORDER BY sc.id, s.name;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getServicesByCategory` (IN `categoryIdIN` INT)   BEGIN
@@ -871,7 +1152,62 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getStaffByCompany` (IN `companyIdIN
     ORDER BY s.display_name;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getStaffServices` (IN `staffIdIN` INT)   BEGIN
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getStaffById` (IN `staffIdIN` INT)   BEGIN
+    SELECT 
+        -- Staff alapadatok
+        s.id AS staff_id,
+        s.display_name,
+        s.specialties,
+        s.bio,
+        s.is_active AS staff_is_active,
+        s.created_at AS staff_created_at,
+        s.updated_at AS staff_updated_at,
+        
+        -- User adatok
+        u.id AS user_id,
+        u.first_name,
+        u.last_name,
+        CONCAT(u.first_name, ' ', u.last_name) AS full_name,
+        u.email,
+        u.phone,
+        u.is_active AS user_is_active,
+        
+        -- Company adatok
+        c.id AS company_id,
+        c.name AS company_name,
+        c.address AS company_address,
+        c.city AS company_city,
+        c.postal_code AS company_postal_code,
+        c.country AS company_country,
+        
+        -- Profil kép
+        COALESCE(
+            (
+                SELECT i.url 
+                FROM `images` i 
+                WHERE i.user_id = u.id 
+                  AND i.is_deleted = 0 
+                LIMIT 1
+            ),
+            'https://via.placeholder.com/200x200?text=No+Image'
+        ) AS profile_image_url,
+        
+        -- Hozzárendelt szolgáltatások száma
+        (
+            SELECT COUNT(DISTINCT ss.service_id)
+            FROM `staff_services` ss
+            WHERE ss.staff_id = s.id
+        ) AS services_count
+        
+    FROM `staff` s
+    INNER JOIN `users` u ON s.user_id = u.id
+    INNER JOIN `companies` c ON s.company_id = c.id
+    
+    WHERE s.id = staffIdIN
+    LIMIT 1;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getStaffServicesActive` (IN `staffIdIN` INT)   BEGIN
     SELECT 
         s.*,
         GROUP_CONCAT(DISTINCT sc.name SEPARATOR ', ') AS categories
@@ -884,6 +1220,39 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getStaffServices` (IN `staffIdIN` I
       AND s.is_deleted = FALSE
     GROUP BY s.id
     ORDER BY s.name;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getStaffServicesDetailed` (IN `staffIdIN` INT)   BEGIN
+    SELECT 
+        -- Service alapadatok
+        s.id AS service_id,
+        s.name AS service_name,
+        s.description,
+        s.duration_minutes,
+        s.price,
+        s.currency,
+        s.is_active,
+        
+        -- Kategóriák
+        GROUP_CONCAT(DISTINCT sc.name ORDER BY sc.name SEPARATOR ', ') AS categories,
+        GROUP_CONCAT(DISTINCT sc.id ORDER BY sc.id SEPARATOR ',') AS category_ids,
+        
+        -- Staff mapping info
+        ss.created_at AS assigned_at
+        
+    FROM `staff_services` ss
+    INNER JOIN `services` s ON ss.service_id = s.id
+    LEFT JOIN `service_category_map` scm ON s.id = scm.service_id
+    LEFT JOIN `service_categories` sc ON scm.category_id = sc.id
+    
+    WHERE ss.staff_id = staffIdIN
+      AND s.is_deleted = FALSE
+    
+    GROUP BY 
+        s.id, s.name, s.description, s.duration_minutes, 
+        s.price, s.currency, s.is_active, ss.created_at
+    
+    ORDER BY s.is_active DESC, s.name ASC;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getTodayAppointments` (IN `companyIdIN` INT, IN `staffIdIN` INT)   BEGIN
@@ -911,6 +1280,31 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getTodayAppointments` (IN `companyI
       AND (staffIdIN IS NULL OR a.staff_id = staffIdIN)
       AND a.status NOT IN ('cancelled')
     ORDER BY a.start_time ASC;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getTopRecommendations` (IN `limitIN` INT)   BEGIN
+    SELECT 
+        c.id,
+        c.name,
+        ROUND(COALESCE(AVG(r.rating), 0), 1) AS rating,
+        COUNT(r.id) AS reviewCount,
+        CONCAT(c.address, ', ', c.postal_code, ' ', c.city, ', ', c.country) AS address,
+        COALESCE(
+            (SELECT `images`.`url`
+             FROM `images`
+             WHERE `images`.`company_id` = c.`id` 
+               AND `images`.`is_deleted` = 0 
+               AND `images`.`is_main` = 1 
+             LIMIT 1
+            ), 
+            'https://via.placeholder.com/400x300'
+        ) AS imageUrl
+    FROM companies c
+    LEFT JOIN reviews r ON r.company_id = c.id AND r.is_deleted = 0
+    WHERE c.is_deleted = 0 AND c.is_active = 1
+    GROUP BY c.id, c.name, c.address, c.postal_code, c.city, c.country
+    ORDER BY rating DESC, reviewCount DESC
+    LIMIT limitIN;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getUserActiveSessions` (IN `userIdIN` INT)   BEGIN
@@ -958,16 +1352,69 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getUserById` (IN `userIdIN` INT)   
     GROUP BY u.id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getUserImage` (IN `userIdIN` INT)   BEGIN
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getUserByRegToken` (IN `tokenIN` VARCHAR(100))   BEGIN
+
+	SELECT 
+		`users`.id,
+        `users`.`email`,
+        `users`.`register_finished_at`,
+        `users`.`is_active`
+    FROM `users`
+    WHERE `users`.`reg_token` = tokenIN AND `users`.`is_deleted` = false
+    LIMIT 1;
+
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getUserFavorites` (IN `userIdIN` INT)   BEGIN
     SELECT 
-        `id`,
-        `user_id`,
-        `url`,
-        `uploaded_at`
-    FROM `images`
-    WHERE `user_id` = userIdIN
-      AND `is_deleted` = FALSE
-    LIMIT 1;  -- Max 1 user kép lehet
+        f.id AS favorite_id,
+        f.created_at AS favorited_at,
+        c.id AS company_id,
+        c.name AS company_name,
+        c.description,
+        c.address,
+        c.city,
+        c.postal_code,
+        c.country,
+        c.phone,
+        c.email,
+        c.website,
+        bc.name AS category,
+        bc.icon AS category_icon,
+        
+        -- Rating és review count
+        ROUND(COALESCE(AVG(r.rating), 0), 1) AS average_rating,
+        COUNT(DISTINCT r.id) AS total_reviews,
+        
+        -- Main image URL
+        COALESCE(
+            (
+                SELECT i.url 
+                FROM `images` i 
+                WHERE i.company_id = c.id 
+                  AND i.is_deleted = 0 
+                  AND i.is_main = 1 
+                LIMIT 1
+            ),
+            'https://via.placeholder.com/400x300?text=No+Image'
+        ) AS image_url
+        
+    FROM `favorites` f
+    INNER JOIN `companies` c ON f.company_id = c.id
+    LEFT JOIN `business_categories` bc ON c.business_category_id = bc.id
+    LEFT JOIN `reviews` r ON c.id = r.company_id AND r.is_deleted = 0
+    
+    WHERE f.user_id = userIdIN
+      AND f.is_deleted = FALSE
+      AND c.is_deleted = FALSE
+      AND c.is_active = TRUE
+    
+    GROUP BY 
+        f.id, f.created_at, c.id, c.name, c.description, c.address, 
+        c.city, c.postal_code, c.country, c.phone, c.email, c.website,
+        bc.name, bc.icon
+    
+    ORDER BY f.created_at DESC;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getUserProfile` (IN `userIdIN` INT)   BEGIN
@@ -988,6 +1435,18 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getUserProfile` (IN `userIdIN` INT)
       AND u.is_active = TRUE
       AND uxr.is_un_assigned = FALSE
     GROUP BY u.id;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getUserProfilePicture` (IN `userIdIN` INT)   BEGIN
+    SELECT 
+        `id`,
+        `user_id`,
+        `url`,
+        `uploaded_at`
+    FROM `images`
+    WHERE `user_id` = userIdIN
+      AND `is_deleted` = FALSE
+    LIMIT 1;  -- Max 1 user kép lehet
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getUsers` (IN `companyIdIN` INT, IN `roleIdIN` INT, IN `isActiveIN` BOOLEAN, IN `limitIN` INT, IN `offsetIN` INT)   BEGIN
@@ -1014,6 +1473,19 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getUsers` (IN `companyIdIN` INT, IN
       AND (isActiveIN IS NULL OR u.is_active = isActiveIN)
     GROUP BY u.id
     ORDER BY u.created_at DESC;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `isFavorite` (IN `userIdIN` INT, IN `companyIdIN` INT)   BEGIN
+    SELECT 
+        CASE 
+            WHEN COUNT(*) > 0 THEN 1
+            ELSE 0
+        END AS is_favorite,
+        MAX(created_at) AS favorited_at
+    FROM `favorites`
+    WHERE `user_id` = userIdIN
+      AND `company_id` = companyIdIN
+      AND `is_deleted` = FALSE;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `logAudit` (IN `userIdIN` INT, IN `companyIdIN` INT, IN `emailIN` VARCHAR(200), IN `entityTypeIN` VARCHAR(50), IN `actionIN` VARCHAR(100), IN `oldValuesIN` JSON, IN `newValuesIN` JSON)   BEGIN
@@ -1047,14 +1519,23 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `login` (IN `emailIN` VARCHAR(200)) 
         `users`.`email`,
         `users`.`password`,
         `users`.`company_id`,
+        `images`.`url`,  -- Ez lehet NULL, ha nincs kép!
         GROUP_CONCAT(`roles`.`name` SEPARATOR ', ') AS "roles"
     FROM `users`
     INNER JOIN `user_x_role` ON `user_x_role`.`user_id` = `users`.`id`
     INNER JOIN `roles` ON `roles`.`id` = `user_x_role`.`role_id`
+    
+    -- ================================================================
+    -- JAVÍTÁS: INNER JOIN → LEFT JOIN
+    -- ================================================================
+    LEFT JOIN `images` ON `images`.`user_id` = `users`.id 
+                       AND `images`.`is_deleted` = FALSE
+    -- ================================================================
+    
     WHERE `users`.`email` = emailIN
       AND `users`.`is_deleted` = FALSE
       AND `user_x_role`.`is_un_assigned` = FALSE
-    GROUP BY `users`.`id`
+    GROUP BY `users`.`id`, `images`.`id`
     LIMIT 1;
 END$$
 
@@ -1087,7 +1568,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `register` (IN `firstNameIN` VARCHAR
         SET MESSAGE_TEXT = 'Invalid role name';
     END IF;
     
-    -- User létrehozása (role_id NÉLKÜL!)
+    -- User létrehozása
     INSERT INTO `users` (
         `first_name`,
         `last_name`,
@@ -1133,16 +1614,13 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerClient` (IN `firstNameIN` V
     DECLARE clientRoleId INT;
     DECLARE regToken VARCHAR(64);
     
-    -- Reg token generálása
     SET regToken = MD5(CONCAT(emailIN, NOW()));
     
-    -- Client role ID lekérése
     SELECT `id` INTO clientRoleId 
     FROM `roles` 
     WHERE `name` = 'client' 
     LIMIT 1;
     
-    -- User létrehozása (role_id NÉLKÜL!)
     INSERT INTO `users` (
         `guid`,
         `first_name`,
@@ -1166,10 +1644,8 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerClient` (IN `firstNameIN` V
         FALSE
     );
     
-    -- Új user ID lekérése
     SET newUserId = LAST_INSERT_ID();
     
-    -- Szerepkör hozzárendelése a user_x_role táblában
     INSERT INTO `user_x_role` (
         `user_id`,
         `role_id`,
@@ -1181,7 +1657,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerClient` (IN `firstNameIN` V
         NOW()
     );
     
-    -- Visszaadjuk az új user ID-t és a reg token-t
     SELECT newUserId AS user_id, regToken AS reg_token;
 END$$
 
@@ -1191,17 +1666,15 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerOwner` (IN `firstNameIN` VA
     DECLARE regToken VARCHAR(64);
     DECLARE newCompanyId INT;
     
-    -- Reg token generálása
     SET regToken = MD5(CONCAT(emailIN, NOW()));
     
-    -- Owner role ID lekérése
     SELECT `id` INTO ownerRoleId 
     FROM `roles` 
     WHERE `name` = 'owner' 
     LIMIT 1;
     
-    -- User létrehozása (role_id NÉLKÜL!)
     INSERT INTO `users` (
+        `guid`,
         `first_name`,
         `last_name`,
         `email`,
@@ -1213,6 +1686,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerOwner` (IN `firstNameIN` VA
         `is_active`
     )
     VALUES (
+        UUID(),
         firstNameIN,
         lastNameIN,
         emailIN,
@@ -1224,10 +1698,8 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerOwner` (IN `firstNameIN` VA
         FALSE
     );
     
-    -- Új user ID lekérése
     SET newUserId = LAST_INSERT_ID();
     
-    -- Szerepkör hozzárendelése a user_x_role táblában
     INSERT INTO `user_x_role` (
         `user_id`,
         `role_id`,
@@ -1239,7 +1711,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerOwner` (IN `firstNameIN` VA
         NOW()
     );
     
-    -- Company létrehozása
     INSERT INTO `companies` (
         `name`,
         `description`,
@@ -1269,32 +1740,28 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerOwner` (IN `firstNameIN` VA
     
     SET newCompanyId = LAST_INSERT_ID();
     
-    -- User company_id frissítése
     UPDATE `users`
     SET `company_id` = newCompanyId
     WHERE `id` = newUserId;
     
-    -- Visszaadjuk az új user ID-t, company ID-t és a reg token-t
     SELECT newUserId AS user_id, newCompanyId AS company_id, regToken AS reg_token;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `registerStaff` (IN `firstNameIN` VARCHAR(100), IN `lastNameIN` VARCHAR(100), IN `emailIN` VARCHAR(100), IN `passwordIN` TEXT, IN `phoneIN` VARCHAR(30), IN `companyIdIN` INT)   BEGIN
+CREATE DEFINER=`root`@`localhost` PROCEDURE `registerStaff` (IN `firstNameIN` VARCHAR(100), IN `lastNameIN` VARCHAR(100), IN `emailIN` VARCHAR(100), IN `passwordIN` TEXT, IN `phoneIN` VARCHAR(30), IN `companyIdIN` INT, IN `authSecretIN` VARCHAR(32))   BEGIN
     DECLARE newUserId INT;
     DECLARE staffRoleId INT;
     DECLARE regToken VARCHAR(64);
     DECLARE newStaffId INT;
     
-    -- Reg token generálása
     SET regToken = MD5(CONCAT(emailIN, NOW()));
     
-    -- Staff role ID lekérése
     SELECT `id` INTO staffRoleId 
     FROM `roles` 
     WHERE `name` = 'staff' 
     LIMIT 1;
     
-    -- User létrehozása (role_id NÉLKÜL!)
     INSERT INTO `users` (
+        `guid`,
         `first_name`,
         `last_name`,
         `email`,
@@ -1306,6 +1773,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerStaff` (IN `firstNameIN` VA
         `is_active`
     )
     VALUES (
+        UUID(),
         firstNameIN,
         lastNameIN,
         emailIN,
@@ -1317,10 +1785,8 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerStaff` (IN `firstNameIN` VA
         FALSE
     );
     
-    -- Új user ID lekérése
     SET newUserId = LAST_INSERT_ID();
     
-    -- Szerepkör hozzárendelése a user_x_role táblában
     INSERT INTO `user_x_role` (
         `user_id`,
         `role_id`,
@@ -1332,7 +1798,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerStaff` (IN `firstNameIN` VA
         NOW()
     );
     
-    -- Staff bejegyzés létrehozása
     INSERT INTO `staff` (
         `user_id`,
         `company_id`,
@@ -1346,8 +1811,36 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerStaff` (IN `firstNameIN` VA
     
     SET newStaffId = LAST_INSERT_ID();
     
-    -- Visszaadjuk az új user ID-t, staff ID-t és a reg token-t
     SELECT newUserId AS user_id, newStaffId AS staff_id, regToken AS reg_token;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `removeFavorite` (IN `userIdIN` INT, IN `companyIdIN` INT)   BEGIN
+    DECLARE favoriteCount INT DEFAULT 0;
+    
+    -- Ellenőrzi, hogy van-e aktív favorite
+    SELECT COUNT(*) INTO favoriteCount
+    FROM `favorites`
+    WHERE `user_id` = userIdIN
+      AND `company_id` = companyIdIN
+      AND `is_deleted` = FALSE;
+    
+    -- Ha nincs aktív favorite, akkor error
+    IF favoriteCount = 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Favorite not found or already removed';
+    END IF;
+    
+    -- Soft delete a favorite-ot
+    UPDATE `favorites`
+    SET 
+        `is_deleted` = TRUE,
+        `deleted_at` = NOW()
+    WHERE `user_id` = userIdIN
+      AND `company_id` = companyIdIN
+      AND `is_deleted` = FALSE;
+    
+    -- Visszajelzés
+    SELECT 'SUCCESS' AS result, 'Favorite removed' AS message, ROW_COUNT() AS rows_affected;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `removeServiceFromStaff` (IN `staffIdIN` INT, IN `serviceIdIN` INT)   BEGIN
@@ -1636,6 +2129,29 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `updateServiceCategory` (IN `categor
     SELECT 'SUCCESS' AS result, 'Category updated' AS message;
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `updateStaff` (IN `staffIdIN` INT, IN `displayNameIN` VARCHAR(255), IN `specialtiesIN` TEXT, IN `bioIN` TEXT)   BEGIN
+    -- Ellenőrzi, hogy a staff létezik
+    IF NOT EXISTS (
+        SELECT 1 FROM `staff` 
+        WHERE `id` = staffIdIN
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Staff not found';
+    END IF;
+    
+    -- Staff adatok frissítése
+    UPDATE `staff`
+    SET 
+        `display_name` = displayNameIN,
+        `specialties` = specialtiesIN,
+        `bio` = bioIN,
+        `updated_at` = NOW()
+    WHERE `id` = staffIdIN;
+    
+    -- Visszajelzés
+    SELECT 'SUCCESS' AS result, 'Staff updated successfully' AS message, staffIdIN AS staff_id;
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `updateUser` (IN `userIdIN` INT, IN `firstNameIN` VARCHAR(100), IN `lastNameIN` VARCHAR(100), IN `phoneIN` VARCHAR(30))   BEGIN
     UPDATE `users`
     SET 
@@ -1807,7 +2323,74 @@ CREATE TABLE `audit_logs` (
 
 INSERT INTO `audit_logs` (`id`, `user_id`, `company_id`, `email`, `entity_type`, `action`, `old_values`, `new_values`, `created_at`) VALUES
 (1, 10, NULL, NULL, 'appointment', 'reschedule', '{\"reason\": \"Kliens nem ért rá reggel\", \"end_time\": \"2025-12-01 11:00:00.000000\", \"start_time\": \"2025-12-01 10:00:00.000000\"}', '{\"end_time\": \"2025-12-01 15:00:00.000000\", \"start_time\": \"2025-12-01 14:00:00.000000\"}', '2025-11-27 11:49:13'),
-(2, 10, NULL, NULL, 'appointment', 'reschedule', '{\"reason\": \"Akarmi\", \"end_time\": \"2025-12-01 15:00:00.000000\", \"start_time\": \"2025-12-01 14:00:00.000000\"}', '{\"end_time\": \"2025-12-01 16:00:00.000000\", \"start_time\": \"2025-12-01 15:00:00.000000\"}', '2025-11-27 11:53:21');
+(2, 10, NULL, NULL, 'appointment', 'reschedule', '{\"reason\": \"Akarmi\", \"end_time\": \"2025-12-01 15:00:00.000000\", \"start_time\": \"2025-12-01 14:00:00.000000\"}', '{\"end_time\": \"2025-12-01 16:00:00.000000\", \"start_time\": \"2025-12-01 15:00:00.000000\"}', '2025-11-27 11:53:21'),
+(3, 22, NULL, 'almaaa@gmail.com', 'user', 'login', NULL, NULL, '2025-12-03 23:14:38'),
+(4, 3, 2, 'kuki', 'user', 'logout', NULL, NULL, '2025-12-03 23:15:09'),
+(5, 22, NULL, 'almaaa@gmail.com', 'user', 'login', NULL, NULL, '2025-12-06 10:46:16'),
+(6, 23, NULL, '092@drxy.hu', 'user', 'register', NULL, '{\"role\": \"client\", \"email\": \"092@drxy.hu\", \"user_id\": 23, \"last_name\": \"Zsolt\", \"first_name\": \"Dorián\"}', '2025-12-06 11:38:24'),
+(7, 24, NULL, 'vasvariben@gmail.com', 'user', 'register', NULL, '{\"role\": \"client\", \"email\": \"vasvariben@gmail.com\", \"user_id\": 24, \"last_name\": \"Vasvári\", \"first_name\": \"Benjamin\"}', '2025-12-06 12:01:50'),
+(8, 23, NULL, '092@drxy.hu', 'user', 'email_verified', NULL, NULL, '2025-12-06 12:17:00'),
+(9, 24, NULL, 'vasvariben@gmail.com', 'user', 'email_verified', NULL, NULL, '2025-12-06 12:26:53'),
+(10, 24, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2025-12-06 12:27:07'),
+(11, 24, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2025-12-06 12:28:35'),
+(12, 22, NULL, 'almaaa@gmail.com', 'user', 'login', NULL, NULL, '2025-12-06 12:30:23'),
+(13, 24, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2025-12-06 12:31:05'),
+(14, 24, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2025-12-06 12:32:29'),
+(15, 24, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2025-12-06 13:36:27'),
+(16, 24, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2025-12-06 13:40:45'),
+(17, 24, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2025-12-06 13:44:22'),
+(18, 24, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2025-12-06 13:50:33'),
+(19, 24, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2025-12-06 14:03:19'),
+(20, 24, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2025-12-06 15:28:52'),
+(21, 24, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2025-12-06 15:33:19'),
+(22, 24, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2025-12-06 15:33:59'),
+(23, 24, NULL, 'vasvariben@gmail.com', 'user', 'logout', NULL, NULL, '2025-12-06 15:34:33'),
+(24, 24, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2025-12-06 18:34:26'),
+(25, 24, NULL, 'vasvariben@gmail.com', 'user', 'logout', NULL, NULL, '2025-12-06 18:35:26'),
+(26, 24, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2025-12-06 21:27:37'),
+(27, 24, NULL, 'vasvariben@gmail.com', 'user', 'logout', NULL, NULL, '2025-12-06 21:27:47'),
+(28, 25, NULL, 'teszt@teszt.hu', 'user', 'register', NULL, '{\"role\": \"client\", \"email\": \"teszt@teszt.hu\", \"user_id\": 25, \"last_name\": \"Teszt\", \"first_name\": \"Jancsi\"}', '2025-12-08 09:47:50'),
+(29, 25, NULL, 'teszt@teszt.hu', 'user', 'email_verified', NULL, NULL, '2025-12-08 09:48:29'),
+(30, 24, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2025-12-08 09:50:03'),
+(31, 24, NULL, 'vasvariben@gmail.com', 'user', 'logout', NULL, NULL, '2025-12-08 09:57:02'),
+(32, 24, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2025-12-08 10:01:59'),
+(33, 24, NULL, 'vasvariben@gmail.com', 'user', 'logout', NULL, NULL, '2025-12-08 10:41:02'),
+(34, 24, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2025-12-08 11:04:52'),
+(35, 24, NULL, 'vasvariben@gmail.com', 'user', 'logout', NULL, NULL, '2025-12-08 11:12:13'),
+(36, 24, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2025-12-09 09:10:21'),
+(37, 24, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2025-12-09 17:41:59');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `business_categories`
+--
+
+CREATE TABLE `business_categories` (
+  `id` int(11) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `description` text,
+  `icon` varchar(50) DEFAULT NULL COMMENT 'Icon class vagy emoji',
+  `is_active` tinyint(1) DEFAULT '1',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Dumping data for table `business_categories`
+--
+
+INSERT INTO `business_categories` (`id`, `name`, `description`, `icon`, `is_active`, `created_at`, `updated_at`) VALUES
+(1, 'Szépségszalon', 'Kozmetikai és szépségápolási szolgáltatások', '💅', 1, '2025-12-05 15:36:27', NULL),
+(2, 'Wellness és Spa', 'Wellness, spa és masszázs szolgáltatások', '💆', 1, '2025-12-05 15:36:27', NULL),
+(3, 'Fodrászat', 'Fodrász és hajápolási szolgáltatások', '💇', 1, '2025-12-05 15:36:27', NULL),
+(4, 'Körömstúdió', 'Műköröm és manikűr szolgáltatások', '💅', 1, '2025-12-05 15:36:27', NULL),
+(5, 'Fitness', 'Fitness, jóga és edzőterem szolgáltatások', '💪', 1, '2025-12-05 15:36:27', NULL),
+(6, 'Egészségügy', 'Orvosi rendelő, gyógytorna és egészségügyi szolgáltatások', '🏥', 1, '2025-12-05 15:36:27', NULL),
+(7, 'Fogorvos', 'Fogászati szolgáltatások', '🦷', 1, '2025-12-05 15:36:27', NULL),
+(8, 'Állatorvos', 'Állatorvosi rendelő és szolgáltatások', '🐕', 1, '2025-12-05 15:36:27', NULL),
+(9, 'Autószerviz', 'Autószerelés és karbantartás', '🚗', 1, '2025-12-05 15:36:27', NULL),
+(10, 'Oktatás', 'Magánoktatás, tanfolyamok', '📚', 1, '2025-12-05 15:36:27', NULL);
 
 -- --------------------------------------------------------
 
@@ -1826,6 +2409,7 @@ CREATE TABLE `companies` (
   `phone` varchar(30) DEFAULT NULL,
   `email` varchar(100) DEFAULT NULL,
   `website` varchar(255) DEFAULT NULL,
+  `business_category_id` int(11) DEFAULT NULL,
   `owner_id` int(11) NOT NULL,
   `booking_advance_days` int(11) DEFAULT '30' COMMENT 'How many days in advance bookings can be made',
   `cancellation_hours` int(11) DEFAULT '24' COMMENT 'How many hours before appointment can be canceled',
@@ -1840,22 +2424,55 @@ CREATE TABLE `companies` (
 -- Dumping data for table `companies`
 --
 
-INSERT INTO `companies` (`id`, `name`, `description`, `address`, `city`, `postal_code`, `country`, `phone`, `email`, `website`, `owner_id`, `booking_advance_days`, `cancellation_hours`, `created_at`, `updated_at`, `deleted_at`, `is_deleted`, `is_active`) VALUES
-(1, 'Bella Szépségszalon', 'Modern szépségszalon a belvárosban, teljes körű kozmetikai szolgáltatásokkal', 'Váci utca 15.', 'Budapest', '1052', 'Hungary', '+36301234501', 'info@bella-szalon.hu', 'www.bella-szalon.hu', 2, 30, 24, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
-(2, 'Exclusive Beauty Center', 'Prémium kategóriás szépségszalon exkluzív kezelésekkel', 'Andrássy út 42.', 'Budapest', '1061', 'Hungary', '+36301234502', 'info@exclusivebeauty.hu', 'www.exclusivebeauty.hu', 3, 45, 48, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
-(3, 'Naturál Szépségstúdió', 'Természetes alapanyagokkal dolgozó családias szalon', 'Fő utca 23.', 'Győr', '9021', 'Hungary', '+36301234503', 'hello@naturalszepseg.hu', 'www.naturalszepseg.hu', 2, 21, 24, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
-(4, 'Harmónia Wellness', 'Wellness központ masszázzsal és spa kezelésekkel', 'Thermal utca 8.', 'Budapest', '1039', 'Hungary', '+36301234504', 'foglalas@harmoniawellness.hu', 'www.harmoniawellness.hu', 3, 30, 24, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
-(5, 'Relaxa Masszázsszalon', 'Professzionális masszázs szolgáltatások nyugodt környezetben', 'Kossuth utca 12.', 'Debrecen', '4024', 'Hungary', '+36301234505', 'info@relaxa.hu', 'www.relaxa.hu', 2, 14, 12, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
-(6, 'ZenSpa Központ', 'Ázsiai ihletésű spa és wellness központ', 'Dózsa György út 34.', 'Szeged', '6720', 'Hungary', '+36301234506', 'reception@zenspa.hu', 'www.zenspa.hu', 3, 60, 48, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
-(7, 'StyleCut Fodrászat', 'Trendi frizurák és hajkezelések minden korosztálynak', 'Rákóczi út 56.', 'Budapest', '1074', 'Hungary', '+36301234507', 'időpont@stylecut.hu', 'www.stylecut.hu', 2, 21, 24, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
-(8, 'Hair Art Studio', 'Kreatív fodrászat speciális színezési technikákkal', 'Bajcsy-Zsilinszky út 19.', 'Pécs', '7621', 'Hungary', '+36301234508', 'info@hairstudio.hu', 'www.hairstudio.hu', 3, 30, 24, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
-(9, 'Perfect Nails Studio', 'Professzionális körömépítés és díszítés', 'Ferenciek tere 3.', 'Budapest', '1053', 'Hungary', '+36301234509', 'booking@perfectnails.hu', 'www.perfectnails.hu', 2, 21, 12, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
-(10, 'Glamour Nails', 'Minőségi műköröm és géllakk szolgáltatások', 'Arany János utca 7.', 'Győr', '9022', 'Hungary', '+36301234510', 'info@glamournails.hu', 'www.glamournails.hu', 3, 14, 24, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
-(11, 'FitZone Edzőterem', 'Modern edzőterem személyi edzőkkel és csoportos órákkal', 'Október 6. utca 22.', 'Budapest', '1051', 'Hungary', '+36301234511', 'info@fitzone.hu', 'www.fitzone.hu', 2, 7, 6, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
-(12, 'Yoga & Balance Stúdió', 'Jóga és meditációs stúdió minden szintű gyakorlóknak', 'Bem rakpart 15.', 'Budapest', '1011', 'Hungary', '+36301234512', 'hello@yogabalance.hu', 'www.yogabalance.hu', 3, 14, 12, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
-(13, 'Vital Med Magánrendelő', 'Magán egészségügyi központ szakorvosi rendelésekkel', 'Üllői út 82.', 'Budapest', '1082', 'Hungary', '+36301234513', 'rendeles@vitalmed.hu', 'www.vitalmed.hu', 2, 30, 48, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
-(14, 'PhysioActive Gyógytorna', 'Gyógytorna és rehabilitációs központ', 'Kálvin tér 9.', 'Szeged', '6722', 'Hungary', '+36301234514', 'info@physioactive.hu', 'www.physioactive.hu', 3, 21, 24, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
-(15, 'BarberShop Budapest', 'Férfi fodrászat és borbély szolgáltatások', 'Wesselényi utca 18.', 'Budapest', '1077', 'Hungary', '+36301234515', 'booking@barbershop.hu', 'www.barbershop-bp.hu', 2, 14, 12, '2025-10-09 16:14:23', NULL, NULL, 0, 1);
+INSERT INTO `companies` (`id`, `name`, `description`, `address`, `city`, `postal_code`, `country`, `phone`, `email`, `website`, `business_category_id`, `owner_id`, `booking_advance_days`, `cancellation_hours`, `created_at`, `updated_at`, `deleted_at`, `is_deleted`, `is_active`) VALUES
+(1, 'Bella Szépségszalon', 'Modern szépségszalon a belvárosban, teljes körű kozmetikai szolgáltatásokkal', 'Váci utca 15.', 'Budapest', '1052', 'Hungary', '+36301234501', 'info@bella-szalon.hu', 'www.bella-szalon.hu', 1, 2, 30, 24, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
+(2, 'Jungle Pécs', 'Ahol TE vagy a lényeg! Próbáld ki bármelyik szolgáltatásunkat, nem fogsz csalódni. Szakmai tudásunk folyamatos fejlesztése nagyon fontos számunkra. Itt kerülsz TE a középpontba! Szolgáltatásaink során figyelünk az egyéniségedre, fejformádra, hajtípusodra és persze a kezelhetőségre is. Várunk sok szeretettel szalonunkban!', 'Koller utca 7', 'Pécs', '7626', 'Hungary', '+36301234502', 'info@exclusivebeauty.hu', 'www.exclusivebeauty.hu', 3, 3, 45, 48, '2025-10-09 16:14:23', '2025-12-05 22:47:07', NULL, 0, 1),
+(3, 'Naturál Szépségstúdió', 'Természetes alapanyagokkal dolgozó családias szalon', 'Fő utca 23.', 'Győr', '9021', 'Hungary', '+36301234503', 'hello@naturalszepseg.hu', 'www.naturalszepseg.hu', 1, 2, 21, 24, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
+(4, 'Harmónia Wellness', 'Wellness központ masszázzsal és spa kezelésekkel', 'Thermal utca 8.', 'Budapest', '1039', 'Hungary', '+36301234504', 'foglalas@harmoniawellness.hu', 'www.harmoniawellness.hu', 2, 3, 30, 24, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
+(5, 'Relaxa Masszázsszalon', 'Professzionális masszázs szolgáltatások nyugodt környezetben', 'Kossuth utca 12.', 'Debrecen', '4024', 'Hungary', '+36301234505', 'info@relaxa.hu', 'www.relaxa.hu', 2, 2, 14, 12, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
+(6, 'ZenSpa Központ', 'Ázsiai ihletésű spa és wellness központ', 'Dózsa György út 34.', 'Szeged', '6720', 'Hungary', '+36301234506', 'reception@zenspa.hu', 'www.zenspa.hu', 2, 3, 60, 48, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
+(7, 'StyleCut Fodrászat', 'Trendi frizurák és hajkezelések minden korosztálynak', 'Rákóczi út 56.', 'Budapest', '1074', 'Hungary', '+36301234507', 'időpont@stylecut.hu', 'www.stylecut.hu', 3, 2, 21, 24, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
+(8, 'Hair Art Studio', 'Kreatív fodrászat speciális színezési technikákkal', 'Bajcsy-Zsilinszky út 19.', 'Pécs', '7621', 'Hungary', '+36301234508', 'info@hairstudio.hu', 'www.hairstudio.hu', 3, 3, 30, 24, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
+(9, 'Perfect Nails Studio', 'Professzionális körömépítés és díszítés', 'Ferenciek tere 3.', 'Budapest', '1053', 'Hungary', '+36301234509', 'booking@perfectnails.hu', 'www.perfectnails.hu', 4, 2, 21, 12, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
+(10, 'Glamour Nails', 'Minőségi műköröm és géllakk szolgáltatások', 'Arany János utca 7.', 'Győr', '9022', 'Hungary', '+36301234510', 'info@glamournails.hu', 'www.glamournails.hu', 4, 3, 14, 24, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
+(11, 'FitZone Edzőterem', 'Modern edzőterem személyi edzőkkel és csoportos órákkal', 'Október 6. utca 22.', 'Budapest', '1051', 'Hungary', '+36301234511', 'info@fitzone.hu', 'www.fitzone.hu', 5, 2, 7, 6, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
+(12, 'Yoga & Balance Stúdió', 'Jóga és meditációs stúdió minden szintű gyakorlóknak', 'Bem rakpart 15.', 'Budapest', '1011', 'Hungary', '+36301234512', 'hello@yogabalance.hu', 'www.yogabalance.hu', 5, 3, 14, 12, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
+(13, 'Vital Med Magánrendelő', 'Magán egészségügyi központ szakorvosi rendelésekkel', 'Üllői út 82.', 'Budapest', '1082', 'Hungary', '+36301234513', 'rendeles@vitalmed.hu', 'www.vitalmed.hu', 6, 2, 30, 48, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
+(14, 'PhysioActive Gyógytorna', 'Gyógytorna és rehabilitációs központ', 'Kálvin tér 9.', 'Szeged', '6722', 'Hungary', '+36301234514', 'info@physioactive.hu', 'www.physioactive.hu', 6, 3, 21, 24, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
+(15, 'BarberShop Budapest', 'Férfi fodrászat és borbély szolgáltatások', 'Wesselényi utca 18.', 'Budapest', '1077', 'Hungary', '+36301234515', 'booking@barbershop.hu', 'www.barbershop-bp.hu', 3, 2, 14, 12, '2025-10-09 16:14:23', NULL, NULL, 0, 1);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `favorites`
+--
+
+CREATE TABLE `favorites` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL COMMENT 'A felhasználó aki kedvencnek jelölte',
+  `company_id` int(11) NOT NULL COMMENT 'A kedvencnek jelölt cég',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Mikor lett kedvenc',
+  `deleted_at` timestamp NULL DEFAULT NULL COMMENT 'Mikor lett törölve',
+  `is_deleted` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'Soft delete flag'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Dumping data for table `favorites`
+--
+
+INSERT INTO `favorites` (`id`, `user_id`, `company_id`, `created_at`, `deleted_at`, `is_deleted`) VALUES
+(1, 10, 1, '2025-11-01 09:30:00', NULL, 0),
+(2, 10, 2, '2025-11-05 13:20:00', NULL, 0),
+(3, 10, 7, '2025-11-10 08:15:00', NULL, 0),
+(4, 11, 1, '2025-11-03 10:00:00', NULL, 0),
+(5, 11, 4, '2025-11-08 15:45:00', NULL, 0),
+(6, 11, 9, '2025-11-12 12:30:00', NULL, 0),
+(7, 12, 2, '2025-11-02 07:20:00', NULL, 0),
+(8, 12, 6, '2025-11-15 09:00:00', NULL, 0),
+(9, 12, 15, '2025-11-20 11:30:00', NULL, 0),
+(10, 13, 1, '2025-11-04 08:00:00', NULL, 0),
+(11, 13, 11, '2025-11-18 14:20:00', NULL, 0),
+(12, 13, 12, '2025-11-22 10:10:00', NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -1867,7 +2484,7 @@ CREATE TABLE `images` (
   `id` int(11) NOT NULL,
   `company_id` int(11) DEFAULT NULL,
   `user_id` int(11) DEFAULT NULL,
-  `url` text NOT NULL,
+  `url` text,
   `is_main` tinyint(4) NOT NULL DEFAULT '0',
   `uploaded_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `deleted_at` timestamp NULL DEFAULT NULL,
@@ -1879,17 +2496,17 @@ CREATE TABLE `images` (
 --
 
 INSERT INTO `images` (`id`, `company_id`, `user_id`, `url`, `is_main`, `uploaded_at`, `deleted_at`, `is_deleted`) VALUES
-(1, 1, NULL, 'https://example.com/bella-main.jpg', 0, '2025-12-01 12:09:21', NULL, 0),
-(2, 1, NULL, 'https://example.com/bella-gallery1.jpg', 1, '2025-12-01 12:09:50', NULL, 0),
-(3, 1, NULL, 'https://example.com/bella-gallery2.jpg', 0, '2025-12-01 12:10:23', '2025-12-01 12:32:59', 1),
-(4, 1, NULL, 'https://example.com/bella-gallery3.jpg', 0, '2025-12-01 12:10:23', NULL, 0),
-(5, 2, NULL, 'https://example.com/exclusive-first.jpg', 0, '2025-12-01 12:14:17', NULL, 0),
-(6, 2, NULL, 'https://example.com/exclusive-second.jpg', 0, '2025-12-01 12:14:17', NULL, 0),
-(7, 2, NULL, 'https://example.com/exclusive-NEW-MAIN.jpg', 1, '2025-12-01 12:14:17', NULL, 0),
+(2, 1, NULL, 'images/companies/1/67ba2b86-5da8-48a6-94cc-4cce64ea754a-PERSPECTIVE-HU-Pcs-Fresha.jpg.avif', 1, '2025-12-01 12:09:50', NULL, 0),
+(5, 2, NULL, 'images/companies/2/c2c8913e-4004-48bf-bcc9-9e2489e76544-Jungle-HU-Pcs-Fresha.jpg', 0, '2025-12-01 12:14:17', NULL, 0),
+(6, 2, NULL, 'images/companies/2/662d09fa-4c88-4365-98dc-20a691699085-Jungle-HU-Pcs-Fresha.jpg', 0, '2025-12-01 12:14:17', NULL, 0),
+(7, 2, NULL, 'images/companies/2/c83e4ae0-f9da-46af-88e7-215207cdd915-Jungle-HU-Pcs-Fresha.jpg', 1, '2025-12-01 12:14:17', NULL, 0),
 (8, NULL, 10, 'https://example.com/janos-profile.jpg', 0, '2025-12-01 12:37:55', '2025-12-01 12:38:21', 1),
 (9, NULL, 10, 'https://example.com/janos-NEW-profile.jpg', 0, '2025-12-01 12:38:21', '2025-12-01 12:41:25', 1),
 (10, NULL, 11, 'https://example.com/eva-profile.jpg', 0, '2025-12-01 12:39:04', NULL, 0),
-(11, NULL, 12, 'https://example.com/laszlo-profile.jpg', 0, '2025-12-01 12:39:04', NULL, 0);
+(11, NULL, 24, NULL, 0, '2025-12-01 12:39:04', NULL, 0),
+(12, 2, NULL, 'images/companies/2/c579047b-d38b-465b-bf9f-fe8c1b83c5ef-Jungle-HU-Pcs-Fresha.jpg', 0, '2025-12-05 22:46:51', NULL, 0),
+(13, NULL, 26, 'https://via.placeholder.com/200x200?text=User', 0, '2025-12-10 10:19:27', NULL, 0),
+(14, NULL, 27, 'https://example.com/teszt-elek-profile.jpg', 0, '2025-12-10 10:31:32', NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -1958,13 +2575,13 @@ INSERT INTO `opening_hours` (`id`, `company_id`, `day_of_week`, `open_time`, `cl
 (5, 1, 'friday', '09:00:00', '17:00:00', 0, '2025-11-26 09:33:44', NULL),
 (6, 1, 'saturday', '09:00:00', '14:00:00', 0, '2025-11-26 09:33:44', NULL),
 (7, 1, 'sunday', NULL, NULL, 1, '2025-11-26 09:33:44', NULL),
-(15, 2, 'monday', '10:00:00', '20:00:00', 0, '2025-12-01 12:03:50', NULL),
-(16, 2, 'tuesday', '10:00:00', '20:00:00', 0, '2025-12-01 12:03:50', NULL),
-(17, 2, 'wednesday', '10:00:00', '20:00:00', 0, '2025-12-01 12:03:50', NULL),
-(18, 2, 'thursday', '10:00:00', '20:00:00', 0, '2025-12-01 12:03:50', NULL),
-(19, 2, 'friday', '10:00:00', '20:00:00', 0, '2025-12-01 12:03:50', NULL),
-(20, 2, 'saturday', '08:00:00', '22:00:00', 0, '2025-12-01 12:03:50', NULL),
-(21, 2, 'sunday', '08:00:00', '22:00:00', 0, '2025-12-01 12:03:50', NULL),
+(15, 2, 'monday', NULL, NULL, 1, '2025-12-01 12:03:50', NULL),
+(16, 2, 'tuesday', '08:00:00', '19:00:00', 0, '2025-12-01 12:03:50', NULL),
+(17, 2, 'wednesday', '08:00:00', '19:00:00', 0, '2025-12-01 12:03:50', NULL),
+(18, 2, 'thursday', '08:00:00', '19:00:00', 0, '2025-12-01 12:03:50', NULL),
+(19, 2, 'friday', '08:00:00', '19:00:00', 0, '2025-12-01 12:03:50', NULL),
+(20, 2, 'saturday', '08:00:00', '19:00:00', 0, '2025-12-01 12:03:50', NULL),
+(21, 2, 'sunday', NULL, NULL, 1, '2025-12-01 12:03:50', NULL),
 (22, 15, 'monday', NULL, NULL, 1, '2025-12-01 12:04:30', NULL),
 (23, 15, 'tuesday', '10:00:00', '19:00:00', 0, '2025-12-01 12:04:30', NULL),
 (24, 15, 'wednesday', '10:00:00', '19:00:00', 0, '2025-12-01 12:04:30', NULL),
@@ -2165,9 +2782,9 @@ INSERT INTO `service_categories` (`id`, `company_id`, `name`, `description`, `cr
 (2, 1, 'Testkezelések', 'Testformáló és relaxáló testkezelések', '2025-10-09 14:50:01', NULL),
 (3, 1, 'Körömápolás', 'Manikűr, pedikűr és műköröm szolgáltatások', '2025-10-09 14:50:01', NULL),
 (4, 1, 'Szempilla és szemöldök', 'Szempilla és szemöldök szépítés', '2025-10-09 14:50:01', NULL),
-(5, 2, 'Masszázsok', 'Különböző típusú masszázs kezelések', '2025-10-09 14:50:01', NULL),
-(6, 2, 'SPA kezelések', 'Luxus spa és wellness kezelések', '2025-10-09 14:50:01', NULL),
-(7, 2, 'Aromaterápia', 'Illóolajos kezelések és terápiák', '2025-10-09 14:50:01', NULL),
+(5, 2, 'Haj / Hair', 'Különböző típusú masszázs kezelések', '2025-10-09 14:50:01', NULL),
+(6, 2, 'Haj & Szakáll / Hair & Beard', 'Luxus spa és wellness kezelések', '2025-10-09 14:50:01', NULL),
+(7, 2, 'Szakáll / Beard', 'Illóolajos kezelések és terápiák', '2025-10-09 14:50:01', NULL),
 (8, 2, 'Arckezelések', 'Prémium arcápoló kezelések', '2025-10-09 14:50:01', NULL),
 (9, 3, 'Bio kozmetika', 'Természetes alapanyagú kezelések', '2025-10-09 14:50:01', NULL),
 (10, 3, 'Arcápolás', 'Organikus arckezelések', '2025-10-09 14:50:01', NULL),
@@ -2339,7 +2956,7 @@ CREATE TABLE `staff` (
 --
 
 INSERT INTO `staff` (`id`, `user_id`, `company_id`, `display_name`, `specialties`, `bio`, `is_active`, `created_at`, `updated_at`) VALUES
-(1, 4, 1, 'Eszter', 'Arckezelés, Anti-aging kezelések, Bőrfiatalítás', 'Több mint 8 éves tapasztalattal rendelkező kozmetikus vagyok, aki szenvedélyesen foglalkozik a bőrápolással és az arckezelésekkel.', 1, '2025-10-09 16:41:10', NULL),
+(1, 4, 1, 'Eszter - Senior Kozmetikus', 'Új szakterületek...', 'Új bio szöveg...', 0, '2025-10-09 16:41:10', '2025-12-10 10:59:59'),
 (2, 5, 1, 'Kati', 'Masszázs, Testkezelés, Cellulit kezelés', 'Testmasszázs és testformálás specialista. Segítek a tökéletes alak elérésében.', 1, '2025-10-09 16:41:10', NULL),
 (3, 6, 1, 'Zsófi', 'Manikűr, Pedikűr, Géllakk', 'Köröm specialista vagyok, aki imádja a kreatív körömdíszítéseket és a tökéletes géllakkot.', 1, '2025-10-09 16:41:10', NULL),
 (4, 7, 2, 'Márta', 'Svéd masszázs, Aromaterápia, Relaxációs masszázs', 'Certificált masszőr vagyok, aki a teljes körű ellazulást és regenerációt helyezi előtérbe.', 1, '2025-10-09 16:41:10', NULL),
@@ -2555,7 +3172,7 @@ CREATE TABLE `two_factor_recovery_codes` (
 
 CREATE TABLE `users` (
   `id` int(11) NOT NULL,
-  `guid` char(36) NOT NULL DEFAULT '',
+  `guid` char(36) NOT NULL,
   `first_name` varchar(100) DEFAULT NULL,
   `last_name` varchar(100) DEFAULT NULL,
   `email` varchar(100) NOT NULL,
@@ -2572,35 +3189,63 @@ CREATE TABLE `users` (
   `is_active` tinyint(1) NOT NULL DEFAULT '1' COMMENT 'Admins can deactivate users',
   `two_factor_enabled` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'Whether 2FA is enabled',
   `two_factor_secret` varchar(32) DEFAULT NULL COMMENT 'TOTP secret key (encrypted)',
-  `two_factor_confirmed_at` datetime DEFAULT NULL COMMENT 'When 2FA was confirmed/activated',
-  `two_factor_recovery_codes` text COMMENT 'Encrypted JSON array of recovery codes'
+  `two_factor_confirmed_at` datetime DEFAULT NULL COMMENT 'When 2FA was confirmed/activated'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `guid`, `first_name`, `last_name`, `email`, `password`, `phone`, `company_id`, `created_at`, `updated_at`, `deleted_at`, `is_deleted`, `last_login`, `register_finished_at`, `reg_token`, `is_active`, `two_factor_enabled`, `two_factor_secret`, `two_factor_confirmed_at`, `two_factor_recovery_codes`) VALUES
-(1, '63f866da-a827-11f0-82be-e9727e212b75', 'Gábor', 'Nagy', 'gabor.nagy@bookr.hu', '$2y$10$abcdefghijklmnopqrstuv', '+36301234567', NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
-(2, '63f892d6-a827-11f0-82be-e9727e212b75', 'Péter', 'Kovács', 'peter.kovacs@szepsegszalon.hu', '$2y$10$bcdefghijklmnopqrstuvw', '+36302345678', 1, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
-(3, '63f8961e-a827-11f0-82be-e9727e212b75', 'Anna', 'Szabó', 'anna.szabo@wellness.hu', '$2y$10$cdefghijklmnopqrstuvwx', '+36303456789', 2, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
-(4, '63f89772-a827-11f0-82be-e9727e212b75', 'Eszter', 'Tóth', 'eszter.toth@szepsegszalon.hu', '$2y$10$defghijklmnopqrstuvwxy', '+36304567890', 1, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
-(5, '63f8988a-a827-11f0-82be-e9727e212b75', 'Katalin', 'Molnár', 'katalin.molnar@szepsegszalon.hu', '$2y$10$efghijklmnopqrstuvwxyz', '+36305678901', 1, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
-(6, '63f8998e-a827-11f0-82be-e9727e212b75', 'Zsófia', 'Kiss', 'zsofia.kiss@szepsegszalon.hu', '$2y$10$fghijklmnopqrstuvwxyza', '+36306789012', 1, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
-(7, '63f89a7e-a827-11f0-82be-e9727e212b75', 'Márta', 'Horváth', 'marta.horvath@wellness.hu', '$2y$10$ghijklmnopqrstuvwxyzab', '+36307890123', 2, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
-(8, '63f89b6e-a827-11f0-82be-e9727e212b75', 'Júlia', 'Varga', 'julia.varga@wellness.hu', '$2y$10$hijklmnopqrstuvwxyzabc', '+36308901234', 2, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
-(9, '63f89c72-a827-11f0-82be-e9727e212b75', 'Ildikó', 'Balogh', 'ildiko.balogh@wellness.hu', '$2y$10$ijklmnopqrstuvwxyzabcd', '+36309012345', 2, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
-(10, '63f89d58-a827-11f0-82be-e9727e212b75', 'János', 'Farkas', 'janos.farkas@gmail.com', '$2y$10$jklmnopqrstuvwxyzabcde', '+36201234567', NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
-(11, '63f89e48-a827-11f0-82be-e9727e212b75', 'Éva', 'Simon', 'eva.simon@gmail.com', '$2y$10$klmnopqrstuvwxyzabcdef', '+36202345678', NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
-(12, '63f89f38-a827-11f0-82be-e9727e212b75', 'László', 'Németh', 'laszlo.nemeth@freemail.hu', '$2y$10$lmnopqrstuvwxyzabcdefg', '+36203456789', NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
-(13, '63f8a06e-a827-11f0-82be-e9727e212b75', 'Mária', 'Papp', 'maria.papp@citromail.hu', '$2y$10$mnopqrstuvwxyzabcdefgh', '+36204567890', NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
-(14, '63f8a15e-a827-11f0-82be-e9727e212b75', 'István', 'Takács', 'istvan.takacs@outlook.com', '$2y$10$nopqrstuvwxyzabcdefghi', '+36205678901', NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
-(15, '63f8a244-a827-11f0-82be-e9727e212b75', 'Ágnes', 'Lakatos', 'agnes.lakatos@yahoo.com', '$2y$10$opqrstuvwxyzabcdefghij', '+36206789012', NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL, NULL),
-(16, '63f8a3b6-a827-11f0-82be-e9727e212b75', 'Teszt', 'Lajos', 'teszt@teszt.com', 'Alma!123', '+367012345678', NULL, '2025-10-10 16:43:02', NULL, NULL, 0, NULL, NULL, '9a03f02d65caced068fc87e0c851511e', 0, 0, NULL, NULL, NULL),
-(17, '63f8a58c-a827-11f0-82be-e9727e212b75', 'Teszt', 'Aladár', 'aladar@teszt.com', '$argon2id$v=19$m=65536,t=3,p=1$L7naGVB2eKFjndxep9p0eQ$A/j8QkNLRcL8+i+uxS53PvvNdJCBPzOpUPTuokE1WaI', '+367012345678', NULL, '2025-10-10 16:49:09', NULL, NULL, 0, NULL, NULL, 'c1afe49e2c51023bfc4f0446a9609af4', 0, 0, NULL, NULL, NULL),
-(18, '-', 'Sándor', 'László', 'lacika@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$4ZcoWslloOnpOReRBkDphQ$1dJvd08oeeHN7m4tNf7hY1VjSeGv0XvJu4rgWl+SKLY', '+367013565678', NULL, '2025-10-17 11:20:15', NULL, NULL, 0, NULL, NULL, 'aa6f1d723c190ecaf03c7f67f535912f', 0, 0, NULL, NULL, NULL),
-(21, '7d78c18c-ae61-11f0-b2dc-2a23318b2722', 'Sándor', 'László', 'alma@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$y1aWgzGwmDzrxviR4yxpSw$EQbDcIBHMBXYbKfALlhrKLVR1WMQ58EbNB7XZ6IYGic', '+367014565678', NULL, '2025-10-21 11:36:58', NULL, NULL, 0, NULL, NULL, 'df6155689e4b2eb220253e5897873420', 0, 0, NULL, NULL, NULL),
-(22, 'eb931f32-ae61-11f0-b2dc-2a23318b2722', 'Sándor', 'László', 'almaaa@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$Mrx15QBn0fr6S4bTdcR51w$f5kj7gloDsIH+3ghUNo2o/L3iMLbOlki+gi7lANR2WE', '+367014465678', NULL, '2025-10-21 11:40:03', NULL, NULL, 0, '2025-11-13 09:27:21', NULL, 'bb13f93f958948980618426e63aff729', 0, 0, NULL, NULL, NULL);
+INSERT INTO `users` (`id`, `guid`, `first_name`, `last_name`, `email`, `password`, `phone`, `company_id`, `created_at`, `updated_at`, `deleted_at`, `is_deleted`, `last_login`, `register_finished_at`, `reg_token`, `is_active`, `two_factor_enabled`, `two_factor_secret`, `two_factor_confirmed_at`) VALUES
+(1, '63f866da-a827-11f0-82be-e9727e212b75', 'Gábor', 'Nagy', 'gabor.nagy@bookr.hu', '$2y$10$abcdefghijklmnopqrstuv', '+36301234567', NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL),
+(2, '63f892d6-a827-11f0-82be-e9727e212b75', 'Péter', 'Kovács', 'peter.kovacs@szepsegszalon.hu', '$2y$10$bcdefghijklmnopqrstuvw', '+36302345678', 1, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL),
+(3, '63f8961e-a827-11f0-82be-e9727e212b75', 'Anna', 'Szabó', 'anna.szabo@wellness.hu', '$2y$10$cdefghijklmnopqrstuvwx', '+36303456789', 2, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL),
+(4, '63f89772-a827-11f0-82be-e9727e212b75', 'Eszter', 'Tóth', 'eszter.toth@szepsegszalon.hu', '$2y$10$defghijklmnopqrstuvwxy', '+36304567890', 1, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL),
+(5, '63f8988a-a827-11f0-82be-e9727e212b75', 'Katalin', 'Molnár', 'katalin.molnar@szepsegszalon.hu', '$2y$10$efghijklmnopqrstuvwxyz', '+36305678901', 1, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL),
+(6, '63f8998e-a827-11f0-82be-e9727e212b75', 'Zsófia', 'Kiss', 'zsofia.kiss@szepsegszalon.hu', '$2y$10$fghijklmnopqrstuvwxyza', '+36306789012', 1, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL),
+(7, '63f89a7e-a827-11f0-82be-e9727e212b75', 'Márta', 'Horváth', 'marta.horvath@wellness.hu', '$2y$10$ghijklmnopqrstuvwxyzab', '+36307890123', 2, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL),
+(8, '63f89b6e-a827-11f0-82be-e9727e212b75', 'Júlia', 'Varga', 'julia.varga@wellness.hu', '$2y$10$hijklmnopqrstuvwxyzabc', '+36308901234', 2, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL),
+(9, '63f89c72-a827-11f0-82be-e9727e212b75', 'Ildikó', 'Balogh', 'ildiko.balogh@wellness.hu', '$2y$10$ijklmnopqrstuvwxyzabcd', '+36309012345', 2, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL),
+(10, '63f89d58-a827-11f0-82be-e9727e212b75', 'János', 'Farkas', 'janos.farkas@gmail.com', '$2y$10$jklmnopqrstuvwxyzabcde', '+36201234567', NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL),
+(11, '63f89e48-a827-11f0-82be-e9727e212b75', 'Éva', 'Simon', 'eva.simon@gmail.com', '$2y$10$klmnopqrstuvwxyzabcdef', '+36202345678', NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL),
+(12, '63f89f38-a827-11f0-82be-e9727e212b75', 'László', 'Németh', 'laszlo.nemeth@freemail.hu', '$2y$10$lmnopqrstuvwxyzabcdefg', '+36203456789', NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL),
+(13, '63f8a06e-a827-11f0-82be-e9727e212b75', 'Mária', 'Papp', 'maria.papp@citromail.hu', '$2y$10$mnopqrstuvwxyzabcdefgh', '+36204567890', NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL),
+(14, '63f8a15e-a827-11f0-82be-e9727e212b75', 'István', 'Takács', 'istvan.takacs@outlook.com', '$2y$10$nopqrstuvwxyzabcdefghi', '+36205678901', NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL),
+(15, '63f8a244-a827-11f0-82be-e9727e212b75', 'Ágnes', 'Lakatos', 'agnes.lakatos@yahoo.com', '$2y$10$opqrstuvwxyzabcdefghij', '+36206789012', NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL),
+(16, '63f8a3b6-a827-11f0-82be-e9727e212b75', 'Teszt', 'Lajos', 'teszt@teszt.com', 'Alma!123', '+367012345678', NULL, '2025-10-10 16:43:02', NULL, NULL, 0, NULL, NULL, '9a03f02d65caced068fc87e0c851511e', 0, 0, NULL, NULL),
+(17, '63f8a58c-a827-11f0-82be-e9727e212b75', 'Teszt', 'Aladár', 'aladar@teszt.com', '$argon2id$v=19$m=65536,t=3,p=1$L7naGVB2eKFjndxep9p0eQ$A/j8QkNLRcL8+i+uxS53PvvNdJCBPzOpUPTuokE1WaI', '+367012345678', NULL, '2025-10-10 16:49:09', NULL, NULL, 0, NULL, NULL, 'c1afe49e2c51023bfc4f0446a9609af4', 0, 0, NULL, NULL),
+(18, 'f8e34f45-d5aa-11f0-972d-94e23c940cf4', 'Sándor', 'László', 'lacika@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$4ZcoWslloOnpOReRBkDphQ$1dJvd08oeeHN7m4tNf7hY1VjSeGv0XvJu4rgWl+SKLY', '+367013565678', NULL, '2025-10-17 11:20:15', NULL, NULL, 0, NULL, NULL, 'aa6f1d723c190ecaf03c7f67f535912f', 0, 0, NULL, NULL),
+(21, '7d78c18c-ae61-11f0-b2dc-2a23318b2722', 'Sándor', 'László', 'alma@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$y1aWgzGwmDzrxviR4yxpSw$EQbDcIBHMBXYbKfALlhrKLVR1WMQ58EbNB7XZ6IYGic', '+367014565678', NULL, '2025-10-21 11:36:58', NULL, NULL, 0, NULL, NULL, 'df6155689e4b2eb220253e5897873420', 0, 0, NULL, NULL),
+(22, 'eb931f32-ae61-11f0-b2dc-2a23318b2722', 'Sándor', 'László', 'almaaa@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$Mrx15QBn0fr6S4bTdcR51w$f5kj7gloDsIH+3ghUNo2o/L3iMLbOlki+gi7lANR2WE', '+367014465678', NULL, '2025-10-21 11:40:03', NULL, NULL, 0, '2025-12-06 13:30:23', NULL, 'bb13f93f958948980618426e63aff729', 0, 0, NULL, NULL),
+(23, '12e0f3a2-d298-11f0-9a88-bf216494b8de', 'Dorián', 'Zsolt', '092@drxy.hu', '$argon2id$v=19$m=65536,t=3,p=1$LZBgb2sLLH0XtjXITpHL4w$0Av6knJziVje8PnS+bV4fxY4ZweU5S+kN6ZnslI0+nA', '+3670123252', NULL, '2025-12-06 12:38:24', NULL, NULL, 0, NULL, '2025-12-06 13:17:00', 'a7889321a076a11195c7d84035f79f49', 1, 0, NULL, NULL),
+(24, '59286216-d29b-11f0-9a88-bf216494b8de', 'Benjamin', 'Vasvári', 'vasvariben@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$8M4CsVWNHZB2eWujo4Of8A$XwsdxqnBSBu4HbsZUQDxzjaPCt/LkSN9kFqoQRsLub4', '+36704134374', NULL, '2025-12-06 13:01:50', NULL, NULL, 0, '2025-12-09 18:41:59', '2025-12-06 13:26:53', '04c30ec10619051c04384c96aace9b7e', 1, 0, NULL, NULL),
+(25, 'f5ad54b8-d41a-11f0-b0d7-1c68b34b5ceb', 'Jancsi', 'Teszt', 'teszt@teszt.hu', '$argon2id$v=19$m=65536,t=3,p=1$6PjP6Jwsv7g/WVe7ClSjOA$Tww++HMs5oY5Kn77fBnsDX8HC0lA22LvquMnCLwr0MQ', '+36301234567', NULL, '2025-12-08 10:47:50', NULL, NULL, 0, NULL, '2025-12-08 10:48:29', '91b148a4bab20496ae9c31ae059df3eb', 1, 0, NULL, NULL),
+(26, 'b54f3219-d5b1-11f0-972d-94e23c940cf4', 'Test', 'User', 'test99@example.com', 'hash...', '+36701234567', NULL, '2025-12-10 11:19:27', NULL, NULL, 0, NULL, NULL, '4871ac864d9c0aec11493843159d35a3', 0, 0, NULL, NULL),
+(27, '182b2af2-d5b3-11f0-972d-94e23c940cf4', 'Teszt', 'Elek', 'teszt.elek@example.com', '$argon2id$v=19$m=65536,t=3,p=1$test123', '+36701112233', NULL, '2025-12-10 11:29:22', NULL, NULL, 0, NULL, NULL, 'd02fe0a5fcb25dde7612dfff6ba3cf63', 0, 0, NULL, NULL);
+
+--
+-- Triggers `users`
+--
+DELIMITER $$
+CREATE TRIGGER `users_before_insert_guid` BEFORE INSERT ON `users` FOR EACH ROW BEGIN
+    IF NEW.guid IS NULL OR NEW.guid = '' OR NEW.guid = '-' OR LENGTH(NEW.guid) != 36 THEN
+        SET NEW.guid = UUID();
+    END IF;
+END
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `users_before_update_guid` BEFORE UPDATE ON `users` FOR EACH ROW BEGIN
+    IF NEW.guid IS NULL OR NEW.guid = '' OR NEW.guid = '-' OR LENGTH(NEW.guid) != 36 THEN
+        IF OLD.guid IS NOT NULL AND OLD.guid != '' AND OLD.guid != '-' AND LENGTH(OLD.guid) = 36 THEN
+            SET NEW.guid = OLD.guid;
+        ELSE
+            SET NEW.guid = UUID();
+        END IF;
+    END IF;
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -2650,7 +3295,12 @@ INSERT INTO `user_x_role` (`id`, `user_id`, `role_id`, `assigned_at`, `un_assign
 (26, 17, 4, '2025-10-10 14:49:09', NULL, 0),
 (27, 18, 4, '2025-10-17 09:20:15', NULL, 0),
 (28, 21, 4, '2025-10-21 09:36:58', NULL, 0),
-(29, 22, 4, '2025-10-21 09:40:03', NULL, 0);
+(29, 22, 4, '2025-10-21 09:40:03', NULL, 0),
+(30, 23, 4, '2025-12-06 11:38:24', NULL, 0),
+(31, 24, 4, '2025-12-06 12:01:50', NULL, 0),
+(32, 25, 4, '2025-12-08 09:47:50', NULL, 0),
+(33, 26, 4, '2025-12-10 10:19:27', NULL, 0),
+(34, 27, 4, '2025-12-10 10:29:23', NULL, 0);
 
 --
 -- Indexes for dumped tables
@@ -2676,11 +3326,28 @@ ALTER TABLE `audit_logs`
   ADD KEY `company_id` (`company_id`);
 
 --
+-- Indexes for table `business_categories`
+--
+ALTER TABLE `business_categories`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_name` (`name`);
+
+--
 -- Indexes for table `companies`
 --
 ALTER TABLE `companies`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `owner_id` (`owner_id`);
+  ADD KEY `owner_id` (`owner_id`),
+  ADD KEY `fk_companies_business_category` (`business_category_id`);
+
+--
+-- Indexes for table `favorites`
+--
+ALTER TABLE `favorites`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_user_id` (`user_id`),
+  ADD KEY `idx_company_id` (`company_id`),
+  ADD KEY `idx_is_deleted` (`is_deleted`);
 
 --
 -- Indexes for table `images`
@@ -2739,6 +3406,7 @@ ALTER TABLE `service_categories`
 --
 ALTER TABLE `service_category_map`
   ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_service_category` (`service_id`,`category_id`),
   ADD KEY `service_id` (`service_id`),
   ADD KEY `category_id` (`category_id`);
 
@@ -2762,6 +3430,7 @@ ALTER TABLE `staff_exceptions`
 --
 ALTER TABLE `staff_services`
   ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_staff_service` (`staff_id`,`service_id`),
   ADD KEY `staff_id` (`staff_id`),
   ADD KEY `service_id` (`service_id`);
 
@@ -2770,6 +3439,7 @@ ALTER TABLE `staff_services`
 --
 ALTER TABLE `staff_working_hours`
   ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `unique_staff_day` (`staff_id`,`day_of_week`),
   ADD KEY `staff_id` (`staff_id`);
 
 --
@@ -2828,7 +3498,13 @@ ALTER TABLE `appointments`
 -- AUTO_INCREMENT for table `audit_logs`
 --
 ALTER TABLE `audit_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=38;
+
+--
+-- AUTO_INCREMENT for table `business_categories`
+--
+ALTER TABLE `business_categories`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `companies`
@@ -2837,10 +3513,16 @@ ALTER TABLE `companies`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
+-- AUTO_INCREMENT for table `favorites`
+--
+ALTER TABLE `favorites`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+
+--
 -- AUTO_INCREMENT for table `images`
 --
 ALTER TABLE `images`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT for table `notification_settings`
@@ -2930,13 +3612,13 @@ ALTER TABLE `two_factor_recovery_codes`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
 
 --
 -- AUTO_INCREMENT for table `user_x_role`
 --
 ALTER TABLE `user_x_role`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=30;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=35;
 
 --
 -- Constraints for dumped tables
@@ -2963,7 +3645,15 @@ ALTER TABLE `audit_logs`
 -- Constraints for table `companies`
 --
 ALTER TABLE `companies`
-  ADD CONSTRAINT `companies_ibfk_1` FOREIGN KEY (`owner_id`) REFERENCES `users` (`id`);
+  ADD CONSTRAINT `companies_ibfk_1` FOREIGN KEY (`owner_id`) REFERENCES `users` (`id`),
+  ADD CONSTRAINT `fk_companies_business_category` FOREIGN KEY (`business_category_id`) REFERENCES `business_categories` (`id`);
+
+--
+-- Constraints for table `favorites`
+--
+ALTER TABLE `favorites`
+  ADD CONSTRAINT `favorites_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `favorites_ibfk_2` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `images`
