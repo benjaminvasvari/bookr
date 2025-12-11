@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3307
--- Generation Time: Dec 11, 2025 at 12:33 PM
+-- Generation Time: Dec 11, 2025 at 05:59 PM
 -- Server version: 5.7.24
 -- PHP Version: 8.3.1
 
@@ -66,13 +66,57 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `activateUser` (IN `userIdIN` INT)  
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `activateUserByRegToken` (IN `tokenIN` VARCHAR(100))   BEGIN
-
-	UPDATE `users`
-	SET 
-    	`users`.`is_active` = true,
-        `users`.`register_finished_at` = NOW()
-	WHERE `users`.`reg_token` = tokenIN AND `users`.`is_deleted` = false;
-
+    DECLARE tokenUserId INT DEFAULT NULL;
+    DECLARE tokenExpired BOOLEAN DEFAULT FALSE;
+    DECLARE tokenRevoked BOOLEAN DEFAULT FALSE;
+    
+    -- Token validálás a tokens táblából
+    SELECT 
+        `user_id`,
+        `expires_at` < NOW() AS is_expired,
+        `is_revoked`
+    INTO 
+        tokenUserId,
+        tokenExpired,
+        tokenRevoked
+    FROM `tokens`
+    WHERE `token` = tokenIN
+      AND `type` = 'email_verify'
+    LIMIT 1;
+    
+    -- Ellenőrzések
+    IF tokenUserId IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Invalid or non-existent token';
+    END IF;
+    
+    IF tokenExpired THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Token has expired (24 hours)';
+    END IF;
+    
+    IF tokenRevoked THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Token has already been used';
+    END IF;
+    
+    -- User aktiválása
+    UPDATE `users`
+    SET 
+        `is_active` = TRUE,
+        `register_finished_at` = NOW(),
+        `updated_at` = NOW()
+    WHERE `id` = tokenUserId
+      AND `is_deleted` = FALSE;
+    
+    -- Token revoke (már felhasználtuk)
+    UPDATE `tokens`
+    SET 
+        `is_revoked` = TRUE,
+        `revoked_at` = NOW()
+    WHERE `token` = tokenIN
+      AND `type` = 'email_verify';
+    
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `addFavorite` (IN `userIdIN` INT, IN `companyIdIN` INT)   BEGIN
@@ -315,17 +359,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `completeAppointment` (IN `appointme
     ELSE
         SELECT 'ERROR' AS result, 'Appointment cannot be completed' AS message;
     END IF;
-END$$
-
-CREATE DEFINER=`root`@`localhost` PROCEDURE `completeRegistration` (IN `regTokenIN` VARCHAR(64))   BEGIN
-    UPDATE `users`
-    SET 
-        `register_finished_at` = NOW(),
-        `is_active` = TRUE,
-        `reg_token` = NULL,
-        `updated_at` = NOW()
-    WHERE `reg_token` = regTokenIN
-      AND `is_deleted` = FALSE;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `confirmAppointment` (IN `appointmentIdIN` INT, IN `confirmedByIN` INT)   BEGIN
@@ -885,16 +918,74 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteUserImage` (IN `userIdIN` INT
     SELECT 'SUCCESS' AS result, 'User profile image deleted' AS message;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `generatePasswordResetToken` (IN `emailIN` VARCHAR(100))   BEGIN
+CREATE DEFINER=`root`@`localhost` PROCEDURE `generateEmailVerificationToken` (IN `userIdIN` INT)   BEGIN
     DECLARE newToken VARCHAR(64);
+    DECLARE tokenExpiry DATETIME;
+    
+    -- Token generálás (biztonságos, egyedi)
+    SET newToken = MD5(CONCAT(userIdIN, NOW(), RAND()));
+    
+    -- Lejárat: 24 óra múlva
+    SET tokenExpiry = DATE_ADD(NOW(), INTERVAL 24 HOUR);
+    
+    -- Token mentése a tokens táblába
+    INSERT INTO `tokens` (
+        `user_id`,
+        `token`,
+        `type`,
+        `expires_at`,
+        `is_revoked`,
+        `created_at`
+    )
+    VALUES (
+        userIdIN,
+        newToken,
+        'email_verify',
+        tokenExpiry,
+        FALSE,
+        NOW()
+    );
+    
+    -- Token visszaadása
+    SELECT newToken AS token, tokenExpiry AS expires_at;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `generatePasswordResetToken` (IN `emailIN` VARCHAR(100))   BEGIN
+    DECLARE userId INT;
+    DECLARE newToken VARCHAR(64);
+    
+    -- User ID lekérése email alapján
+    SELECT `id` INTO userId
+    FROM `users`
+    WHERE `email` = emailIN
+      AND `is_deleted` = FALSE
+    LIMIT 1;
+    
+    IF userId IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'User not found';
+    END IF;
+    
+    -- Token generálás
     SET newToken = MD5(CONCAT(emailIN, NOW(), RAND()));
     
-    UPDATE `users`
-    SET 
-        `reg_token` = newToken,
-        `updated_at` = NOW()
-    WHERE `email` = emailIN
-      AND `is_deleted` = FALSE;
+    -- Token mentése (15 PERC lejárat password reset-hez)
+    INSERT INTO `tokens` (
+        `user_id`,
+        `token`,
+        `type`,
+        `expires_at`,
+        `is_revoked`,
+        `created_at`
+    )
+    VALUES (
+        userId,
+        newToken,
+        'password_reset',
+        DATE_ADD(NOW(), INTERVAL 15 MINUTE),  -- ← MÓDOSÍTVA: 1 HOUR → 15 MINUTE
+        FALSE,
+        NOW()
+    );
     
     -- Token visszaadása
     SELECT newToken AS reset_token;
@@ -1595,31 +1686,44 @@ END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getUserById` (IN `userIdIN` INT)   BEGIN
     SELECT 
-        u.*,
-        GROUP_CONCAT(r.name SEPARATOR ', ') AS role_names,
-        GROUP_CONCAT(r.description SEPARATOR '; ') AS role_descriptions,
-        c.name AS company_name
-    FROM `users` u
-    INNER JOIN `user_x_role` uxr ON u.id = uxr.user_id
-    INNER JOIN `roles` r ON uxr.role_id = r.id
-    LEFT JOIN `companies` c ON u.company_id = c.id
-    WHERE u.id = userIdIN
-      AND u.is_deleted = FALSE
-      AND uxr.is_un_assigned = FALSE
-    GROUP BY u.id;
+        users.id,
+        users.first_name,
+        users.last_name,
+        users.email,
+        users.phone,
+        images.url,
+        users.company_id,
+        GROUP_CONCAT(roles.name SEPARATOR ', ') AS role_names,
+        users.created_at,
+        users.last_login,
+        users.is_deleted,
+        users.is_active
+    FROM users
+    INNER JOIN user_x_role ON users.id = user_x_role.user_id
+    INNER JOIN roles ON user_x_role.role_id = roles.id
+    LEFT JOIN companies ON users.company_id = companies.id
+    LEFT JOIN images ON users.id = images.user_id
+    WHERE users.id = userIdIN
+      AND user_x_role.is_un_assigned = FALSE
+    GROUP BY users.id, images.id;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getUserByRegToken` (IN `tokenIN` VARCHAR(100))   BEGIN
-
-	SELECT 
-		`users`.id,
-        `users`.`email`,
-        `users`.`register_finished_at`,
-        `users`.`is_active`
-    FROM `users`
-    WHERE `users`.`reg_token` = tokenIN AND `users`.`is_deleted` = false
+    -- Tokens táblából joinolva users-hez
+    SELECT 
+        u.`id`,
+        u.`email`,
+        u.`register_finished_at`,
+        u.`is_active`,
+        t.`expires_at`,
+        t.`is_revoked`,
+        t.`expires_at` < NOW() AS is_expired
+    FROM `tokens` t
+    INNER JOIN `users` u ON t.`user_id` = u.`id`
+    WHERE t.`token` = tokenIN
+      AND t.`type` = 'email_verify'
+      AND u.`is_deleted` = FALSE
     LIMIT 1;
-
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getUserFavorites` (IN `userIdIN` INT)   BEGIN
@@ -1811,7 +1915,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `register` (IN `firstNameIN` VARCHAR
     DECLARE regToken VARCHAR(64);
     
     -- Reg token generálása
-    SET regToken = MD5(CONCAT(emailIN, NOW()));
+    SET regToken = MD5(CONCAT(emailIN, NOW(), RAND()));
     
     -- Role ID lekérése a role name alapján
     SELECT `id` INTO roleId 
@@ -1825,7 +1929,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `register` (IN `firstNameIN` VARCHAR
         SET MESSAGE_TEXT = 'Invalid role name';
     END IF;
     
-    -- User létrehozása
+    -- User létrehozása (reg_token NÉLKÜL!)
     INSERT INTO `users` (
         `first_name`,
         `last_name`,
@@ -1833,7 +1937,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `register` (IN `firstNameIN` VARCHAR
         `password`,
         `phone`,
         `company_id`,
-        `reg_token`,
         `is_active`
     )
     VALUES (
@@ -1843,7 +1946,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `register` (IN `firstNameIN` VARCHAR
         passwordIN,
         phoneIN,
         companyIdIN,
-        regToken,
         FALSE
     );
     
@@ -1862,6 +1964,24 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `register` (IN `firstNameIN` VARCHAR
         NOW()
     );
     
+    -- Token mentése a tokens táblába
+    INSERT INTO `tokens` (
+        `user_id`,
+        `token`,
+        `type`,
+        `expires_at`,
+        `is_revoked`,
+        `created_at`
+    )
+    VALUES (
+        newUserId,
+        regToken,
+        'email_verify',
+        DATE_ADD(NOW(), INTERVAL 24 HOUR),
+        FALSE,
+        NOW()
+    );
+    
     -- Visszaadjuk az új user ID-t és a reg token-t
     SELECT newUserId AS user_id, regToken AS reg_token;
 END$$
@@ -1871,13 +1991,14 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerClient` (IN `firstNameIN` V
     DECLARE clientRoleId INT;
     DECLARE regToken VARCHAR(64);
     
-    SET regToken = MD5(CONCAT(emailIN, NOW()));
+    SET regToken = MD5(CONCAT(emailIN, NOW(), RAND()));
     
     SELECT `id` INTO clientRoleId 
     FROM `roles` 
     WHERE `name` = 'client' 
     LIMIT 1;
     
+    -- User létrehozása (reg_token NÉLKÜL!)
     INSERT INTO `users` (
         `guid`,
         `first_name`,
@@ -1886,7 +2007,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerClient` (IN `firstNameIN` V
         `password`,
         `phone`,
         `company_id`,
-        `reg_token`,
         `is_active`
     )
     VALUES (
@@ -1897,7 +2017,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerClient` (IN `firstNameIN` V
         passwordIN,
         phoneIN,
         NULL,
-        regToken,
         FALSE
     );
     
@@ -1914,6 +2033,24 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerClient` (IN `firstNameIN` V
         NOW()
     );
     
+    -- Token a tokens táblába
+    INSERT INTO `tokens` (
+        `user_id`,
+        `token`,
+        `type`,
+        `expires_at`,
+        `is_revoked`,
+        `created_at`
+    )
+    VALUES (
+        newUserId,
+        regToken,
+        'email_verify',
+        DATE_ADD(NOW(), INTERVAL 24 HOUR),
+        FALSE,
+        NOW()
+    );
+    
     SELECT newUserId AS user_id, regToken AS reg_token;
 END$$
 
@@ -1923,13 +2060,14 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerOwner` (IN `firstNameIN` VA
     DECLARE regToken VARCHAR(64);
     DECLARE newCompanyId INT;
     
-    SET regToken = MD5(CONCAT(emailIN, NOW()));
+    SET regToken = MD5(CONCAT(emailIN, NOW(), RAND()));
     
     SELECT `id` INTO ownerRoleId 
     FROM `roles` 
     WHERE `name` = 'owner' 
     LIMIT 1;
     
+    -- User létrehozása (reg_token NÉLKÜL!)
     INSERT INTO `users` (
         `guid`,
         `first_name`,
@@ -1939,7 +2077,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerOwner` (IN `firstNameIN` VA
         `phone`,
         `auth_secret`,
         `company_id`,
-        `reg_token`,
         `is_active`
     )
     VALUES (
@@ -1951,7 +2088,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerOwner` (IN `firstNameIN` VA
         phoneIN,
         authSecretIN,
         NULL,
-        regToken,
         FALSE
     );
     
@@ -2001,6 +2137,24 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerOwner` (IN `firstNameIN` VA
     SET `company_id` = newCompanyId
     WHERE `id` = newUserId;
     
+    -- Token a tokens táblába
+    INSERT INTO `tokens` (
+        `user_id`,
+        `token`,
+        `type`,
+        `expires_at`,
+        `is_revoked`,
+        `created_at`
+    )
+    VALUES (
+        newUserId,
+        regToken,
+        'email_verify',
+        DATE_ADD(NOW(), INTERVAL 24 HOUR),
+        FALSE,
+        NOW()
+    );
+    
     SELECT newUserId AS user_id, newCompanyId AS company_id, regToken AS reg_token;
 END$$
 
@@ -2010,13 +2164,14 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerStaff` (IN `firstNameIN` VA
     DECLARE regToken VARCHAR(64);
     DECLARE newStaffId INT;
     
-    SET regToken = MD5(CONCAT(emailIN, NOW()));
+    SET regToken = MD5(CONCAT(emailIN, NOW(), RAND()));
     
     SELECT `id` INTO staffRoleId 
     FROM `roles` 
     WHERE `name` = 'staff' 
     LIMIT 1;
     
+    -- User létrehozása (reg_token NÉLKÜL!)
     INSERT INTO `users` (
         `guid`,
         `first_name`,
@@ -2026,7 +2181,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerStaff` (IN `firstNameIN` VA
         `phone`,
         `auth_secret`,
         `company_id`,
-        `reg_token`,
         `is_active`
     )
     VALUES (
@@ -2038,7 +2192,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerStaff` (IN `firstNameIN` VA
         phoneIN,
         authSecretIN,
         companyIdIN,
-        regToken,
         FALSE
     );
     
@@ -2067,6 +2220,24 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerStaff` (IN `firstNameIN` VA
     );
     
     SET newStaffId = LAST_INSERT_ID();
+    
+    -- Token a tokens táblába
+    INSERT INTO `tokens` (
+        `user_id`,
+        `token`,
+        `type`,
+        `expires_at`,
+        `is_revoked`,
+        `created_at`
+    )
+    VALUES (
+        newUserId,
+        regToken,
+        'email_verify',
+        DATE_ADD(NOW(), INTERVAL 24 HOUR),
+        FALSE,
+        NOW()
+    );
     
     SELECT newUserId AS user_id, newStaffId AS staff_id, regToken AS reg_token;
 END$$
@@ -2154,6 +2325,201 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `rescheduleAppointment` (IN `appoint
     );
     
     SELECT 'SUCCESS' AS result, 'Appointment rescheduled' AS message;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `resendEmailVerification` (IN `emailIN` VARCHAR(100))   BEGIN
+    DECLARE userId INT DEFAULT NULL;
+    DECLARE userIsActive BOOLEAN DEFAULT FALSE;
+    DECLARE lastTokenTime DATETIME DEFAULT NULL;
+    DECLARE newToken VARCHAR(64);
+    DECLARE minutesSinceLastToken INT DEFAULT 0;
+    
+    -- User lekérése email alapján
+    SELECT 
+        `id`,
+        `is_active`
+    INTO 
+        userId,
+        userIsActive
+    FROM `users`
+    WHERE `email` = emailIN
+      AND `is_deleted` = FALSE
+    LIMIT 1;
+    
+    -- Ellenőrzés 1: User létezik?
+    IF userId IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'User not found';
+    END IF;
+    
+    -- Ellenőrzés 2: User már aktív?
+    IF userIsActive = TRUE THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'User is already active';
+    END IF;
+    
+    -- Ellenőrzés 3: Rate limiting - legutóbbi token mikor lett generálva?
+    SELECT 
+        `created_at`,
+        TIMESTAMPDIFF(MINUTE, `created_at`, NOW()) AS minutes_ago
+    INTO 
+        lastTokenTime,
+        minutesSinceLastToken
+    FROM `tokens`
+    WHERE `user_id` = userId
+      AND `type` = 'email_verify'
+    ORDER BY `created_at` DESC
+    LIMIT 1;
+    
+    -- Ha volt token és még nincs 5 perc
+    IF lastTokenTime IS NOT NULL AND minutesSinceLastToken < 5 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Please wait 5 minutes before requesting a new verification email';
+    END IF;
+    
+    -- Régi email_verify tokenek revoke-olása (tisztítás)
+    UPDATE `tokens`
+    SET 
+        `is_revoked` = TRUE,
+        `revoked_at` = NOW()
+    WHERE `user_id` = userId
+      AND `type` = 'email_verify'
+      AND `is_revoked` = FALSE;
+    
+    -- Új token generálása
+    SET newToken = MD5(CONCAT(emailIN, NOW(), RAND()));
+    
+    -- Új token mentése
+    INSERT INTO `tokens` (
+        `user_id`,
+        `token`,
+        `type`,
+        `expires_at`,
+        `is_revoked`,
+        `created_at`
+    )
+    VALUES (
+        userId,
+        newToken,
+        'email_verify',
+        DATE_ADD(NOW(), INTERVAL 24 HOUR),
+        FALSE,
+        NOW()
+    );
+    
+    -- Audit log (opcionális)
+    INSERT INTO `audit_logs` (
+        `user_id`,
+        `company_id`,
+        `email`,
+        `entity_type`,
+        `action`,
+        `old_values`,
+        `new_values`,
+        `created_at`
+    )
+    VALUES (
+        userId,
+        NULL,
+        emailIN,
+        'user',
+        'resend_email_verification',
+        NULL,
+        JSON_OBJECT('token_count', ROW_COUNT()),
+        NOW()
+    );
+    
+    -- Sikeres visszajelzés
+    SELECT 
+        'SUCCESS' AS result,
+        'Verification email has been resent' AS message,
+        newToken AS token,
+        DATE_ADD(NOW(), INTERVAL 24 HOUR) AS expires_at,
+        userId AS user_id;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `resetPasswordWithToken` (IN `tokenIN` VARCHAR(64), IN `newPasswordIN` TEXT)   BEGIN
+    DECLARE tokenUserId INT DEFAULT NULL;
+    DECLARE tokenExpired BOOLEAN DEFAULT FALSE;
+    DECLARE tokenRevoked BOOLEAN DEFAULT FALSE;
+    DECLARE userEmail VARCHAR(100);
+    
+    -- Token validálás
+    SELECT 
+        t.`user_id`,
+        t.`expires_at` < NOW() AS is_expired,
+        t.`is_revoked`,
+        u.`email`
+    INTO 
+        tokenUserId,
+        tokenExpired,
+        tokenRevoked,
+        userEmail
+    FROM `tokens` t
+    INNER JOIN `users` u ON t.`user_id` = u.`id`
+    WHERE t.`token` = tokenIN
+      AND t.`type` = 'password_reset'
+    LIMIT 1;
+    
+    -- Ellenőrzések
+    IF tokenUserId IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Invalid or non-existent token';
+    END IF;
+    
+    IF tokenExpired THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Token has expired (15 minutes)';
+    END IF;
+    
+    IF tokenRevoked THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Token has already been used';
+    END IF;
+    
+    -- Jelszó frissítése
+    UPDATE `users`
+    SET 
+        `password` = newPasswordIN,
+        `updated_at` = NOW()
+    WHERE `id` = tokenUserId
+      AND `is_deleted` = FALSE;
+    
+    -- Token revoke (már nem használható)
+    UPDATE `tokens`
+    SET 
+        `is_revoked` = TRUE,
+        `revoked_at` = NOW()
+    WHERE `token` = tokenIN
+      AND `type` = 'password_reset';
+    
+    -- Audit log (opcionális, de hasznos)
+    INSERT INTO `audit_logs` (
+        `user_id`,
+        `company_id`,
+        `email`,
+        `entity_type`,
+        `action`,
+        `old_values`,
+        `new_values`,
+        `created_at`
+    )
+    VALUES (
+        tokenUserId,
+        NULL,
+        userEmail,
+        'user',
+        'password_reset',
+        NULL,
+        JSON_OBJECT('reset_method', 'token'),
+        NOW()
+    );
+    
+    -- Sikeres visszajelzés
+    SELECT 
+        'SUCCESS' AS result,
+        'Password has been reset successfully' AS message,
+        tokenUserId AS user_id;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `revokeAllUserTokens` (IN `userIdIN` INT)   BEGIN
@@ -2298,14 +2664,40 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `updateCompany` (IN `companyIdIN` IN
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `updateEmail` (IN `userIdIN` INT, IN `newEmailIN` VARCHAR(100))   BEGIN
+    DECLARE verifyToken VARCHAR(64);
+    
+    -- Token generálás
+    SET verifyToken = MD5(CONCAT(newEmailIN, NOW(), RAND()));
+    
+    -- Email frissítése (inaktív lesz, újra kell aktiválni)
     UPDATE `users`
     SET 
         `email` = newEmailIN,
         `is_active` = FALSE,
-        `reg_token` = MD5(CONCAT(newEmailIN, NOW())),
         `updated_at` = NOW()
     WHERE `id` = userIdIN
       AND `is_deleted` = FALSE;
+    
+    -- Új verification token
+    INSERT INTO `tokens` (
+        `user_id`,
+        `token`,
+        `type`,
+        `expires_at`,
+        `is_revoked`,
+        `created_at`
+    )
+    VALUES (
+        userIdIN,
+        verifyToken,
+        'email_verify',
+        DATE_ADD(NOW(), INTERVAL 24 HOUR),
+        FALSE,
+        NOW()
+    );
+    
+    -- Token visszaadása
+    SELECT verifyToken AS reg_token;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `updateLastLogin` (IN `userIdIN` INT)   BEGIN
@@ -2524,6 +2916,53 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `uploadUserImage` (IN `userIdIN` INT
     SELECT LAST_INSERT_ID() AS image_id;
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `validatePasswordResetToken` (IN `tokenIN` VARCHAR(64))   BEGIN
+    DECLARE tokenUserId INT DEFAULT NULL;
+    DECLARE tokenExpired BOOLEAN DEFAULT FALSE;
+    DECLARE tokenRevoked BOOLEAN DEFAULT FALSE;
+    DECLARE userEmail VARCHAR(100);
+    
+    -- Token validálás
+    SELECT 
+        t.`user_id`,
+        t.`expires_at` < NOW() AS is_expired,
+        t.`is_revoked`,
+        u.`email`
+    INTO 
+        tokenUserId,
+        tokenExpired,
+        tokenRevoked,
+        userEmail
+    FROM `tokens` t
+    INNER JOIN `users` u ON t.`user_id` = u.`id`
+    WHERE t.`token` = tokenIN
+      AND t.`type` = 'password_reset'
+    LIMIT 1;
+    
+    -- Ellenőrzések
+    IF tokenUserId IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Invalid or non-existent token';
+    END IF;
+    
+    IF tokenExpired THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Token has expired (15 minutes)';
+    END IF;
+    
+    IF tokenRevoked THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Token has already been used';
+    END IF;
+    
+    -- Token valid, visszaadjuk a user email-t (hogy lássa a frontend)
+    SELECT 
+        'SUCCESS' AS result,
+        'Token is valid' AS message,
+        tokenUserId AS user_id,
+        userEmail AS email;
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `validateRefreshToken` (IN `tokenIN` VARCHAR(500))   BEGIN
     SELECT *
     FROM `tokens`
@@ -2651,7 +3090,9 @@ INSERT INTO `audit_logs` (`id`, `user_id`, `company_id`, `email`, `entity_type`,
 (34, 24, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2025-12-08 11:04:52'),
 (35, 24, NULL, 'vasvariben@gmail.com', 'user', 'logout', NULL, NULL, '2025-12-08 11:12:13'),
 (36, 24, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2025-12-09 09:10:21'),
-(37, 24, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2025-12-09 17:41:59');
+(37, 24, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2025-12-09 17:41:59'),
+(38, 30, NULL, 'teszt@example.hu', 'user', 'password_reset', NULL, '{\"reset_method\": \"token\"}', '2025-12-11 17:44:47'),
+(39, 32, NULL, 'resend@test.com', 'user', 'resend_email_verification', NULL, '{\"token_count\": 1}', '2025-12-11 17:55:15');
 
 -- --------------------------------------------------------
 
@@ -3462,6 +3903,16 @@ CREATE TABLE `tokens` (
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+--
+-- Dumping data for table `tokens`
+--
+
+INSERT INTO `tokens` (`id`, `user_id`, `token`, `type`, `expires_at`, `is_revoked`, `revoked_at`, `created_at`) VALUES
+(6, 30, '95bbdaa5535278a26f5525497302e2dd', 'password_reset', '2025-12-11 18:42:06', 0, NULL, '2025-12-11 18:27:06'),
+(7, 30, 'b5fea74ff636d85af45062ac9828b9a8', 'password_reset', '2025-12-11 18:58:54', 1, '2025-12-11 18:44:47', '2025-12-11 18:43:54'),
+(8, 32, '29ed2cb129b2676e9e81172fa038564e', 'email_verify', '2025-12-12 18:53:59', 1, '2025-12-11 18:55:15', '2025-12-11 18:49:04'),
+(9, 32, 'c2193c46e898acc9d555787e22d168b2', 'email_verify', '2025-12-12 18:55:15', 0, NULL, '2025-12-11 18:55:15');
+
 -- --------------------------------------------------------
 
 --
@@ -3498,7 +3949,6 @@ CREATE TABLE `users` (
   `is_deleted` tinyint(1) NOT NULL DEFAULT '0',
   `last_login` datetime DEFAULT NULL,
   `register_finished_at` datetime DEFAULT NULL,
-  `reg_token` varchar(64) DEFAULT NULL,
   `is_active` tinyint(1) NOT NULL DEFAULT '1' COMMENT 'Admins can deactivate users',
   `two_factor_enabled` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'Whether 2FA is enabled',
   `two_factor_secret` varchar(32) DEFAULT NULL COMMENT 'TOTP secret key (encrypted)',
@@ -3509,32 +3959,35 @@ CREATE TABLE `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `guid`, `first_name`, `last_name`, `email`, `password`, `phone`, `company_id`, `created_at`, `updated_at`, `deleted_at`, `is_deleted`, `last_login`, `register_finished_at`, `reg_token`, `is_active`, `two_factor_enabled`, `two_factor_secret`, `two_factor_confirmed_at`) VALUES
-(1, '63f866da-a827-11f0-82be-e9727e212b75', 'Gábor', 'Nagy', 'gabor.nagy@bookr.hu', '$2y$10$abcdefghijklmnopqrstuv', '+36301234567', NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL),
-(2, '63f892d6-a827-11f0-82be-e9727e212b75', 'Péter', 'Kovács', 'peter.kovacs@szepsegszalon.hu', '$2y$10$bcdefghijklmnopqrstuvw', '+36302345678', 1, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL),
-(3, '63f8961e-a827-11f0-82be-e9727e212b75', 'Anna', 'Szabó', 'anna.szabo@wellness.hu', '$2y$10$cdefghijklmnopqrstuvwx', '+36303456789', 2, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL),
-(4, '63f89772-a827-11f0-82be-e9727e212b75', 'Eszter', 'Tóth', 'eszter.toth@szepsegszalon.hu', '$2y$10$defghijklmnopqrstuvwxy', '+36304567890', 1, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL),
-(5, '63f8988a-a827-11f0-82be-e9727e212b75', 'Katalin', 'Molnár', 'katalin.molnar@szepsegszalon.hu', '$2y$10$efghijklmnopqrstuvwxyz', '+36305678901', 1, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL),
-(6, '63f8998e-a827-11f0-82be-e9727e212b75', 'Zsófia', 'Kiss', 'zsofia.kiss@szepsegszalon.hu', '$2y$10$fghijklmnopqrstuvwxyza', '+36306789012', 1, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL),
-(7, '63f89a7e-a827-11f0-82be-e9727e212b75', 'Márta', 'Horváth', 'marta.horvath@wellness.hu', '$2y$10$ghijklmnopqrstuvwxyzab', '+36307890123', 2, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL),
-(8, '63f89b6e-a827-11f0-82be-e9727e212b75', 'Júlia', 'Varga', 'julia.varga@wellness.hu', '$2y$10$hijklmnopqrstuvwxyzabc', '+36308901234', 2, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL),
-(9, '63f89c72-a827-11f0-82be-e9727e212b75', 'Ildikó', 'Balogh', 'ildiko.balogh@wellness.hu', '$2y$10$ijklmnopqrstuvwxyzabcd', '+36309012345', 2, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL),
-(10, '63f89d58-a827-11f0-82be-e9727e212b75', 'János', 'Farkas', 'janos.farkas@gmail.com', '$2y$10$jklmnopqrstuvwxyzabcde', '+36201234567', NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL),
-(11, '63f89e48-a827-11f0-82be-e9727e212b75', 'Éva', 'Simon', 'eva.simon@gmail.com', '$2y$10$klmnopqrstuvwxyzabcdef', '+36202345678', NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL),
-(12, '63f89f38-a827-11f0-82be-e9727e212b75', 'László', 'Németh', 'laszlo.nemeth@freemail.hu', '$2y$10$lmnopqrstuvwxyzabcdefg', '+36203456789', NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL),
-(13, '63f8a06e-a827-11f0-82be-e9727e212b75', 'Mária', 'Papp', 'maria.papp@citromail.hu', '$2y$10$mnopqrstuvwxyzabcdefgh', '+36204567890', NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL),
-(14, '63f8a15e-a827-11f0-82be-e9727e212b75', 'István', 'Takács', 'istvan.takacs@outlook.com', '$2y$10$nopqrstuvwxyzabcdefghi', '+36205678901', NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL),
-(15, '63f8a244-a827-11f0-82be-e9727e212b75', 'Ágnes', 'Lakatos', 'agnes.lakatos@yahoo.com', '$2y$10$opqrstuvwxyzabcdefghij', '+36206789012', NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', NULL, 1, 0, NULL, NULL),
-(16, '63f8a3b6-a827-11f0-82be-e9727e212b75', 'Teszt', 'Lajos', 'teszt@teszt.com', 'Alma!123', '+367012345678', NULL, '2025-10-10 16:43:02', NULL, NULL, 0, NULL, NULL, '9a03f02d65caced068fc87e0c851511e', 0, 0, NULL, NULL),
-(17, '63f8a58c-a827-11f0-82be-e9727e212b75', 'Teszt', 'Aladár', 'aladar@teszt.com', '$argon2id$v=19$m=65536,t=3,p=1$L7naGVB2eKFjndxep9p0eQ$A/j8QkNLRcL8+i+uxS53PvvNdJCBPzOpUPTuokE1WaI', '+367012345678', NULL, '2025-10-10 16:49:09', NULL, NULL, 0, NULL, NULL, 'c1afe49e2c51023bfc4f0446a9609af4', 0, 0, NULL, NULL),
-(18, 'f8e34f45-d5aa-11f0-972d-94e23c940cf4', 'Sándor', 'László', 'lacika@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$4ZcoWslloOnpOReRBkDphQ$1dJvd08oeeHN7m4tNf7hY1VjSeGv0XvJu4rgWl+SKLY', '+367013565678', NULL, '2025-10-17 11:20:15', NULL, NULL, 0, NULL, NULL, 'aa6f1d723c190ecaf03c7f67f535912f', 0, 0, NULL, NULL),
-(21, '7d78c18c-ae61-11f0-b2dc-2a23318b2722', 'Sándor', 'László', 'alma@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$y1aWgzGwmDzrxviR4yxpSw$EQbDcIBHMBXYbKfALlhrKLVR1WMQ58EbNB7XZ6IYGic', '+367014565678', NULL, '2025-10-21 11:36:58', NULL, NULL, 0, NULL, NULL, 'df6155689e4b2eb220253e5897873420', 0, 0, NULL, NULL),
-(22, 'eb931f32-ae61-11f0-b2dc-2a23318b2722', 'Sándor', 'László', 'almaaa@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$Mrx15QBn0fr6S4bTdcR51w$f5kj7gloDsIH+3ghUNo2o/L3iMLbOlki+gi7lANR2WE', '+367014465678', NULL, '2025-10-21 11:40:03', NULL, NULL, 0, '2025-12-06 13:30:23', NULL, 'bb13f93f958948980618426e63aff729', 0, 0, NULL, NULL),
-(23, '12e0f3a2-d298-11f0-9a88-bf216494b8de', 'Dorián', 'Zsolt', '092@drxy.hu', '$argon2id$v=19$m=65536,t=3,p=1$LZBgb2sLLH0XtjXITpHL4w$0Av6knJziVje8PnS+bV4fxY4ZweU5S+kN6ZnslI0+nA', '+3670123252', NULL, '2025-12-06 12:38:24', NULL, NULL, 0, NULL, '2025-12-06 13:17:00', 'a7889321a076a11195c7d84035f79f49', 1, 0, NULL, NULL),
-(24, '59286216-d29b-11f0-9a88-bf216494b8de', 'Benjamin', 'Vasvári', 'vasvariben@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$8M4CsVWNHZB2eWujo4Of8A$XwsdxqnBSBu4HbsZUQDxzjaPCt/LkSN9kFqoQRsLub4', '+36704134374', NULL, '2025-12-06 13:01:50', NULL, NULL, 0, '2025-12-09 18:41:59', '2025-12-06 13:26:53', '04c30ec10619051c04384c96aace9b7e', 1, 0, NULL, NULL),
-(25, 'f5ad54b8-d41a-11f0-b0d7-1c68b34b5ceb', 'Jancsi', 'Teszt', 'teszt@teszt.hu', '$argon2id$v=19$m=65536,t=3,p=1$6PjP6Jwsv7g/WVe7ClSjOA$Tww++HMs5oY5Kn77fBnsDX8HC0lA22LvquMnCLwr0MQ', '+36301234567', NULL, '2025-12-08 10:47:50', NULL, NULL, 0, NULL, '2025-12-08 10:48:29', '91b148a4bab20496ae9c31ae059df3eb', 1, 0, NULL, NULL),
-(26, 'b54f3219-d5b1-11f0-972d-94e23c940cf4', 'Test', 'User', 'test99@example.com', 'hash...', '+36701234567', NULL, '2025-12-10 11:19:27', NULL, NULL, 0, NULL, NULL, '4871ac864d9c0aec11493843159d35a3', 0, 0, NULL, NULL),
-(27, '182b2af2-d5b3-11f0-972d-94e23c940cf4', 'Teszt', 'Elek', 'teszt.elek@example.com', '$argon2id$v=19$m=65536,t=3,p=1$test123', '+36701112233', NULL, '2025-12-10 11:29:22', NULL, NULL, 0, NULL, NULL, 'd02fe0a5fcb25dde7612dfff6ba3cf63', 0, 0, NULL, NULL);
+INSERT INTO `users` (`id`, `guid`, `first_name`, `last_name`, `email`, `password`, `phone`, `company_id`, `created_at`, `updated_at`, `deleted_at`, `is_deleted`, `last_login`, `register_finished_at`, `is_active`, `two_factor_enabled`, `two_factor_secret`, `two_factor_confirmed_at`) VALUES
+(1, '63f866da-a827-11f0-82be-e9727e212b75', 'Gábor', 'Nagy', 'gabor.nagy@bookr.hu', '$2y$10$abcdefghijklmnopqrstuv', '+36301234567', NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', 1, 0, NULL, NULL),
+(2, '63f892d6-a827-11f0-82be-e9727e212b75', 'Péter', 'Kovács', 'peter.kovacs@szepsegszalon.hu', '$2y$10$bcdefghijklmnopqrstuvw', '+36302345678', 1, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', 1, 0, NULL, NULL),
+(3, '63f8961e-a827-11f0-82be-e9727e212b75', 'Anna', 'Szabó', 'anna.szabo@wellness.hu', '$2y$10$cdefghijklmnopqrstuvwx', '+36303456789', 2, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', 1, 0, NULL, NULL),
+(4, '63f89772-a827-11f0-82be-e9727e212b75', 'Eszter', 'Tóth', 'eszter.toth@szepsegszalon.hu', '$2y$10$defghijklmnopqrstuvwxy', '+36304567890', 1, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', 1, 0, NULL, NULL),
+(5, '63f8988a-a827-11f0-82be-e9727e212b75', 'Katalin', 'Molnár', 'katalin.molnar@szepsegszalon.hu', '$2y$10$efghijklmnopqrstuvwxyz', '+36305678901', 1, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', 1, 0, NULL, NULL),
+(6, '63f8998e-a827-11f0-82be-e9727e212b75', 'Zsófia', 'Kiss', 'zsofia.kiss@szepsegszalon.hu', '$2y$10$fghijklmnopqrstuvwxyza', '+36306789012', 1, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', 1, 0, NULL, NULL),
+(7, '63f89a7e-a827-11f0-82be-e9727e212b75', 'Márta', 'Horváth', 'marta.horvath@wellness.hu', '$2y$10$ghijklmnopqrstuvwxyzab', '+36307890123', 2, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', 1, 0, NULL, NULL),
+(8, '63f89b6e-a827-11f0-82be-e9727e212b75', 'Júlia', 'Varga', 'julia.varga@wellness.hu', '$2y$10$hijklmnopqrstuvwxyzabc', '+36308901234', 2, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', 1, 0, NULL, NULL),
+(9, '63f89c72-a827-11f0-82be-e9727e212b75', 'Ildikó', 'Balogh', 'ildiko.balogh@wellness.hu', '$2y$10$ijklmnopqrstuvwxyzabcd', '+36309012345', 2, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', 1, 0, NULL, NULL),
+(10, '63f89d58-a827-11f0-82be-e9727e212b75', 'János', 'Farkas', 'janos.farkas@gmail.com', '$2y$10$jklmnopqrstuvwxyzabcde', '+36201234567', NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', 1, 0, NULL, NULL),
+(11, '63f89e48-a827-11f0-82be-e9727e212b75', 'Éva', 'Simon', 'eva.simon@gmail.com', '$2y$10$klmnopqrstuvwxyzabcdef', '+36202345678', NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', 1, 0, NULL, NULL),
+(12, '63f89f38-a827-11f0-82be-e9727e212b75', 'László', 'Németh', 'laszlo.nemeth@freemail.hu', '$2y$10$lmnopqrstuvwxyzabcdefg', '+36203456789', NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', 1, 0, NULL, NULL),
+(13, '63f8a06e-a827-11f0-82be-e9727e212b75', 'Mária', 'Papp', 'maria.papp@citromail.hu', '$2y$10$mnopqrstuvwxyzabcdefgh', '+36204567890', NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', 1, 0, NULL, NULL),
+(14, '63f8a15e-a827-11f0-82be-e9727e212b75', 'István', 'Takács', 'istvan.takacs@outlook.com', '$2y$10$nopqrstuvwxyzabcdefghi', '+36205678901', NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', 1, 0, NULL, NULL),
+(15, '63f8a244-a827-11f0-82be-e9727e212b75', 'Ágnes', 'Lakatos', 'agnes.lakatos@yahoo.com', '$2y$10$opqrstuvwxyzabcdefghij', '+36206789012', NULL, '2025-10-09 16:14:23', NULL, NULL, 0, NULL, '2025-10-09 16:14:23', 1, 0, NULL, NULL),
+(16, '63f8a3b6-a827-11f0-82be-e9727e212b75', 'Teszt', 'Lajos', 'teszt@teszt.com', 'Alma!123', '+367012345678', NULL, '2025-10-10 16:43:02', NULL, NULL, 0, NULL, NULL, 0, 0, NULL, NULL),
+(17, '63f8a58c-a827-11f0-82be-e9727e212b75', 'Teszt', 'Aladár', 'aladar@teszt.com', '$argon2id$v=19$m=65536,t=3,p=1$L7naGVB2eKFjndxep9p0eQ$A/j8QkNLRcL8+i+uxS53PvvNdJCBPzOpUPTuokE1WaI', '+367012345678', NULL, '2025-10-10 16:49:09', NULL, NULL, 0, NULL, NULL, 0, 0, NULL, NULL),
+(18, 'f8e34f45-d5aa-11f0-972d-94e23c940cf4', 'Sándor', 'László', 'lacika@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$4ZcoWslloOnpOReRBkDphQ$1dJvd08oeeHN7m4tNf7hY1VjSeGv0XvJu4rgWl+SKLY', '+367013565678', NULL, '2025-10-17 11:20:15', NULL, NULL, 0, NULL, NULL, 0, 0, NULL, NULL),
+(21, '7d78c18c-ae61-11f0-b2dc-2a23318b2722', 'Sándor', 'László', 'alma@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$y1aWgzGwmDzrxviR4yxpSw$EQbDcIBHMBXYbKfALlhrKLVR1WMQ58EbNB7XZ6IYGic', '+367014565678', NULL, '2025-10-21 11:36:58', NULL, NULL, 0, NULL, NULL, 0, 0, NULL, NULL),
+(22, 'eb931f32-ae61-11f0-b2dc-2a23318b2722', 'Sándor', 'László', 'almaaa@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$Mrx15QBn0fr6S4bTdcR51w$f5kj7gloDsIH+3ghUNo2o/L3iMLbOlki+gi7lANR2WE', '+367014465678', NULL, '2025-10-21 11:40:03', NULL, NULL, 0, '2025-12-06 13:30:23', NULL, 0, 0, NULL, NULL),
+(23, '12e0f3a2-d298-11f0-9a88-bf216494b8de', 'Dorián', 'Zsolt', '092@drxy.hu', '$argon2id$v=19$m=65536,t=3,p=1$LZBgb2sLLH0XtjXITpHL4w$0Av6knJziVje8PnS+bV4fxY4ZweU5S+kN6ZnslI0+nA', '+3670123252', NULL, '2025-12-06 12:38:24', NULL, NULL, 0, NULL, '2025-12-06 13:17:00', 1, 0, NULL, NULL),
+(24, '59286216-d29b-11f0-9a88-bf216494b8de', 'Benjamin', 'Vasvári', 'vasvariben@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$8M4CsVWNHZB2eWujo4Of8A$XwsdxqnBSBu4HbsZUQDxzjaPCt/LkSN9kFqoQRsLub4', '+36704134374', NULL, '2025-12-06 13:01:50', NULL, NULL, 0, '2025-12-09 18:41:59', '2025-12-06 13:26:53', 1, 0, NULL, NULL),
+(25, 'f5ad54b8-d41a-11f0-b0d7-1c68b34b5ceb', 'Jancsi', 'Teszt', 'teszt@teszt.hu', '$argon2id$v=19$m=65536,t=3,p=1$6PjP6Jwsv7g/WVe7ClSjOA$Tww++HMs5oY5Kn77fBnsDX8HC0lA22LvquMnCLwr0MQ', '+36301234567', NULL, '2025-12-08 10:47:50', NULL, NULL, 0, NULL, '2025-12-08 10:48:29', 1, 0, NULL, NULL),
+(26, 'b54f3219-d5b1-11f0-972d-94e23c940cf4', 'Test', 'User', 'test99@example.com', 'hash...', '+36701234567', NULL, '2025-12-10 11:19:27', NULL, NULL, 0, NULL, NULL, 0, 0, NULL, NULL),
+(27, '182b2af2-d5b3-11f0-972d-94e23c940cf4', 'Teszt', 'Elek', 'teszt.elek@example.com', '$argon2id$v=19$m=65536,t=3,p=1$test123', '+36701112233', NULL, '2025-12-10 11:29:22', NULL, NULL, 0, NULL, NULL, 0, 0, NULL, NULL),
+(30, '3adf17d2-d6b4-11f0-8c83-94e23c940cf4', 'Teszt', 'Elek', 'teszt@example.hu', '$2y$10$UJ_JELSZÓ_HASH', '+36301112233', NULL, '2025-12-11 18:10:01', '2025-12-11 18:44:47', NULL, 0, NULL, '2025-12-11 18:12:30', 1, 0, NULL, NULL),
+(31, 'ea162e9d-d6b4-11f0-8c83-94e23c940cf4', 'Anna', 'Kovács', 'anna@example.hu', '$2y$10$xyz', '+36309998877', NULL, '2025-12-11 18:14:55', NULL, NULL, 0, NULL, NULL, 0, 0, NULL, NULL),
+(32, '5f2646eb-d6ba-11f0-8c83-94e23c940cf4', 'Teszt', 'Resend', 'resend@test.com', '$2y$10$test_password', '+36301234567', NULL, '2025-12-11 18:53:59', NULL, NULL, 0, NULL, NULL, 0, 0, NULL, NULL);
 
 --
 -- Triggers `users`
@@ -3613,7 +4066,10 @@ INSERT INTO `user_x_role` (`id`, `user_id`, `role_id`, `assigned_at`, `un_assign
 (31, 24, 4, '2025-12-06 12:01:50', NULL, 0),
 (32, 25, 4, '2025-12-08 09:47:50', NULL, 0),
 (33, 26, 4, '2025-12-10 10:19:27', NULL, 0),
-(34, 27, 4, '2025-12-10 10:29:23', NULL, 0);
+(34, 27, 4, '2025-12-10 10:29:23', NULL, 0),
+(36, 30, 4, '2025-12-11 17:10:01', NULL, 0),
+(37, 31, 4, '2025-12-11 17:14:55', NULL, 0),
+(38, 32, 4, '2025-12-11 17:53:59', NULL, 0);
 
 --
 -- Indexes for dumped tables
@@ -3811,7 +4267,7 @@ ALTER TABLE `appointments`
 -- AUTO_INCREMENT for table `audit_logs`
 --
 ALTER TABLE `audit_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=38;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=40;
 
 --
 -- AUTO_INCREMENT for table `business_categories`
@@ -3913,7 +4369,7 @@ ALTER TABLE `temporary_closed_periods`
 -- AUTO_INCREMENT for table `tokens`
 --
 ALTER TABLE `tokens`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `two_factor_recovery_codes`
@@ -3925,13 +4381,13 @@ ALTER TABLE `two_factor_recovery_codes`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
 
 --
 -- AUTO_INCREMENT for table `user_x_role`
 --
 ALTER TABLE `user_x_role`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=35;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
 
 --
 -- Constraints for dumped tables
@@ -4070,6 +4526,39 @@ ALTER TABLE `users`
 ALTER TABLE `user_x_role`
   ADD CONSTRAINT `user_x_role_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`),
   ADD CONSTRAINT `user_x_role_ibfk_2` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`);
+
+DELIMITER $$
+--
+-- Events
+--
+CREATE DEFINER=`root`@`localhost` EVENT `cleanup_expired_tokens` ON SCHEDULE EVERY 1 DAY STARTS '2025-12-12 02:00:00' ON COMPLETION NOT PRESERVE ENABLE COMMENT 'Automatikusan törli a lejárt vagy revoked tokeneket' DO BEGIN
+    -- Futtatjuk a meglévő eljárást
+    CALL cleanExpiredTokens();
+    
+    -- Opcionális: audit log
+    INSERT INTO audit_logs (
+        user_id,
+        company_id,
+        email,
+        entity_type,
+        action,
+        old_values,
+        new_values,
+        created_at
+    )
+    VALUES (
+        1,  -- superadmin
+        NULL,
+        'system@bookr.hu',
+        'tokens',
+        'cleanup_expired',
+        NULL,
+        JSON_OBJECT('deleted_count', ROW_COUNT()),
+        NOW()
+    );
+END$$
+
+DELIMITER ;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
