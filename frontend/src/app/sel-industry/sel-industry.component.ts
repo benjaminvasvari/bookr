@@ -2,145 +2,98 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 
-interface Service {
-  id: number;
-  name: string;
-  duration: string;
-  price: number;
-  currency: string;
-}
+import { Title } from '@angular/platform-browser';
+import { HungarianCurrencyPipe } from '../core/pipes/hungarian-currency.pipe';
 
-interface Review {
-  id: number;
-  userName: string;
-  userImage?: string;
-  rating: number;
-  comment: string;
-  date: string;
-}
-
-interface CompanyDetails {
-  id: number;
-  name: string;
-  category: string;
-  description: string;
-  rating: number;
-  mainImage: string;
-  galleryImages: string[];
-  services: Service[];
-  reviews: Review[];
-  isFavorite: boolean;
-}
+// Importáljuk a models-ből az interface-eket
+import { Company } from '../core/models';
+// Importáljuk a service-t
+import { CompaniesService } from '../core/services/companies.service';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { Service } from '../core/models/service.model';
 
 @Component({
   selector: 'app-sel-industry',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, HungarianCurrencyPipe],
   templateUrl: './sel-industry.component.html',
   styleUrls: ['./sel-industry.component.css'],
 })
 export class SelIndustryComponent implements OnInit {
   companyId: number | null = null;
-  company: CompanyDetails | null = null;
-  selectedTab: 'services' | 'beard' | 'facial' | 'combined' = 'services';
+  company: Company | null = null;
+  selectedCategoryId: number | null = null;
+  isLoading: boolean = false;
+  errorMessage: string = '';
+  isFavorite: boolean = false;
 
-  mockCompanyData: CompanyDetails = {
-    id: 1,
-    name: 'Future',
-    category: 'Cég adatok',
-    description:
-      'Lorem ipsum dolor sit amet consectetur. Ut id tellus bibendum massa et tristique elit.',
-    rating: 4.5,
-    mainImage: 'assets/images/barbershop-main.jpg',
-    galleryImages: [
-      'assets/images/barbershop-1.jpg',
-      'assets/images/barbershop-2.jpg',
-      'assets/images/barbershop-3.jpg',
-    ],
-    services: [
-      {
-        id: 1,
-        name: 'Klasszikus hajvágás',
-        duration: '45 p - 1 ó',
-        price: 4500,
-        currency: 'Ft',
-      },
-      {
-        id: 2,
-        name: 'Modern fade',
-        duration: '45 p - 1 ó',
-        price: 6000,
-        currency: 'Ft',
-      },
-      {
-        id: 3,
-        name: 'Gyermek hajvágás',
-        duration: '30 p - 45 p',
-        price: 4000,
-        currency: 'Ft',
-      },
-      {
-        id: 4,
-        name: 'Hajformázás',
-        duration: '15 p - 20 p',
-        price: 3500,
-        currency: 'Ft',
-      },
-    ],
-    reviews: [
-      {
-        id: 1,
-        userName: 'Kovács Anna',
-        userImage: '',
-        rating: 5,
-        comment:
-          'Kiváló szolgáltatás, nagyon profik! Mindenképpen ajánlom mindenkinek, aki minőségi munkát keres.',
-        date: '2024. 11. 15.',
-      },
-      {
-        id: 2,
-        userName: 'Nagy Péter',
-        userImage: '',
-        rating: 4,
-        comment:
-          'Nagyon elégedett vagyok az eredménnyel. Precíz munka, barátságos kiszolgálás. Csak ajánlani tudom!',
-        date: '2024. 11. 10.',
-      },
-      {
-        id: 3,
-        userName: 'Szabó Eszter',
-        userImage: '',
-        rating: 5,
-        comment:
-          'Tökéletes élmény volt! A stylist pontosan azt csinálta, amit kértem. Biztos visszamegyek!',
-        date: '2024. 11. 05.',
-      },
-    ],
-    isFavorite: false,
-  };
-
-  constructor(private route: ActivatedRoute, private router: Router) {}
+  constructor(
+    private route: ActivatedRoute,
+    private router: Router,
+    private companiesService: CompaniesService,
+    private sanitizer: DomSanitizer,
+    private title: Title
+  ) {}
 
   ngOnInit(): void {
+    // URL paraméterből kinyerjük a company ID-t
     this.route.params.subscribe((params) => {
       this.companyId = +params['id'];
       this.loadCompanyDetails();
     });
+    // Oldal tetejére görgetés
     window.scrollTo(0, 0);
   }
 
   loadCompanyDetails(): void {
-    this.company = this.mockCompanyData;
+    // Ellenőrizzük hogy van-e companyId
+    if (!this.companyId) {
+      this.errorMessage = 'Érvénytelen cég azonosító';
+      return;
+    }
+
+    // Betöltés kezdése
+    this.isLoading = true;
+    this.errorMessage = '';
+
+    // API hívás a service-en keresztül
+    this.companiesService.getCompanyById(this.companyId).subscribe({
+      // Sikeres válasz esetén
+      next: (data: Company) => {
+        this.company = data;
+        this.isLoading = false;
+
+        this.title.setTitle(`${data.name} | Bookr`);
+
+        // Első kategória automatikus kiválasztása
+        if (data.serviceCategories && data.serviceCategories.length > 0) {
+          this.selectedCategoryId = data.serviceCategories[0].id;
+        }
+
+        // Ha a backend küldi az isFavorite mezőt, használjuk
+        if (data.isFavorite !== undefined) {
+          this.isFavorite = data.isFavorite;
+        }
+
+        console.log('Cég adatok betöltve:', data);
+      },
+
+      // Hiba esetén
+      error: (error) => {
+        console.error('Hiba a cég betöltése során:', error);
+        this.errorMessage = 'Nem sikerült betölteni a cég adatait. Kérjük próbálja újra később.';
+        this.isLoading = false;
+      },
+    });
   }
 
-  selectTab(tab: 'services' | 'beard' | 'facial' | 'combined'): void {
-    this.selectedTab = tab;
+  selectCategory(categoryId: number): void {
+    this.selectedCategoryId = categoryId;
   }
 
   toggleFavorite(): void {
-    if (this.company) {
-      this.company.isFavorite = !this.company.isFavorite;
-    }
+    this.isFavorite = !this.isFavorite;
+    // TODO: Később amikor van kedvencek API
   }
 
   shareCompany(): void {
@@ -164,7 +117,7 @@ export class SelIndustryComponent implements OnInit {
     }
   }
 
-  bookService(service: any): void {
+  bookService(service: Service): void {
     if (this.company?.id) {
       this.router.navigate(['/appointment', this.company.id, 'services'], {
         queryParams: { serviceId: service.id },
@@ -179,5 +132,52 @@ export class SelIndustryComponent implements OnInit {
 
   getReviewStars(rating: number): number[] {
     return Array(Math.floor(rating)).fill(0);
+  }
+
+  getMapUrl(): SafeResourceUrl {
+    if (!this.company?.addressDetails) {
+      return '';
+    }
+
+    const details = this.company.addressDetails;
+
+    // Összerakod a címet
+    const address = `${details.street}, ${details.postalCode} ${details.city}, ${details.country}`;
+
+    // URL encode
+    const encodedAddress = encodeURIComponent(address);
+
+    // Google Maps URL
+    const url = `https://maps.google.com/maps?q=${encodedAddress}&output=embed`;
+    // Sanitize
+    return this.sanitizer.bypassSecurityTrustResourceUrl(url);
+  }
+
+  getMapTitle(): string {
+    if (!this.company) return 'Térkép - Bookr';
+
+    const details = this.company.addressDetails;
+    if (!details) return `${this.company.name} - Térkép`;
+
+    return `${this.company.name} - ${details.street}, ${details.city}`;
+  }
+
+  /**
+   * Mai nap meghatározása (lowercase)
+   * @returns 'monday' | 'tuesday' | ... | 'sunday'
+   */
+  getCurrentDay(): string {
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const today = new Date().getDay(); // 0 = vasárnap, 1 = hétfő, ...
+    return days[today];
+  }
+
+  /**
+   * Ellenőrzi hogy az adott nap ma van-e
+   * @param day 'monday' | 'tuesday' | ...
+   * @returns boolean
+   */
+  isToday(day: string): boolean {
+    return this.getCurrentDay() === day.toLowerCase();
   }
 }

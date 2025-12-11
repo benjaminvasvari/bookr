@@ -1,7 +1,16 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { AbstractControl, FormBuilder, FormGroup, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  FormBuilder,
+  FormGroup,
+  ReactiveFormsModule,
+  ValidationErrors,
+  ValidatorFn,
+  Validators,
+} from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
+import { AuthService } from '../core/services/auth.service';
 
 // Custom validator for password matching
 export function passwordMatchValidator(): ValidatorFn {
@@ -13,9 +22,7 @@ export function passwordMatchValidator(): ValidatorFn {
       return null;
     }
 
-    return password.value === confirmPassword.value 
-      ? null 
-      : { passwordMismatch: true };
+    return password.value === confirmPassword.value ? null : { passwordMismatch: true };
   };
 }
 
@@ -24,50 +31,91 @@ export function passwordMatchValidator(): ValidatorFn {
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterModule],
   templateUrl: './register-page.component.html',
-  styleUrls: ['./register-page.component.css']
+  styleUrls: ['./register-page.component.css'],
 })
 export class RegisterComponent {
   registerForm: FormGroup;
-  isSubmitting = false;
+  isLoading = false;
   hidePassword = true;
   hideConfirmPassword = true;
+  errorMessage = '';
+  successMessage = '';
 
-  constructor(
-    private fb: FormBuilder,
-    private router: Router
-  ) {
-    this.registerForm = this.fb.group({
-      lastName: ['', [Validators.required, Validators.minLength(2)]],
-      firstName: ['', [Validators.required, Validators.minLength(2)]],
-      email: ['', [Validators.required, Validators.email]],
-      phone: ['', [Validators.required, Validators.pattern(/^[\d\s\+\-\(\)]+$/)]],
-      password: ['', [Validators.required, Validators.minLength(8)]],
-      confirmPassword: ['', [Validators.required]]
-    }, { validators: passwordMatchValidator() });
+  // Snapshot a form hibáiról submit pillanatában
+  public submittedFormSnapshot: any = null;
+
+  constructor(private fb: FormBuilder, private router: Router, private authService: AuthService) {
+    this.registerForm = this.fb.group(
+      {
+        lastName: ['', [Validators.required, Validators.minLength(2)]],
+        firstName: ['', [Validators.required, Validators.minLength(2)]],
+        email: ['', [Validators.required, Validators.email]],
+        phone: ['', [Validators.required, Validators.pattern(/^[\d\s\+\-\(\)]+$/)]],
+        password: ['', [Validators.required, Validators.minLength(6)]],
+        confirmPassword: ['', [Validators.required]],
+      },
+      { validators: passwordMatchValidator() }
+    );
   }
 
   onSubmit(): void {
-    if (this.registerForm.valid) {
-      this.isSubmitting = true;
-      
-      // TODO: Implement registration logic with backend service
-      const formData = this.registerForm.value;
-      // Remove confirmPassword before sending to backend
-      const { confirmPassword, ...registrationData } = formData;
-      console.log('Registration data:', registrationData);
-      
-      // Simulate API call
-      setTimeout(() => {
-        this.isSubmitting = false;
-        // Navigate to login or dashboard after successful registration
-        this.router.navigate(['/login']);
-      }, 1000);
-    } else {
-      // Mark all fields as touched to show validation errors
-      Object.keys(this.registerForm.controls).forEach(key => {
-        this.registerForm.get(key)?.markAsTouched();
-      });
+    // Snapshot készítése a jelenlegi form hibáiról
+    this.submittedFormSnapshot = {
+      lastName: this.lastName.errors,
+      firstName: this.firstName.errors,
+      email: this.email.errors,
+      phone: this.phone.errors,
+      password: this.password.errors,
+      confirmPassword: this.confirmPassword.errors,
+      passwordMismatch: this.registerForm.hasError('passwordMismatch'),
+    };
+
+    // Ha invalid form, return (NEM küldi el)
+    if (this.registerForm.invalid) {
+      return;
     }
+
+    // Loading state bekapcsolása
+    this.isLoading = true;
+    this.errorMessage = '';
+    this.successMessage = '';
+
+    // Backend adatok előkészítése
+    const { confirmPassword, ...registrationData } = this.registerForm.value;
+
+    // Backend hívás
+    this.authService.register(registrationData).subscribe({
+      next: (response) => {
+        this.isLoading = false;
+
+        if (response.status === 'success') {
+          // Sikeres regisztráció
+          this.successMessage =
+            'Sikeres regisztráció! Ellenőrizd az email fiókodat a megerősítéshez.';
+
+          // 3 másodperc után navigálás a login oldalra
+          setTimeout(() => {
+            this.router.navigate(['/login']);
+          }, 3000);
+        } else {
+          this.errorMessage = 'Sikertelen regisztráció. Kérlek próbáld újra.';
+        }
+      },
+      error: (error) => {
+        this.isLoading = false;
+
+        // Hibaüzenet beállítása
+        if (error.message && error.message.includes('email')) {
+          this.errorMessage = 'Ez az email cím már regisztrálva van.';
+        } else if (error.message) {
+          this.errorMessage = error.message;
+        } else {
+          this.errorMessage = 'Sikertelen regisztráció. Kérlek próbáld újra későb';
+        }
+
+        console.error('Registration error:', error);
+      },
+    });
   }
 
   // Getters for form controls
@@ -95,62 +143,62 @@ export class RegisterComponent {
     return this.registerForm.get('confirmPassword')!;
   }
 
-  // Dynamic error message getters
-  get lastNameErrorMessage(): string {
-    if (this.lastName.hasError('required') && this.lastName.touched) {
-      return 'A vezetéknév megadása kötelező';
-    }
-    if (this.lastName.hasError('minlength') && this.lastName.touched) {
-      return 'A vezetéknévnek legalább 2 karakter hosszúnak kell lennie';
-    }
-    return '';
-  }
+  // EGYETLEN validációs hibaüzenet getter - a SNAPSHOT alapján
+  get validationErrorMessage(): string {
+    if (!this.submittedFormSnapshot) return '';
 
-  get firstNameErrorMessage(): string {
-    if (this.firstName.hasError('required') && this.firstName.touched) {
-      return 'A keresztnév megadása kötelező';
-    }
-    if (this.firstName.hasError('minlength') && this.firstName.touched) {
-      return 'A keresztnévnek legalább 2 karakter hosszúnak kell lennie';
-    }
-    return '';
-  }
+    const snap = this.submittedFormSnapshot;
+    let errorCount = 0;
 
-  get emailErrorMessage(): string {
-    if (this.email.hasError('required') && this.email.touched) {
-      return 'Az email cím megadása kötelező';
+    // Számoljuk meg hány hiba van
+    if (snap.lastName) errorCount++;
+    if (snap.firstName) errorCount++;
+    if (snap.email) errorCount++;
+    if (snap.phone) errorCount++;
+    if (snap.password) errorCount++;
+    if (snap.confirmPassword) errorCount++;
+    if (snap.passwordMismatch) errorCount++;
+
+    // Ha több mint 1 hiba → általános üzenet
+    if (errorCount > 1) {
+      return 'Kérlek töltsd ki az összes kötelező mezőt';
     }
-    if (this.email.hasError('email') && this.email.touched) {
+
+    // Ha csak 1 hiba → specifikus üzenet
+    if (snap.lastName?.required) {
+      return 'Kérlek add meg a vezetékneved';
+    }
+    if (snap.lastName?.minlength) {
+      return 'A vezetéknév legalább 2 karakter hosszú legyen';
+    }
+    if (snap.firstName?.required) {
+      return 'Kérlek add meg a keresztneved';
+    }
+    if (snap.firstName?.minlength) {
+      return 'A keresztnév legalább 2 karakter hosszú legyen';
+    }
+    if (snap.email?.required) {
+      return 'Kérlek add meg az email címed';
+    }
+    if (snap.email?.email) {
       return 'Érvénytelen email formátum';
     }
-    return '';
-  }
-
-  get phoneErrorMessage(): string {
-    if (this.phone.hasError('required') && this.phone.touched) {
-      return 'A telefonszám megadása kötelező';
+    if (snap.phone?.required) {
+      return 'Kérlek add meg a telefonszámod';
     }
-    if (this.phone.hasError('pattern') && this.phone.touched) {
+    if (snap.phone?.pattern) {
       return 'Érvénytelen telefonszám formátum';
     }
-    return '';
-  }
-
-  get passwordErrorMessage(): string {
-    if (this.password.hasError('required') && this.password.touched) {
-      return 'A jelszó megadása kötelező';
+    if (snap.password?.required) {
+      return 'Kérlek add meg a jelszavad';
     }
-    if (this.password.hasError('minlength') && this.password.touched) {
-      return 'A jelszónak legalább 8 karakter hosszúnak kell lennie';
+    if (snap.password?.minlength) {
+      return 'A jelszó legalább 6 karakter hosszú legyen';
     }
-    return '';
-  }
-
-  get confirmPasswordErrorMessage(): string {
-    if (this.confirmPassword.hasError('required') && this.confirmPassword.touched) {
-      return 'A jelszó megerősítése kötelező';
+    if (snap.confirmPassword?.required) {
+      return 'Kérlek erősítsd meg a jelszavad';
     }
-    if (this.registerForm.hasError('passwordMismatch') && this.confirmPassword.touched && !this.confirmPassword.hasError('required')) {
+    if (snap.passwordMismatch) {
       return 'A két jelszó nem egyezik meg';
     }
     return '';

@@ -1,7 +1,12 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { CartService, CartItem, SelectedSpecialist, SelectedAppointment } from '../core/services/cart.service';
+import {
+  CartService,
+  CartItem,
+  SelectedSpecialist,
+  SelectedAppointment,
+} from '../core/services/cart.service';
 
 interface Specialist {
   id: number;
@@ -33,20 +38,20 @@ interface DayColumn {
 export class AppointmentSelectComponent implements OnInit {
   companyId: number = 0;
   company: any = null;
-  
+
   // Szakemberek
   specialists: Specialist[] = [];
   selectedSpecialist: Specialist | null = null;
-  
+
   // Naptár
   currentWeekStart: Date = new Date();
   weekDays: DayColumn[] = [];
   selectedDate: Date | null = null;
-  
+
   // Időpontok
   timeSlots: TimeSlot[] = [];
   selectedTimeSlot: TimeSlot | null = null;
-  
+
   // Kosár
   cart: CartItem[] = [];
 
@@ -61,6 +66,9 @@ export class AppointmentSelectComponent implements OnInit {
     this.loadMockData();
     this.initializeWeek();
     this.loadCart();
+
+    // Oldal tetejére görgetés
+    window.scrollTo(0, 0);
   }
 
   loadMockData(): void {
@@ -79,31 +87,31 @@ export class AppointmentSelectComponent implements OnInit {
         id: 1,
         name: 'Kiss Anna',
         imageUrl: 'https://i.pravatar.cc/150?img=1',
-        specialization: 'Fodrász'
+        specialization: 'Fodrász',
       },
       {
         id: 2,
         name: 'Nagy Péter',
         imageUrl: 'https://i.pravatar.cc/150?img=2',
-        specialization: 'Fodrász'
+        specialization: 'Fodrász',
       },
       {
         id: 3,
         name: 'Szabó Eszter',
         imageUrl: 'https://i.pravatar.cc/150?img=3',
-        specialization: 'Kozmetikus'
+        specialization: 'Kozmetikus',
       },
       {
         id: 4,
         name: 'Tóth László',
         imageUrl: 'https://i.pravatar.cc/150?img=4',
-        specialization: 'Masszőr'
-      }
+        specialization: 'Masszőr',
+      },
     ];
   }
 
   loadCart(): void {
-    this.cartService.cart$.subscribe(cart => {
+    this.cartService.cart$.subscribe((cart) => {
       this.cart = cart;
     });
   }
@@ -112,7 +120,7 @@ export class AppointmentSelectComponent implements OnInit {
   initializeWeek(): void {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     // Mai nap a hét eleje
     this.currentWeekStart = new Date(today);
     this.generateWeekDays();
@@ -127,17 +135,17 @@ export class AppointmentSelectComponent implements OnInit {
     for (let i = 0; i < 7; i++) {
       const date = new Date(this.currentWeekStart);
       date.setDate(this.currentWeekStart.getDate() + i);
-      
+
       const dayOfWeek = date.getDay();
       const isDisabled = dayOfWeek === 0 || dayOfWeek === 3 || dayOfWeek === 6; // Vasárnap, Szerda, Szombat
       const isPast = date < today;
-      
+
       this.weekDays.push({
         date: date,
         dayName: this.getDayName(dayOfWeek),
         dayNumber: date.getDate(),
         isDisabled: isDisabled || isPast,
-        isToday: date.getTime() === today.getTime()
+        isToday: date.getTime() === today.getTime(),
       });
     }
   }
@@ -175,11 +183,11 @@ export class AppointmentSelectComponent implements OnInit {
       this.selectedSpecialist = specialist;
       this.selectedDate = null;
       this.selectedTimeSlot = null;
-      
+
       this.cartService.setSpecialist({
         id: specialist.id,
         name: specialist.name,
-        imageUrl: specialist.imageUrl
+        imageUrl: specialist.imageUrl,
       });
     }
   }
@@ -199,14 +207,24 @@ export class AppointmentSelectComponent implements OnInit {
   generateTimeSlots(): void {
     this.timeSlots = [];
     const times = [
-      '8:00', '8:45', '9:30', '10:15', '11:00', '11:45',
-      '12:30', '13:15', '14:00', '14:45', '15:30', '16:15'
+      '8:00',
+      '8:45',
+      '9:30',
+      '10:15',
+      '11:00',
+      '11:45',
+      '12:30',
+      '13:15',
+      '14:00',
+      '14:45',
+      '15:30',
+      '16:15',
     ];
 
-    times.forEach(time => {
+    times.forEach((time) => {
       this.timeSlots.push({
         time: time,
-        available: true // TODO: később API-ból jön a foglaltság
+        available: true, // TODO: később API-ból jön a foglaltság
       });
     });
   }
@@ -218,11 +236,11 @@ export class AppointmentSelectComponent implements OnInit {
     }
 
     this.selectedTimeSlot = slot;
-    
+
     if (this.selectedDate) {
       this.cartService.setAppointment({
         date: this.selectedDate,
-        time: slot.time
+        time: slot.time,
       });
     }
   }
@@ -236,29 +254,18 @@ export class AppointmentSelectComponent implements OnInit {
     return this.cartService.getTotal();
   }
 
+  
+
   // Folytatás (későbbi lépés)
   continue(): void {
-    if (this.cart.length === 0) {
-      return;
-    }
-
-    if (!this.selectedSpecialist) {
-      alert('Kérlek válassz szakembert!');
-      return;
-    }
-
-    if (!this.selectedTimeSlot) {
-      alert('Kérlek válassz időpontot!');
-      return;
-    }
-
     // TODO: Navigálás a következő lépésre
+    this.router.navigate(['/appointment-payment']);
     console.log('Foglalás:', {
       company: this.company,
       services: this.cart,
       specialist: this.selectedSpecialist,
       date: this.selectedDate,
-      time: this.selectedTimeSlot.time
+      time: this.selectedTimeSlot?.time,
     });
 
     alert('Következő lépés (összesítő/megerősítés) még nincs kész!');
@@ -266,7 +273,20 @@ export class AppointmentSelectComponent implements OnInit {
 
   // Formázó függvények
   formatDate(date: Date): string {
-    const months = ['jan', 'feb', 'már', 'ápr', 'máj', 'jún', 'júl', 'aug', 'szep', 'okt', 'nov', 'dec'];
+    const months = [
+      'jan',
+      'feb',
+      'már',
+      'ápr',
+      'máj',
+      'jún',
+      'júl',
+      'aug',
+      'szep',
+      'okt',
+      'nov',
+      'dec',
+    ];
     return `${months[date.getMonth()]}. ${date.getDate()}.`;
   }
 }

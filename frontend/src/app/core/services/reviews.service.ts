@@ -1,44 +1,58 @@
-import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+export interface Company {
+  id: number;
+  name: string;
+  rating: number;
+  reviewCount: number;
+  address: string;
+  imageUrl: string;
+  description?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  category?: string;
+  galleryImages?: string[];
+  openingHours?: OpeningHours;
+  services?: Service[];
+  reviews?: Review[];
+  isFavorite?: boolean;
+}
 
-import { environment } from '../../../environments/environment';
-import { API_ENDPOINTS } from '../constants/api-endpoints';
-import { Review, CreateReviewRequest } from '../models';
+export interface OpeningHours {
+  monday?: string;
+  tuesday?: string;
+  wednesday?: string;
+  thursday?: string;
+  friday?: string;
+  saturday?: string;
+  sunday?: string;
+}
 
-@Injectable({
-  providedIn: 'root'
-})
-export class ReviewsService {
-  private apiUrl = environment.apiUrl;
+export interface Service {
+  id: number;
+  name: string;
+  duration: string;
+  price: number;
+  currency: string;
+}
 
-  constructor(private http: HttpClient) {}
+export interface Review {
+  id: number;
+  userName: string;
+  userImage?: string;
+  rating: number;
+  comment: string;
+  date: string;
+}
 
-  /**
-   * Összes értékelés lekérése
-   */
-  getReviews(): Observable<Review[]> {
-    return this.http.get<Review[]>(
-      `${this.apiUrl}${API_ENDPOINTS.REVIEWS.LIST}`
-    );
-  }
+export interface ServiceCategory {
+  id: number;
+  name: string;
+  description?: string;
+}
 
-  /**
-   * Egy cég értékeléseinek lekérése
-   */
-  getReviewsByCompany(companyId: number): Observable<Review[]> {
-    return this.http.get<Review[]>(
-      `${this.apiUrl}${API_ENDPOINTS.REVIEWS.BY_COMPANY(companyId)}`
-    );
-  }
-
-  /**
-   * Új értékelés létrehozása
-   */
-  createReview(reviewData: CreateReviewRequest): Observable<Review> {
-    return this.http.post<Review>(
-      `${this.apiUrl}${API_ENDPOINTS.REVIEWS.CREATE}`,
-      reviewData
-    );
-  }
+// ÚJ - CreateReviewRequest interface
+export interface CreateReviewRequest {
+  companyId: number;
+  rating: number;
+  comment: string;
 }

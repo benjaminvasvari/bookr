@@ -1,0 +1,225 @@
+<div class="profile-info-container">
+  <!-- Page Header -->
+  <div class="section-header">
+    <h1 class="section-title">Profil adatok</h1>
+    <p class="section-subtitle">Kezeld a személyes adataidat</p>
+  </div>
+
+  <!-- Success Message -->
+  <div *ngIf="profileSaveSuccess" class="alert alert-success">
+    <svg class="alert-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+    </svg>
+    <span>Profil adatok sikeresen mentve!</span>
+  </div>
+
+  <div *ngIf="passwordSaveSuccess" class="alert alert-success">
+    <svg class="alert-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+    </svg>
+    <span>Jelszó sikeresen megváltoztatva!</span>
+  </div>
+
+  <!-- Profile Form Card -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Személyes adatok</h2>
+      <button 
+        *ngIf="!isEditingProfile" 
+        class="btn-edit"
+        (click)="enableProfileEdit()"
+      >
+        <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+        </svg>
+        Szerkesztés
+      </button>
+    </div>
+
+    <form [formGroup]="profileForm" class="card-body">
+      <!-- Error Message -->
+      <div *ngIf="profileSaveError" class="alert alert-error">
+        <span>{{ profileSaveError }}</span>
+      </div>
+
+      <!-- First Name -->
+      <div class="form-group">
+        <label class="form-label">Keresztnév</label>
+        <input 
+          type="text" 
+          class="form-input"
+          [class.disabled]="!isEditingProfile"
+          [readonly]="!isEditingProfile"
+          formControlName="firstName"
+          placeholder="Pl. János"
+        />
+        <div 
+          *ngIf="profileForm.get('firstName')?.invalid && profileForm.get('firstName')?.touched" 
+          class="form-error"
+        >
+          Minimum 2 karakter szükséges
+        </div>
+      </div>
+
+      <!-- Last Name -->
+      <div class="form-group">
+        <label class="form-label">Vezetéknév</label>
+        <input 
+          type="text" 
+          class="form-input"
+          [class.disabled]="!isEditingProfile"
+          [readonly]="!isEditingProfile"
+          formControlName="lastName"
+          placeholder="Pl. Kovács"
+        />
+        <div 
+          *ngIf="profileForm.get('lastName')?.invalid && profileForm.get('lastName')?.touched" 
+          class="form-error"
+        >
+          Minimum 2 karakter szükséges
+        </div>
+      </div>
+
+      <!-- Email -->
+      <div class="form-group">
+        <label class="form-label">Email cím</label>
+        <input 
+          type="email" 
+          class="form-input"
+          [class.disabled]="!isEditingProfile"
+          [readonly]="!isEditingProfile"
+          formControlName="email"
+          placeholder="pelda@email.com"
+        />
+        <div 
+          *ngIf="profileForm.get('email')?.invalid && profileForm.get('email')?.touched" 
+          class="form-error"
+        >
+          Érvényes email cím szükséges
+        </div>
+      </div>
+
+      <!-- Phone -->
+      <div class="form-group">
+        <label class="form-label">Telefonszám</label>
+        <input 
+          type="tel" 
+          class="form-input"
+          [class.disabled]="!isEditingProfile"
+          [readonly]="!isEditingProfile"
+          formControlName="phone"
+          placeholder="+36201234567"
+        />
+        <div 
+          *ngIf="profileForm.get('phone')?.invalid && profileForm.get('phone')?.touched" 
+          class="form-error"
+        >
+          Helyes formátum: +36201234567
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div *ngIf="isEditingProfile" class="form-actions">
+        <button 
+          type="button" 
+          class="btn btn-secondary"
+          (click)="cancelProfileEdit()"
+        >
+          Mégse
+        </button>
+        <button 
+          type="button" 
+          class="btn btn-primary"
+          (click)="saveProfile()"
+          [disabled]="profileForm.invalid"
+        >
+          Mentés
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Password Change Card -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Jelszó megváltoztatása</h2>
+      <button 
+        class="btn-toggle"
+        (click)="togglePasswordChange()"
+      >
+        {{ isChangingPassword ? 'Mégse' : 'Jelszó változtatás' }}
+      </button>
+    </div>
+
+    <form *ngIf="isChangingPassword" [formGroup]="passwordForm" class="card-body">
+      <!-- Error Message -->
+      <div *ngIf="passwordSaveError" class="alert alert-error">
+        <span>{{ passwordSaveError }}</span>
+      </div>
+
+      <!-- Current Password -->
+      <div class="form-group">
+        <label class="form-label">Jelenlegi jelszó</label>
+        <input 
+          type="password" 
+          class="form-input"
+          formControlName="currentPassword"
+          placeholder="••••••••"
+        />
+      </div>
+
+      <!-- New Password -->
+      <div class="form-group">
+        <label class="form-label">Új jelszó</label>
+        <input 
+          type="password" 
+          class="form-input"
+          formControlName="newPassword"
+          placeholder="••••••••"
+        />
+        <div 
+          *ngIf="passwordForm.get('newPassword')?.invalid && passwordForm.get('newPassword')?.touched" 
+          class="form-error"
+        >
+          Minimum 6 karakter szükséges
+        </div>
+      </div>
+
+      <!-- Confirm Password -->
+      <div class="form-group">
+        <label class="form-label">Új jelszó megerősítése</label>
+        <input 
+          type="password" 
+          class="form-input"
+          formControlName="confirmPassword"
+          placeholder="••••••••"
+        />
+        <div 
+          *ngIf="passwordForm.hasError('passwordMismatch') && passwordForm.get('confirmPassword')?.touched" 
+          class="form-error"
+        >
+          A jelszavak nem egyeznek
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="form-actions">
+        <button 
+          type="button" 
+          class="btn btn-secondary"
+          (click)="togglePasswordChange()"
+        >
+          Mégse
+        </button>
+        <button 
+          type="button" 
+          class="btn btn-primary"
+          (click)="savePassword()"
+          [disabled]="passwordForm.invalid"
+        >
+          Jelszó mentése
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

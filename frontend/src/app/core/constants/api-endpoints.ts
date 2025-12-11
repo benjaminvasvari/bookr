@@ -5,12 +5,12 @@ export const API_ENDPOINTS = {
     REGISTER: '/auth/register',
     LOGOUT: '/auth/logout',
     REFRESH_TOKEN: '/auth/refresh',
-    VERIFY_EMAIL: '/auth/verify-email'
+    VERIFY_EMAIL: '/auth/verify'
   },
   
   COMPANIES: {
     LIST: '/companies',
-    DETAIL: (id: number) => `/companies/${id}`,
+    DETAIL: (id: number) => `/companies/loadCompanyById?id=${id}`,
     TOP_RECOMMENDATIONS: '/companies/top',
     FEATURED: '/companies/featured',
     NEW: '/companies/new',

@@ -12,7 +12,7 @@
             id="lastName" 
             formControlName="lastName"
             placeholder=" "
-            [class.invalid]="lastName.invalid && lastName.touched">
+            [class.invalid]="submittedFormSnapshot && lastName.invalid">
           <label for="lastName">Vezetéknév</label>
           <i class="fas fa-user input-icon"></i>
         </div>
@@ -24,7 +24,7 @@
             id="firstName" 
             formControlName="firstName"
             placeholder=" "
-            [class.invalid]="firstName.invalid && firstName.touched">
+            [class.invalid]="submittedFormSnapshot && firstName.invalid">
           <label for="firstName">Keresztnév</label>
           <i class="fas fa-user input-icon"></i>
         </div>
@@ -36,7 +36,7 @@
             id="email" 
             formControlName="email"
             placeholder=" "
-            [class.invalid]="email.invalid && email.touched">
+            [class.invalid]="submittedFormSnapshot && email.invalid">
           <label for="email">Email cím</label>
           <i class="fas fa-envelope input-icon"></i>
         </div>
@@ -48,7 +48,7 @@
             id="phone" 
             formControlName="phone"
             placeholder=" "
-            [class.invalid]="phone.invalid && phone.touched">
+            [class.invalid]="submittedFormSnapshot && phone.invalid">
           <label for="phone">Telefonszám</label>
           <i class="fas fa-phone input-icon"></i>
         </div>
@@ -60,7 +60,7 @@
             id="password" 
             formControlName="password"
             placeholder=" "
-            [class.invalid]="password.invalid && password.touched">
+            [class.invalid]="submittedFormSnapshot && password.invalid">
           <label for="password">Jelszó</label>
           <i class="fas fa-lock input-icon"></i>
           
@@ -74,13 +74,13 @@
         </div>
 
         <!-- Jelszó megerősítése -->
-        <div class="input-group" style="margin-bottom: 0;">
+        <div class="input-group">
           <input 
             [type]="hideConfirmPassword ? 'password' : 'text'"
             id="confirmPassword" 
             formControlName="confirmPassword"
             placeholder=" "
-            [class.invalid]="(confirmPassword.invalid && confirmPassword.touched) || (registerForm.hasError('passwordMismatch') && confirmPassword.touched)">
+            [class.invalid]="submittedFormSnapshot && (confirmPassword.invalid || registerForm.hasError('passwordMismatch'))">
           <label for="confirmPassword">Jelszó megerősítése</label>
           <i class="fas fa-lock input-icon"></i>
           
@@ -91,21 +91,37 @@
             [attr.aria-label]="hideConfirmPassword ? 'Jelszó megjelenítése' : 'Jelszó elrejtése'">
             <i [class]="hideConfirmPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
           </button>
+        </div>
 
-          <div class="error-messages">
-            <div class="error-message" 
-                 [style.opacity]="confirmPasswordErrorMessage ? '1' : '0'">
-              {{ confirmPasswordErrorMessage || '&nbsp;' }}
-            </div>
-          </div>
+        <!-- KÖZPONTI VALIDÁCIÓS HIBAÜZENET - Az összes mező után -->
+        <div *ngIf="validationErrorMessage" class="validation-error-message">
+          <i class="fas fa-exclamation-triangle"></i>
+          {{ validationErrorMessage }}
+        </div>
+
+        <!-- Success message megjelenítése -->
+        <div *ngIf="successMessage" class="success-message">
+          <i class="fas fa-check-circle"></i>
+          {{ successMessage }}
+        </div>
+
+        <!-- Backend hibaüzenet megjelenítése -->
+        <div *ngIf="errorMessage" class="backend-error-message">
+          <i class="fas fa-exclamation-circle"></i>
+          {{ errorMessage }}
         </div>
 
         <!-- Submit gomb -->
         <button 
           type="submit" 
           class="btn-submit"
-          [disabled]="registerForm.invalid || isSubmitting">
-          {{ isSubmitting ? 'FELDOLGOZÁS...' : 'FOLYTATÁS' }}
+          [disabled]="isLoading">
+          
+          <!-- Loading spinner VAGY szöveg -->
+          <span *ngIf="!isLoading">FOLYTATÁS</span>
+          <span *ngIf="isLoading">
+            <i class="fas fa-spinner fa-spin"></i> REGISZTRÁCIÓ...
+          </span>
         </button>
 
         <div class="divider"></div>

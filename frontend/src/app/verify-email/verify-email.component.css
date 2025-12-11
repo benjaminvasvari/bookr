@@ -1,0 +1,244 @@
+:host {
+  display: block;
+  height: 100vh;
+  width: 100%;
+}
+
+.verify-container {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: hsl(210, 29%, 22%);
+}
+
+.verify-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 100%;
+  height: 100%;
+  max-height: 100vh;
+}
+
+.verify-wrapper {
+  background-color: hsl(210, 29%, 22%);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 3rem;
+  color: white;
+}
+
+.verify-title {
+  font-size: 3rem;
+  font-weight: 700;
+  margin-bottom: 3rem;
+  color: white;
+  letter-spacing: 2px;
+  text-align: center;
+}
+
+/* VERIFY BOX - Közös stílusok */
+.verify-box {
+  width: 100%;
+  max-width: 500px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 25px;
+  padding: 3rem 2rem;
+  text-align: center;
+  animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ICON WRAPPER */
+.icon-wrapper {
+  font-size: 5rem;
+  margin-bottom: 1.5rem;
+  color: #fff;
+}
+
+.icon-wrapper.success-icon {
+  color: #4caf50;
+}
+
+.icon-wrapper.error-icon {
+  color: #f44336;
+}
+
+/* LOADING SPINNER */
+.loading-box .fa-spinner {
+  color: #38a179;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { 
+    transform: rotate(0deg); 
+  }
+  to { 
+    transform: rotate(360deg); 
+  }
+}
+
+/* TEXT ELEMENTS */
+.verify-box h2 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: white;
+}
+
+.verify-box p {
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 1rem;
+  line-height: 1.6;
+}
+
+.redirect-text {
+  font-size: 1rem;
+  color: #38a179;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.error-text {
+  color: #ff6b6b;
+  font-weight: 600;
+  margin-bottom: 2rem;
+}
+
+/* ACTION BUTTONS */
+.btn-action {
+  width: 100%;
+  max-width: 300px;
+  padding: 1rem 2rem;
+  border: none;
+  border-radius: 25px;
+  background-color: #38a179;
+  color: white;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 1rem;
+}
+
+.btn-action:hover {
+  background-color: #2d8a63;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(56, 161, 121, 0.4);
+}
+
+.btn-action:active {
+  transform: translateY(0);
+}
+
+.btn-action.btn-secondary {
+  background-color: transparent;
+  border: 2px solid white;
+  color: white;
+}
+
+.btn-action.btn-secondary:hover {
+  background-color: white;
+  color: hsl(210, 29%, 22%);
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
+}
+
+/* MULTIPLE BUTTONS */
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  align-items: center;
+}
+
+/* IMAGE SECTION */
+.image-wrapper {
+  position: relative;
+  background-image: url('https://images.unsplash.com/photo-1557804506-669a67965ba0?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.image-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(44, 62, 80, 0.3) 0%, rgba(44, 62, 80, 0.1) 100%);
+}
+
+/* RESPONSIVE DESIGN */
+@media (max-width: 992px) {
+  .verify-content {
+    grid-template-columns: 1fr;
+  }
+
+  .image-wrapper {
+    display: none;
+  }
+
+  .verify-wrapper {
+    padding: 2rem;
+  }
+
+  .verify-title {
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .verify-box {
+    padding: 2.5rem 1.5rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .verify-wrapper {
+    padding: 1.5rem;
+  }
+
+  .verify-title {
+    font-size: 2rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .verify-box {
+    padding: 2rem 1.5rem;
+  }
+
+  .icon-wrapper {
+    font-size: 4rem;
+  }
+
+  .verify-box h2 {
+    font-size: 1.5rem;
+  }
+
+  .verify-box p {
+    font-size: 1rem;
+  }
+
+  .btn-action {
+    padding: 0.875rem 1.5rem;
+    font-size: 1rem;
+  }
+}

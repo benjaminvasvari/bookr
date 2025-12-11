@@ -190,6 +190,38 @@
   pointer-events: none;  /* Ne legyen klikkelhetõ átlátszó állapotban */
 }
 
+/* BACKEND ERROR MESSAGE */
+.backend-error-message {
+  background-color: rgba(244, 67, 54, 0.1);
+  border: 2px solid #f44336;
+  border-radius: 15px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  color: #f44336;
+  font-weight: 600;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  animation: slideDown 0.3s ease;
+}
+
+.backend-error-message i {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* SUBMIT BUTTON */
 .btn-submit {
   width: 100%;
@@ -204,6 +236,10 @@
   cursor: pointer;
   transition: all 0.3s ease;
   margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
 .btn-submit:hover:not(:disabled) {
@@ -223,6 +259,20 @@
   color: #999;
   cursor: not-allowed;
   opacity: 0.6;
+}
+
+/* LOADING SPINNER ANIMATION */
+.fa-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { 
+    transform: rotate(0deg); 
+  }
+  to { 
+    transform: rotate(360deg); 
+  }
 }
 
 /* DIVIDER */
@@ -332,5 +382,10 @@
   .btn-submit {
     padding: 0.875rem;
     font-size: 1rem;
+  }
+
+  .backend-error-message {
+    font-size: 0.85rem;
+    padding: 0.875rem;
   }
 }

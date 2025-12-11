@@ -332,7 +332,7 @@
   border-radius: 20px;
   overflow: hidden;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-  border: 3px solid  #38a179;
+  border: 3px solid #38a179;
 }
 
 .map-container iframe {
@@ -367,63 +367,102 @@
   justify-content: space-between;
 }
 
-/* Opening hours secction */
+/* Opening hours section */
 .opening-hours-card {
-    background-color: #ffffff;
-    border-radius: 16px;
-    padding: 2rem;
-    width: 50%;
-
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    margin-bottom: 3rem;
+  background-color: #ffffff;
+  border-radius: 16px;
+  padding: 2rem;
+  width: 50%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  margin-bottom: 3rem;
 }
 
 .title {
-    font-size: 2rem;
-    font-weight: 700;
-    margin: 0 0 1.5rem 0;
-    color: #2c3e50;
-    font-family: 'Montserrat', sans-serif;
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0 0 1.5rem 0;
+  color: #2c3e50;
+  font-family: 'Montserrat', sans-serif;
 }
 
 .hours-list {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .hours-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.5rem;
-    border: 2px solid #e0e0e0;
-    border-radius: 12px;
-    transition: all 0.3s ease;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  position: relative;
 }
 
 .hours-item:hover {
-    border-color: var(--dark-green-color, #38a179);
-    box-shadow: 0 4px 12px rgba(52, 152, 219, 0.15);
+  border-color: #38a179;
+  box-shadow: 0 4px 12px rgba(56, 161, 121, 0.1);
+}
+
+/* MAI NAP KIEMELÉS */
+.hours-item.today {
+  background: linear-gradient(135deg, #f0f8ff 0%, #e7f3ff 100%);
+  border-left: 5px solid #38a179;
+  border-color: #38a179;
+  box-shadow: 0 6px 16px rgba(56, 161, 121, 0.2);
+  transform: translateX(4px);
+}
+
+.hours-item.today .day {
+  color: #38a179;
+  font-weight: 700;
+}
+
+.hours-item.today .time {
+  color: #2c3e50;
+  font-weight: 700;
+}
+
+/* Ha ma zárva van */
+.hours-item.today.closed .time {
+  color: #e74c3c;
+  font-weight: 700;
 }
 
 .day {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #2c3e50;
-    font-family: 'Montserrat', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2c3e50;
+  font-family: 'Montserrat', sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .time {
-    font-size: 1rem;
-    font-weight: 600;
-    color: #2c3e50;
-    font-family: 'Montserrat', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #2c3e50;
+  font-family: 'Montserrat', sans-serif;
+}
+
+/* Zárva státusz */
+.hours-item.closed {
+  opacity: 0.85;
 }
 
 .hours-item.closed .time {
-    color: #e74c3c;
-    font-weight: 600;
+  color: #e74c3c;
+  font-weight: 600;
+}
+
+/* Hover animáció a mai napnál */
+.hours-item.today:hover {
+  transform: translateX(8px);
+  box-shadow: 0 8px 20px rgba(56, 161, 121, 0.3);
 }
 
 /* Értékelések Szekció */
@@ -533,9 +572,6 @@
   text-overflow: ellipsis;
 }
 
-
-
-
 /* Betöltés */
 .loading {
   display: flex;
@@ -546,45 +582,45 @@
   color: #7f8c8d;
 }
 
-/* Footer */
-.footer {
-  background-color: #2c3e50;
-  color: white;
-  padding: 40px 0 20px 0;
+
+/* Hiba üzenet stílusok */
+.error-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 200px); /* Teljes viewport magasság mínusz header */
+  padding: 2rem;
+  width: 100%;
+  margin: 0 auto;
 }
 
-.footer-content {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 30px;
-  margin-bottom: 30px;
+.error-message {
+  text-align: center;
+  background-color: #ffffff;
+  padding: 3rem;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  max-width: 500px;
+  width: 100%;
+  margin: 0 auto;
 }
 
-.footer-column p {
-  margin: 8px 0;
-  font-size: 14px;
-  color: #b0b8c0;
+.error-message h2 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #e74c3c;
+  margin: 0 0 1rem 0;
+  font-family: 'Montserrat', sans-serif;
 }
 
-.footer-bottom {
-  padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+.error-message p {
+  font-size: 1.1rem;
+  color: #7f8c8d;
+  margin: 0 0 0 0;
+  line-height: 1.6;
+  font-family: 'Montserrat', sans-serif;
 }
 
-.footer-logo {
-  font-size: 40px;
-  font-weight: 900;
-  padding: 0;
-  color: white;
-  text-decoration: none;
-}
-.footer-logo .logo-highlight {
-  color: var(--dark-green-color);
-}
-
-.brand-logo .logo-highlight {
-  color: var(--dark-green-color);
-}
 
 /* Reszponzív dizájn */
 @media (max-width: 992px) {
@@ -617,7 +653,6 @@
     max-width: 450px;
     height: 450px;
   }
-
 
   .hours-reviews-wrapper {
     flex-direction: column;

@@ -1,15 +1,17 @@
 export interface Booking {
-  id?: number;
-  userId: number;
+  id: number;
   companyId: number;
-  specialistId: number;
-  serviceIds: number[];
-  date: string; // ISO date format
-  time: string; // HH:mm format
-  totalPrice: number;
-  status: BookingStatus;
-  createdAt?: string;
-  updatedAt?: string;
+  companyName: string;
+  companyImage: string;
+  serviceName: string;
+  serviceCategory: string;
+  specialistName: string;
+  date: string;
+  time: string;
+  price: number;
+  status: 'upcoming' | 'completed' | 'cancelled';
+  canReview?: boolean;
+  reviewId?: number | null;
 }
 
 export enum BookingStatus {
