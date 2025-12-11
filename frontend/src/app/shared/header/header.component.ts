@@ -46,17 +46,17 @@ export class HeaderComponent implements OnInit, OnDestroy {
   }
 
   goToBookings(): void {
-    this.router.navigate(['/bookings']);
+    this.router.navigate(['/profile/bookings']);
     this.closeDropdown();
   }
 
   goToFavorites(): void {
-    this.router.navigate(['/favorites']);
+    this.router.navigate(['/profile/favorites']);
     this.closeDropdown();
   }
 
   goToSettings(): void {
-    this.router.navigate(['/settings']);
+    this.router.navigate(['/profile/settings']);
     this.closeDropdown();
   }
 

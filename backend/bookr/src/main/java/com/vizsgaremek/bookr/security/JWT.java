@@ -134,7 +134,7 @@ public class JWT {
             String tokenType = claims.get("token_type", String.class);
             String issuer = claims.getIssuer();
 
-            // ✅ Issuer ellenőrzés (security)
+            // Issuer ellenőrzés (security)
             if (!"bookr-api".equals(issuer)) {
                 System.out.println(issuer);
 

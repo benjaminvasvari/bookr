@@ -1,37 +1,28 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, RouterOutlet, ActivatedRoute, NavigationEnd } from '@angular/router';
 import { AuthService } from '../core/services/auth.service';
 import { User } from '../core/models';
-
-// Child components
-import { ProfileInfoComponent } from './components/profile-info/profile-info.component';
-import { ProfileBookingsComponent } from './components/profile-bookings/profile-bookings.component';
-import { ProfileFavoritesComponent } from './components/profile-favorites/profile-favorites.component';
-import { ProfileSettingsComponent } from './components/profile-settings/profile-settings.component';
-
-type TabType = 'info' | 'bookings' | 'favorites' | 'settings';
+import { filter } from 'rxjs/operators';
 
 @Component({
   selector: 'app-profile',
   standalone: true,
   imports: [
     CommonModule,
-    ProfileInfoComponent,
-    ProfileBookingsComponent,
-    ProfileFavoritesComponent,
-    ProfileSettingsComponent
+    RouterOutlet  // ← FONTOS! Router outlet kell
   ],
   templateUrl: './profile.component.html',
   styleUrls: ['./profile.component.css']
 })
 export class ProfileComponent implements OnInit {
   currentUser: User | null = null;
-  activeTab: TabType = 'info';
+  activeTab: string = 'info';
 
   constructor(
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private activatedRoute: ActivatedRoute
   ) {}
 
   ngOnInit(): void {
@@ -45,15 +36,39 @@ export class ProfileComponent implements OnInit {
       }
     });
 
+    // Detect active route
+    this.router.events
+      .pipe(filter(event => event instanceof NavigationEnd))
+      .subscribe(() => {
+        const childRoute = this.activatedRoute.firstChild;
+        if (childRoute) {
+          childRoute.url.subscribe(segments => {
+            if (segments.length > 0) {
+              this.activeTab = segments[0].path;
+            }
+          });
+        }
+      });
+
+    // Set initial active tab
+    const childRoute = this.activatedRoute.firstChild;
+    if (childRoute) {
+      childRoute.url.subscribe(segments => {
+        if (segments.length > 0) {
+          this.activeTab = segments[0].path;
+        }
+      });
+    }
+
     // Scroll to top
     window.scrollTo(0, 0);
   }
 
-  selectTab(tab: TabType): void {
-    this.activeTab = tab;
+  selectTab(tab: string): void {
+    this.router.navigate(['/profile', tab]);
   }
 
-  isActive(tab: TabType): boolean {
+  isActive(tab: string): boolean {
     return this.activeTab === tab;
   }
 }

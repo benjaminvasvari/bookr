@@ -179,7 +179,7 @@
 .dropdown-divider {
     height: 1px;
     background: #e9ecef;
-    margin: 8px 0;
+    margin: 0 0 0 8px;
 }
 
 /* Dropdown Items */
@@ -218,6 +218,7 @@
 /* Logout Item */
 .dropdown-item.logout {
     color: #dc3545;
+    border-radius: 0 0 12px 12px;
 }
 
 .dropdown-item.logout:hover {

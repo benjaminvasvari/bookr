@@ -183,9 +183,9 @@ public class Users implements Serializable {
 
     @Transient
     private String roleName;  // Az első role neve
-    
+
     @Transient
-    private String avatarUrl;
+    private String imageUrl;
 
     static EntityManagerFactory emf = Persistence.createEntityManagerFactory("com.vizsgaremek_bookr_war_1.0-SNAPSHOTPU");
     static SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -231,7 +231,7 @@ public class Users implements Serializable {
         this.email = email;
         this.password = password;
         this.companyId = companyId;
-        this.avatarUrl = avatarUrl;
+        this.imageUrl = imageUrl;
         this.rolesString = rolesString;
 
         if (rolesString != null && !rolesString.isEmpty()) {
@@ -248,38 +248,34 @@ public class Users implements Serializable {
     }
 
     // getUserById
-    public Users(Integer id, String guid, String firstName, String lastName, String email, String phone, Integer companyId, Date createdAt, Date updatedAt, boolean isDeleted, Date lastLogin, Date registerFinishedAt, boolean isActive) {
+    public Users(Integer id, String firstName, String lastName, String email, String phone, String imageUrl, Integer companyId, String rolesString, Date createdAt, Date lastLogin, Boolean isDeleted, Boolean isActive) {
         this.id = id;
-        this.guid = guid;
         this.firstName = firstName;
         this.lastName = lastName;
         this.email = email;
         this.phone = phone;
+        this.imageUrl = imageUrl;
         this.companyId = companyId;
+        this.rolesString = rolesString;
         this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
-        this.isDeleted = isDeleted;
         this.lastLogin = lastLogin;
-        this.registerFinishedAt = registerFinishedAt;
+        this.isDeleted = isDeleted;
         this.isActive = isActive;
 
     }
-    
-    // logout
 
+    // logout
     public Users(Integer id, String email, Integer companyId) {
         this.id = id;
         this.email = email;
         this.companyId = companyId;
     }
-    
+
     // checkUser
     public Users(boolean isDeleted, boolean isActive) {
         this.isDeleted = isDeleted;
         this.isActive = isActive;
     }
-    
-    
 
     public Integer getId() {
         return id;
@@ -567,13 +563,13 @@ public class Users implements Serializable {
         hash += (id != null ? id.hashCode() : 0);
         return hash;
     }
-    
-    public String getAvatarUrl() {
-        return avatarUrl;
+
+    public String getImageUrl() {
+        return imageUrl;
     }
-    
-    public void setAvatarUrl(String avatarUrl) {
-        this.avatarUrl = avatarUrl;
+
+    public void setImageUrl(String avatarUrl) {
+        this.imageUrl = avatarUrl;
     }
 
     @Override
@@ -795,7 +791,6 @@ public class Users implements Serializable {
 
             Object[] record = resultList.get(0);
 
-
             // User objektum összeállítása
             Users user = new Users(
                     Integer.valueOf(record[0].toString()), // id
@@ -837,19 +832,17 @@ public class Users implements Serializable {
 
             Users user = new Users(
                     Integer.valueOf(record[0].toString()), // id
-                    record[1].toString(), // guid
-                    record[2].toString(), // first_name
-                    record[3].toString(), // last_name
-                    record[4].toString(), // email
-                    record[5].toString(), // phone
+                    record[1].toString(), // first_name
+                    record[2].toString(), // last_name
+                    record[3].toString(), // email
+                    record[4].toString(), // phone
+                    record[5] == null ? null : record[5].toString(), // imageUrl
                     record[6] == null ? null : Integer.valueOf(record[6].toString()), // company_id
-                    formatter.parse(record[7].toString()), // created_at
-                    record[8] == null ? null : formatter.parse(record[8].toString()), // updated_at
-                    Boolean.parseBoolean(record[9].toString()), // is_deleted
-                    record[10] == null ? null : formatter.parse(record[10].toString()), // last_login
-                    record[11] == null ? null : formatter.parse(record[11].toString()), // register_finished_at
-                    Boolean.parseBoolean(record[12].toString())
-
+                    record[7].toString(),
+                    formatter.parse(record[8].toString()),
+                    record[9] == null ? null : formatter.parse(record[9].toString()), // last login
+                    record[10] == null ? null : Boolean.parseBoolean(record[10].toString()),
+                    record[11] == null ? null : Boolean.parseBoolean(record[11].toString())
             );
 
             return user;
@@ -863,8 +856,8 @@ public class Users implements Serializable {
             }
         }
     }
-    
-        public static Users checkUser(Integer id) {
+
+    public static Users checkUser(Integer id) {
         EntityManager em = emf.createEntityManager();
 
         try {

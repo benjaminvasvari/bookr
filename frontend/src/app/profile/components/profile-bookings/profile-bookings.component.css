@@ -8,7 +8,7 @@
 /* Section Header - STICKY */
 .section-header {
     position: sticky;
-    top: 0; /* Container tetejéhez képest */
+    top: 30px; /* Container tetejéhez képest */
     z-index: 10;
     background: #f8f9fa;
     padding: 20px 0 16px 0;

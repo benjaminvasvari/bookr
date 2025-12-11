@@ -18,7 +18,7 @@ import org.json.JSONObject;
  *
  * @author vben
  */
-@ApplicationScoped  // CDI injection-höz
+@ApplicationScoped
 public class AuthService {
 
     @Inject
@@ -251,8 +251,8 @@ public class AuthService {
         }
         
         // User Avatar kezelése (lehet null)
-        if (userFromDB.getAvatarUrl() != null) {
-            userData.put("avatarUrl", userFromDB.getAvatarUrl());
+        if (userFromDB.getImageUrl() != null) {
+            userData.put("avatarUrl", userFromDB.getImageUrl());
         } else {
             userData.put("avatarUrl", JSONObject.NULL);
         }
@@ -437,7 +437,6 @@ public class AuthService {
                 statusCode = 404;
                 toReturn.put("status", status);
                 toReturn.put("statusCode", statusCode);
-                System.out.println("===========kuki==========");
                 return toReturn;
             }
 
