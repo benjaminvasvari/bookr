@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3307
--- Generation Time: Dec 11, 2025 at 08:40 AM
+-- Generation Time: Dec 11, 2025 at 12:33 PM
 -- Server version: 5.7.24
 -- PHP Version: 8.3.1
 
@@ -20,8 +20,6 @@ SET time_zone = "+00:00";
 --
 -- Database: `bookr`
 --
-CREATE DATABASE IF NOT EXISTS `bookr` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
-USE `bookr`;
 
 DELIMITER $$
 --
@@ -566,6 +564,187 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `createStaff` (IN `userIdIN` INT, IN
     SELECT newStaffId AS staff_id;
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `createStaffException` (IN `staffIdIN` INT, IN `dateIN` DATE, IN `startTimeIN` TIME, IN `endTimeIN` TIME, IN `typeIN` ENUM('day_off','custom_hours'), IN `noteIN` TEXT)   BEGIN
+    DECLARE newExceptionId INT;
+    
+    -- Ellenőrzi, hogy a staff létezik
+    IF NOT EXISTS (
+        SELECT 1 FROM `staff` WHERE `id` = staffIdIN
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Staff not found';
+    END IF;
+    
+    -- Ellenőrzi, hogy a dátum jövőbeli-e (opcionális, lehet kihagyni)
+    IF dateIN < CURDATE() THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Cannot create exception for past dates';
+    END IF;
+    
+    -- Ellenőrzi, hogy nincs-e már exception erre a napra
+    IF EXISTS (
+        SELECT 1 FROM `staff_exceptions`
+        WHERE `staff_id` = staffIdIN
+          AND `date` = dateIN
+          AND `is_deleted` = FALSE
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Exception already exists for this date. Delete it first or use a different date.';
+    END IF;
+    
+    -- Validáció: day_off esetén start/end time legyen NULL
+    IF typeIN = 'day_off' AND (startTimeIN IS NOT NULL OR endTimeIN IS NOT NULL) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'day_off type requires start_time and end_time to be NULL';
+    END IF;
+    
+    -- Validáció: custom_hours esetén start/end time kötelező
+    IF typeIN = 'custom_hours' AND (startTimeIN IS NULL OR endTimeIN IS NULL) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'custom_hours type requires both start_time and end_time';
+    END IF;
+    
+    -- Validáció: custom_hours esetén start < end
+    IF typeIN = 'custom_hours' AND startTimeIN >= endTimeIN THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'start_time must be before end_time';
+    END IF;
+    
+    -- Exception létrehozása
+    INSERT INTO `staff_exceptions` (
+        `staff_id`,
+        `date`,
+        `start_time`,
+        `end_time`,
+        `type`,
+        `note`
+    )
+    VALUES (
+        staffIdIN,
+        dateIN,
+        startTimeIN,
+        endTimeIN,
+        typeIN,
+        noteIN
+    );
+    
+    -- Új exception ID lekérése
+    SET newExceptionId = LAST_INSERT_ID();
+    
+    -- Visszajelzés
+    SELECT 'SUCCESS' AS result, 
+           'Staff exception created' AS message,
+           newExceptionId AS exception_id,
+           staffIdIN AS staff_id,
+           dateIN AS date,
+           typeIN AS type;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `createStaffWorkingHours` (IN `staffIdIN` INT, IN `mondayStartIN` TIME, IN `mondayEndIN` TIME, IN `mondayAvailableIN` TINYINT(1), IN `tuesdayStartIN` TIME, IN `tuesdayEndIN` TIME, IN `tuesdayAvailableIN` TINYINT(1), IN `wednesdayStartIN` TIME, IN `wednesdayEndIN` TIME, IN `wednesdayAvailableIN` TINYINT(1), IN `thursdayStartIN` TIME, IN `thursdayEndIN` TIME, IN `thursdayAvailableIN` TINYINT(1), IN `fridayStartIN` TIME, IN `fridayEndIN` TIME, IN `fridayAvailableIN` TINYINT(1), IN `saturdayStartIN` TIME, IN `saturdayEndIN` TIME, IN `saturdayAvailableIN` TINYINT(1), IN `sundayStartIN` TIME, IN `sundayEndIN` TIME, IN `sundayAvailableIN` TINYINT(1))   BEGIN
+    -- Ellenőrzi, hogy a staff létezik
+    IF NOT EXISTS (
+        SELECT 1 FROM `staff` WHERE `id` = staffIdIN
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Staff not found';
+    END IF;
+    
+    -- Ellenőrzi, hogy nincs-e már working hours beállítva
+    IF EXISTS (
+        SELECT 1 FROM `staff_working_hours` WHERE `staff_id` = staffIdIN
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Working hours already exist for this staff. Use update procedure instead.';
+    END IF;
+    
+    -- Hétfő
+    INSERT INTO `staff_working_hours` (
+        `staff_id`, `day_of_week`, `start_time`, `end_time`, `is_available`
+    )
+    VALUES (
+        staffIdIN, 
+        'monday', 
+        IF(mondayAvailableIN = TRUE, mondayStartIN, NULL),
+        IF(mondayAvailableIN = TRUE, mondayEndIN, NULL),
+        mondayAvailableIN
+    );
+    
+    -- Kedd
+    INSERT INTO `staff_working_hours` (
+        `staff_id`, `day_of_week`, `start_time`, `end_time`, `is_available`
+    )
+    VALUES (
+        staffIdIN, 
+        'tuesday', 
+        IF(tuesdayAvailableIN = TRUE, tuesdayStartIN, NULL),
+        IF(tuesdayAvailableIN = TRUE, tuesdayEndIN, NULL),
+        tuesdayAvailableIN
+    );
+    
+    -- Szerda
+    INSERT INTO `staff_working_hours` (
+        `staff_id`, `day_of_week`, `start_time`, `end_time`, `is_available`
+    )
+    VALUES (
+        staffIdIN, 
+        'wednesday', 
+        IF(wednesdayAvailableIN = TRUE, wednesdayStartIN, NULL),
+        IF(wednesdayAvailableIN = TRUE, wednesdayEndIN, NULL),
+        wednesdayAvailableIN
+    );
+    
+    -- Csütörtök
+    INSERT INTO `staff_working_hours` (
+        `staff_id`, `day_of_week`, `start_time`, `end_time`, `is_available`
+    )
+    VALUES (
+        staffIdIN, 
+        'thursday', 
+        IF(thursdayAvailableIN = TRUE, thursdayStartIN, NULL),
+        IF(thursdayAvailableIN = TRUE, thursdayEndIN, NULL),
+        thursdayAvailableIN
+    );
+    
+    -- Péntek
+    INSERT INTO `staff_working_hours` (
+        `staff_id`, `day_of_week`, `start_time`, `end_time`, `is_available`
+    )
+    VALUES (
+        staffIdIN, 
+        'friday', 
+        IF(fridayAvailableIN = TRUE, fridayStartIN, NULL),
+        IF(fridayAvailableIN = TRUE, fridayEndIN, NULL),
+        fridayAvailableIN
+    );
+    
+    -- Szombat
+    INSERT INTO `staff_working_hours` (
+        `staff_id`, `day_of_week`, `start_time`, `end_time`, `is_available`
+    )
+    VALUES (
+        staffIdIN, 
+        'saturday', 
+        IF(saturdayAvailableIN = TRUE, saturdayStartIN, NULL),
+        IF(saturdayAvailableIN = TRUE, saturdayEndIN, NULL),
+        saturdayAvailableIN
+    );
+    
+    -- Vasárnap
+    INSERT INTO `staff_working_hours` (
+        `staff_id`, `day_of_week`, `start_time`, `end_time`, `is_available`
+    )
+    VALUES (
+        staffIdIN, 
+        'sunday', 
+        IF(sundayAvailableIN = TRUE, sundayStartIN, NULL),
+        IF(sundayAvailableIN = TRUE, sundayEndIN, NULL),
+        sundayAvailableIN
+    );
+    
+    -- Visszajelzés
+    SELECT 'SUCCESS' AS result, 'Working hours created for all 7 days' AS message, staffIdIN AS staff_id;
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `deactivateStaff` (IN `staffIdIN` INT)   BEGIN
     -- Ellenőrzi, hogy a staff létezik
     IF NOT EXISTS (
@@ -657,6 +836,30 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteService` (IN `serviceIdIN` IN
     END IF;
     
     SELECT 'SUCCESS' AS result, 'Service deleted' AS message;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteStaffException` (IN `exceptionIdIN` INT)   BEGIN
+    -- Ellenőrzi, hogy a exception létezik és nem törölt
+    IF NOT EXISTS (
+        SELECT 1 FROM `staff_exceptions`
+        WHERE `id` = exceptionIdIN
+          AND `is_deleted` = FALSE
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Exception not found or already deleted';
+    END IF;
+    
+    -- Soft delete - exception törlése
+    UPDATE `staff_exceptions`
+    SET 
+        `is_deleted` = TRUE,
+        `deleted_at` = NOW()
+    WHERE `id` = exceptionIdIN;
+    
+    -- Visszajelzés
+    SELECT 'SUCCESS' AS result, 
+           'Staff exception deleted' AS message,
+           exceptionIdIN AS exception_id;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteUserImage` (IN `userIdIN` INT)   BEGIN
@@ -1207,6 +1410,35 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getStaffById` (IN `staffIdIN` INT) 
     LIMIT 1;
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getStaffExceptions` (IN `staffIdIN` INT, IN `dateFromIN` DATE, IN `dateToIN` DATE)   BEGIN
+    -- Ellenőrzi, hogy a staff létezik
+    IF NOT EXISTS (
+        SELECT 1 FROM `staff` WHERE `id` = staffIdIN
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Staff not found';
+    END IF;
+    
+    -- Exceptions lekérése
+    SELECT 
+        `id`,
+        `staff_id`,
+        `date`,
+        `start_time`,
+        `end_time`,
+        `type`,
+        `note`,
+        `created_at`
+    FROM `staff_exceptions`
+    WHERE `staff_id` = staffIdIN
+      AND `is_deleted` = FALSE
+      -- Ha dateFromIN megvan, akkor >= dateFromIN
+      AND (dateFromIN IS NULL OR `date` >= dateFromIN)
+      -- Ha dateToIN megvan, akkor <= dateToIN
+      AND (dateToIN IS NULL OR `date` <= dateToIN)
+    ORDER BY `date` ASC;
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getStaffServicesActive` (IN `staffIdIN` INT)   BEGIN
     SELECT 
         s.*,
@@ -1253,6 +1485,31 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getStaffServicesDetailed` (IN `staf
         s.price, s.currency, s.is_active, ss.created_at
     
     ORDER BY s.is_active DESC, s.name ASC;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getStaffWorkingHours` (IN `staffIdIN` INT)   BEGIN
+    -- Ellenőrzi, hogy a staff létezik
+    IF NOT EXISTS (
+        SELECT 1 FROM `staff` WHERE `id` = staffIdIN
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Staff not found';
+    END IF;
+    
+    -- Working hours lekérése hétfő-vasárnap sorrendben
+    SELECT 
+        `id`,
+        `staff_id`,
+        `day_of_week`,
+        `start_time`,
+        `end_time`,
+        `is_available`,
+        `created_at`,
+        `updated_at`
+    FROM `staff_working_hours`
+    WHERE `staff_id` = staffIdIN
+    ORDER BY 
+        FIELD(`day_of_week`, 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday');
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getTodayAppointments` (IN `companyIdIN` INT, IN `staffIdIN` INT)   BEGIN
@@ -2152,6 +2409,42 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `updateStaff` (IN `staffIdIN` INT, I
     SELECT 'SUCCESS' AS result, 'Staff updated successfully' AS message, staffIdIN AS staff_id;
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `updateStaffWorkingHours` (IN `staffIdIN` INT, IN `dayOfWeekIN` VARCHAR(20), IN `startTimeIN` TIME, IN `endTimeIN` TIME, IN `isAvailableIN` TINYINT(1))   BEGIN
+    -- Ellenőrzi, hogy a staff létezik
+    IF NOT EXISTS (
+        SELECT 1 FROM `staff` WHERE `id` = staffIdIN
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Staff not found';
+    END IF;
+    
+    -- Ellenőrzi, hogy létezik-e working hours az adott napra
+    IF NOT EXISTS (
+        SELECT 1 FROM `staff_working_hours`
+        WHERE `staff_id` = staffIdIN
+          AND `day_of_week` = dayOfWeekIN
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Working hours not found for this day. Use createStaffWorkingHours first.';
+    END IF;
+    
+    -- Munkaidő frissítése
+    UPDATE `staff_working_hours`
+    SET 
+        `start_time` = IF(isAvailableIN = TRUE, startTimeIN, NULL),
+        `end_time` = IF(isAvailableIN = TRUE, endTimeIN, NULL),
+        `is_available` = isAvailableIN,
+        `updated_at` = NOW()
+    WHERE `staff_id` = staffIdIN
+      AND `day_of_week` = dayOfWeekIN;
+    
+    -- Visszajelzés
+    SELECT 'SUCCESS' AS result, 
+           CONCAT('Working hours updated for ', dayOfWeekIN) AS message,
+           staffIdIN AS staff_id,
+           dayOfWeekIN AS day_of_week;
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `updateUser` (IN `userIdIN` INT, IN `firstNameIN` VARCHAR(100), IN `lastNameIN` VARCHAR(100), IN `phoneIN` VARCHAR(30))   BEGIN
     UPDATE `users`
     SET 
@@ -2982,6 +3275,26 @@ CREATE TABLE `staff_exceptions` (
   `is_deleted` tinyint(1) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+--
+-- Dumping data for table `staff_exceptions`
+--
+
+INSERT INTO `staff_exceptions` (`id`, `staff_id`, `date`, `start_time`, `end_time`, `type`, `note`, `created_at`, `deleted_at`, `is_deleted`) VALUES
+(1, 1, '2025-12-24', NULL, NULL, 'day_off', 'Karácsonyi szabadság', '2025-12-11 10:27:22', '2025-12-11 11:36:48', 1),
+(2, 1, '2025-12-15', '07:00:00', '15:00:00', 'custom_hours', 'Korai műszak - családi program délután', '2025-12-11 10:27:22', NULL, 0),
+(3, 1, '2025-12-20', '09:00:00', '13:00:00', 'custom_hours', 'Orvosi vizsgálat délután', '2025-12-11 10:27:23', NULL, 0),
+(4, 2, '2025-12-27', NULL, NULL, 'day_off', 'Téli szabadság - 1. nap', '2025-12-11 10:27:23', NULL, 0),
+(5, 2, '2025-12-28', NULL, NULL, 'day_off', 'Téli szabadság - 2. nap', '2025-12-11 10:27:23', NULL, 0),
+(6, 2, '2025-12-18', '12:00:00', '20:00:00', 'custom_hours', 'Délutános műszak', '2025-12-11 10:27:23', NULL, 0),
+(7, 3, '2025-12-13', NULL, NULL, 'day_off', 'Betegszabadság', '2025-12-11 10:27:23', NULL, 0),
+(8, 3, '2025-12-19', '14:00:00', '20:00:00', 'custom_hours', 'Csak délután - vizsgaidőszak', '2025-12-11 10:27:23', NULL, 0),
+(9, 4, '2025-12-16', NULL, NULL, 'day_off', 'Továbbképzés', '2025-12-11 10:27:23', NULL, 0),
+(10, 4, '2025-12-21', '08:00:00', '20:00:00', 'custom_hours', 'Spa rendezvény - hosszabb műszak', '2025-12-11 10:27:23', NULL, 0),
+(11, 5, '2025-12-31', NULL, NULL, 'day_off', 'Szilveszter', '2025-12-11 10:27:23', NULL, 0),
+(12, 5, '2026-01-01', NULL, NULL, 'day_off', 'Újév', '2025-12-11 10:27:23', NULL, 0),
+(13, 1, '2025-12-25', NULL, NULL, 'day_off', 'Karácsonyi pihenőnap', '2025-12-11 10:30:20', NULL, 0),
+(14, 3, '2025-12-23', '09:00:00', '13:00:00', 'custom_hours', 'Csak délelőtt', '2025-12-11 10:30:36', NULL, 0);
+
 -- --------------------------------------------------------
 
 --
@@ -3025,12 +3338,12 @@ CREATE TABLE `staff_working_hours` (
 --
 
 INSERT INTO `staff_working_hours` (`id`, `staff_id`, `day_of_week`, `start_time`, `end_time`, `is_available`, `created_at`, `updated_at`) VALUES
-(1, 1, 'monday', '09:00:00', '17:00:00', 1, '2025-10-09 14:41:18', NULL),
+(1, 1, 'monday', '10:00:00', '18:00:00', 1, '2025-10-09 14:41:18', '2025-12-11 10:22:02'),
 (2, 1, 'tuesday', '09:00:00', '17:00:00', 1, '2025-10-09 14:41:18', NULL),
 (3, 1, 'wednesday', '09:00:00', '17:00:00', 1, '2025-10-09 14:41:18', NULL),
 (4, 1, 'thursday', '09:00:00', '17:00:00', 1, '2025-10-09 14:41:18', NULL),
 (5, 1, 'friday', '09:00:00', '17:00:00', 1, '2025-10-09 14:41:18', NULL),
-(6, 1, 'saturday', '09:00:00', '14:00:00', 1, '2025-10-09 14:41:18', NULL),
+(6, 1, 'saturday', NULL, NULL, 0, '2025-10-09 14:41:18', '2025-12-11 10:22:18'),
 (7, 1, 'sunday', NULL, NULL, 0, '2025-10-09 14:41:18', NULL),
 (8, 2, 'monday', NULL, NULL, 0, '2025-10-09 14:41:18', NULL),
 (9, 2, 'tuesday', '10:00:00', '18:00:00', 1, '2025-10-09 14:41:18', NULL),
@@ -3576,7 +3889,7 @@ ALTER TABLE `staff`
 -- AUTO_INCREMENT for table `staff_exceptions`
 --
 ALTER TABLE `staff_exceptions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT for table `staff_services`
