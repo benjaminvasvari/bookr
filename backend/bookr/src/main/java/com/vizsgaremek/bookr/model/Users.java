@@ -263,8 +263,8 @@ public class Users implements Serializable {
         this.isActive = isActive;
 
     }
-    
-        // getUserProfile
+
+    // getUserProfile
     public Users(Integer id, String firstName, String lastName, String email, String phone, String imageUrl, Date createdAt) {
         this.id = id;
         this.firstName = firstName;
@@ -286,6 +286,23 @@ public class Users implements Serializable {
     public Users(boolean isDeleted, boolean isActive) {
         this.isDeleted = isDeleted;
         this.isActive = isActive;
+    }
+
+    // updateUser request
+    public Users(String firstName, String lastName, String email, String phone) {
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.email = email;
+        this.phone = phone;
+    }
+
+    // updateUser response
+    public Users(Integer id, String firstName, String lastName, String email, String phone) {
+        this.id = id;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.email = email;
+        this.phone = phone;
     }
 
     public Integer getId() {
@@ -933,7 +950,7 @@ public class Users implements Serializable {
                     record[5] == null ? null : record[5].toString(), // imageUrl
                     formatter.parse(record[6].toString())
             );
-            
+
             return user;
 
         } catch (Exception ex) {
@@ -943,6 +960,54 @@ public class Users implements Serializable {
             if (em != null && em.isOpen()) {
                 em.close();
             }
+        }
+    }
+
+    public static Boolean softDeleteUser(Integer userId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("softDeleteUser");
+            spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("userIdIN", userId);
+
+            spq.execute();
+
+            return true;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return false;
+        }
+    }
+
+    public static Boolean updateUser(Users updatedUser, Integer userId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("updateUser");
+            spq.registerStoredProcedureParameter("idIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("firstNameIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("lastNameIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("emailIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("phoneIN", String.class, ParameterMode.IN);
+
+            spq.setParameter("idIN", userId);
+            spq.setParameter("firstNameIN", updatedUser.getFirstName());
+            spq.setParameter("lastNameIN", updatedUser.getLastName());
+            spq.setParameter("emailIN", updatedUser.getEmail());
+            spq.setParameter("phoneIN", updatedUser.getPhone());
+
+            spq.execute();
+
+            return true;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return false;
         }
     }
 }

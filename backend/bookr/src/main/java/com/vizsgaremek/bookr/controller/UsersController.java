@@ -4,16 +4,19 @@
  */
 package com.vizsgaremek.bookr.controller;
 
+import com.vizsgaremek.bookr.model.Users;
 import com.vizsgaremek.bookr.security.JWT;
 import com.vizsgaremek.bookr.service.UsersService;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.Produces;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
 import javax.ws.rs.Path;
 import javax.ws.rs.PUT;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import org.json.JSONObject;
@@ -92,4 +95,76 @@ public class UsersController {
         }
     }
 
+    @DELETE
+    @Path("deleteUser")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response deleteUser(@HeaderParam("Authorization") String authHeader) {
+
+        // Extract token from "Bearer <token>"
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            System.out.println("Missing or invalid Authorization header");
+            return Response.status(401).entity("missingToken").build();
+        }
+
+        // Remove "Bearer " prefix
+        String jwtToken = authHeader.substring(7);
+
+        Boolean validJwt = JWT.validateAccessToken(jwtToken);
+
+        if (validJwt == null) {
+            // Lejárt JWT
+            return Response.status(401).entity("tokenExpired").build();
+        } else if (validJwt == false) {
+            // Invalid JWT
+            return Response.status(401).entity("invalidToken").build();
+        } else {
+            // Valid token
+            JSONObject toReturn = layer.softDeleteUser(jwtToken);
+            return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                    .entity(toReturn.toString())
+                    .type(MediaType.APPLICATION_JSON)
+                    .build();
+        }
+    }
+
+    @PUT
+    @Path("updateUser")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response updateUser(String body, @HeaderParam("Authorization") String authHeader) {
+        JSONObject bodyObject = new JSONObject(body);
+
+        // Extract token from "Bearer <token>"
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            System.out.println("Missing or invalid Authorization header");
+            return Response.status(401).entity("missingToken").build();
+        }
+
+        // Remove "Bearer " prefix
+        String jwtToken = authHeader.substring(7);
+
+        Boolean validJwt = JWT.validateAccessToken(jwtToken);
+
+        if (validJwt == null) {
+            // Lejárt JWT
+            return Response.status(401).entity("tokenExpired").build();
+        } else if (validJwt == false) {
+            // Invalid JWT
+            return Response.status(401).entity("invalidToken").build();
+        } else {
+            // Valid token
+            Users updatedUser = new Users(
+                    bodyObject.getString("firstName"),
+                    bodyObject.getString("lastName"),
+                    bodyObject.getString("email"),
+                    bodyObject.getString("phone")
+            );
+
+            JSONObject toReturn = layer.updateUser(updatedUser, jwtToken);
+
+            return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                    .entity(toReturn.toString())
+                    .type(MediaType.APPLICATION_JSON)
+                    .build();
+        }
+    }
 }
