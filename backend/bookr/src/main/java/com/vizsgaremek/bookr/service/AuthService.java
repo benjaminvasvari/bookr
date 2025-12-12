@@ -63,6 +63,7 @@ public class AuthService {
                 try {
                     AuditLogs auditLog = new AuditLogs(
                             registrationResult.getUserId(),
+                            "client",
                             clientRegistered.getEmail(),
                             "user",
                             "register"
@@ -138,6 +139,7 @@ public class AuthService {
                 try {
                     AuditLogs auditLog = new AuditLogs(
                             registrationResult.getUserId(),
+                            "client",
                             staffRegistered.getEmail(),
                             "user",
                             "register"
@@ -249,7 +251,7 @@ public class AuthService {
         } else {
             userData.put("companyId", JSONObject.NULL);
         }
-        
+
         // User Avatar kezelése (lehet null)
         if (userFromDB.getImageUrl() != null) {
             userData.put("avatarUrl", userFromDB.getImageUrl());
@@ -282,6 +284,8 @@ public class AuthService {
         try {
             auditLogService.logSimpleAction(
                     userFromDB.getId(),
+                    userFromDB.getRoleName(),
+                    null,
                     userFromDB.getCompanyId() != null ? userFromDB.getCompanyId() : null,
                     userFromDB.getEmail(),
                     "user",
@@ -366,6 +370,8 @@ public class AuthService {
                 try {
                     auditLogService.logSimpleAction(
                             user.getId(),
+                            user.getRoleName(),
+                            null,
                             user.getCompanyId() != null ? user.getCompanyId() : null,
                             user.getEmail(),
                             "user",
@@ -481,10 +487,12 @@ public class AuthService {
 //            }
             auditLogService.logSimpleAction(
                     loggedoutUser.getId(),
-                    loggedoutUser.getCompanyId(),
+                    loggedoutUser.getRoleName(),
+                    null,
+                    loggedoutUser.getCompanyId() != null ? loggedoutUser.getCompanyId() : null,
                     loggedoutUser.getEmail(),
                     "user",
-                    "logout"
+                    "login"
             );
 
             toReturn.put("status", "success");

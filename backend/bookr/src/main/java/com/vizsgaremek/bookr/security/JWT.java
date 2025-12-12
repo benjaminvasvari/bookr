@@ -227,7 +227,7 @@ public class JWT {
     }
 
     /**
-     * ✅ ÚJ: JTI (JWT ID) kinyerése - token visszavonáshoz
+     * JTI (JWT ID) kinyerése - token visszavonáshoz
      */
     public static String getJtiFromAccessToken(String token) {
         try {

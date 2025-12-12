@@ -128,7 +128,7 @@ public class UsersController {
     }
 
     @PUT
-    @Path("updateUser")
+    @Path("updateProfile")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response updateUser(String body, @HeaderParam("Authorization") String authHeader) {
         JSONObject bodyObject = new JSONObject(body);
@@ -153,6 +153,7 @@ public class UsersController {
         } else {
             // Valid token
             Users updatedUser = new Users(
+                    bodyObject.getInt("id"),
                     bodyObject.getString("firstName"),
                     bodyObject.getString("lastName"),
                     bodyObject.getString("email"),

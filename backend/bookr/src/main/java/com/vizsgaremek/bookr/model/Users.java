@@ -156,8 +156,6 @@ public class Users implements Serializable {
     private Collection<NotificationSettings> notificationSettingsCollection;
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "userId")
     private Collection<Staff> staffCollection;
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "userId")
-    private Collection<AuditLogs> auditLogsCollection;
     @JoinColumn(name = "company_id", referencedColumnName = "id")
     @ManyToOne
     private Companies company;
@@ -288,15 +286,7 @@ public class Users implements Serializable {
         this.isActive = isActive;
     }
 
-    // updateUser request
-    public Users(String firstName, String lastName, String email, String phone) {
-        this.firstName = firstName;
-        this.lastName = lastName;
-        this.email = email;
-        this.phone = phone;
-    }
-
-    // updateUser response
+    // updateUser request & response
     public Users(Integer id, String firstName, String lastName, String email, String phone) {
         this.id = id;
         this.firstName = firstName;
@@ -519,15 +509,6 @@ public class Users implements Serializable {
 
     public void setStaffCollection(Collection<Staff> staffCollection) {
         this.staffCollection = staffCollection;
-    }
-
-    @XmlTransient
-    public Collection<AuditLogs> getAuditLogsCollection() {
-        return auditLogsCollection;
-    }
-
-    public void setAuditLogsCollection(Collection<AuditLogs> auditLogsCollection) {
-        this.auditLogsCollection = auditLogsCollection;
     }
 
     public Companies getCompany() {
@@ -983,7 +964,7 @@ public class Users implements Serializable {
         }
     }
 
-    public static Boolean updateUser(Users updatedUser, Integer userId) {
+    public static Boolean updateUser(Users updatedUser) {
         EntityManager em = emf.createEntityManager();
 
         try {
@@ -995,7 +976,7 @@ public class Users implements Serializable {
             spq.registerStoredProcedureParameter("emailIN", String.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("phoneIN", String.class, ParameterMode.IN);
 
-            spq.setParameter("idIN", userId);
+            spq.setParameter("idIN", updatedUser.getId());
             spq.setParameter("firstNameIN", updatedUser.getFirstName());
             spq.setParameter("lastNameIN", updatedUser.getLastName());
             spq.setParameter("emailIN", updatedUser.getEmail());

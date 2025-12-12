@@ -16,30 +16,40 @@ public class AuditLogService {
      */
     public void logAudit(AuditLogs auditLog) {
         // Validációk
-        if (auditLog.getUserId() == null) {
-            throw new IllegalArgumentException("User ID cannot be null");
+        if (auditLog.getPerformedByUserId() == null) {
+            throw new IllegalArgumentException("Performed by user ID cannot be null");
         }
-        
-        if (auditLog.getEmail() == null || auditLog.getEmail().isEmpty()) {
-            throw new IllegalArgumentException("Email cannot be null or empty");
-        }
-        
+
         if (auditLog.getAction() == null || auditLog.getAction().isEmpty()) {
             throw new IllegalArgumentException("Action cannot be null or empty");
         }
-        
+
         // MODEL layer handles database communication
         auditLog.logAudit();
     }
 
     /**
      * Egyszerű logolás action nélkül old/new values
+     *
+     * @param performedByUserId Ki hajtotta végre a műveletet
+     * @param performedByRole Milyen szerepkörben (client, staff, admin, stb.)
+     * @param affectedUserId Kit érintett a művelet (nullable)
+     * @param companyId Cég ID (nullable)
+     * @param email Email cím (nullable)
+     * @param entityType Entitás típus (user, appointment, company, stb.)
+     * @param action Művelet típus (login, logout, create, update, delete, stb.)
      */
-    public void logSimpleAction(Integer userId, Integer companyId, String email, 
-                                String entityType, String action) {
-        AuditLogs auditLog = new AuditLogs(userId, email, entityType, action);
-        auditLog.setCompanyId(companyId);
+    public void logSimpleAction(Integer performedByUserId, String performedByRole,
+            Integer affectedUserId, Integer companyId,
+            String email, String entityType, String action) 
+    {
+        AuditLogs auditLog = new AuditLogs(performedByUserId, performedByRole,
+                email, entityType, action);
         
+        
+        auditLog.setAffectedUserId(affectedUserId);
+        auditLog.setCompanyId(companyId);
+
         logAudit(auditLog);
     }
 }

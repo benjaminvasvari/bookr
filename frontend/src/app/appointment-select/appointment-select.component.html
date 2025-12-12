@@ -2,16 +2,17 @@
   <!-- Bal oldal: Szakemberek és Naptár -->
   <div class="specialists-section">
     <h2>Szakemberek</h2>
-    
+
     <!-- Szakemberek lista -->
     <div class="specialists-grid">
-      <div 
+      <div
         *ngFor="let specialist of specialists"
         class="specialist-card"
         [class.selected]="selectedSpecialist?.id === specialist.id"
-        (click)="selectSpecialist(specialist)">
+        (click)="selectSpecialist(specialist)"
+      >
         <div class="specialist-image">
-          <img [src]="specialist.imageUrl" [alt]="specialist.name">
+          <img [src]="specialist.imageUrl" [alt]="specialist.name" />
         </div>
         <h4>{{ specialist.name }}</h4>
         <p class="specialization">{{ specialist.specialization }}</p>
@@ -32,13 +33,14 @@
 
       <!-- Heti naptár -->
       <div class="week-calendar">
-        <div 
+        <div
           *ngFor="let day of weekDays"
           class="day-column"
           [class.disabled]="day.isDisabled"
           [class.selected]="selectedDate?.getTime() === day.date.getTime()"
           [class.today]="day.isToday"
-          (click)="selectDay(day)">
+          (click)="selectDay(day)"
+        >
           <div class="day-name">{{ day.dayName }}</div>
           <div class="day-number">{{ day.dayNumber }}</div>
         </div>
@@ -54,7 +56,8 @@
             [class.selected]="selectedTimeSlot?.time === slot.time"
             [class.unavailable]="!slot.available"
             [disabled]="!slot.available"
-            (click)="selectTimeSlot(slot)">
+            (click)="selectTimeSlot(slot)"
+          >
             {{ slot.time }}
           </button>
         </div>
@@ -74,7 +77,7 @@
       <!-- Cég info -->
       <div class="company-info">
         <div class="company-image">
-          <img [src]="company?.imageUrl || 'assets/placeholder.jpg'" [alt]="company?.name">
+          <img [src]="company?.imageUrl || 'assets/placeholder.jpg'" [alt]="company?.name" />
         </div>
         <div class="company-details">
           <h3>{{ company?.name }}</h3>
@@ -130,15 +133,27 @@
             <i class="fas fa-times"></i>
           </button>
         </div>
+        <!-- Hibaüzenetek/figyelmeztetések -->
+        @if (cart.length === 0) {
+        <div class="warning-message">
+          <i class="fas fa-exclamation-circle"></i>
+          Válassz szolgáltatásokat a foglaláshoz
+        </div>
+        } @if (cart.length > 0 && !selectedSpecialist) {
+        <div class="warning-message">
+          <i class="fas fa-exclamation-circle"></i>
+          Válassz szakembert a folytatáshoz
+        </div>
+        } @if (selectedSpecialist && !selectedTimeSlot) {
+        <div class="warning-message">
+          <i class="fas fa-exclamation-circle"></i>
+          Válassz időpontot a folytatáshoz
+        </div>
+        }
       </div>
 
       <!-- Folytatás gomb -->
-      <button 
-        class="continue-btn"
-        [disabled]="cart.length === 0 || !selectedSpecialist || !selectedTimeSlot"
-        (click)="continue()">
-        Foglalás megerősítése
-      </button>
+      <button class="continue-btn" (click)="continue()">Foglalás megerősítése</button>
     </div>
   </div>
 </div>

@@ -13,6 +13,7 @@ export interface SelectedSpecialist {
   id: number;
   name: string;
   imageUrl: string;
+  specialization?: string;
 }
 
 export interface SelectedAppointment {
@@ -21,7 +22,7 @@ export interface SelectedAppointment {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class CartService {
   private cartItems = new BehaviorSubject<CartItem[]>([]);
@@ -41,8 +42,8 @@ export class CartService {
 
   addToCart(item: CartItem): void {
     const currentCart = this.cartItems.value;
-    const exists = currentCart.some(i => i.id === item.id);
-    
+    const exists = currentCart.some((i) => i.id === item.id);
+
     if (!exists) {
       this.cartItems.next([...currentCart, item]);
     }
@@ -50,11 +51,11 @@ export class CartService {
 
   removeFromCart(itemId: number): void {
     const currentCart = this.cartItems.value;
-    this.cartItems.next(currentCart.filter(item => item.id !== itemId));
+    this.cartItems.next(currentCart.filter((item) => item.id !== itemId));
   }
 
   isInCart(itemId: number): boolean {
-    return this.cartItems.value.some(item => item.id === itemId);
+    return this.cartItems.value.some((item) => item.id === itemId);
   }
 
   getTotal(): number {
@@ -63,6 +64,8 @@ export class CartService {
 
   clearCart(): void {
     this.cartItems.next([]);
+    this.selectedSpecialist.next(null);
+    this.selectedAppointment.next(null);
   }
 
   // Szakember metódusok

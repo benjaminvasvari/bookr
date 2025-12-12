@@ -8,10 +8,7 @@ import { AppointmentComponent } from './appointment/appointment.component';
 import { AppointmentSelectComponent } from './appointment-select/appointment-select.component';
 import { VerifyEmailComponent } from './verify-email/verify-email.component';
 import { ProfileComponent } from './profile/profile.component';
-import { ProfileFavoritesComponent } from './profile/components/profile-favorites/profile-favorites.component';
-import { ProfileBookingsComponent } from './profile/components/profile-bookings/profile-bookings.component';
-import { ProfileSettingsComponent } from './profile/components/profile-settings/profile-settings.component';
-import { ProfileInfoComponent } from './profile/components/profile-info/profile-info.component';
+import { AppointmentPaymentComponent } from './appointment-payment/appointment-payment.component';
 
 export const appRoutes: Routes = [
   {
@@ -34,7 +31,11 @@ export const appRoutes: Routes = [
     component: VerifyEmailComponent,
     data: { showFooter: false },
   },
-
+  {
+    path: 'profile',
+    component: ProfileComponent,
+    data: { showFooter: false },
+  },
   {
     path: 'sel-industry/:id',
     component: SelIndustryComponent,
@@ -51,35 +52,8 @@ export const appRoutes: Routes = [
     data: { showFooter: true },
   },
   {
-    path: 'profile',
-    component: ProfileComponent,
-    data: { showFooter: false },
-    children: [
-      {
-        path: '',
-        redirectTo: 'info',
-        pathMatch: 'full',
-      },
-      {
-        path: 'info',
-        component: ProfileInfoComponent,
-        data: { showFooter: false },
-      },
-      {
-        path: 'bookings',
-        component: ProfileBookingsComponent,
-        data: { showFooter: false },
-      },
-      {
-        path: 'favorites',
-        component: ProfileFavoritesComponent,
-        data: { showFooter: false },
-      },
-      {
-        path: 'settings',
-        component: ProfileSettingsComponent,
-        data: { showFooter: false },
-      },
-    ],
+    path: 'appointment/:companyId/payment',
+    component: AppointmentPaymentComponent,
+    data: { showFooter: true },
   },
 ];

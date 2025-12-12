@@ -38,7 +38,8 @@ import org.json.JSONObject;
 @NamedQueries({
     @NamedQuery(name = "AuditLogs.findAll", query = "SELECT a FROM AuditLogs a"),
     @NamedQuery(name = "AuditLogs.findById", query = "SELECT a FROM AuditLogs a WHERE a.id = :id"),
-    @NamedQuery(name = "AuditLogs.findByUserId", query = "SELECT a FROM AuditLogs a WHERE a.userId = :userId"),
+    @NamedQuery(name = "AuditLogs.findByPerformedByUserId", query = "SELECT a FROM AuditLogs a WHERE a.performedByUserId = :performedByUserId"),
+    @NamedQuery(name = "AuditLogs.findByAffectedUserId", query = "SELECT a FROM AuditLogs a WHERE a.affectedUserId = :affectedUserId"),
     @NamedQuery(name = "AuditLogs.findByEmail", query = "SELECT a FROM AuditLogs a WHERE a.email = :email"),
     @NamedQuery(name = "AuditLogs.findByEntityType", query = "SELECT a FROM AuditLogs a WHERE a.entityType = :entityType"),
     @NamedQuery(name = "AuditLogs.findByAction", query = "SELECT a FROM AuditLogs a WHERE a.action = :action"),
@@ -58,8 +59,15 @@ public class AuditLogs implements Serializable {
 
     @Basic(optional = false)
     @NotNull
-    @Column(name = "user_id")
-    private Integer userId;
+    @Column(name = "performed_by_user_id")
+    private Integer performedByUserId;
+
+    @Size(max = 50)
+    @Column(name = "performed_by_role")
+    private String performedByRole;
+
+    @Column(name = "affected_user_id")
+    private Integer affectedUserId;
 
     @Column(name = "company_id")
     private Integer companyId;
@@ -111,9 +119,18 @@ public class AuditLogs implements Serializable {
         this.id = id;
     }
 
-    public AuditLogs(Integer userId, String email, String entityType, String action) {
-        this();
-        this.userId = userId;
+    public AuditLogs(Integer performedByUserId, String performedByRole, String email, String entityType, String action) {
+        this.performedByUserId = performedByUserId;
+        this.performedByRole = performedByRole;
+        this.email = email;
+        this.entityType = entityType;
+        this.action = action;
+    }
+
+    public AuditLogs(Integer performedByUserId, String performedByRole, Integer affectedUserId, String email, String entityType, String action) {
+        this.performedByUserId = performedByUserId;
+        this.performedByRole = performedByRole;
+        this.affectedUserId = affectedUserId;
         this.email = email;
         this.entityType = entityType;
         this.action = action;
@@ -124,8 +141,16 @@ public class AuditLogs implements Serializable {
         return id;
     }
 
-    public Integer getUserId() {
-        return userId;
+    public Integer getPerformedByUserId() {
+        return performedByUserId;
+    }
+
+    public String getPerformedByRole() {
+        return performedByRole;
+    }
+
+    public Integer getAffectedUserId() {
+        return affectedUserId;
     }
 
     public Integer getCompanyId() {
@@ -180,13 +205,21 @@ public class AuditLogs implements Serializable {
         return newValuesMap;
     }
 
-    // ========== SETTERS (normál setter-ek, nem fluent API) ==========
+    // ========== SETTERS ==========
     public void setId(Integer id) {
         this.id = id;
     }
 
-    public void setUserId(Integer userId) {
-        this.userId = userId;
+    public void setPerformedByUserId(Integer performedByUserId) {
+        this.performedByUserId = performedByUserId;
+    }
+
+    public void setPerformedByRole(String performedByRole) {
+        this.performedByRole = performedByRole;
+    }
+
+    public void setAffectedUserId(Integer affectedUserId) {
+        this.affectedUserId = affectedUserId;
     }
 
     public void setCompanyId(Integer companyId) {
@@ -268,7 +301,9 @@ public class AuditLogs implements Serializable {
     public String toString() {
         return "AuditLogs{"
                 + "id=" + id
-                + ", userId=" + userId
+                + ", performedByUserId=" + performedByUserId
+                + ", performedByRole='" + performedByRole + '\''
+                + ", affectedUserId=" + affectedUserId
                 + ", companyId=" + companyId
                 + ", email='" + email + '\''
                 + ", entityType='" + entityType + '\''
@@ -276,9 +311,6 @@ public class AuditLogs implements Serializable {
                 + ", createdAt=" + createdAt
                 + '}';
     }
-    
-    
-    
 
     // ========== DATABASE COMMUNICATION ==========
     /**
@@ -298,8 +330,10 @@ public class AuditLogs implements Serializable {
 
             StoredProcedureQuery spq = em.createStoredProcedureQuery("logAudit");
 
-            // Register parameters
-            spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
+            // Register parameters according to the new stored procedure signature
+            spq.registerStoredProcedureParameter("performedByUserIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("performedByRoleIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("affectedUserIdIN", Integer.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("emailIN", String.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("entityTypeIN", String.class, ParameterMode.IN);
@@ -307,8 +341,29 @@ public class AuditLogs implements Serializable {
             spq.registerStoredProcedureParameter("oldValuesIN", String.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("newValuesIN", String.class, ParameterMode.IN);
 
-            // Set parameters
-            spq.setParameter("userIdIN", this.userId);
+            // Set required parameters
+            spq.setParameter("performedByUserIdIN", this.performedByUserId);
+            spq.setParameter("actionIN", this.action);
+
+            // Handle nullable performedByRole
+            if (this.performedByRole != null && !this.performedByRole.isEmpty()) {
+                spq.setParameter("performedByRoleIN", this.performedByRole);
+            } else {
+                spq.unwrap(org.hibernate.procedure.ProcedureCall.class)
+                        .getParameterRegistration("performedByRoleIN")
+                        .enablePassingNulls(true);
+                spq.setParameter("performedByRoleIN", null);
+            }
+
+            // Handle nullable affectedUserId
+            if (this.affectedUserId != null) {
+                spq.setParameter("affectedUserIdIN", this.affectedUserId);
+            } else {
+                spq.unwrap(org.hibernate.procedure.ProcedureCall.class)
+                        .getParameterRegistration("affectedUserIdIN")
+                        .enablePassingNulls(true);
+                spq.setParameter("affectedUserIdIN", null);
+            }
 
             // Handle nullable companyId
             if (this.companyId != null) {
@@ -320,9 +375,25 @@ public class AuditLogs implements Serializable {
                 spq.setParameter("companyIdIN", null);
             }
 
-            spq.setParameter("emailIN", this.email);
-            spq.setParameter("entityTypeIN", this.entityType);
-            spq.setParameter("actionIN", this.action);
+            // Handle nullable email
+            if (this.email != null && !this.email.isEmpty()) {
+                spq.setParameter("emailIN", this.email);
+            } else {
+                spq.unwrap(org.hibernate.procedure.ProcedureCall.class)
+                        .getParameterRegistration("emailIN")
+                        .enablePassingNulls(true);
+                spq.setParameter("emailIN", null);
+            }
+
+            // Handle nullable entityType
+            if (this.entityType != null && !this.entityType.isEmpty()) {
+                spq.setParameter("entityTypeIN", this.entityType);
+            } else {
+                spq.unwrap(org.hibernate.procedure.ProcedureCall.class)
+                        .getParameterRegistration("entityTypeIN")
+                        .enablePassingNulls(true);
+                spq.setParameter("entityTypeIN", null);
+            }
 
             // Handle nullable oldValues
             if (this.oldValues != null && !this.oldValues.isEmpty()) {

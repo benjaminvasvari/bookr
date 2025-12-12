@@ -61,8 +61,26 @@
   <!-- Main Content Area -->
   <main class="profile-content">
     <div class="content-wrapper">
-      <!-- Router Outlet for Child Routes -->
-      <router-outlet></router-outlet>
+      <!-- Profile Info Tab -->
+      <app-profile-info 
+        *ngIf="activeTab === 'info'"
+        [currentUser]="currentUser"
+      ></app-profile-info>
+
+      <!-- Bookings Tab -->
+      <app-profile-bookings 
+        *ngIf="activeTab === 'bookings'"
+      ></app-profile-bookings>
+
+      <!-- Favorites Tab -->
+      <app-profile-favorites 
+        *ngIf="activeTab === 'favorites'"
+      ></app-profile-favorites>
+
+      <!-- Settings Tab -->
+      <app-profile-settings 
+        *ngIf="activeTab === 'settings'"
+      ></app-profile-settings>
     </div>
   </main>
 </div>

@@ -2,6 +2,7 @@ package com.vizsgaremek.bookr.service;
 
 import com.vizsgaremek.bookr.config.ValidationUtil;
 import com.vizsgaremek.bookr.model.AuditLogs;
+import com.vizsgaremek.bookr.model.Tokens;
 import com.vizsgaremek.bookr.model.Users;
 import com.vizsgaremek.bookr.security.JWT;
 import javax.inject.Inject;
@@ -15,6 +16,9 @@ public class UsersService {
 
     @Inject
     private AuditLogService auditLogService;
+
+    @Inject
+    private EmailService EmailService;
 
     public JSONObject getUserProfile(String token) {
 
@@ -93,13 +97,15 @@ public class UsersService {
             } else {
                 // ========== AUDIT LOG ==========
                 try {
-                    AuditLogs auditLog = new AuditLogs(
+                    auditLogService.logSimpleAction(
                             userId,
+                            userRoles.split(",")[0].trim(),
+                            null,
+                            JWT.getCompanyIdFromAccessToken(token) != null ? JWT.getCompanyIdFromAccessToken(token) : null,
                             userEmail,
-                            userRoles.split(",")[0],
-                            "deleteUser"
+                            "user",
+                            "login"
                     );
-                    auditLogService.logAudit(auditLog);
 
                 } catch (Exception ex) {
                     // Log the error but don't fail the registration
@@ -123,9 +129,8 @@ public class UsersService {
         String status = "success";
         Integer statusCode = 200;
 
-        Integer userId = JWT.getUserIdFromAccessToken(jwtToken);
-        String userRoles = JWT.getRoleNameFromAccessToken(jwtToken);
-        String userEmail = JWT.getEmailFromAccessToken(jwtToken);
+        Integer performedId = JWT.getUserIdFromAccessToken(jwtToken);
+        String performedUserRoles = JWT.getRoleNameFromAccessToken(jwtToken);
 
         //code
         Users userToUpdate = new Users(updatedUser.getId());
@@ -138,38 +143,85 @@ public class UsersService {
                 status = "InvalidEmail";
                 statusCode = 417;
             } else {
-                Boolean modelResult = Users.updateUser(updatedUser, userId);
+                Boolean modelResult = Users.updateUser(updatedUser);
                 if (modelResult == false) {
                     status = "serverError";
                     statusCode = 500;
                 } else {
+                    Users userFromDB = Users.getUserById(updatedUser.getId());
+
                     // ========== AUDIT LOG ==========
+                    if (performedId == updatedUser.getId()) {
+
+                        try {
+                            AuditLogs auditLog = new AuditLogs(
+                                    updatedUser.getId(),
+                                    performedUserRoles.split(",")[0].trim(),
+                                    userFromDB.getEmail(),
+                                    "user",
+                                    "updateUser"
+                            );
+                            auditLog.addOldValue("first_name", userFromDB.getFirstName());
+                            auditLog.addOldValue("last_name", userFromDB.getLastName());
+                            auditLog.addOldValue("email", userFromDB.getEmail());
+                            auditLog.addOldValue("phone", userFromDB.getPhone());
+
+                            auditLog.addNewValue("first_name", updatedUser.getFirstName());
+                            auditLog.addNewValue("last_name", updatedUser.getLastName());
+                            auditLog.addNewValue("email", updatedUser.getEmail());
+                            auditLog.addNewValue("phone", updatedUser.getPhone());
+
+                            auditLogService.logAudit(auditLog);
+
+                        } catch (Exception ex) {
+                            // Log the error but don't fail the registration
+                            ex.printStackTrace();
+                        }
+                    } else if (performedUserRoles.split(",")[0].trim() == "superadmin") {
+                        try {
+                            AuditLogs auditLog = new AuditLogs(
+                                    performedId,
+                                    performedUserRoles.split(",")[0].trim(),
+                                    updatedUser.getId(),
+                                    userFromDB.getEmail(),
+                                    "user",
+                                    "updateUser"
+                            );
+                            auditLog.addOldValue("first_name", userFromDB.getFirstName());
+                            auditLog.addOldValue("last_name", userFromDB.getLastName());
+                            auditLog.addOldValue("email", userFromDB.getEmail());
+                            auditLog.addOldValue("phone", userFromDB.getPhone());
+
+                            auditLog.addNewValue("first_name", updatedUser.getFirstName());
+                            auditLog.addNewValue("last_name", updatedUser.getLastName());
+                            auditLog.addNewValue("email", updatedUser.getEmail());
+                            auditLog.addNewValue("phone", updatedUser.getPhone());
+
+                            auditLogService.logAudit(auditLog);
+
+                        } catch (Exception ex) {
+                            // Log the error but don't fail the registration
+                            ex.printStackTrace();
+                        }
+                    }
+                    // ==================================
+
+                    // ========== EMAIL KÜLDÉS ==========
+                    Tokens newVerifyToken = Tokens.generateEmailVerificationToken(updatedUser.getId());
+
                     try {
-                        AuditLogs auditLog = new AuditLogs(
-                                userId,
-                                userEmail,
-                                userRoles.split(",")[0],
-                                "updateUser"
+                        EmailService.sendVerificationEmail(
+                                updatedUser.getEmail(),
+                                updatedUser.getFirstName(),
+                                newVerifyToken.getToken()
                         );
-                        auditLog.addOldValue("user_id", registrationResult.getUserId());
-                        auditLog.addOldValue("email", clientRegistered.getEmail());
-                        auditLog.addOldValue("first_name", clientRegistered.getFirstName());
-                        auditLog.addOldValue("last_name", clientRegistered.getLastName());
-                        auditLog.addOldValue("roles", userRoles);
-                        
-                        auditLog.addNewValue("user_id", registrationResult.getUserId());
-                        auditLog.addNewValue("email", clientRegistered.getEmail());
-                        auditLog.addNewValue("first_name", clientRegistered.getFirstName());
-                        auditLog.addNewValue("last_name", clientRegistered.getLastName());
-                        auditLog.addNewValue("roles", userRoles);
-
-                        auditLogService.logAudit(auditLog);
-
                     } catch (Exception ex) {
                         // Log the error but don't fail the registration
+                        System.err.println("Failed to send verification email: " + ex.getMessage());
                         ex.printStackTrace();
                     }
                     // ===============================
+
                 }
                 toReturn.put("result", modelResult);
             }
