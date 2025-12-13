@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3307
--- Generation Time: Dec 12, 2025 at 09:45 AM
+-- Generation Time: Dec 13, 2025 at 03:33 PM
 -- Server version: 5.7.24
 -- PHP Version: 8.3.1
 
@@ -303,6 +303,20 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `cancelAppointment` (IN `appointment
     WHERE `id` = appointmentIdIN;
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `cancelExpiredPendingAppointments` ()   BEGIN
+    -- Pending appointmentek amelyek start_time-ja elmúlt
+    UPDATE appointments
+    SET 
+        status = 'no_show',
+        updated_at = NOW()
+    WHERE status = 'pending'
+      AND start_time < NOW();
+    
+    -- Visszaadja hány sort módosított
+    SELECT ROW_COUNT() AS updated_appointments;
+    
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `checkById` (IN `idIN` INT)   BEGIN
 
 SELECT
@@ -453,6 +467,76 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `createCompany` (IN `nameIN` VARCHAR
     
     -- Visszaadjuk az új company ID-t
     SELECT newCompanyId AS company_id;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `createNotification` (IN `userIdIN` INT, IN `typeIN` ENUM('appointment_confirmation','appointment_reminder','appointment_cancellation','appointment_rescheduled','review_request','staff_assignment','system_message','marketing'), IN `titleIN` VARCHAR(255), IN `messageIN` TEXT, IN `relatedAppointmentIdIN` INT, IN `relatedCompanyIdIN` INT, IN `expiresAtIN` DATETIME)   BEGIN
+    DECLARE newNotificationId INT;
+    
+    -- Ellenőrzi, hogy a user létezik
+    IF NOT EXISTS (
+        SELECT 1 FROM `users` 
+        WHERE `id` = userIdIN 
+          AND `is_deleted` = FALSE
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'User not found or deleted';
+    END IF;
+    
+    -- Ha van appointment_id, ellenőrzi hogy létezik-e
+    IF relatedAppointmentIdIN IS NOT NULL THEN
+        IF NOT EXISTS (
+            SELECT 1 FROM `appointments` 
+            WHERE `id` = relatedAppointmentIdIN
+        ) THEN
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Related appointment not found';
+        END IF;
+    END IF;
+    
+    -- Ha van company_id, ellenőrzi hogy létezik-e
+    IF relatedCompanyIdIN IS NOT NULL THEN
+        IF NOT EXISTS (
+            SELECT 1 FROM `companies` 
+            WHERE `id` = relatedCompanyIdIN 
+              AND `is_deleted` = FALSE
+        ) THEN
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Related company not found or deleted';
+        END IF;
+    END IF;
+    
+    -- Notification létrehozása
+    INSERT INTO `notifications` (
+        `user_id`,
+        `type`,
+        `title`,
+        `message`,
+        `related_appointment_id`,
+        `related_company_id`,
+        `is_read`,
+        `expires_at`,
+        `created_at`
+    )
+    VALUES (
+        userIdIN,
+        typeIN,
+        titleIN,
+        messageIN,
+        relatedAppointmentIdIN,
+        relatedCompanyIdIN,
+        FALSE,
+        expiresAtIN,
+        NOW()
+    );
+    
+    -- Új notification ID lekérése
+    SET newNotificationId = LAST_INSERT_ID();
+    
+    -- Visszajelzés
+    SELECT 
+        'SUCCESS' AS result, 
+        'Notification created successfully' AS message,
+        newNotificationId AS notification_id;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `createOpeningHours` (IN `companyIdIN` INT, IN `mondayOpenIN` TIME, IN `mondayCloseIN` TIME, IN `mondayClosedIN` TINYINT(1), IN `tuesdayOpenIN` TIME, IN `tuesdayCloseIN` TIME, IN `tuesdayClosedIN` TINYINT(1), IN `wednesdayOpenIN` TIME, IN `wednesdayCloseIN` TIME, IN `wednesdayClosedIN` TINYINT(1), IN `thursdayOpenIN` TIME, IN `thursdayCloseIN` TIME, IN `thursdayClosedIN` TINYINT(1), IN `fridayOpenIN` TIME, IN `fridayCloseIN` TIME, IN `fridayClosedIN` TINYINT(1), IN `saturdayOpenIN` TIME, IN `saturdayCloseIN` TIME, IN `saturdayClosedIN` TINYINT(1), IN `sundayOpenIN` TIME, IN `sundayCloseIN` TIME, IN `sundayClosedIN` TINYINT(1))   BEGIN
@@ -1051,20 +1135,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getAppointmentsByStaff` (IN `staffI
     ORDER BY a.start_time ASC;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getAvailableTimeSlots` (IN `companyIdIN` INT, IN `serviceIdIN` INT, IN `staffIdIN` INT, IN `dateIN` DATE)   BEGIN
-    -- Egyszerűsített verzió: visszaadja az aznapi foglalásokat
-    -- A backend logika fogja kiszámolni a szabad időpontokat
-    SELECT 
-        `start_time`,
-        `end_time`
-    FROM `appointments`
-    WHERE `company_id` = companyIdIN
-      AND (`staff_id` = staffIdIN OR staffIdIN IS NULL)
-      AND DATE(`start_time`) = dateIN
-      AND `status` NOT IN ('cancelled')
-    ORDER BY `start_time`;
-END$$
-
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getAverageRatingByCompany` (IN `companyIdIN` INT)   BEGIN
     SELECT 
         ROUND(AVG(rating), 2) AS average_rating,
@@ -1249,6 +1319,66 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getCompanyReviews` (IN `companyIdIN
       AND is_deleted = FALSE;
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getCompanyStatistics` (IN `companyIdIN` INT, IN `dateFromIN` DATE, IN `dateToIN` DATE)   BEGIN
+SELECT 
+    -- ============================================
+    -- FOGLALÁSOK ÖSSZESEN
+    -- ============================================
+    COUNT(DISTINCT a.id) AS total_appointments,
+    
+    -- ============================================
+    -- STATUS SZERINTI BONTÁS
+    -- ============================================
+    SUM(CASE WHEN a.status = 'completed' THEN 1 ELSE 0 END) AS completed_appointments,
+    SUM(CASE WHEN a.status = 'pending' THEN 1 ELSE 0 END) AS pending_appointments,
+    SUM(CASE WHEN a.status = 'confirmed' THEN 1 ELSE 0 END) AS confirmed_appointments,
+    SUM(CASE WHEN a.status = 'no_show' THEN 1 ELSE 0 END) AS no_show_appointments,
+    
+    -- ============================================
+    -- BECSÜLT BEVÉTEL (csak completed)
+    -- ============================================
+    COALESCE(
+        SUM(CASE WHEN a.status = 'completed' THEN a.price ELSE 0 END), 
+        0
+    ) AS estimated_revenue,
+    a.currency,
+    
+    -- ============================================
+    -- ÉRTÉKELÉSEK
+    -- ============================================
+    ROUND(COALESCE(AVG(r.rating), 0), 1) AS average_rating,
+    COUNT(DISTINCT r.id) AS total_reviews,
+    
+    -- ============================================
+    -- AKTÍV ERŐFORRÁSOK
+    -- ============================================
+    (
+        SELECT COUNT(*) 
+        FROM staff 
+        WHERE company_id = companyIdIN 
+          AND is_active = TRUE
+    ) AS active_staff_count,
+    
+    (
+        SELECT COUNT(*) 
+        FROM services 
+        WHERE company_id = companyIdIN 
+          AND is_active = TRUE 
+          AND is_deleted = FALSE
+    ) AS active_services_count
+    
+FROM appointments a
+LEFT JOIN reviews r 
+    ON r.company_id = companyIdIN 
+    AND r.is_deleted = FALSE
+WHERE a.company_id = companyIdIN
+  AND DATE(a.start_time) BETWEEN dateFromIN AND dateToIN
+  AND a.status NOT IN ('cancelled')
+GROUP BY a.currency;
+
+
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getFeaturedCompanies` (IN `limitIN` INT)   BEGIN
     SELECT 
         c.id,
@@ -1428,6 +1558,72 @@ GROUP BY s.id, s.name, s.description, s.duration_minutes, s.price, s.currency,
          s.is_active, s.created_at, s.updated_at
 ORDER BY s.is_active DESC, s.name ASC;
 
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getStaffAvailableSlots` (IN `staffIdIN` INT, IN `dateIN` DATE)   BEGIN
+    -- Ellenőrzi, hogy a staff létezik és aktív
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM `staff` 
+        WHERE `id` = staffIdIN 
+          AND `is_active` = TRUE
+    ) THEN
+        SIGNAL SQLSTATE '45000' 
+        SET MESSAGE_TEXT = 'Staff not found or inactive';
+    END IF;
+    
+    -- ============================================
+    -- RESULT SET 1: WORKING HOURS
+    -- ============================================
+    SELECT 
+        'working_hours' AS data_type, 
+        `start_time`, 
+        `end_time`, 
+        `is_available`
+    FROM `staff_working_hours`
+    WHERE `staff_id` = staffIdIN
+      AND `day_of_week` = CASE DAYOFWEEK(dateIN)
+          WHEN 1 THEN 'sunday' 
+          WHEN 2 THEN 'monday' 
+          WHEN 3 THEN 'tuesday'
+          WHEN 4 THEN 'wednesday' 
+          WHEN 5 THEN 'thursday' 
+          WHEN 6 THEN 'friday' 
+          WHEN 7 THEN 'saturday'
+      END
+    LIMIT 1;
+    
+    -- ============================================
+    -- RESULT SET 2: EXCEPTION
+    -- ============================================
+    SELECT 
+        'exception' AS data_type, 
+        `type` AS exception_type, 
+        `start_time`, 
+        `end_time`, 
+        `note`
+    FROM `staff_exceptions`
+    WHERE `staff_id` = staffIdIN 
+      AND `date` = dateIN 
+      AND `is_deleted` = FALSE
+    LIMIT 1;
+    
+    -- ============================================
+    -- RESULT SET 3: APPOINTMENTS
+    -- ============================================
+    SELECT 
+        'appointment' AS data_type, 
+        `id` AS appointment_id, 
+        TIME(`start_time`) AS start_time, 
+        TIME(`end_time`) AS end_time, 
+        `status`, 
+        `notes`
+    FROM `appointments`
+    WHERE `staff_id` = staffIdIN 
+      AND DATE(`start_time`) = dateIN 
+      AND `status` NOT IN ('cancelled')
+    ORDER BY `start_time`;
+    
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getStaffByCompany` (IN `companyIdIN` INT, IN `isActiveIN` TINYINT(1))   BEGIN
@@ -1776,6 +1972,75 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getUserFavorites` (IN `userIdIN` IN
         bc.name, bc.icon
     
     ORDER BY f.created_at DESC;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getUserNotifications` (IN `userIdIN` INT, IN `showOnlyUnreadIN` TINYINT(1), IN `typeFilterIN` VARCHAR(50), IN `limitIN` INT, IN `offsetIN` INT)   BEGIN
+    DECLARE finalLimit INT DEFAULT 20;
+    DECLARE finalOffset INT DEFAULT 0;
+    
+    -- Limit beállítása
+    IF limitIN IS NULL OR limitIN <= 0 THEN
+        SET finalLimit = 20;
+    ELSE
+        SET finalLimit = limitIN;
+    END IF;
+    
+    -- Offset beállítása
+    IF offsetIN IS NULL OR offsetIN < 0 THEN
+        SET finalOffset = 0;
+    ELSE
+        SET finalOffset = offsetIN;
+    END IF;
+    
+    -- Notifications lekérése
+    SELECT 
+        n.id,
+        n.type,
+        n.title,
+        n.message,
+        n.related_appointment_id,
+        n.related_company_id,
+        n.is_read,
+        n.read_at,
+        n.is_sent_email,
+        n.sent_email_at,
+        n.is_sent_sms,
+        n.sent_sms_at,
+        n.created_at,
+        n.expires_at,
+        
+        -- Kapcsolódó appointment adatok
+        a.start_time AS appointment_start_time,
+        a.end_time AS appointment_end_time,
+        a.status AS appointment_status,
+        s.name AS service_name,
+        
+        -- Kapcsolódó company adatok
+        c.name AS company_name,
+        c.phone AS company_phone,
+        c.address AS company_address,
+        
+        -- Staff adatok
+        CONCAT(staff_user.first_name, ' ', staff_user.last_name) AS staff_name
+        
+    FROM `notifications` n
+    LEFT JOIN `appointments` a ON n.related_appointment_id = a.id
+    LEFT JOIN `services` s ON a.service_id = s.id
+    LEFT JOIN `staff` st ON a.staff_id = st.id
+    LEFT JOIN `users` staff_user ON st.user_id = staff_user.id
+    LEFT JOIN `companies` c ON n.related_company_id = c.id
+    
+    WHERE n.user_id = userIdIN
+      AND (showOnlyUnreadIN IS NULL OR showOnlyUnreadIN = 0 OR n.is_read = FALSE)
+      AND (typeFilterIN IS NULL OR n.type = typeFilterIN)
+      AND (n.expires_at IS NULL OR n.expires_at > NOW())
+    
+    ORDER BY 
+        n.is_read ASC,
+        n.created_at DESC
+    
+    LIMIT finalLimit OFFSET finalOffset;
+    
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getUserProfile` (IN `userIdIN` INT)   BEGIN
@@ -3185,7 +3450,8 @@ INSERT INTO `appointments` (`id`, `company_id`, `service_id`, `staff_id`, `clien
 (14, 1, 1, 1, 10, '2025-11-27 09:00:00', '2025-11-27 10:00:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2025-11-27 11:30:34', '2025-12-12 10:16:13'),
 (15, 1, 4, 2, 11, '2025-11-27 11:00:00', '2025-11-27 12:00:00', 'in_progress', NULL, NULL, '9900.00', 'HUF', NULL, NULL, NULL, '2025-11-27 11:30:34', NULL),
 (16, 1, 6, 3, 12, '2025-11-26 14:00:00', '2025-11-26 14:45:00', 'completed', NULL, '', '4900.00', 'HUF', NULL, NULL, NULL, '2025-11-27 11:30:34', '2025-11-27 11:34:07'),
-(17, 1, 1, 1, 10, '2025-12-15 10:00:00', '2025-12-15 11:00:00', 'confirmed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2025-11-27 12:46:37', '2025-12-12 10:01:56');
+(17, 1, 1, 1, 10, '2025-12-15 10:00:00', '2025-12-15 11:00:00', 'confirmed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2025-11-27 12:46:37', '2025-12-12 10:01:56'),
+(18, 1, 2, 1, 10, '2025-12-11 10:00:00', '2025-12-11 11:30:00', 'no_show', NULL, NULL, '15900.00', 'HUF', NULL, NULL, NULL, '2025-12-12 12:50:09', '2025-12-12 12:50:34');
 
 -- --------------------------------------------------------
 
@@ -3409,6 +3675,41 @@ INSERT INTO `images` (`id`, `company_id`, `user_id`, `url`, `is_main`, `uploaded
 (12, 2, NULL, 'images/companies/2/c579047b-d38b-465b-bf9f-fe8c1b83c5ef-Jungle-HU-Pcs-Fresha.jpg', 0, '2025-12-05 22:46:51', NULL, 0),
 (13, NULL, 26, 'https://via.placeholder.com/200x200?text=User', 0, '2025-12-10 10:19:27', NULL, 0),
 (14, NULL, 27, 'https://example.com/teszt-elek-profile.jpg', 0, '2025-12-10 10:31:32', NULL, 0);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `notifications`
+--
+
+CREATE TABLE `notifications` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL COMMENT 'Kinek szól az értesítés',
+  `type` enum('appointment_confirmation','appointment_reminder','appointment_cancellation','appointment_rescheduled','review_request','staff_assignment','system_message','marketing') NOT NULL COMMENT 'Értesítés típusa',
+  `title` varchar(255) NOT NULL COMMENT 'Értesítés címe',
+  `message` text NOT NULL COMMENT 'Értesítés szövege',
+  `related_appointment_id` int(11) DEFAULT NULL COMMENT 'Kapcsolódó időpont (ha van)',
+  `related_company_id` int(11) DEFAULT NULL COMMENT 'Kapcsolódó cég (ha van)',
+  `is_read` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'Elolvasta-e',
+  `read_at` datetime DEFAULT NULL COMMENT 'Mikor olvasta el',
+  `is_sent_email` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'Ki lett-e küldve email',
+  `sent_email_at` datetime DEFAULT NULL COMMENT 'Mikor lett kiküldve email',
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `expires_at` datetime DEFAULT NULL COMMENT 'Meddig érvényes (pl. marketing)'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Felhasználói értesítések';
+
+--
+-- Dumping data for table `notifications`
+--
+
+INSERT INTO `notifications` (`id`, `user_id`, `type`, `title`, `message`, `related_appointment_id`, `related_company_id`, `is_read`, `read_at`, `is_sent_email`, `sent_email_at`, `created_at`, `expires_at`) VALUES
+(1, 10, 'appointment_confirmation', 'Időpont megerősítve', 'Az Ön időpontja 2025-01-15 14:00-kor megerősítésre került.', 17, 1, 0, NULL, 0, NULL, '2025-12-13 15:05:36', NULL),
+(2, 10, 'appointment_confirmation', 'Időpont megerősítve', 'Megerősítettük az Ön időpontját 2025. január 15-én 14:00 órára a Bella Szépségszalonban.', 17, 1, 0, NULL, 0, NULL, '2025-12-13 15:06:25', NULL),
+(3, 10, 'appointment_confirmation', 'Időpont megerősítve', 'Az Ön időpontja 2025. december 15-én 10:00 órára megerősítésre került a Bella Szépségszalonban.', 17, 1, 0, NULL, 0, NULL, '2025-12-13 15:12:59', NULL),
+(4, 10, 'appointment_reminder', 'Emlékeztető: Holnap találkozunk!', 'Ne felejtse el, hogy holnap 10:00-kor találkozunk a Bella Szépségszalonban.', 17, 1, 0, NULL, 0, NULL, '2025-12-13 15:12:59', NULL),
+(5, 10, 'review_request', 'Ossza meg velünk tapasztalatait!', 'Kérjük, értékelje a legutóbbi szolgáltatásunkat. Véleménye fontos számunkra!', 1, 1, 0, NULL, 0, NULL, '2025-12-13 15:12:59', NULL),
+(6, 10, 'system_message', 'Rendszerkarbantartás', 'December 20-án 02:00-04:00 között rendszerkarbantartást végzünk. Az online foglalás átmenetileg nem elérhető.', NULL, NULL, 0, NULL, 0, NULL, '2025-12-13 15:12:59', '2025-12-20 16:12:59'),
+(7, 10, 'marketing', '🎁 Karácsonyi akció!', 'December 24-ig 20% kedvezmény minden szolgáltatásunkra! Foglaljon most!', NULL, 1, 0, NULL, 0, NULL, '2025-12-13 15:12:59', '2025-12-27 16:12:59');
 
 -- --------------------------------------------------------
 
@@ -4409,6 +4710,18 @@ ALTER TABLE `images`
   ADD KEY `user_id` (`user_id`);
 
 --
+-- Indexes for table `notifications`
+--
+ALTER TABLE `notifications`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_user_id` (`user_id`),
+  ADD KEY `idx_type` (`type`),
+  ADD KEY `idx_is_read` (`is_read`),
+  ADD KEY `idx_created_at` (`created_at`),
+  ADD KEY `idx_related_appointment` (`related_appointment_id`),
+  ADD KEY `idx_related_company` (`related_company_id`);
+
+--
 -- Indexes for table `notification_settings`
 --
 ALTER TABLE `notification_settings`
@@ -4543,7 +4856,7 @@ ALTER TABLE `user_x_role`
 -- AUTO_INCREMENT for table `appointments`
 --
 ALTER TABLE `appointments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT for table `audit_logs`
@@ -4574,6 +4887,12 @@ ALTER TABLE `favorites`
 --
 ALTER TABLE `images`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+
+--
+-- AUTO_INCREMENT for table `notifications`
+--
+ALTER TABLE `notifications`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `notification_settings`
@@ -4714,6 +5033,14 @@ ALTER TABLE `favorites`
 ALTER TABLE `images`
   ADD CONSTRAINT `images_ibfk_1` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`),
   ADD CONSTRAINT `images_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`);
+
+--
+-- Constraints for table `notifications`
+--
+ALTER TABLE `notifications`
+  ADD CONSTRAINT `fk_notifications_appointment` FOREIGN KEY (`related_appointment_id`) REFERENCES `appointments` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_notifications_company` FOREIGN KEY (`related_company_id`) REFERENCES `companies` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_notifications_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `notification_settings`
@@ -4876,6 +5203,8 @@ CREATE DEFINER=`root`@`localhost` EVENT `updateExpiredAppointments` ON SCHEDULE 
     WHERE `status` = 'confirmed'
       AND `end_time` < NOW();
 END$$
+
+CREATE DEFINER=`root`@`localhost` EVENT `autoCleanExpiredAppointments` ON SCHEDULE EVERY 1 DAY STARTS '2025-12-13 02:00:00' ON COMPLETION PRESERVE ENABLE COMMENT 'No_show-ra állítja a lejárt pending appointmenteket' DO CALL cancelExpiredPendingAppointments()$$
 
 DELIMITER ;
 COMMIT;
