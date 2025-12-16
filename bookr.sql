@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3307
--- Generation Time: Dec 16, 2025 at 09:45 AM
+-- Generation Time: Dec 16, 2025 at 11:44 AM
 -- Server version: 5.7.24
 -- PHP Version: 8.3.1
 
@@ -1464,24 +1464,27 @@ END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getCompanyShort` (IN `companyIdIN` INT)   BEGIN
     SELECT 
-        companies.id,
-        companies.name,
-        companies.address,
-        companies.postal_code,
-        companies.city,
-        companies.country,
-        ROUND(COALESCE(AVG(reviews.rating), 0), 1) AS 'rating',
-        COUNT(reviews.id) AS "review_count"
-    FROM companies
-    LEFT JOIN reviews ON reviews.company_id = companies.id 
-                        AND reviews.is_deleted = FALSE
-    WHERE companies.id = companyIdIN
-    GROUP BY companies.id, 
-             companies.name, 
-             companies.address, 
-             companies.postal_code, 
-             companies.city, 
-             companies.country;
+        `companies`.`id`,
+        `companies`.`name`,
+        `companies`.`address`,
+        `companies`.`postal_code`,
+        `companies`.`city`,
+        `companies`.`country`,
+        ROUND(COALESCE(AVG(`reviews`.`rating`), 0), 1) AS 'rating',
+        COUNT(`reviews`.`id`) AS "review_count",
+        `images`.`url` AS "imageUrl"
+    FROM `companies`
+    LEFT JOIN `reviews` ON `reviews`.`company_id` = `companies`.`id` 
+                        AND `reviews`.`is_deleted` = FALSE
+    INNER JOIN `images` ON `images`.`company_id` = `companies`.`id`
+    WHERE `companies`.`id` = companyIdIN AND `images`.`is_main` = true AND `images`.`is_deleted` = false
+    GROUP BY `companies`.`id`, 
+             `companies`.`name`, 
+             `companies`.`address`, 
+             `companies`.`postal_code`, 
+             `companies`.`city`, 
+             `companies`.`country`,
+             `images`.`url`;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getCompanyStatistics` (IN `companyIdIN` INT, IN `dateFromIN` DATE, IN `dateToIN` DATE)   BEGIN
