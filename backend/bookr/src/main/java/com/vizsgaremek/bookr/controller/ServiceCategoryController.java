@@ -63,8 +63,8 @@ public class ServiceCategoryController {
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    @Path("getServiceCategoriesWithServicesByCompanyId")
-    public Response getServiceCategoriesWithServicesByCompanyId(@QueryParam("id") Integer id) {
+    @Path("services")
+    public Response getServiceCategoriesWithServicesByCompanyId(@QueryParam("companyId") Integer id) {
         try {
             // Service réteg továbbra is JSONArray-t ad vissza
             JSONArray categories = layer.getServiceCategoriesWithServicesByCompanyId(id);
@@ -77,8 +77,8 @@ public class ServiceCategoryController {
                 response.put("message", "Categories retrieved successfully");
                 response.put("data", categories);
             } else {
-                response.put("statusCode", 404);
-                response.put("message", "No categories found for this company");
+                response.put("statusCode", 400);
+                response.put("message", "InvalidParam");
                 response.put("data", new JSONArray());
             }
 
