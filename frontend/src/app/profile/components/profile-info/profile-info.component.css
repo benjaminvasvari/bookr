@@ -383,6 +383,63 @@
   border-radius: 8px;
 }
 
+/* Centered Modal Styles */
+.modal-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+}
+
+.modal-confirm {
+    max-width: 400px;
+    text-align: center;
+    pointer-events: auto;
+    padding: 20px;
+}
+
+.modal-icon-danger {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #fee, #fcc);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 24px;
+}
+
+.modal-icon-danger svg {
+    fill: #dc3545;
+}
+
+.modal-title-center {
+    font-size: 24px;
+    font-weight: 700;
+    color: #2c3e50;
+    margin: 0 0 12px 0;
+}
+
+.modal-description-center {
+    font-size: 15px;
+    color: #6c757d;
+    margin: 0 0 32px 0;
+    line-height: 1.6;
+}
+
+.modal-actions-center {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.modal-actions-center .btn {
+    flex: 1;
+    justify-content: center;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .card-header {

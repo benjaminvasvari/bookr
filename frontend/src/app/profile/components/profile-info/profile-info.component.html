@@ -88,7 +88,7 @@
         <button
           type="button"
           class="btn btn-danger"
-          (click)="deleteAvatar()"
+          (click)="showDeleteConfirmModal()"
           [disabled]="isUploadingAvatar || isDeletingAvatar"
         >
           <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
@@ -337,6 +337,48 @@
       </button>
     </div>
     }
+  </div>
+</div>
+}
+
+<!-- Delete Confirmation Modal -->
+@if (showDeleteConfirm) {
+<div class="modal-backdrop" (click)="closeDeleteConfirmModal()"></div>
+<div class="modal modal-center">
+  <div class="modal-content modal-confirm">
+    <div class="modal-icon-danger">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="48" height="48">
+        <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
+      </svg>
+    </div>
+
+    <h3 class="modal-title-center">Biztosan törlöd?</h3>
+    <p class="modal-description-center">
+      A profilképed véglegesen törlődik. Bármikor feltölthetsz újat.
+    </p>
+
+    <div class="modal-actions-center">
+      <button
+        type="button"
+        class="btn btn-secondary"
+        (click)="closeDeleteConfirmModal()"
+        [disabled]="isDeletingAvatar"
+      >
+        Mégse
+      </button>
+      <button
+        type="button"
+        class="btn btn-danger"
+        (click)="confirmDeleteAvatar()"
+        [disabled]="isDeletingAvatar"
+      >
+        @if (isDeletingAvatar) {
+        <span>Törlés...</span>
+        } @else {
+        <span>Igen, törlöm</span>
+        }
+      </button>
+    </div>
   </div>
 </div>
 }
