@@ -1,6 +1,5 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { CommonModule } from '@angular/common';
 import {
   CartService,
   CartItem,
@@ -31,7 +30,7 @@ interface DayColumn {
 @Component({
   selector: 'app-appointment-select',
   standalone: true,
-  imports: [CommonModule],
+  imports: [],
   templateUrl: './appointment-select.component.html',
   styleUrl: './appointment-select.component.css',
 })

@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Company } from '../core/models';
 import { CompaniesService } from '../core/services/companies.service';
+import { Title } from '@angular/platform-browser';
+
 
 interface Review {
   author: string;
@@ -73,12 +75,14 @@ export class MainPageComponent implements OnInit {
     },
   ];
 
-  constructor(private router: Router, private companiesService: CompaniesService) {}
+  constructor(private router: Router, private companiesService: CompaniesService, private title: Title) {}
 
   ngOnInit(): void {
     this.loadTopRecommendations();
     this.loadNewServices();
     this.loadFeaturedServices();
+        this.title.setTitle(`Bookr`);
+
   }
 
   loadTopRecommendations(): void {

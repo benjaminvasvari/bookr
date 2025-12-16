@@ -482,7 +482,7 @@
   width: 100%;
   padding: 1rem;
   border: none;
-  background: #38a179;
+  background: #2c3e50;
   color: white;
   border-radius: 8px;
   font-size: 1rem;
@@ -492,7 +492,7 @@
 }
 
 .continue-btn:hover:not(:disabled) {
-  background: #2d8763;
+  background: #34495e;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(56, 161, 121, 0.3);
 }
