@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3307
--- Generation Time: Dec 13, 2025 at 03:33 PM
+-- Generation Time: Dec 16, 2025 at 09:45 AM
 -- Server version: 5.7.24
 -- PHP Version: 8.3.1
 
@@ -955,6 +955,92 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteService` (IN `serviceIdIN` IN
     SELECT 'SUCCESS' AS result, 'Service deleted' AS message;
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteServiceCategory` (IN `categoryIdIN` INT)   BEGIN
+    DECLARE serviceCount INT DEFAULT 0;
+    
+    -- Ellenőrzi, hogy a kategória létezik
+    IF NOT EXISTS (
+        SELECT 1 FROM `service_categories` 
+        WHERE `id` = categoryIdIN
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Category not found';
+    END IF;
+    
+    -- Ellenőrzi, hogy vannak-e aktív szolgáltatások a kategóriában
+    SELECT COUNT(*) INTO serviceCount
+    FROM `service_category_map` scm
+    INNER JOIN `services` s ON scm.service_id = s.id
+    WHERE scm.category_id = categoryIdIN
+      AND s.is_deleted = FALSE
+      AND s.is_active = TRUE;
+    
+    IF serviceCount > 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Cannot delete category with active services. Remove services first or deactivate them.';
+    END IF;
+    
+    -- Kategória törlése a mapping táblából
+    DELETE FROM `service_category_map`
+    WHERE `category_id` = categoryIdIN;
+    
+    -- Kategória törlése
+    DELETE FROM `service_categories`
+    WHERE `id` = categoryIdIN;
+    
+    -- Visszajelzés
+    SELECT 'SUCCESS' AS result, 'Service category deleted successfully' AS message;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteStaff` (IN `staffIdIN` INT)   BEGIN
+    DECLARE staffUserId INT;
+    DECLARE futureAppointmentCount INT DEFAULT 0;
+    
+    -- Ellenőrzi, hogy a staff létezik
+    IF NOT EXISTS (
+        SELECT 1 FROM `staff` 
+        WHERE `id` = staffIdIN
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Staff not found';
+    END IF;
+    
+    -- User ID lekérése
+    SELECT `user_id` INTO staffUserId
+    FROM `staff`
+    WHERE `id` = staffIdIN;
+    
+    -- Ellenőrzi, hogy vannak-e jövőbeli appointmentjei
+    SELECT COUNT(*) INTO futureAppointmentCount
+    FROM `appointments`
+    WHERE `staff_id` = staffIdIN
+      AND `start_time` > NOW()
+      AND `status` IN ('pending', 'confirmed');
+    
+    IF futureAppointmentCount > 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Cannot delete staff with future appointments. Cancel or reassign them first.';
+    END IF;
+    
+    -- Staff deaktiválása (nem törlés, hogy megtartsuk a history-t)
+    UPDATE `staff`
+    SET 
+        `is_active` = FALSE,
+        `updated_at` = NOW()
+    WHERE `id` = staffIdIN;
+    
+    -- User deaktiválása
+    UPDATE `users`
+    SET 
+        `is_active` = FALSE,
+        `updated_at` = NOW()
+    WHERE `id` = staffUserId
+      AND `is_deleted` = FALSE;
+    
+    -- Visszajelzés
+    SELECT 'SUCCESS' AS result, 'Staff deactivated successfully' AS message, staffIdIN AS staff_id;
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteStaffException` (IN `exceptionIdIN` INT)   BEGIN
     -- Ellenőrzi, hogy a exception létezik és nem törölt
     IF NOT EXISTS (
@@ -1098,6 +1184,63 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllBusinessCategories` ()   BEGI
     FROM business_categories
     WHERE is_active = 1
     ORDER BY name ASC;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getAppointmentById` (IN `appointmentIdIN` INT)   BEGIN
+    SELECT 
+        a.id,
+        a.company_id,
+        a.service_id,
+        a.staff_id,
+        a.client_id,
+        a.start_time,
+        a.end_time,
+        a.status,
+        a.notes,
+        a.internal_notes,
+        a.price,
+        a.currency,
+        a.cancelled_by,
+        a.cancelled_reason,
+        a.cancelled_at,
+        a.created_at,
+        a.updated_at,
+        
+        -- Service adatok
+        s.name AS service_name,
+        s.description AS service_description,
+        s.duration_minutes,
+        
+        -- Company adatok
+        c.name AS company_name,
+        c.address AS company_address,
+        c.city AS company_city,
+        c.phone AS company_phone,
+        c.email AS company_email,
+        
+        -- Staff adatok
+        CONCAT(staff_user.first_name, ' ', staff_user.last_name) AS staff_name,
+        staff_user.email AS staff_email,
+        staff_user.phone AS staff_phone,
+        
+        -- Client adatok
+        CONCAT(client_user.first_name, ' ', client_user.last_name) AS client_name,
+        client_user.email AS client_email,
+        client_user.phone AS client_phone,
+        
+        -- Cancelled by user adatok (ha van)
+        CONCAT(cancelled_user.first_name, ' ', cancelled_user.last_name) AS cancelled_by_name
+        
+    FROM `appointments` a
+    INNER JOIN `services` s ON a.service_id = s.id
+    INNER JOIN `companies` c ON a.company_id = c.id
+    LEFT JOIN `staff` st ON a.staff_id = st.id
+    LEFT JOIN `users` staff_user ON st.user_id = staff_user.id
+    INNER JOIN `users` client_user ON a.client_id = client_user.id
+    LEFT JOIN `users` cancelled_user ON a.cancelled_by = cancelled_user.id
+    
+    WHERE a.id = appointmentIdIN
+    LIMIT 1;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getAppointmentsByClient` (IN `clientIdIN` INT, IN `statusFilterIN` VARCHAR(20), IN `limitIN` INT, IN `offsetIN` INT)   BEGIN
@@ -1317,6 +1460,28 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getCompanyReviews` (IN `companyIdIN
     FROM `reviews`
     WHERE company_id = companyIdIN
       AND is_deleted = FALSE;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getCompanyShort` (IN `companyIdIN` INT)   BEGIN
+    SELECT 
+        companies.id,
+        companies.name,
+        companies.address,
+        companies.postal_code,
+        companies.city,
+        companies.country,
+        ROUND(COALESCE(AVG(reviews.rating), 0), 1) AS 'rating',
+        COUNT(reviews.id) AS "review_count"
+    FROM companies
+    LEFT JOIN reviews ON reviews.company_id = companies.id 
+                        AND reviews.is_deleted = FALSE
+    WHERE companies.id = companyIdIN
+    GROUP BY companies.id, 
+             companies.name, 
+             companies.address, 
+             companies.postal_code, 
+             companies.city, 
+             companies.country;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getCompanyStatistics` (IN `companyIdIN` INT, IN `dateFromIN` DATE, IN `dateToIN` DATE)   BEGIN
@@ -3057,6 +3222,62 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `softDeleteUser` (IN `userIdIN` INT)
     WHERE `id` = userIdIN;
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `updateAppointment` (IN `appointmentIdIN` INT, IN `serviceIdIN` INT, IN `staffIdIN` INT, IN `startTimeIN` DATETIME, IN `endTimeIN` DATETIME, IN `notesIN` TEXT, IN `priceIN` DECIMAL(10,2), IN `currencyIN` VARCHAR(10))   BEGIN
+    -- Ellenőrzi, hogy az appointment létezik
+    IF NOT EXISTS (
+        SELECT 1 FROM `appointments` 
+        WHERE `id` = appointmentIdIN
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Appointment not found';
+    END IF;
+    
+    -- Ellenőrzi, hogy a service létezik és aktív
+    IF NOT EXISTS (
+        SELECT 1 FROM `services` 
+        WHERE `id` = serviceIdIN 
+          AND `is_deleted` = FALSE 
+          AND `is_active` = TRUE
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Service not found or inactive';
+    END IF;
+    
+    -- Ellenőrzi, hogy a staff létezik és aktív (ha meg van adva)
+    IF staffIdIN IS NOT NULL THEN
+        IF NOT EXISTS (
+            SELECT 1 FROM `staff` 
+            WHERE `id` = staffIdIN 
+              AND `is_active` = TRUE
+        ) THEN
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Staff not found or inactive';
+        END IF;
+    END IF;
+    
+    -- Ellenőrzi, hogy start_time < end_time
+    IF startTimeIN >= endTimeIN THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Start time must be before end time';
+    END IF;
+    
+    -- Appointment frissítése
+    UPDATE `appointments`
+    SET 
+        `service_id` = serviceIdIN,
+        `staff_id` = staffIdIN,
+        `start_time` = startTimeIN,
+        `end_time` = endTimeIN,
+        `notes` = notesIN,
+        `price` = priceIN,
+        `currency` = currencyIN,
+        `updated_at` = NOW()
+    WHERE `id` = appointmentIdIN;
+    
+    -- Visszajelzés
+    SELECT 'SUCCESS' AS result, 'Appointment updated successfully' AS message, appointmentIdIN AS appointment_id;
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `updateAppointmentStatus` (IN `appointmentIdIN` INT, IN `newStatusIN` ENUM('pending','confirmed','cancelled','completed','no_show','in_progress'))   BEGIN
     UPDATE `appointments`
     SET 
@@ -3126,6 +3347,53 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `updateLastLogin` (IN `userIdIN` INT
     SET `last_login` = NOW()
     WHERE `id` = userIdIN
       AND `is_deleted` = FALSE;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `updateOpeningHours` (IN `companyIdIN` INT, IN `mondayOpenIN` TIME, IN `mondayCloseIN` TIME, IN `mondayClosedIN` TINYINT(1), IN `tuesdayOpenIN` TIME, IN `tuesdayCloseIN` TIME, IN `tuesdayClosedIN` TINYINT(1), IN `wednesdayOpenIN` TIME, IN `wednesdayCloseIN` TIME, IN `wednesdayClosedIN` TINYINT(1), IN `thursdayOpenIN` TIME, IN `thursdayCloseIN` TIME, IN `thursdayClosedIN` TINYINT(1), IN `fridayOpenIN` TIME, IN `fridayCloseIN` TIME, IN `fridayClosedIN` TINYINT(1), IN `saturdayOpenIN` TIME, IN `saturdayCloseIN` TIME, IN `saturdayClosedIN` TINYINT(1), IN `sundayOpenIN` TIME, IN `sundayCloseIN` TIME, IN `sundayClosedIN` TINYINT(1))   BEGIN
+    -- Ellenőrzi, hogy a company létezik
+    IF NOT EXISTS (
+        SELECT 1 FROM `companies` 
+        WHERE `id` = companyIdIN 
+          AND `is_deleted` = FALSE
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Company not found';
+    END IF;
+    
+    -- Töröljük a régi nyitvatartást
+    DELETE FROM `opening_hours`
+    WHERE `company_id` = companyIdIN;
+    
+    -- Hétfő
+    INSERT INTO `opening_hours` (`company_id`, `day_of_week`, `open_time`, `close_time`, `is_closed`)
+    VALUES (companyIdIN, 'monday', IF(mondayClosedIN = TRUE, NULL, mondayOpenIN), IF(mondayClosedIN = TRUE, NULL, mondayCloseIN), mondayClosedIN);
+    
+    -- Kedd
+    INSERT INTO `opening_hours` (`company_id`, `day_of_week`, `open_time`, `close_time`, `is_closed`)
+    VALUES (companyIdIN, 'tuesday', IF(tuesdayClosedIN = TRUE, NULL, tuesdayOpenIN), IF(tuesdayClosedIN = TRUE, NULL, tuesdayCloseIN), tuesdayClosedIN);
+    
+    -- Szerda
+    INSERT INTO `opening_hours` (`company_id`, `day_of_week`, `open_time`, `close_time`, `is_closed`)
+    VALUES (companyIdIN, 'wednesday', IF(wednesdayClosedIN = TRUE, NULL, wednesdayOpenIN), IF(wednesdayClosedIN = TRUE, NULL, wednesdayCloseIN), wednesdayClosedIN);
+    
+    -- Csütörtök
+    INSERT INTO `opening_hours` (`company_id`, `day_of_week`, `open_time`, `close_time`, `is_closed`)
+    VALUES (companyIdIN, 'thursday', IF(thursdayClosedIN = TRUE, NULL, thursdayOpenIN), IF(thursdayClosedIN = TRUE, NULL, thursdayCloseIN), thursdayClosedIN);
+    
+    -- Péntek
+    INSERT INTO `opening_hours` (`company_id`, `day_of_week`, `open_time`, `close_time`, `is_closed`)
+    VALUES (companyIdIN, 'friday', IF(fridayClosedIN = TRUE, NULL, fridayOpenIN), IF(fridayClosedIN = TRUE, NULL, fridayCloseIN), fridayClosedIN);
+    
+    -- Szombat
+    INSERT INTO `opening_hours` (`company_id`, `day_of_week`, `open_time`, `close_time`, `is_closed`)
+    VALUES (companyIdIN, 'saturday', IF(saturdayClosedIN = TRUE, NULL, saturdayOpenIN), IF(saturdayClosedIN = TRUE, NULL, saturdayCloseIN), saturdayClosedIN);
+    
+    -- Vasárnap
+    INSERT INTO `opening_hours` (`company_id`, `day_of_week`, `open_time`, `close_time`, `is_closed`)
+    VALUES (companyIdIN, 'sunday', IF(sundayClosedIN = TRUE, NULL, sundayOpenIN), IF(sundayClosedIN = TRUE, NULL, sundayCloseIN), sundayClosedIN);
+    
+    -- Visszajelzés
+    SELECT 'SUCCESS' AS result, 'Opening hours updated successfully' AS message;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `updateOpeningHoursDay` (IN `companyIdIN` INT, IN `dayOfWeekIN` VARCHAR(20), IN `openTimeIN` TIME, IN `closeTimeIN` TIME, IN `isClosedIN` TINYINT(1))   BEGIN
@@ -3220,6 +3488,46 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `updateStaff` (IN `staffIdIN` INT, I
     
     -- Visszajelzés
     SELECT 'SUCCESS' AS result, 'Staff updated successfully' AS message, staffIdIN AS staff_id;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `updateStaffUser` (IN `staffIdIN` INT, IN `firstNameIN` VARCHAR(100), IN `lastNameIN` VARCHAR(100), IN `phoneIN` VARCHAR(30), IN `displayNameIN` VARCHAR(255), IN `specialtiesIN` TEXT, IN `bioIN` TEXT)   BEGIN
+    DECLARE staffUserId INT;
+    
+    -- Ellenőrzi, hogy a staff létezik
+    IF NOT EXISTS (
+        SELECT 1 FROM `staff` 
+        WHERE `id` = staffIdIN
+    ) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Staff not found';
+    END IF;
+    
+    -- User ID lekérése
+    SELECT `user_id` INTO staffUserId
+    FROM `staff`
+    WHERE `id` = staffIdIN;
+    
+    -- User adatok frissítése
+    UPDATE `users`
+    SET 
+        `first_name` = firstNameIN,
+        `last_name` = lastNameIN,
+        `phone` = phoneIN,
+        `updated_at` = NOW()
+    WHERE `id` = staffUserId
+      AND `is_deleted` = FALSE;
+    
+    -- Staff adatok frissítése
+    UPDATE `staff`
+    SET 
+        `display_name` = displayNameIN,
+        `specialties` = specialtiesIN,
+        `bio` = bioIN,
+        `updated_at` = NOW()
+    WHERE `id` = staffIdIN;
+    
+    -- Visszajelzés
+    SELECT 'SUCCESS' AS result, 'Staff user updated successfully' AS message, staffIdIN AS staff_id;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `updateStaffWorkingHours` (IN `staffIdIN` INT, IN `dayOfWeekIN` VARCHAR(20), IN `startTimeIN` TIME, IN `endTimeIN` TIME, IN `isAvailableIN` TINYINT(1))   BEGIN
@@ -3452,6 +3760,117 @@ INSERT INTO `appointments` (`id`, `company_id`, `service_id`, `staff_id`, `clien
 (16, 1, 6, 3, 12, '2025-11-26 14:00:00', '2025-11-26 14:45:00', 'completed', NULL, '', '4900.00', 'HUF', NULL, NULL, NULL, '2025-11-27 11:30:34', '2025-11-27 11:34:07'),
 (17, 1, 1, 1, 10, '2025-12-15 10:00:00', '2025-12-15 11:00:00', 'confirmed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2025-11-27 12:46:37', '2025-12-12 10:01:56'),
 (18, 1, 2, 1, 10, '2025-12-11 10:00:00', '2025-12-11 11:30:00', 'no_show', NULL, NULL, '15900.00', 'HUF', NULL, NULL, NULL, '2025-12-12 12:50:09', '2025-12-12 12:50:34');
+
+--
+-- Triggers `appointments`
+--
+DELIMITER $$
+CREATE TRIGGER `after_appointment_cancel` AFTER UPDATE ON `appointments` FOR EACH ROW BEGIN
+    DECLARE performerRole VARCHAR(50);
+    
+    -- Ha cancelled státuszra változott
+    IF NEW.status = 'cancelled' AND OLD.status != 'cancelled' THEN
+        
+        -- Performer role lekérése
+        SELECT r.name INTO performerRole
+        FROM user_x_role uxr
+        INNER JOIN roles r ON uxr.role_id = r.id
+        WHERE uxr.user_id = NEW.cancelled_by
+          AND uxr.is_un_assigned = FALSE
+        LIMIT 1;
+        
+        -- Audit log bejegyzés
+        INSERT INTO `audit_logs` (
+            `performed_by_user_id`,
+            `performed_by_role`,
+            `affected_user_id`,
+            `company_id`,
+            `entity_type`,
+            `action`,
+            `old_values`,
+            `new_values`,
+            `created_at`
+        )
+        VALUES (
+            NEW.cancelled_by,
+            performerRole,
+            NEW.client_id,
+            NEW.company_id,
+            'appointment',
+            'cancel',
+            JSON_OBJECT('status', OLD.status),
+            JSON_OBJECT(
+                'status', NEW.status,
+                'cancelled_reason', NEW.cancelled_reason,
+                'cancelled_at', NEW.cancelled_at
+            ),
+            NOW()
+        );
+    END IF;
+END
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `after_appointment_update` AFTER UPDATE ON `appointments` FOR EACH ROW BEGIN
+    DECLARE performerRole VARCHAR(50);
+    
+    -- Ha változott valami (nem csak updated_at)
+    IF (NEW.service_id != OLD.service_id 
+        OR NEW.staff_id != OLD.staff_id 
+        OR NEW.start_time != OLD.start_time 
+        OR NEW.end_time != OLD.end_time 
+        OR NEW.status != OLD.status
+        OR NEW.price != OLD.price) THEN
+        
+        -- Performer role lekérése (aki módosította - feltételezve hogy a client)
+        SELECT r.name INTO performerRole
+        FROM user_x_role uxr
+        INNER JOIN roles r ON uxr.role_id = r.id
+        WHERE uxr.user_id = NEW.client_id
+          AND uxr.is_un_assigned = FALSE
+        LIMIT 1;
+        
+        -- Audit log bejegyzés
+        INSERT INTO `audit_logs` (
+            `performed_by_user_id`,
+            `performed_by_role`,
+            `affected_user_id`,
+            `company_id`,
+            `entity_type`,
+            `action`,
+            `old_values`,
+            `new_values`,
+            `created_at`
+        )
+        VALUES (
+            NEW.client_id,
+            performerRole,
+            NEW.client_id,
+            NEW.company_id,
+            'appointment',
+            'update',
+            JSON_OBJECT(
+                'service_id', OLD.service_id,
+                'staff_id', OLD.staff_id,
+                'start_time', OLD.start_time,
+                'end_time', OLD.end_time,
+                'status', OLD.status,
+                'price', OLD.price
+            ),
+            JSON_OBJECT(
+                'service_id', NEW.service_id,
+                'staff_id', NEW.staff_id,
+                'start_time', NEW.start_time,
+                'end_time', NEW.end_time,
+                'status', NEW.status,
+                'price', NEW.price
+            ),
+            NOW()
+        );
+    END IF;
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
@@ -3960,6 +4379,55 @@ INSERT INTO `services` (`id`, `company_id`, `name`, `description`, `duration_min
 (77, 15, 'Szakáll formázás', 'Szakáll igazítás és ápolás', 30, '3900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
 (78, 15, 'Hajvágás + szakáll', 'Komplett csomag', 60, '7900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0),
 (79, 15, 'VIP csomag', 'Vágás, borotválás, masszázs', 90, '12900.00', 'HUF', 1, '2025-10-09 16:52:27', NULL, NULL, 0);
+
+--
+-- Triggers `services`
+--
+DELIMITER $$
+CREATE TRIGGER `after_service_update` AFTER UPDATE ON `services` FOR EACH ROW BEGIN
+    -- Ha változott valami lényeges
+    IF (NEW.name != OLD.name 
+        OR NEW.price != OLD.price 
+        OR NEW.duration_minutes != OLD.duration_minutes 
+        OR NEW.is_active != OLD.is_active) THEN
+        
+        -- Audit log bejegyzés
+        INSERT INTO `audit_logs` (
+            `performed_by_user_id`,
+            `performed_by_role`,
+            `affected_user_id`,
+            `company_id`,
+            `entity_type`,
+            `action`,
+            `old_values`,
+            `new_values`,
+            `created_at`
+        )
+        VALUES (
+            NULL, -- Nem tudjuk ki módosította (admin vagy owner)
+            'admin',
+            NULL,
+            NEW.company_id,
+            'service',
+            'update',
+            JSON_OBJECT(
+                'name', OLD.name,
+                'price', OLD.price,
+                'duration_minutes', OLD.duration_minutes,
+                'is_active', OLD.is_active
+            ),
+            JSON_OBJECT(
+                'name', NEW.name,
+                'price', NEW.price,
+                'duration_minutes', NEW.duration_minutes,
+                'is_active', NEW.is_active
+            ),
+            NOW()
+        );
+    END IF;
+END
+$$
+DELIMITER ;
 
 -- --------------------------------------------------------
 
