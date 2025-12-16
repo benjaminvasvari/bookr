@@ -229,6 +229,19 @@ public class Companies implements Serializable {
         this.imageUrl = imageUrl;
     }
 
+    // getCompnayShort response
+    public Companies(Integer id, String name, String address, String postalCode, String city, String country, Double rating, Integer reviewCount, String imageUrl) {
+        this.id = id;
+        this.name = name;
+        this.address = address;
+        this.postalCode = postalCode;
+        this.city = city;
+        this.country = country;
+        this.rating = rating;
+        this.reviewCount = reviewCount;
+        this.imageUrl = imageUrl;
+    }
+
     public Integer getId() {
         return id;
     }
@@ -810,6 +823,49 @@ public class Companies implements Serializable {
         } catch (Exception ex) {
             ex.printStackTrace();
             return new ArrayList<>();  // Error esetén üres lista (nem null!)
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static Companies getCompanyShort(Integer id) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getCompanyShort");
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.setParameter("companyIdIN", id);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            Object[] record = resultList.get(0);
+
+            // Create Companies object with basic data
+            Companies company = new Companies(
+                    Integer.valueOf(record[0].toString()),
+                    record[1].toString(),
+                    record[2].toString(),
+                    record[3].toString(),
+                    record[4].toString(),
+                    record[5].toString(),
+                    Double.parseDouble(record[6].toString()),
+                    Integer.valueOf(record[7].toString()),
+                    record[8].toString()
+            );
+
+            return company;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
         } finally {
             if (em != null && em.isOpen()) {
                 em.close();

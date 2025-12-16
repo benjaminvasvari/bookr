@@ -298,7 +298,7 @@ public class ServiceCategories implements Serializable {
 
             for (Object[] record : resultList) {
                 ServiceCategories service = new ServiceCategories(
-                        Integer.valueOf(record[0].toString()),
+                        Integer.parseInt(record[0].toString()),
                         record[1].toString(),
                         record[2] != null ? record[2].toString() : null, // categoryDescription 
                         Integer.valueOf(record[3].toString()),

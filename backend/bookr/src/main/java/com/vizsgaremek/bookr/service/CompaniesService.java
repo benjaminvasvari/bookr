@@ -18,7 +18,7 @@ import org.json.JSONObject;
  * @author vben
  */
 public class CompaniesService {
-    
+
     private static final String IMAGE_BASE_URL = "http://localhost:8080/bookr-1.0-SNAPSHOT/";
 
     private Companies layer = new Companies();
@@ -102,15 +102,14 @@ public class CompaniesService {
 
             // AddressDetails nested object
             JSONObject addressDetails = new JSONObject();
-            
+
             addressDetails.put("street", company.getAddress());
             addressDetails.put("postalCode", company.getPostalCode());
             addressDetails.put("city", company.getCity());
             addressDetails.put("country", company.getCountry());
 
             result.put("addressDetails", addressDetails);
-            
-            
+
             result.put("phone", company.getPhone());
             result.put("email", company.getEmail());
             result.put("website", company.getWebsite());
@@ -136,7 +135,7 @@ public class CompaniesService {
             return error;
         }
     }
-    
+
     public JSONObject getTopRecommendations(Integer limit) {
         JSONObject toReturn = new JSONObject();
         String status = "success";
@@ -197,7 +196,7 @@ public class CompaniesService {
 
         return toReturn;
     }
-    
+
     public JSONObject getNewCompanies(Integer limit) {
         JSONObject toReturn = new JSONObject();
         String status = "success";
@@ -258,7 +257,7 @@ public class CompaniesService {
 
         return toReturn;
     }
-    
+
     public JSONObject getFeaturedCompanies(Integer limit) {
         JSONObject toReturn = new JSONObject();
         String status = "success";
@@ -318,5 +317,64 @@ public class CompaniesService {
         }
 
         return toReturn;
+    }
+
+    public JSONObject getCompanyShort(Integer id) {
+
+        try {
+            // 1. VALIDÁCIÓ
+            if (id == null || id <= 0) {
+                JSONObject error = new JSONObject();
+                error.put("statusCode", 400);
+                error.put("message", "Invalid company ID");
+                return error;
+            }
+
+            Companies company = Companies.getCompanyShort(id);
+
+            if (company == null) {
+                JSONObject error = new JSONObject();
+                error.put("statusCode", 404);
+                error.put("message", "Company not found with ID: " + id);
+                return error;
+            }
+
+            JSONObject result = new JSONObject();
+            result.put("statusCode", 200);
+            result.put("id", company.getId());
+            result.put("name", company.getName());
+
+            // Teljes cím
+            String fullAddress = String.format("%s, %s %s, %s",
+                    company.getAddress(),
+                    company.getPostalCode(),
+                    company.getCity(),
+                    company.getCountry()
+            );
+            result.put("address", fullAddress);
+
+            // AddressDetails nested object
+            JSONObject addressDetails = new JSONObject();
+
+            addressDetails.put("street", company.getAddress());
+            addressDetails.put("postalCode", company.getPostalCode());
+            addressDetails.put("city", company.getCity());
+            addressDetails.put("country", company.getCountry());
+
+            result.put("addressDetails", addressDetails);
+
+            result.put("rating", company.getRating());
+            result.put("reviewCount", company.getReviewCount());
+            result.put("imageUrl", IMAGE_BASE_URL + company.getImageUrl());
+
+            return result;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            JSONObject error = new JSONObject();
+            error.put("statusCode", 500);
+            error.put("message", "Internal server error: " + e.getMessage());
+            return error;
+        }
     }
 }

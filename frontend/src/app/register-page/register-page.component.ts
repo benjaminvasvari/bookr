@@ -51,7 +51,7 @@ export class RegisterComponent {
         firstName: ['', [Validators.required, Validators.minLength(2)]],
         email: ['', [Validators.required, Validators.email]],
         phone: ['', [Validators.required, Validators.pattern(/^[\d\s\+\-\(\)]+$/)]],
-        password: ['', [Validators.required, Validators.minLength(6)]],
+        password: ['', [Validators.required, Validators.minLength(8)]],
         confirmPassword: ['', [Validators.required]],
       },
       { validators: passwordMatchValidator() }
@@ -193,7 +193,7 @@ export class RegisterComponent {
       return 'Kérlek add meg a jelszavad';
     }
     if (snap.password?.minlength) {
-      return 'A jelszó legalább 6 karakter hosszú legyen';
+      return 'A jelszó legalább 8 karakter hosszú legyen';
     }
     if (snap.confirmPassword?.required) {
       return 'Kérlek erősítsd meg a jelszavad';

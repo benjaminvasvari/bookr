@@ -37,7 +37,6 @@ public class ServiceCategoryService {
 
         try {
 
-            // 2.
             List<ServiceCategories> ServiceCategory = ServiceCategories.getServiceCategoriesWithServicesByCompanyId(id);
 
             Map<Integer, JSONObject> categoriesMap = new LinkedHashMap<>();

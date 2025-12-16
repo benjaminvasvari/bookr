@@ -107,4 +107,26 @@ public class CompaniesController {
 
         return Response.status(Integer.parseInt(toReturn.get("statusCode").toString())).entity(toReturn.toString()).type(MediaType.APPLICATION_JSON).build();
     }
+
+    @GET
+    @Path("short")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getCompanyShort(@QueryParam("id") Integer id) {
+        JSONObject toReturn = layer.getCompanyShort(id);
+
+        // Ellenőrizzük: van-e statusCode (hiba)?
+        if (toReturn.has("statusCode")) {
+            // HIBA VÁLASZ
+            int statusCode = toReturn.getInt("statusCode");
+            return Response.status(statusCode)
+                    .entity(toReturn.toString())
+                    .type(MediaType.APPLICATION_JSON)
+                    .build();
+        } else {
+            // SIKERES VÁLASZ (200 OK)
+            return Response.ok(toReturn.toString())
+                    .type(MediaType.APPLICATION_JSON)
+                    .build();
+        }
+    }
 }
