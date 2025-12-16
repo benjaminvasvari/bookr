@@ -119,7 +119,7 @@
 }
 
 .add-btn:hover:not(:disabled) {
-  background: #0d6efd;
+  background: #33d459;
   color: white;
   transform: scale(1.1);
 }

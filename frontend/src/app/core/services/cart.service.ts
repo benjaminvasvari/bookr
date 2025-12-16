@@ -28,6 +28,9 @@ export class CartService {
   private cartItems = new BehaviorSubject<CartItem[]>([]);
   private selectedSpecialist = new BehaviorSubject<SelectedSpecialist | null>(null);
   private selectedAppointment = new BehaviorSubject<SelectedAppointment | null>(null);
+  private cartSubject = this.cartItems;
+  private specialistSubject = this.selectedSpecialist
+  private appointmentSubject = this.selectedAppointment;
 
   cart$: Observable<CartItem[]> = this.cartItems.asObservable();
   specialist$: Observable<SelectedSpecialist | null> = this.selectedSpecialist.asObservable();
