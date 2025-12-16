@@ -195,6 +195,7 @@
 
 .service-info {
   padding: 15px;
+  
 }
 
 .service-name {
@@ -232,15 +233,15 @@
 .service-address {
   color: #666;
   font-size: 13px;
-  margin-bottom: 12px;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
-  line-clamp: 3;
+  line-clamp: 1;
   overflow: hidden;
 }
 
 .btn-book {
+
   width: 100%;
   background-color: #e0e0e0;
   color: #666;

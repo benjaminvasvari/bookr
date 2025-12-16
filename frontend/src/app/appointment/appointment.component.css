@@ -76,6 +76,7 @@
   border: 2px solid #dee2e6;
   border-radius: 12px;
   transition: all 0.2s;
+  cursor: pointer;
 }
 
 .service-card:hover {
@@ -119,7 +120,7 @@
 }
 
 .add-btn:hover:not(:disabled) {
-  background: #0d6efd;
+  background: #33d459;
   color: white;
   transform: scale(1.1);
 }
@@ -294,9 +295,10 @@
 }
 
 .continue-btn:hover:not(:disabled) {
-  background: #1a252f;
+  background: #34495e;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(44, 62, 80, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  
 }
 
 .continue-btn:disabled {

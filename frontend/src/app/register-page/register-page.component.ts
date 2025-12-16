@@ -33,6 +33,7 @@ export function passwordMatchValidator(): ValidatorFn {
   templateUrl: './register-page.component.html',
   styleUrls: ['./register-page.component.css'],
 })
+
 export class RegisterComponent {
   registerForm: FormGroup;
   isLoading = false;

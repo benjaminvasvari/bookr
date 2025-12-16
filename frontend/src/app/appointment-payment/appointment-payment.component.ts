@@ -88,7 +88,6 @@ export class AppointmentPaymentComponent implements OnInit {
       services: this.cart,
       paymentMethod: this.selectedPaymentMethod,
       totalPrice: this.getCartTotal(),
-      totalDuration: this.getTotalDuration()
     };
 
     console.log('Véglegesített foglalás:', booking);
@@ -109,11 +108,6 @@ export class AppointmentPaymentComponent implements OnInit {
   // Kosár összesen
   getCartTotal(): number {
     return this.cartService.getTotal();
-  }
-
-  // Teljes időtartam
-  getTotalDuration(): number {
-    return this.cart.reduce((total, item) => total + item.duration, 0);
   }
 
   // Időpont formázása (pl. "dec. 11. 8:00")

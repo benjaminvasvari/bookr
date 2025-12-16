@@ -1,14 +1,15 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';  // ← ÚJ IMPORT!
+import { map } from 'rxjs/operators';
 
 import { environment } from '../../../environments/environment';
 import { API_ENDPOINTS } from '../constants/api-endpoints';
-import { Company } from '../models';
+import { Company, CompanyShort } from '../models/company.model';
+import { ServiceCategory } from '../models/service.model';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class CompaniesService {
   private apiUrl = environment.apiUrl;
@@ -16,12 +17,30 @@ export class CompaniesService {
   constructor(private http: HttpClient) {}
 
   /**
-   * Egy konkrét cég lekérése ID alapján
+   * Egy konkrét cég rövid adatainak lekérése (appointment flow-hoz)
+   */
+  getCompanyShort(id: number): Observable<CompanyShort> {
+    return this.http.get<CompanyShort>(`${this.apiUrl}${API_ENDPOINTS.COMPANIES.SHORT(id)}`);
+  }
+
+  /**
+   * Egy konkrét cég teljes adatainak lekérése
    */
   getCompanyById(id: number): Observable<Company> {
-    return this.http.get<Company>(
-      `${this.apiUrl}${API_ENDPOINTS.COMPANIES.DETAIL(id)}`
-    );
+    return this.http.get<Company>(`${this.apiUrl}${API_ENDPOINTS.COMPANIES.DETAIL(id)}`);
+  }
+
+  /**
+   * Egy cég szolgáltatásainak lekérése kategóriákkal
+   */
+  getServiceCategoriesWithServices(companyId: number): Observable<ServiceCategory[]> {
+    return this.http
+      .get<{ data: ServiceCategory[]; message: string; statusCode: number }>(
+        `${this.apiUrl}${API_ENDPOINTS.SERVICES.BY_COMPANY(companyId)}`
+      )
+      .pipe(
+        map((response) => response.data || []) // ← Itt csomagoljuk ki!
+      );
   }
 
   /**
@@ -29,13 +48,10 @@ export class CompaniesService {
    */
   getTopRecommendations(limit: number = 4): Observable<Company[]> {
     const params = new HttpParams().set('limit', limit.toString());
-    
-    return this.http.get<any>(  // ← any mert wrapper object
-      `${this.apiUrl}${API_ENDPOINTS.COMPANIES.TOP_RECOMMENDATIONS}`,
-      { params }
-    ).pipe(
-      map((response: any) => response.result || [])  // ← Kicsomagolás!
-    );
+
+    return this.http
+      .get<any>(`${this.apiUrl}${API_ENDPOINTS.COMPANIES.TOP_RECOMMENDATIONS}`, { params })
+      .pipe(map((response: any) => response.result || []));
   }
 
   /**
@@ -43,13 +59,10 @@ export class CompaniesService {
    */
   getFeaturedCompanies(limit: number = 4): Observable<Company[]> {
     const params = new HttpParams().set('limit', limit.toString());
-    
-    return this.http.get<any>(
-      `${this.apiUrl}${API_ENDPOINTS.COMPANIES.FEATURED}`,
-      { params }
-    ).pipe(
-      map((response: any) => response.result || [])  // ← Kicsomagolás!
-    );
+
+    return this.http
+      .get<any>(`${this.apiUrl}${API_ENDPOINTS.COMPANIES.FEATURED}`, { params })
+      .pipe(map((response: any) => response.result || []));
   }
 
   /**
@@ -57,13 +70,10 @@ export class CompaniesService {
    */
   getNewCompanies(limit: number = 4): Observable<Company[]> {
     const params = new HttpParams().set('limit', limit.toString());
-    
-    return this.http.get<any>(
-      `${this.apiUrl}${API_ENDPOINTS.COMPANIES.NEW}`,
-      { params }
-    ).pipe(
-      map((response: any) => response.result || [])  // ← Kicsomagolás!
-    );
+
+    return this.http
+      .get<any>(`${this.apiUrl}${API_ENDPOINTS.COMPANIES.NEW}`, { params })
+      .pipe(map((response: any) => response.result || []));
   }
 
   /**
@@ -71,10 +81,7 @@ export class CompaniesService {
    */
   searchCompanies(query: string): Observable<Company[]> {
     const params = new HttpParams().set('q', query);
-    
-    return this.http.get<Company[]>(
-      `${this.apiUrl}${API_ENDPOINTS.COMPANIES.SEARCH}`,
-      { params }
-    );
+
+    return this.http.get<Company[]>(`${this.apiUrl}${API_ENDPOINTS.COMPANIES.SEARCH}`, { params });
   }
 }

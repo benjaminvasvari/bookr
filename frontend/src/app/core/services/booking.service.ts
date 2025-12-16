@@ -49,23 +49,27 @@ export class BookingService {
   /**
    * Foglalás lemondása
    */
-  cancelBooking(id: number): Observable<Booking> {
+  cancelBooking(id: number, reason?: string): Observable<Booking> {
+    const body = reason ? { reason } : {};
     return this.http.put<Booking>(
       `${this.apiUrl}${API_ENDPOINTS.BOOKINGS.CANCEL(id)}`,
-      {}
+      body
     );
   }
 
   /**
    * Elérhető időpontok lekérése egy szakemberhez egy adott napon
+   * ÚJ PARAMÉTEREK: companyId is kell
    */
   getAvailableTimeSlots(
-    specialistId: number,
-    date: string,
+    companyId: number,
+    staffId: number,
+    date: string, // YYYY-MM-DD formátum
     serviceIds: number[]
   ): Observable<AvailableTimeSlotsResponse> {
     let params = new HttpParams()
-      .set('specialistId', specialistId.toString())
+      .set('companyId', companyId.toString())
+      .set('staffId', staffId.toString())
       .set('date', date);
     
     // ServiceIds hozzáadása (több érték esetén)

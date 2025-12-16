@@ -20,7 +20,7 @@ export interface RegisterRequest {
   password: string;
   firstName: string;
   lastName: string;
-  phone: string;
+  phone?: string;
 }
 
 export interface LoginResponse {
@@ -64,4 +64,19 @@ export interface VerifyEmailResponse {
 
 export interface VerifyEmailRequest {
   token: string;
+}
+
+export interface UpdateProfileRequest {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+}
+
+export interface PasswordResetRequest {
+  currentPassword: string;
+}
+
+export interface AvatarUploadResponse {
+  avatarUrl: string;
 }

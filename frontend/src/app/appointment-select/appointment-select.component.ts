@@ -1,6 +1,5 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { CommonModule } from '@angular/common';
 import {
   CartService,
   CartItem,
@@ -31,7 +30,7 @@ interface DayColumn {
 @Component({
   selector: 'app-appointment-select',
   standalone: true,
-  imports: [CommonModule],
+  imports: [],
   templateUrl: './appointment-select.component.html',
   styleUrl: './appointment-select.component.css',
 })
@@ -259,7 +258,7 @@ export class AppointmentSelectComponent implements OnInit {
   // Folytatás (későbbi lépés)
   continue(): void {
     // TODO: Navigálás a következő lépésre
-    this.router.navigate(['/appointment-payment']);
+    this.router.navigate(['/appointment-payment', this.companyId]);
     console.log('Foglalás:', {
       company: this.company,
       services: this.cart,
@@ -267,8 +266,6 @@ export class AppointmentSelectComponent implements OnInit {
       date: this.selectedDate,
       time: this.selectedTimeSlot?.time,
     });
-
-    alert('Következő lépés (összesítő/megerősítés) még nincs kész!');
   }
 
   // Formázó függvények

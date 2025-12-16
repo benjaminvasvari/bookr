@@ -15,7 +15,7 @@ import java.nio.file.Paths;
 public class ImageServlet extends HttpServlet {
 
     // Képek root mappája
-    private static final String IMAGE_BASE_DIR = "/Users/vben/Programming school/idopontfogalo_rendszer/backend/bookr/uploads/images";
+    private static final String IMAGE_BASE_DIR = "/Users/vben/Programming school/bookr/backend/bookr/uploads/images";
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)

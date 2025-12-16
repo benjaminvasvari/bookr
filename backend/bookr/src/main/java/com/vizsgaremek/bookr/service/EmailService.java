@@ -145,7 +145,7 @@ public class EmailService {
                 + "                                <tr>\n"
                 + "                                    <td align=\"center\" style=\"border-radius: 12px; background-color: #38a179; box-shadow: 0 6px 20px rgba(56, 161, 121, 0.3);\">\n"
                 + "                                        <a href=\"" + verificationLink + "\" style=\"display: inline-block; color: #ffffff; text-decoration: none; padding: 18px 48px; font-size: 16px; font-weight: 700; letter-spacing: 0.5px;\">\n"
-                + "                                            Email Cím Megerősítése\n"
+                + "                                            ✉️ Email Cím Megerősítése\n"
                 + "                                        </a>\n"
                 + "                                    </td>\n"
                 + "                                </tr>\n"

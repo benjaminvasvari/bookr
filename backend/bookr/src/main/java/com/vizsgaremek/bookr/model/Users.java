@@ -229,7 +229,7 @@ public class Users implements Serializable {
         this.email = email;
         this.password = password;
         this.companyId = companyId;
-        this.imageUrl = imageUrl;
+        this.imageUrl = avatarUrl;
         this.rolesString = rolesString;
 
         if (rolesString != null && !rolesString.isEmpty()) {

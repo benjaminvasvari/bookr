@@ -21,6 +21,8 @@ import org.json.JSONObject;
 @ApplicationScoped
 public class AuthService {
 
+    private static final String IMAGE_BASE_URL = "http://localhost:8080/bookr-1.0-SNAPSHOT/";
+
     @Inject
     private EmailService emailService;
 
@@ -254,7 +256,7 @@ public class AuthService {
 
         // User Avatar kezelése (lehet null)
         if (userFromDB.getImageUrl() != null) {
-            userData.put("avatarUrl", userFromDB.getImageUrl());
+            userData.put("avatarUrl", IMAGE_BASE_URL + userFromDB.getImageUrl());
         } else {
             userData.put("avatarUrl", JSONObject.NULL);
         }

@@ -52,8 +52,7 @@ export const appRoutes: Routes = [
     data: { showFooter: true },
   },
   {
-    path: 'appointment/:companyId/payment',
-    component: AppointmentPaymentComponent,
-    data: { showFooter: true },
+    path: 'appointment-payment/:companyId',
+    component: AppointmentPaymentComponent
   },
 ];

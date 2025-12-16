@@ -1,11 +1,16 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 
+/**
+ * CartItem - kosárban tárolt szolgáltatás
+ * A Service interfészből származik + categoryId a szűréshez
+ */
 export interface CartItem {
   id: number;
   name: string;
-  duration: number;
+  duration: string;
   price: number;
+  currency: string;
   categoryId: number;
 }
 
@@ -64,8 +69,6 @@ export class CartService {
 
   clearCart(): void {
     this.cartItems.next([]);
-    this.selectedSpecialist.next(null);
-    this.selectedAppointment.next(null);
   }
 
   // Szakember metódusok
@@ -88,7 +91,7 @@ export class CartService {
 
   // Teljes foglalás törlése
   clearBooking(): void {
-    this.clearCart();
+    this.cartItems.next([]);
     this.selectedSpecialist.next(null);
     this.selectedAppointment.next(null);
   }

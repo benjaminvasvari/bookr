@@ -3,9 +3,17 @@
   <aside class="profile-sidebar">
     <div class="sidebar-header">
       <div class="user-avatar-large">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-        </svg>
+        @if (currentUser?.avatarUrl) {
+          <img 
+            [src]="currentUser!.avatarUrl" 
+            [alt]="currentUser!.firstName"
+            class="user-avatar-img"
+          />
+        } @else {
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+          </svg>
+        }
       </div>
       <h2 class="user-name">{{ currentUser?.firstName }} {{ currentUser?.lastName }}</h2>
       <p class="user-email">{{ currentUser?.email }}</p>
@@ -62,25 +70,26 @@
   <main class="profile-content">
     <div class="content-wrapper">
       <!-- Profile Info Tab -->
-      <app-profile-info 
-        *ngIf="activeTab === 'info'"
-        [currentUser]="currentUser"
-      ></app-profile-info>
+      @if (activeTab === 'info') {
+        <app-profile-info 
+          [currentUser]="currentUser"
+        ></app-profile-info>
+      }
 
       <!-- Bookings Tab -->
-      <app-profile-bookings 
-        *ngIf="activeTab === 'bookings'"
-      ></app-profile-bookings>
+      @if (activeTab === 'bookings') {
+        <app-profile-bookings></app-profile-bookings>
+      }
 
       <!-- Favorites Tab -->
-      <app-profile-favorites 
-        *ngIf="activeTab === 'favorites'"
-      ></app-profile-favorites>
+      @if (activeTab === 'favorites') {
+        <app-profile-favorites></app-profile-favorites>
+      }
 
       <!-- Settings Tab -->
-      <app-profile-settings 
-        *ngIf="activeTab === 'settings'"
-      ></app-profile-settings>
+      @if (activeTab === 'settings') {
+        <app-profile-settings></app-profile-settings>
+      }
     </div>
   </main>
 </div>
