@@ -210,4 +210,29 @@ public class AuthController {
                 .type(MediaType.APPLICATION_JSON)
                 .build();
     }
+    
+        @POST
+    @Path("resetPassRequest")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response logout(String body) {
+        JSONObject bodyObject = new JSONObject(body);
+
+        // companyId nullable field kezelése
+        Integer companyId = bodyObject.has("companyId") && !bodyObject.isNull("companyId")
+                ? bodyObject.getInt("companyId")
+                : null;
+
+        Users loggedoutUser = new Users(
+                bodyObject.getInt("id"),
+                bodyObject.getString("email"),
+                companyId // ← null-t is elfogad
+        );
+
+        JSONObject toReturn = authService.logout(loggedoutUser);
+        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                .entity(toReturn.toString())
+                .type(MediaType.APPLICATION_JSON)
+                .build();
+    }
 }

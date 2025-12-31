@@ -4,8 +4,6 @@
  */
 package com.vizsgaremek.bookr.model;
 
-import com.vizsgaremek.bookr.model.Staff;
-
 import java.io.Serializable;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -294,6 +292,12 @@ public class Users implements Serializable {
         this.email = email;
         this.phone = phone;
     }
+
+    public Users(Integer id, String password) {
+        this.id = id;
+        this.password = password;
+    }
+    
 
     public Integer getId() {
         return id;
@@ -989,6 +993,43 @@ public class Users implements Serializable {
         } catch (Exception ex) {
             ex.printStackTrace();
             return false;
+        }
+    }
+    
+    public static Users getPassword(Integer userId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getPassword");
+            spq.registerStoredProcedureParameter("idIN", Integer.class, ParameterMode.IN);
+            
+            spq.setParameter("idIN", userId);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            // Csak az első rekord kell (LIMIT 1 a stored procedure-ben)
+            Object[] record = resultList.get(0);
+
+            Users user = new Users(
+                    Integer.valueOf(record[0].toString()),
+                    record[1].toString()
+            );
+
+            return user;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
         }
     }
 }

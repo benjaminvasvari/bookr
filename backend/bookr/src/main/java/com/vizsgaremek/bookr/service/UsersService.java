@@ -1,5 +1,6 @@
 package com.vizsgaremek.bookr.service;
 
+import com.vizsgaremek.bookr.config.PasswordHasher;
 import com.vizsgaremek.bookr.config.ValidationUtil;
 import com.vizsgaremek.bookr.model.AuditLogs;
 import com.vizsgaremek.bookr.model.Tokens;
@@ -19,6 +20,9 @@ public class UsersService {
 
     @Inject
     private EmailService EmailService;
+    
+    @Inject
+    private PasswordHasher PasswordHasher;
 
     public JSONObject getUserProfile(String token) {
 
@@ -230,5 +234,23 @@ public class UsersService {
         toReturn.put("status", status);
         toReturn.put("statusCode", statusCode);
         return toReturn;
+    }
+    
+    public Boolean checkPassword(String passwordString, Integer userId) {
+        
+        Boolean toReturn;
+        
+        try {
+            
+            String passwordHash = Users.getPassword(userId).getPassword();
+            
+            toReturn = PasswordHasher.verifyPassword(passwordString, passwordHash);
+            
+            return toReturn;
+            
+        } catch (Exception ex) {
+            toReturn = null;
+            return toReturn;
+        }
     }
 }

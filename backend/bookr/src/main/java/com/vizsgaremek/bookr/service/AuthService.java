@@ -4,6 +4,7 @@ import com.vizsgaremek.bookr.config.PasswordHasher;
 import com.vizsgaremek.bookr.config.ValidationUtil;
 import com.vizsgaremek.bookr.model.AuditLogs;
 import com.vizsgaremek.bookr.model.RegistrationResult;
+import com.vizsgaremek.bookr.model.Tokens;
 import com.vizsgaremek.bookr.model.Users;
 import com.vizsgaremek.bookr.security.JWT;
 import javax.enterprise.context.ApplicationScoped;
@@ -28,6 +29,9 @@ public class AuthService {
 
     @Inject
     private AuditLogService auditLogService;
+    
+    @Inject
+    private UsersService UsersService;
 
     private final PasswordHasher passwordHasher = new PasswordHasher();
 
@@ -508,6 +512,86 @@ public class AuthService {
             toReturn.put("message", "An unexpected error occurred: " + ex.getMessage());
         }
 
+        return toReturn;
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    public JSONObject changePasswordEmail(String passwordString, String jwt) {
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+        
+        Integer userId = JWT.getUserIdFromAccessToken(jwt);
+
+        // Validálás
+        if (UsersService.checkPassword(passwordString, userId) == false) {
+            status = "InvalidPassword";
+            statusCode = 417;
+
+        } else if (UsersService.checkPassword(passwordString, userId) == null) {
+            status = "InternalServerError";
+            statusCode = 500;
+
+        } else if (UsersService.checkPassword(passwordString, userId) == true) {
+            
+            // ========== GENERATE RESET TOKEN ==========
+            Tokens resetTokenResult = Tokens.generatePasswordResetToken(userId);
+            
+
+            if (resetTokenResult == null) {
+                status = "serverError";
+                statusCode = 500;
+            } else {
+                // ========== AUDIT LOG ==========
+                try {
+                    AuditLogs auditLog = new AuditLogs(
+                            registrationResult.getUserId(),
+                            "client",
+                            clientRegistered.getEmail(),
+                            "user",
+                            "register"
+                    );
+                    auditLog.addNewValue("user_id", registrationResult.getUserId());
+                    auditLog.addNewValue("email", clientRegistered.getEmail());
+                    auditLog.addNewValue("first_name", clientRegistered.getFirstName());
+                    auditLog.addNewValue("last_name", clientRegistered.getLastName());
+                    auditLog.addNewValue("role", "client");
+
+                    auditLogService.logAudit(auditLog);
+                } catch (Exception ex) {
+                    // Log the error but don't fail the registration
+                    ex.printStackTrace();
+                }
+                // ===============================
+
+                // ========== EMAIL KÜLDÉS ==========
+                try {
+                    emailService.sendVerificationEmail(
+                            clientRegistered.getEmail(),
+                            clientRegistered.getFirstName(),
+                            registrationResult.getRegToken()
+                    );
+                } catch (Exception ex) {
+                    // Log the error but don't fail the registration
+                    System.err.println("Failed to send verification email: " + ex.getMessage());
+                    ex.printStackTrace();
+                }
+                // ==================================
+
+                toReturn.put("userId", registrationResult.getUserId());
+                toReturn.put("regToken", registrationResult.getRegToken());
+            }
+        }
+
+        toReturn.put("status", status);
+        toReturn.put("statusCode", statusCode);
         return toReturn;
     }
 }
