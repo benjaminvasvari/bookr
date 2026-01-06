@@ -6,6 +6,7 @@ import com.vizsgaremek.bookr.model.AuditLogs;
 import com.vizsgaremek.bookr.model.RegistrationResult;
 import com.vizsgaremek.bookr.model.Tokens;
 import com.vizsgaremek.bookr.model.Users;
+import com.vizsgaremek.bookr.service.UsersService;
 import com.vizsgaremek.bookr.security.JWT;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
@@ -29,9 +30,9 @@ public class AuthService {
 
     @Inject
     private AuditLogService auditLogService;
-    
+
     @Inject
-    private UsersService UsersService;
+    private UsersService usersService;
 
     private final PasswordHasher passwordHasher = new PasswordHasher();
 
@@ -514,80 +515,117 @@ public class AuthService {
 
         return toReturn;
     }
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    public JSONObject changePasswordEmail(String passwordString, String jwt) {
+
+    public Boolean checkPassword(String passwordString, Integer userId) {
+
+        Boolean toReturn;
+
+        try {
+
+            String passwordHash = Users.getPassword(userId);
+
+            toReturn = passwordHasher.verifyPassword(passwordString, passwordHash);
+
+            return toReturn;
+
+        } catch (Exception ex) {
+            toReturn = null;
+            return toReturn;
+        }
+    }
+
+    public JSONObject changePasswordEmail(String currentPassword, String jwt) {
         JSONObject toReturn = new JSONObject();
         String status = "success";
         Integer statusCode = 200;
-        
-        Integer userId = JWT.getUserIdFromAccessToken(jwt);
 
-        // Validálás
-        if (UsersService.checkPassword(passwordString, userId) == false) {
-            status = "InvalidPassword";
-            statusCode = 417;
+        try {
+            // ========== JWT PARSING ==========
+            Integer userId = JWT.getUserIdFromAccessToken(jwt);
+            String userEmail = JWT.getEmailFromAccessToken(jwt);
 
-        } else if (UsersService.checkPassword(passwordString, userId) == null) {
-            status = "InternalServerError";
-            statusCode = 500;
+            if (userId == null || userEmail == null) {
+                toReturn.put("status", "InvalidToken");
+                toReturn.put("statusCode", 401);
+                return toReturn;
+            }
 
-        } else if (UsersService.checkPassword(passwordString, userId) == true) {
-            
-            // ========== GENERATE RESET TOKEN ==========
+            // ========== JELSZÓ ELLENŐRZÉS (CSAK EGYSZER!) ==========
+            Boolean isPasswordValid = checkPassword(currentPassword, userId);
+
+            if (isPasswordValid == null) {
+                // Szerver hiba (pl. DB kapcsolat probléma)
+                status = "InternalServerError";
+                statusCode = 500;
+                toReturn.put("status", status);
+                toReturn.put("statusCode", statusCode);
+                return toReturn;
+            }
+
+            if (!isPasswordValid) {
+                // Helytelen jelszó
+                status = "InvalidPassword";
+                statusCode = 401;
+                toReturn.put("status", status);
+                toReturn.put("statusCode", statusCode);
+                return toReturn;
+            }
+
+            // ========== RESET TOKEN GENERÁLÁS ==========
             Tokens resetTokenResult = Tokens.generatePasswordResetToken(userId);
-            
 
-            if (resetTokenResult == null) {
+            if (resetTokenResult == null || resetTokenResult.getToken() == null) {
                 status = "serverError";
                 statusCode = 500;
-            } else {
-                // ========== AUDIT LOG ==========
-                try {
-                    AuditLogs auditLog = new AuditLogs(
-                            registrationResult.getUserId(),
-                            "client",
-                            clientRegistered.getEmail(),
-                            "user",
-                            "register"
-                    );
-                    auditLog.addNewValue("user_id", registrationResult.getUserId());
-                    auditLog.addNewValue("email", clientRegistered.getEmail());
-                    auditLog.addNewValue("first_name", clientRegistered.getFirstName());
-                    auditLog.addNewValue("last_name", clientRegistered.getLastName());
-                    auditLog.addNewValue("role", "client");
-
-                    auditLogService.logAudit(auditLog);
-                } catch (Exception ex) {
-                    // Log the error but don't fail the registration
-                    ex.printStackTrace();
-                }
-                // ===============================
-
-                // ========== EMAIL KÜLDÉS ==========
-                try {
-                    emailService.sendVerificationEmail(
-                            clientRegistered.getEmail(),
-                            clientRegistered.getFirstName(),
-                            registrationResult.getRegToken()
-                    );
-                } catch (Exception ex) {
-                    // Log the error but don't fail the registration
-                    System.err.println("Failed to send verification email: " + ex.getMessage());
-                    ex.printStackTrace();
-                }
-                // ==================================
-
-                toReturn.put("userId", registrationResult.getUserId());
-                toReturn.put("regToken", registrationResult.getRegToken());
+                toReturn.put("status", status);
+                toReturn.put("statusCode", statusCode);
+                return toReturn;
             }
+
+            // ========== AUDIT LOG ==========
+            try {
+                AuditLogs auditLog = new AuditLogs(
+                        userId,
+                        "client",
+                        userEmail,
+                        "user",
+                        "password_reset_request"
+                );
+                auditLogService.logAudit(auditLog);
+            } catch (Exception ex) {
+                // Log the error but don't fail the process
+                ex.printStackTrace();
+            }
+
+            // ========== PASSWORD RESET EMAIL KÜLDÉS ==========
+            try {
+                Users user = Users.getUserById(userId);
+
+                if (user == null) {
+                    status = "UserNotFound";
+                    statusCode = 404;
+                    toReturn.put("status", status);
+                    toReturn.put("statusCode", statusCode);
+                    return toReturn;
+                }
+
+                emailService.sendPasswordResetEmail(
+                        userEmail,
+                        resetTokenResult.getToken()
+                );
+
+            } catch (Exception ex) {
+                ex.printStackTrace();
+
+                status = "EmailSendFailed";
+                statusCode = 500;
+            }
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+
+            status = "InternalServerError";
+            statusCode = 500;
         }
 
         toReturn.put("status", status);

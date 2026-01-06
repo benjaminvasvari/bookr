@@ -5,6 +5,7 @@
 package com.vizsgaremek.bookr.controller;
 
 import com.vizsgaremek.bookr.model.Users;
+import com.vizsgaremek.bookr.security.JWT;
 import com.vizsgaremek.bookr.service.AuthService;
 import javax.inject.Inject;
 import javax.ws.rs.core.Context;
@@ -12,6 +13,7 @@ import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.Produces;
 import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PUT;
@@ -185,7 +187,7 @@ public class AuthController {
                     .build();
         }
     }
-    
+
     @POST
     @Path("logout")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -210,29 +212,39 @@ public class AuthController {
                 .type(MediaType.APPLICATION_JSON)
                 .build();
     }
-    
-        @POST
+
+    @POST
     @Path("resetPassRequest")
     @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response logout(String body) {
+    public Response resetPassRequest(@HeaderParam("Authorization") String authHeader, String body) {
         JSONObject bodyObject = new JSONObject(body);
 
-        // companyId nullable field kezelése
-        Integer companyId = bodyObject.has("companyId") && !bodyObject.isNull("companyId")
-                ? bodyObject.getInt("companyId")
-                : null;
+        // Extract token from "Bearer <token>"
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            System.out.println("Missing or invalid Authorization header");
+            return Response.status(401).entity("missingToken").build();
+        }
 
-        Users loggedoutUser = new Users(
-                bodyObject.getInt("id"),
-                bodyObject.getString("email"),
-                companyId // ← null-t is elfogad
-        );
+        // Remove "Bearer " prefix
+        String jwtToken = authHeader.substring(7);
 
-        JSONObject toReturn = authService.logout(loggedoutUser);
-        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
-                .entity(toReturn.toString())
-                .type(MediaType.APPLICATION_JSON)
-                .build();
+        Boolean validJwt = JWT.validateAccessToken(jwtToken);
+        
+        String passString = bodyObject.getString("password");
+
+        if (validJwt == null) {
+            // Lejárt JWT
+            return Response.status(401).entity("tokenExpired").build();
+        } else if (validJwt == false) {
+            // Invalid JWT
+            return Response.status(401).entity("invalidToken").build();
+        } else {
+            // Valid token
+            JSONObject toReturn = authService.changePasswordEmail(passString, jwtToken);
+            return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                    .entity(toReturn.toString())
+                    .type(MediaType.APPLICATION_JSON)
+                    .build();
+        }
     }
 }

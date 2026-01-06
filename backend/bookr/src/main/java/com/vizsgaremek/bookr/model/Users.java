@@ -297,7 +297,6 @@ public class Users implements Serializable {
         this.id = id;
         this.password = password;
     }
-    
 
     public Integer getId() {
         return id;
@@ -995,33 +994,25 @@ public class Users implements Serializable {
             return false;
         }
     }
-    
-    public static Users getPassword(Integer userId) {
-        EntityManager em = emf.createEntityManager();
 
+    public static String getPassword(Integer userId) {
+        EntityManager em = emf.createEntityManager();
         try {
             StoredProcedureQuery spq = em.createStoredProcedureQuery("getPassword");
             spq.registerStoredProcedureParameter("idIN", Integer.class, ParameterMode.IN);
             
             spq.setParameter("idIN", userId);
-
+            
             spq.execute();
 
-            List<Object[]> resultList = spq.getResultList();
+            List<Object> resultList = spq.getResultList();
 
-            if (resultList.isEmpty()) {
+            if (resultList == null || resultList.isEmpty()) {
                 return null;
             }
 
-            // Csak az első rekord kell (LIMIT 1 a stored procedure-ben)
-            Object[] record = resultList.get(0);
-
-            Users user = new Users(
-                    Integer.valueOf(record[0].toString()),
-                    record[1].toString()
-            );
-
-            return user;
+            Object result = resultList.get(0);
+            return result != null ? result.toString() : null;
 
         } catch (Exception ex) {
             ex.printStackTrace();

@@ -4,6 +4,7 @@ import io.github.cdimascio.dotenv.Dotenv;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Base64;
+import javax.enterprise.context.ApplicationScoped;
 import org.bouncycastle.crypto.generators.Argon2BytesGenerator;
 import org.bouncycastle.crypto.params.Argon2Parameters;
 
@@ -11,6 +12,7 @@ import org.bouncycastle.crypto.params.Argon2Parameters;
  *
  * @author vben
  */
+@ApplicationScoped
 public class PasswordHasher {
     
     private final int SALT_LENGTH;

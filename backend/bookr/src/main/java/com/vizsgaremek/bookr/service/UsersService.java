@@ -6,6 +6,7 @@ import com.vizsgaremek.bookr.model.AuditLogs;
 import com.vizsgaremek.bookr.model.Tokens;
 import com.vizsgaremek.bookr.model.Users;
 import com.vizsgaremek.bookr.security.JWT;
+import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import org.json.JSONObject;
 
@@ -13,6 +14,7 @@ import org.json.JSONObject;
  *
  * @author vben
  */
+@ApplicationScoped
 public class UsersService {
 
     @Inject
@@ -236,21 +238,5 @@ public class UsersService {
         return toReturn;
     }
     
-    public Boolean checkPassword(String passwordString, Integer userId) {
-        
-        Boolean toReturn;
-        
-        try {
-            
-            String passwordHash = Users.getPassword(userId).getPassword();
-            
-            toReturn = PasswordHasher.verifyPassword(passwordString, passwordHash);
-            
-            return toReturn;
-            
-        } catch (Exception ex) {
-            toReturn = null;
-            return toReturn;
-        }
-    }
+
 }

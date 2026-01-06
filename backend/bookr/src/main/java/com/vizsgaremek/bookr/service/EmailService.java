@@ -54,6 +54,39 @@ public class EmailService {
     }
 
     /**
+     * Send password reset email asynchronously
+     *
+     * @param toEmail Recipient email address
+     * @param resetToken Password reset token
+     */
+    public void sendPasswordResetEmail(String toEmail, String resetToken) {
+        if (!EmailConfig.isEmailEnabled()) {
+            System.out.println("Email sending is disabled. Would send password reset email to: " + toEmail);
+            return;
+        }
+
+        // Send email asynchronously
+        emailExecutor.submit(() -> {
+            try {
+                String resetLink = EmailConfig.getAppBaseUrl() + "/reset-password?token=" + resetToken;
+                String htmlContent = createPasswordResetEmailHTML(resetLink);
+
+                sendEmail(
+                        toEmail,
+                        "Jelszó visszaállítás - Bookr",
+                        htmlContent
+                );
+
+                System.out.println("✅ Password reset email sent to: " + toEmail);
+
+            } catch (Exception e) {
+                System.err.println("❌ Failed to send password reset email to: " + toEmail);
+                e.printStackTrace();
+            }
+        });
+    }
+
+    /**
      * Send email via SMTP
      */
     private void sendEmail(String toEmail, String subject, String htmlContent)
@@ -206,6 +239,158 @@ public class EmailService {
                 + "                                </p>\n"
                 + "                                <p style=\"margin: 0; color: #adb5bd; font-size: 13px; line-height: 1.5;\">\n"
                 + "                                    Ezt az emailt azért kaptad, mert valaki (remélhetőleg te) regisztrált a Bookr rendszerébe ezzel az email címmel.\n"
+                + "                                </p>\n"
+                + "                            </div>\n"
+                + "                            \n"
+                + "                            <!-- Copyright -->\n"
+                + "                            <p style=\"margin: 0 0 8px 0; color: #6c757d; font-size: 14px; font-weight: 600;\">\n"
+                + "                                © 2025 B<span style=\"color: #38a179;\">oo</span>kr\n"
+                + "                            </p>\n"
+                + "                            <p style=\"margin: 0; color: #adb5bd; font-size: 12px;\">\n"
+                + "                                Ez egy automatikus email, kérjük ne válaszolj rá.\n"
+                + "                            </p>\n"
+                + "                        </td>\n"
+                + "                    </tr>\n"
+                + "                    \n"
+                + "                </table>\n"
+                + "                \n"
+                + "                <!-- Bottom Spacer -->\n"
+                + "                <table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin-top: 20px;\">\n"
+                + "                    <tr>\n"
+                + "                        <td align=\"center\">\n"
+                + "                            <p style=\"margin: 0; color: #adb5bd; font-size: 12px;\">\n"
+                + "                                Bookr - Modern foglalási rendszer szalonoknak és szolgáltatóknak\n"
+                + "                            </p>\n"
+                + "                        </td>\n"
+                + "                    </tr>\n"
+                + "                </table>\n"
+                + "                \n"
+                + "            </td>\n"
+                + "        </tr>\n"
+                + "    </table>\n"
+                + "</body>\n"
+                + "</html>";
+    }
+
+    /**
+     * 🔐 Create HTML email template for password reset - Bookr Brand Colors
+     */
+    private String createPasswordResetEmailHTML(String resetLink) {
+        return "<!DOCTYPE html>\n"
+                + "<html lang=\"hu\">\n"
+                + "<head>\n"
+                + "    <meta charset=\"UTF-8\">\n"
+                + "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
+                + "    <title>Jelszó Visszaállítás - Bookr</title>\n"
+                + "</head>\n"
+                + "<body style=\"margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8f9fa;\">\n"
+                + "    <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color: #f8f9fa; padding: 40px 20px;\">\n"
+                + "        <tr>\n"
+                + "            <td align=\"center\">\n"
+                + "                <!-- Main Container -->\n"
+                + "                <table width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08);\">\n"
+                + "                    \n"
+                + "                    <!-- Header with Brand Colors -->\n"
+                + "                    <tr>\n"
+                + "                        <td style=\"background-color: #2c3e50; padding: 50px 30px; text-align: center;\">\n"
+                + "                            <!-- Logo -->\n"
+                + "                            <div style=\"margin-bottom: 20px;\">\n"
+                + "                                <h1 style=\"margin: 0; color: #ffffff; font-size: 48px; font-weight: 800; letter-spacing: -1px;\">\n"
+                + "                                    B<span style=\"color: #38a179;\">oo</span>kr\n"
+                + "                                </h1>\n"
+                + "                            </div>\n"
+                + "                            <p style=\"margin: 0; color: rgba(255, 255, 255, 0.8); font-size: 16px; font-weight: 500;\">Foglalási Rendszer</p>\n"
+                + "                        </td>\n"
+                + "                    </tr>\n"
+                + "                    \n"
+                + "                    <!-- Reset Section -->\n"
+                + "                    <tr>\n"
+                + "                        <td style=\"padding: 50px 40px 30px;\">\n"
+                + "                            <h2 style=\"margin: 0 0 16px 0; color: #2c3e50; font-size: 28px; font-weight: 700;\">Jelszó Visszaállítás</h2>\n"
+                + "                            \n"
+                + "                            <p style=\"margin: 0 0 24px 0; color: #6c757d; font-size: 16px; line-height: 1.6;\">\n"
+                + "                                Jelszó visszaállítási kérelmet kaptunk a <strong style=\"color: #2c3e50;\">Bookr</strong> fiókodhoz.\n"
+                + "                            </p>\n"
+                + "                            \n"
+                + "                            <p style=\"margin: 0 0 32px 0; color: #6c757d; font-size: 16px; line-height: 1.6;\">\n"
+                + "                                Ha te kezdeményezted ezt, kattints az alábbi gombra egy új jelszó beállításához:\n"
+                + "                            </p>\n"
+                + "                        </td>\n"
+                + "                    </tr>\n"
+                + "                    \n"
+                + "                    <!-- CTA Button -->\n"
+                + "                    <tr>\n"
+                + "                        <td align=\"center\" style=\"padding: 0 40px 40px;\">\n"
+                + "                            <table cellpadding=\"0\" cellspacing=\"0\">\n"
+                + "                                <tr>\n"
+                + "                                    <td align=\"center\" style=\"border-radius: 12px; background-color: #e74c3c; box-shadow: 0 6px 20px rgba(231, 76, 60, 0.3);\">\n"
+                + "                                        <a href=\"" + resetLink + "\" style=\"display: inline-block; color: #ffffff; text-decoration: none; padding: 18px 48px; font-size: 16px; font-weight: 700; letter-spacing: 0.5px;\">\n"
+                + "                                            Jelszó Visszaállítása\n"
+                + "                                        </a>\n"
+                + "                                    </td>\n"
+                + "                                </tr>\n"
+                + "                            </table>\n"
+                + "                        </td>\n"
+                + "                    </tr>\n"
+                + "                    \n"
+                + "                    <!-- Alternative Link -->\n"
+                + "                    <tr>\n"
+                + "                        <td style=\"padding: 0 40px 30px;\">\n"
+                + "                            <div style=\"background-color: #f8f9fa; border-radius: 8px; padding: 20px; text-align: center;\">\n"
+                + "                                <p style=\"margin: 0 0 12px 0; color: #6c757d; font-size: 14px; font-weight: 600;\">\n"
+                + "                                    Nem működik a gomb?\n"
+                + "                                </p>\n"
+                + "                                <p style=\"margin: 0; font-size: 13px; word-break: break-all;\">\n"
+                + "                                    <a href=\"" + resetLink + "\" style=\"color: #e74c3c; text-decoration: none; font-weight: 500;\">" + resetLink + "</a>\n"
+                + "                                </p>\n"
+                + "                            </div>\n"
+                + "                        </td>\n"
+                + "                    </tr>\n"
+                + "                    \n"
+                + "                    <!-- Warning Box - CRITICAL -->\n"
+                + "                    <tr>\n"
+                + "                        <td style=\"padding: 0 40px 40px;\">\n"
+                + "                            <div style=\"background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 20px; border-radius: 8px;\">\n"
+                + "                                <p style=\"margin: 0 0 12px 0; color: #856404; font-size: 14px; line-height: 1.6; font-weight: 700;\">\n"
+                + "                                    ⚠️ FONTOS BIZTONSÁGI INFORMÁCIÓK:\n"
+                + "                                </p>\n"
+                + "                                <ul style=\"margin: 0; padding-left: 20px; color: #856404; font-size: 13px; line-height: 1.7;\">\n"
+                + "                                    <li>Ez a link <strong>15 percig</strong> érvényes</li>\n"
+                + "                                    <li>Ha <strong>nem te kérted</strong> a visszaállítást, hagyd figyelmen kívül ezt az emailt</li>\n"
+                + "                                    <li>A jelszavad <strong>csak akkor változik</strong>, ha rákattintasz a gombra</li>\n"
+                + "                                    <li><strong>Soha ne add ki</strong> ezt a linket másoknak!</li>\n"
+                + "                                </ul>\n"
+                + "                            </div>\n"
+                + "                        </td>\n"
+                + "                    </tr>\n"
+                + "                    \n"
+                + "                    <!-- Info Box -->\n"
+                + "                    <tr>\n"
+                + "                        <td style=\"padding: 0 40px 40px;\">\n"
+                + "                            <div style=\"background: linear-gradient(135deg, #fef5e7 0%, #fadbd8 100%); border-left: 4px solid #e74c3c; padding: 20px; border-radius: 8px;\">\n"
+                + "                                <p style=\"margin: 0; color: #2c3e50; font-size: 14px; line-height: 1.6;\">\n"
+                + "                                    <strong>💡 Tipp:</strong> Válassz erős jelszót, amely tartalmaz nagybetűt, kisbetűt, számot és speciális karaktert!\n"
+                + "                                </p>\n"
+                + "                            </div>\n"
+                + "                        </td>\n"
+                + "                    </tr>\n"
+                + "                    \n"
+                + "                    <!-- Divider -->\n"
+                + "                    <tr>\n"
+                + "                        <td style=\"padding: 0 40px;\">\n"
+                + "                            <div style=\"height: 1px; background-color: #e9ecef;\"></div>\n"
+                + "                        </td>\n"
+                + "                    </tr>\n"
+                + "                    \n"
+                + "                    <!-- Footer -->\n"
+                + "                    <tr>\n"
+                + "                        <td style=\"padding: 40px; text-align: center;\">\n"
+                + "                            <div style=\"margin-bottom: 20px;\">\n"
+                + "                                <p style=\"margin: 0 0 8px 0; color: #6c757d; font-size: 14px; font-weight: 600;\">\n"
+                + "                                    Miért kaptam ezt az emailt?\n"
+                + "                                </p>\n"
+                + "                                <p style=\"margin: 0; color: #adb5bd; font-size: 13px; line-height: 1.5;\">\n"
+                + "                                    Ezt az emailt azért kaptad, mert valaki (remélhetőleg te) jelszó visszaállítást kért a Bookr fiókodhoz.\n"
                 + "                                </p>\n"
                 + "                            </div>\n"
                 + "                            \n"
