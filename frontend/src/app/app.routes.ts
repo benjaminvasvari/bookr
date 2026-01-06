@@ -9,6 +9,7 @@ import { AppointmentSelectComponent } from './appointment-select/appointment-sel
 import { VerifyEmailComponent } from './verify-email/verify-email.component';
 import { ProfileComponent } from './profile/profile.component';
 import { AppointmentPaymentComponent } from './appointment-payment/appointment-payment.component';
+import { authGuard } from './core/guards/auth.guard';
 
 export const appRoutes: Routes = [
   {
@@ -35,6 +36,7 @@ export const appRoutes: Routes = [
     path: 'profile',
     component: ProfileComponent,
     data: { showFooter: false },
+    canActivate: [authGuard]
   },
   {
     path: 'sel-industry/:id',
