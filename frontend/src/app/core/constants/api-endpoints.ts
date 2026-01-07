@@ -7,7 +7,7 @@ export const API_ENDPOINTS = {
     REFRESH_TOKEN: '/auth/refresh',
     VERIFY_EMAIL: '/auth/verify',
     REQUEST_PASSWORD_RESET: '/auth/resetPassRequest',
-    RESET_PASSWORD: '/auth/resetPassword',
+    RESET_PASSWORD: '/auth/resetPassUpdate',
   },
 
   COMPANIES: {

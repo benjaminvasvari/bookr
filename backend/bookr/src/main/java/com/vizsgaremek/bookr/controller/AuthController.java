@@ -230,7 +230,7 @@ public class AuthController {
 
         Boolean validJwt = JWT.validateAccessToken(jwtToken);
 
-        String passString = bodyObject.getString("password");
+        String passString = bodyObject.getString("currentPassword");
 
         if (validJwt == null) {
             // Lejárt JWT
@@ -266,6 +266,7 @@ public class AuthController {
         Boolean validJwt = JWT.validateAccessToken(jwtToken);
 
         String passString = bodyObject.getString("password");
+        String token = bodyObject.getString("token");
 
         if (validJwt == null) {
             // Lejárt JWT
@@ -275,7 +276,7 @@ public class AuthController {
             return Response.status(401).entity("invalidToken").build();
         } else {
             // Valid token
-            JSONObject toReturn = authService.resetPassUpdate(passString, jwtToken);
+            JSONObject toReturn = authService.resetPassUpdate(passString, token, jwtToken);
             return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
                     .entity(toReturn.toString())
                     .type(MediaType.APPLICATION_JSON)

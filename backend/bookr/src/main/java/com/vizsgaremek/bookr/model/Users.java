@@ -1023,4 +1023,26 @@ public class Users implements Serializable {
             }
         }
     }
+    
+        public static Boolean updatePassword(String token, String newPasswordHash) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("resetPasswordWithToken");
+            spq.registerStoredProcedureParameter("tokenIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("newPasswordIN", String.class, ParameterMode.IN);
+
+            spq.setParameter("tokenIN", token);
+            spq.setParameter("newPasswordIN", newPasswordHash);
+
+            spq.execute();
+
+            return true;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return false;
+        }
+    }
 }

@@ -421,7 +421,6 @@ public class AuthService {
 
             if (!isValid) {
                 status = "InvalidToken";
-                System.out.println("token validation");
 
                 statusCode = 401;
                 toReturn.put("status", status);
@@ -433,7 +432,6 @@ public class AuthService {
             Integer userId = JWT.getUserIdFromRefreshToken(refreshToken);
 
             if (userId == null) {
-                System.out.println("UserId");
 
                 status = "InvalidToken";
                 statusCode = 401;
@@ -619,6 +617,62 @@ public class AuthService {
 
                 status = "EmailSendFailed";
                 statusCode = 500;
+            }
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+
+            status = "InternalServerError";
+            statusCode = 500;
+        }
+
+        toReturn.put("status", status);
+        toReturn.put("statusCode", statusCode);
+        return toReturn;
+    }
+    
+    public JSONObject resetPassUpdate(String newPassword, String token, String jwt) {
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        try {
+            // ========== JWT PARSING ==========
+            Integer userId = JWT.getUserIdFromAccessToken(jwt);
+            String userEmail = JWT.getEmailFromAccessToken(jwt);
+
+            if (userId == null || userEmail == null) {
+                toReturn.put("status", "InvalidToken");
+                toReturn.put("statusCode", 401);
+                return toReturn;
+            }
+
+            String newPasswordHash = passwordHasher.hashPassword(newPassword);
+
+            // ========== Update password ==========
+            Boolean passwordIsUpdated = Users.updatePassword(token, newPasswordHash);
+
+            if (!passwordIsUpdated) {
+                status = "serverError";
+                statusCode = 500;
+                toReturn.put("status", status);
+                toReturn.put("statusCode", statusCode);
+                return toReturn;
+            }
+
+            // ========== AUDIT LOG ==========
+            try {
+                AuditLogs auditLog = new AuditLogs(
+                        userId,
+                        "client",
+                        userEmail,
+                        "user",
+                        "password_reset"
+                );
+                auditLogService.logAudit(auditLog);
+            } catch (Exception ex) {
+                // Log the error but don't fail the process
+                ex.printStackTrace();
             }
 
         } catch (Exception ex) {
