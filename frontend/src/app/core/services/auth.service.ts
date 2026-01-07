@@ -86,7 +86,17 @@ export class AuthService {
   }
 
   /**
-   * Token frissítés
+   * Token frissítés (REACTIVE approach)
+   * 
+   * ⚠️ FONTOS: Ezt az interceptor hívja automatikusan 401 error esetén!
+   * 
+   * Flow:
+   * 1. API kérés → 401 Unauthorized (access token lejárt)
+   * 2. Interceptor észreveszi → meghívja ezt a metódust
+   * 3. Backend validálja a refresh tokent → új access + refresh tokent ad
+   * 4. Metódus elmenti az új tokeneket localStorage-ba
+   * 5. Interceptor újrapróbálja az eredeti kérést az új tokennel
+   * 6. Ha refresh sikertelen → interceptor logout-ol
    */
   refreshToken(): Observable<RefreshTokenResponse> {
     const refreshToken = this.getRefreshToken();
@@ -102,9 +112,11 @@ export class AuthService {
       .post<RefreshTokenResponse>(`${this.apiUrl}${API_ENDPOINTS.AUTH.REFRESH_TOKEN}`, request)
       .pipe(
         tap((response) => {
-          // Csak a tokeneket frissítjük, a user adatokat NEM!
+          // ✅ Csak a tokeneket frissítjük, a user adatokat NEM!
           localStorage.setItem(this.ACCESS_TOKEN_KEY, response.accessToken);
           localStorage.setItem(this.REFRESH_TOKEN_KEY, response.refreshToken);
+          
+          console.log('✅ Token refresh successful');
         })
       );
   }
@@ -219,20 +231,14 @@ export class AuthService {
   }
 
   /**
-   * Token lejárat ellenőrzés (JWT decode kell hozzá)
-   * Opcionális: telepítsd az @auth0/angular-jwt package-et
+   * Password reset - új jelszó beállítása token alapján
    */
-  // private isTokenExpired(token: string): boolean {
-  //   const helper = new JwtHelperService();
-  //   return helper.isTokenExpired(token);
-  // }
-
   resetPassword(resetToken: string, newPassword: string): Observable<void> {
-  const body = {
-    token: resetToken,
-    password: newPassword
-  };
+    const body = {
+      token: resetToken,
+      password: newPassword
+    };
 
-  return this.http.post<void>(API_ENDPOINTS.AUTH.RESET_PASSWORD, body);
-}
+    return this.http.post<void>(`${this.apiUrl}${API_ENDPOINTS.AUTH.RESET_PASSWORD}`, body);
+  }
 }

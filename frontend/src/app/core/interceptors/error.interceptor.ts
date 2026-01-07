@@ -15,6 +15,11 @@ import { catchError, throwError } from 'rxjs';
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
+      // Az authInterceptor kezeli (automatic token refresh)
+      if (error.status === 401) {
+        return throwError(() => error); // Továbbdobjuk az authInterceptor-nak!
+      }
+      
       let errorMessage = 'Ismeretlen hiba történt';
       
       if (error.error instanceof ErrorEvent) {
@@ -29,7 +34,6 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
           case 400:
             errorMessage = error.error?.message || 'Hibás kérés';
             break;
-          // 401-et NEM kezeljük itt! Az authInterceptor kezeli (token refresh)
           case 403:
             errorMessage = 'Nincs hozzáférésed ehhez az erőforráshoz.';
             break;
