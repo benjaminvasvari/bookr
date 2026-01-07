@@ -20,7 +20,7 @@ export class LoginPageComponent {
   constructor(private fb: FormBuilder, private router: Router, private authService: AuthService) {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(6)]],
+      password: ['', [Validators.required, Validators.minLength(8)]],
     });
   }
 
@@ -55,7 +55,7 @@ export class LoginPageComponent {
       return 'A jelszó megadása kötelező';
     }
     if (this.password.hasError('minlength')) {
-      return 'A jelszónak legalább 6 karakter hosszúnak kell lennie';
+      return 'A jelszónak legalább 8 karakter hosszúnak kell lennie';
     }
     return '';
   }

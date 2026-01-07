@@ -226,4 +226,13 @@ export class AuthService {
   //   const helper = new JwtHelperService();
   //   return helper.isTokenExpired(token);
   // }
+
+  resetPassword(resetToken: string, newPassword: string): Observable<void> {
+  const body = {
+    token: resetToken,
+    password: newPassword
+  };
+
+  return this.http.post<void>(API_ENDPOINTS.AUTH.RESET_PASSWORD, body);
+}
 }

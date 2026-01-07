@@ -229,7 +229,7 @@ public class AuthController {
         String jwtToken = authHeader.substring(7);
 
         Boolean validJwt = JWT.validateAccessToken(jwtToken);
-        
+
         String passString = bodyObject.getString("password");
 
         if (validJwt == null) {
@@ -241,6 +241,41 @@ public class AuthController {
         } else {
             // Valid token
             JSONObject toReturn = authService.changePasswordEmail(passString, jwtToken);
+            return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                    .entity(toReturn.toString())
+                    .type(MediaType.APPLICATION_JSON)
+                    .build();
+        }
+    }
+
+    @POST
+    @Path("resetPassUpdate")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response resetPassUpdate(@HeaderParam("Authorization") String authHeader, String body) {
+        JSONObject bodyObject = new JSONObject(body);
+
+        // Extract token from "Bearer <token>"
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            System.out.println("Missing or invalid Authorization header");
+            return Response.status(401).entity("missingToken").build();
+        }
+
+        // Remove "Bearer " prefix
+        String jwtToken = authHeader.substring(7);
+
+        Boolean validJwt = JWT.validateAccessToken(jwtToken);
+
+        String passString = bodyObject.getString("password");
+
+        if (validJwt == null) {
+            // Lejárt JWT
+            return Response.status(401).entity("tokenExpired").build();
+        } else if (validJwt == false) {
+            // Invalid JWT
+            return Response.status(401).entity("invalidToken").build();
+        } else {
+            // Valid token
+            JSONObject toReturn = authService.resetPassUpdate(passString, jwtToken);
             return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
                     .entity(toReturn.toString())
                     .type(MediaType.APPLICATION_JSON)
