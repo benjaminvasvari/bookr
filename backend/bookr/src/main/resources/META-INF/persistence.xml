@@ -23,6 +23,7 @@
     <class>com.vizsgaremek.bookr.model.Tokens</class>
     <class>com.vizsgaremek.bookr.model.Users</class>
     <class>com.vizsgaremek.bookr.model.BusinessCategories</class>
+    <class>com.vizsgaremek.bookr.model.Favorites</class>
     <exclude-unlisted-classes>false</exclude-unlisted-classes>
     <properties>
       <!-- Hibernate beállítások -->

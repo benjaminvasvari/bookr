@@ -136,7 +136,7 @@ export class AppointmentSelectComponent implements OnInit {
       date.setDate(this.currentWeekStart.getDate() + i);
 
       const dayOfWeek = date.getDay();
-      const isDisabled = dayOfWeek === 0 || dayOfWeek === 3 || dayOfWeek === 6; // Vasárnap, Szerda, Szombat
+      const isDisabled = dayOfWeek === 0 || dayOfWeek === 6; // Vasárnap, Szerda, Szombat
       const isPast = date < today;
 
       this.weekDays.push({

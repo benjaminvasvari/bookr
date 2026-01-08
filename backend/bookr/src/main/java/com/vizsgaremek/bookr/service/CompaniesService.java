@@ -72,7 +72,7 @@ public class CompaniesService {
             }
 
             // 6. OPENING HOURS
-            OpeningHours openingHours = OpeningHours.getOpeningHours(id);
+            OpeningHours openingHours = OpeningHours.getOpeningHoursFormatted(id);
             JSONObject openingHoursObj = new JSONObject();
             if (openingHours != null) {
                 openingHoursObj.put("monday", openingHours.getMonday());

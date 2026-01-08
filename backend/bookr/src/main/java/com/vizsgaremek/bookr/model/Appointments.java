@@ -4,13 +4,18 @@
  */
 package com.vizsgaremek.bookr.model;
 
+import static com.vizsgaremek.bookr.model.Users.emf;
+import static com.vizsgaremek.bookr.model.Users.formatter;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 import javax.persistence.Basic;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EntityManager;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -20,6 +25,8 @@ import javax.persistence.ManyToOne;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.OneToMany;
+import javax.persistence.ParameterMode;
+import javax.persistence.StoredProcedureQuery;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
@@ -114,6 +121,36 @@ public class Appointments implements Serializable {
     @OneToMany(mappedBy = "appointmentId")
     private Collection<Reviews> reviewsCollection;
 
+    @javax.persistence.Transient
+    private String serviceName;
+
+    @javax.persistence.Transient
+    private Integer durationMinutes;
+
+    @javax.persistence.Transient
+    private String clientName;
+
+    @javax.persistence.Transient
+    private String clientPhone;
+
+    @javax.persistence.Transient
+    private String clientEmail;
+    
+    @javax.persistence.Transient
+    private Integer companyIdInt;
+    
+    @javax.persistence.Transient
+    private Integer serviceIdInt;
+    
+    @javax.persistence.Transient
+    private Integer staffIdInt;
+    
+    @javax.persistence.Transient
+    private Integer clientIdInt;
+    
+    @javax.persistence.Transient
+    private Integer cancelledByInt;
+
     public Appointments() {
     }
 
@@ -126,6 +163,32 @@ public class Appointments implements Serializable {
         this.startTime = startTime;
         this.endTime = endTime;
         this.currency = currency;
+    }
+    
+    // getAppointmentsByStaff
+    public Appointments(Integer id, Integer companyIdInt, Integer serviceIdInt, Integer staffIdInt, Integer clientIdInt, Date startTime, Date endTime, String status, String notes, String internalNotes, BigDecimal price, String currency, Integer cancelledByInt, String cancelledReason, Date cancelledAt, Date createdAt, Date updatedAt, String serviceName, Integer durationMinutes, String clientName, String clientPhone, String clientEmail) {
+        this.id = id;
+        this.companyIdInt = companyIdInt;
+        this.serviceIdInt = serviceIdInt;
+        this.staffIdInt = staffIdInt;
+        this.clientIdInt = clientIdInt;
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.status = status;
+        this.notes = notes;
+        this.internalNotes = internalNotes;
+        this.price = price;
+        this.currency = currency;
+        this.cancelledByInt = cancelledByInt;
+        this.cancelledReason = cancelledReason;
+        this.cancelledAt = cancelledAt;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.serviceName = serviceName;
+        this.durationMinutes = durationMinutes;
+        this.clientName = clientName;
+        this.clientPhone = clientPhone;
+        this.clientEmail = clientEmail;
     }
 
     public Integer getId() {
@@ -263,7 +326,92 @@ public class Appointments implements Serializable {
     public void setCancelledBy(Users cancelledBy) {
         this.cancelledBy = cancelledBy;
     }
+    
+    
+    public String getServiceName() {
+        return serviceName;
+    }
 
+    public void setServiceName(String serviceName) {
+        this.serviceName = serviceName;
+    }
+    
+    public Integer getDurationMinutes() {
+        return durationMinutes;
+    }
+
+    public void setDurationMinutes(Integer durationMinutes) {
+        this.durationMinutes = durationMinutes;
+    }
+    
+    public String getClientName() {
+        return clientName;
+    }
+
+    public void setClientName(String clientName) {
+        this.clientName = clientName;
+    }
+    
+    public String getClientPhone() {
+        return clientPhone;
+    }
+
+    public void setClientPhone(String clientPhone) {
+        this.clientPhone = clientPhone;
+    }
+    
+    public String getClientEmail() {
+        return clientEmail;
+    }
+
+    public void setClientEmail(String clientEmail) {
+        this.clientEmail = clientEmail;
+    }
+    
+    public Integer getCompanyIdInt() {
+        return companyIdInt;
+    }
+
+    public void setCompanyIdInt(Integer companyIdInt) {
+        this.companyIdInt = companyIdInt;
+    }
+    
+    public Integer getServiceIdInt() {
+        return serviceIdInt;
+    }
+
+    public void setServiceIdInt(Integer serviceIdInt) {
+        this.serviceIdInt = serviceIdInt;
+    }
+    
+    public Integer getStaffIdInt() {
+        return staffIdInt;
+    }
+
+    public void setStaffIdInt(Integer staffIdInt) {
+        this.staffIdInt = staffIdInt;
+    }
+    
+    public Integer getClientIdInt() {
+        return clientIdInt;
+    }
+
+    public void setClientIdInt(Integer clientIdInt) {
+        this.clientIdInt = clientIdInt;
+    }
+    
+    public Integer getCancelledByInt() {
+        return cancelledByInt;
+    }
+
+    public void setCancelledByInt(Integer cancelledByInt) {
+        this.cancelledByInt = cancelledByInt;
+    }
+   
+    
+    
+
+    
     @XmlTransient
     public Collection<Reviews> getReviewsCollection() {
         return reviewsCollection;
@@ -297,5 +445,66 @@ public class Appointments implements Serializable {
     public String toString() {
         return "com.vizsgaremek.bookr.model.Appointments[ id=" + id + " ]";
     }
-    
+
+    public static ArrayList<Appointments> getAppointmentsByStaff(Integer staffId, Date dateFrom, Date dateTo) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getAppointmentsByStaff");
+
+            spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("dateFromIN", Date.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("dateToIN", Date.class, ParameterMode.IN);
+
+            spq.setParameter("staffIdIN", staffId);
+            spq.setParameter("dateFromIN", dateFrom);
+            spq.setParameter("dateToIN", dateTo);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+            ArrayList<Appointments> toReturn = new ArrayList();
+
+            for (Object[] record : resultList) {
+
+                Appointments a = new Appointments(
+                        Integer.valueOf(record[0].toString()),
+                        Integer.valueOf(record[1].toString()),
+                        Integer.valueOf(record[2].toString()),
+                        Integer.valueOf(record[3].toString()),
+                        Integer.valueOf(record[4].toString()),
+                        formatter.parse(record[5].toString()),
+                        formatter.parse(record[6].toString()),
+                        record[7].toString(),
+                        record[8] != null ? record[8].toString() : null, // notes
+                        record[9] != null ? record[9].toString() : null, // internalNotes
+                        record[10] != null ? new BigDecimal(record[10].toString()) : null, // price
+                        record[11].toString(),
+                        record[12] != null ? Integer.valueOf(record[12].toString()) : null, // cancelledByInt
+                        record[13] != null ? record[13].toString() : null,
+                        record[14] != null ? formatter.parse(record[14].toString()) : null, // cancelledAt
+                        formatter.parse(record[15].toString()),
+                        record[16] != null ? formatter.parse(record[16].toString()) : null, // updatedAt
+                        record[17].toString(),
+                        Integer.valueOf(record[18].toString()),
+                        record[19].toString(),
+                        record[20].toString(),
+                        record[21].toString()
+                );
+
+                toReturn.add(a);
+
+            }
+
+            return toReturn;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+
+        } finally {
+            em.close();
+        }
+    }
 }

@@ -67,6 +67,9 @@ import javax.xml.bind.annotation.XmlTransient;
 
 public class Users implements Serializable {
 
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "userId")
+    private Collection<Favorites> favoritesCollection;
+
     private static final long serialVersionUID = 1L;
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -1058,5 +1061,14 @@ public class Users implements Serializable {
                 em.close();
             }
         }
+    }
+
+    @XmlTransient
+    public Collection<Favorites> getFavoritesCollection() {
+        return favoritesCollection;
+    }
+
+    public void setFavoritesCollection(Collection<Favorites> favoritesCollection) {
+        this.favoritesCollection = favoritesCollection;
     }
 }

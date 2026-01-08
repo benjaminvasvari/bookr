@@ -39,7 +39,7 @@ export class CompaniesService {
         `${this.apiUrl}${API_ENDPOINTS.SERVICES.BY_COMPANY(companyId)}`
       )
       .pipe(
-        map((response) => response.data || []) // ← Itt csomagoljuk ki!
+        map((response) => response.data || []) 
       );
   }
 

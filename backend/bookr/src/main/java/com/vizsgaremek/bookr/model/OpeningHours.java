@@ -4,9 +4,11 @@
  */
 package com.vizsgaremek.bookr.model;
 
+import static com.vizsgaremek.bookr.model.Users.emf;
 import java.io.Serializable;
 import java.sql.Time;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import javax.persistence.Basic;
@@ -101,6 +103,8 @@ public class OpeningHours implements Serializable {
     @Transient
     private String sunday;
 
+    static SimpleDateFormat timeFormatter = new SimpleDateFormat("HH:mm");
+
     public OpeningHours() {
     }
 
@@ -112,6 +116,14 @@ public class OpeningHours implements Serializable {
         this.id = id;
         this.dayOfWeek = dayOfWeek;
         this.createdAt = createdAt;
+    }
+
+    // getOpeningHours
+    public OpeningHours(String dayOfWeek, Date openTime, Date closeTime, Boolean isClosed) {
+        this.dayOfWeek = dayOfWeek;
+        this.openTime = openTime;
+        this.closeTime = closeTime;
+        this.isClosed = isClosed;
     }
 
     public Integer getId() {
@@ -260,13 +272,15 @@ public class OpeningHours implements Serializable {
         return "com.vizsgaremek.bookr.model.OpeningHours[ id=" + id + " ]";
     }
 
-    public static OpeningHours getOpeningHours(Integer companyId) {
+    public static OpeningHours getOpeningHoursFormatted(Integer companyId) {
         EntityManager em = Users.emf.createEntityManager();
 
         try {
             // Stored procedure hívás
             StoredProcedureQuery spq = em.createStoredProcedureQuery("getOpeningHours");
+            
             spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            
             spq.setParameter("companyIdIN", companyId);
 
             spq.execute();
@@ -280,7 +294,6 @@ public class OpeningHours implements Serializable {
 
             // Új OpeningHours objektum létrehozása
             OpeningHours openingHours = new OpeningHours();
-            SimpleDateFormat timeFormatter = new SimpleDateFormat("HH:mm");
 
             // Végigmegyünk a sorokon (7 nap)
             for (Object[] record : resultList) {
@@ -337,4 +350,42 @@ public class OpeningHours implements Serializable {
         }
     }
 
+    public static ArrayList<OpeningHours> getOpeningHours(Integer companyId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getOpeningHours");
+
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("companyIdIN", companyId);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+            ArrayList<OpeningHours> toReturn = new ArrayList();
+
+            for (Object[] record : resultList) {
+
+                OpeningHours o = new OpeningHours(
+                        record[0].toString(),
+                        record[1] != null ? timeFormatter.parse(record[1].toString()) : null,
+                        record[2] != null ? timeFormatter.parse(record[2].toString()) : null,
+                        Boolean.parseBoolean(record[3].toString())
+                );
+
+                toReturn.add(o);
+            }
+
+            return toReturn;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+
+        } finally {
+            em.close();
+        }
+    }
 }

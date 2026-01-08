@@ -1,4 +1,4 @@
-export interface Specialist {
+export interface Staff {
   id: number;
   name: string;
   imageUrl: string;

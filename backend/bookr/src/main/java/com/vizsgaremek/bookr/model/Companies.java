@@ -61,6 +61,9 @@ import javax.xml.bind.annotation.XmlTransient;
     @NamedQuery(name = "Companies.findByIsActive", query = "SELECT c FROM Companies c WHERE c.isActive = :isActive")})
 public class Companies implements Serializable {
 
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "companyId")
+    private Collection<Favorites> favoritesCollection;
+
     private static final long serialVersionUID = 1L;
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -871,5 +874,14 @@ public class Companies implements Serializable {
                 em.close();
             }
         }
+    }
+
+    @XmlTransient
+    public Collection<Favorites> getFavoritesCollection() {
+        return favoritesCollection;
+    }
+
+    public void setFavoritesCollection(Collection<Favorites> favoritesCollection) {
+        this.favoritesCollection = favoritesCollection;
     }
 }

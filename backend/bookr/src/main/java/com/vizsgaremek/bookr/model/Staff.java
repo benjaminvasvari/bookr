@@ -4,13 +4,15 @@
  */
 package com.vizsgaremek.bookr.model;
 
+import static com.vizsgaremek.bookr.model.Users.emf;
 import java.io.Serializable;
-import java.util.Collection;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import javax.persistence.Basic;
-import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EntityManager;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -19,13 +21,13 @@ import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
-import javax.persistence.OneToMany;
+import javax.persistence.ParameterMode;
+import javax.persistence.StoredProcedureQuery;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 import javax.validation.constraints.Size;
 import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlTransient;
 
 /**
  *
@@ -68,26 +70,50 @@ public class Staff implements Serializable {
     @Column(name = "updated_at")
     @Temporal(TemporalType.TIMESTAMP)
     private Date updatedAt;
-    @OneToMany(mappedBy = "staffId")
-    private Collection<Appointments> appointmentsCollection;
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "staffId")
-    private Collection<StaffExceptions> staffExceptionsCollection;
     @JoinColumn(name = "company_id", referencedColumnName = "id")
     @ManyToOne(optional = false)
     private Companies companyId;
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     @ManyToOne(optional = false)
     private Users userId;
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "staffId")
-    private Collection<StaffServices> staffServicesCollection;
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "staffId")
-    private Collection<StaffWorkingHours> staffWorkingHoursCollection;
+
+    @javax.persistence.Transient
+    private String imageUrl;
+
+    @javax.persistence.Transient
+    private Integer servicesCount;
+
+    @javax.persistence.Transient
+    private Integer companyIdInt;
+
+    @javax.persistence.Transient
+    private Integer userIdInt;
+
+    @javax.persistence.Transient
+    private String firstName;
+
+    @javax.persistence.Transient
+    private String lastName;
 
     public Staff() {
     }
 
     public Staff(Integer id) {
         this.id = id;
+    }
+
+    public Staff(Integer id, Integer userIdInt, String displayName, String specialties, String bio, Boolean isActive, Integer companyIdInt, String firstName, String lastName, String imageUrl, Integer servicesCount) {
+        this.id = id;
+        this.userIdInt = userIdInt;
+        this.displayName = displayName;
+        this.specialties = specialties;
+        this.bio = bio;
+        this.isActive = isActive;
+        this.companyIdInt = companyIdInt;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.imageUrl = imageUrl;
+        this.servicesCount = servicesCount;
     }
 
     public Integer getId() {
@@ -146,24 +172,6 @@ public class Staff implements Serializable {
         this.updatedAt = updatedAt;
     }
 
-    @XmlTransient
-    public Collection<Appointments> getAppointmentsCollection() {
-        return appointmentsCollection;
-    }
-
-    public void setAppointmentsCollection(Collection<Appointments> appointmentsCollection) {
-        this.appointmentsCollection = appointmentsCollection;
-    }
-
-    @XmlTransient
-    public Collection<StaffExceptions> getStaffExceptionsCollection() {
-        return staffExceptionsCollection;
-    }
-
-    public void setStaffExceptionsCollection(Collection<StaffExceptions> staffExceptionsCollection) {
-        this.staffExceptionsCollection = staffExceptionsCollection;
-    }
-
     public Companies getCompanyId() {
         return companyId;
     }
@@ -180,22 +188,52 @@ public class Staff implements Serializable {
         this.userId = userId;
     }
 
-    @XmlTransient
-    public Collection<StaffServices> getStaffServicesCollection() {
-        return staffServicesCollection;
+    public String getImageUrl() {
+        return imageUrl;
     }
 
-    public void setStaffServicesCollection(Collection<StaffServices> staffServicesCollection) {
-        this.staffServicesCollection = staffServicesCollection;
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 
-    @XmlTransient
-    public Collection<StaffWorkingHours> getStaffWorkingHoursCollection() {
-        return staffWorkingHoursCollection;
+    public Integer getServicesCount() {
+        return servicesCount;
     }
 
-    public void setStaffWorkingHoursCollection(Collection<StaffWorkingHours> staffWorkingHoursCollection) {
-        this.staffWorkingHoursCollection = staffWorkingHoursCollection;
+    public void setServicesCount(Integer servicesCount) {
+        this.servicesCount = servicesCount;
+    }
+
+    public Integer getCompanyIdInt() {
+        return companyIdInt;
+    }
+
+    public void setCompanyIdInt(Integer companyIdInt) {
+        this.companyIdInt = companyIdInt;
+    }
+
+    public Integer getUserIdInt() {
+        return userIdInt;
+    }
+
+    public void setUserIdInt(Integer userIdInt) {
+        this.userIdInt = userIdInt;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
     }
 
     @Override
@@ -222,5 +260,54 @@ public class Staff implements Serializable {
     public String toString() {
         return "com.vizsgaremek.bookr.model.Staff[ id=" + id + " ]";
     }
-    
+
+    public static ArrayList<Staff> getFilteredStaffByServices(Integer companyId, String serviceIds) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getStaffByCompanyAndServices");
+
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("serviceIdsIN", String.class, ParameterMode.IN);
+
+            spq.setParameter("companyIdIN", companyId);
+            spq.setParameter("serviceIdsIN", serviceIds);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+            ArrayList<Staff> toReturn = new ArrayList();
+
+            for (Object[] record : resultList) {
+
+                Staff s = new Staff(
+                        Integer.valueOf(record[0].toString()),
+                        Integer.valueOf(record[1].toString()),
+                        record[2].toString(),
+                        record[3] != null ? record[3].toString() : null,
+                        record[4] != null ? record[4].toString() : null,
+                        Boolean.parseBoolean(record[5].toString()),
+                        Integer.valueOf(record[6].toString()),
+                        record[7].toString(),
+                        record[8].toString(),
+                        record[9] != null ? record[9].toString() : null,
+                        Integer.valueOf(record[10].toString())
+                );
+
+                toReturn.add(s);
+
+            }
+
+            return toReturn;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+
+        } finally {
+            em.close();
+        }
+    }
+
 }

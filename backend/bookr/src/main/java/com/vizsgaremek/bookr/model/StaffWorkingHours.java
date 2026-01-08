@@ -4,11 +4,17 @@
  */
 package com.vizsgaremek.bookr.model;
 
+import static com.vizsgaremek.bookr.model.OpeningHours.timeFormatter;
+import static com.vizsgaremek.bookr.model.Users.emf;
+import static com.vizsgaremek.bookr.model.Users.formatter;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import javax.persistence.Basic;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EntityManager;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -16,9 +22,12 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
+import javax.persistence.ParameterMode;
+import javax.persistence.StoredProcedureQuery;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
+import javax.persistence.Transient;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import javax.xml.bind.annotation.XmlRootElement;
@@ -72,6 +81,9 @@ public class StaffWorkingHours implements Serializable {
     @ManyToOne(optional = false)
     private Staff staffId;
 
+    @Transient
+    private Integer staffIdInt;
+
     public StaffWorkingHours() {
     }
 
@@ -83,6 +95,17 @@ public class StaffWorkingHours implements Serializable {
         this.id = id;
         this.dayOfWeek = dayOfWeek;
         this.createdAt = createdAt;
+    }
+
+    public StaffWorkingHours(Integer id, Integer staffIdInt, String dayOfWeek, Date startTime, Date endTime, Boolean isAvailable, Date createdAt, Date updatedAt) {
+        this.id = id;
+        this.staffIdInt = staffIdInt;
+        this.dayOfWeek = dayOfWeek;
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.isAvailable = isAvailable;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
     }
 
     public Integer getId() {
@@ -149,6 +172,14 @@ public class StaffWorkingHours implements Serializable {
         this.staffId = staffId;
     }
 
+    public Integer getStaffIdInt() {
+        return staffIdInt;
+    }
+
+    public void setStaffIdInt(Integer staffIdInt) {
+        this.staffIdInt = staffIdInt;
+    }
+
     @Override
     public int hashCode() {
         int hash = 0;
@@ -173,5 +204,47 @@ public class StaffWorkingHours implements Serializable {
     public String toString() {
         return "com.vizsgaremek.bookr.model.StaffWorkingHours[ id=" + id + " ]";
     }
-    
+
+    public static ArrayList<StaffWorkingHours> getStaffWorkingHours(Integer companyId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getStaffWorkingHours");
+
+            spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("staffIdIN", companyId);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+            ArrayList<StaffWorkingHours> toReturn = new ArrayList();
+
+            for (Object[] record : resultList) {
+
+                StaffWorkingHours s = new StaffWorkingHours(
+                        Integer.valueOf(record[0].toString()),
+                        Integer.valueOf(record[1].toString()),
+                        record[2].toString(),
+                        record[3] != null ? timeFormatter.parse(record[3].toString()) : null,
+                        record[4] != null ? timeFormatter.parse(record[4].toString()) : null,
+                        Boolean.parseBoolean(record[5].toString()),
+                        record[6] != null ? formatter.parse(record[6].toString()) : null,
+                        record[7] != null ? formatter.parse(record[7].toString()) : null
+                );
+
+                toReturn.add(s);
+            }
+
+            return toReturn;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+
+        } finally {
+            em.close();
+        }
+    }
 }
