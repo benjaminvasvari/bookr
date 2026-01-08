@@ -29,83 +29,7 @@
   </div>
   }
 
-  <!-- Avatar Card -->
-  <div class="card">
-    <div class="card-header">
-      <h2 class="card-title">Profilkép</h2>
-    </div>
-
-    <div class="card-body avatar-section">
-      <!-- Error Message -->
-      @if (avatarUploadError) {
-      <div class="alert alert-error">
-        <span>{{ avatarUploadError }}</span>
-      </div>
-      } @if (avatarDeleteError) {
-      <div class="alert alert-error">
-        <span>{{ avatarDeleteError }}</span>
-      </div>
-      }
-
-      <!-- Avatar Display -->
-      <div class="avatar-display">
-        <div class="avatar-large">
-          @if (currentUser?.avatarUrl) {
-          <img [src]="currentUser!.avatarUrl" [alt]="currentUser!.firstName" class="avatar-img" />
-          } @else {
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-            <path
-              d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
-            />
-          </svg>
-          }
-        </div>
-      </div>
-
-      <!-- Avatar Actions -->
-      <div class="avatar-actions">
-        <input
-          type="file"
-          id="avatarFileInput"
-          accept="image/jpeg,image/png,image/webp"
-          (change)="onAvatarFileSelected($event)"
-          style="display: none"
-        />
-
-        <button
-          type="button"
-          class="btn btn-primary"
-          (click)="triggerFileInput()"
-          [disabled]="isUploadingAvatar || isDeletingAvatar"
-        >
-          <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-            <path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z" />
-          </svg>
-          Kép feltöltése
-        </button>
-
-        @if (currentUser?.avatarUrl) {
-        <button
-          type="button"
-          class="btn btn-danger"
-          (click)="showDeleteConfirmModal()"
-          [disabled]="isUploadingAvatar || isDeletingAvatar"
-        >
-          <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-            <path
-              d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
-            />
-          </svg>
-          Kép törlése
-        </button>
-        }
-      </div>
-
-      <p class="avatar-info">Max 2MB • JPG, PNG, WEBP</p>
-    </div>
-  </div>
-
-  <!-- Profile Form Card -->
+  <!-- Combined Profile & Avatar Card -->
   <div class="card">
     <div class="card-header">
       <h2 class="card-title">Személyes adatok</h2>
@@ -121,93 +45,168 @@
       }
     </div>
 
-    <form [formGroup]="profileForm" class="card-body">
-      <!-- Error Message -->
-      @if (profileSaveError) {
-      <div class="alert alert-error">
-        <span>{{ profileSaveError }}</span>
-      </div>
-      }
+    <div class="card-body profile-grid">
+      <!-- Left Column - Form -->
+      <div class="profile-form-column">
+        <form [formGroup]="profileForm">
+          <!-- Error Message -->
+          @if (profileSaveError) {
+          <div class="alert alert-error alert-compact">
+            <span>{{ profileSaveError }}</span>
+          </div>
+          }
 
-      <!-- First Name -->
-      <div class="form-group">
-        <label class="form-label">Keresztnév</label>
-        <input
-          type="text"
-          class="form-input"
-          [class.disabled]="!isEditingProfile"
-          [readonly]="!isEditingProfile"
-          formControlName="firstName"
-          placeholder="Pl. János"
-        />
-        @if (profileForm.get('firstName')?.invalid && profileForm.get('firstName')?.touched) {
-        <div class="form-error">Minimum 2 karakter szükséges</div>
+          <!-- Vezetéknév -->
+          <div class="form-group">
+            <label class="form-label">Vezetéknév</label>
+            <input
+              type="text"
+              class="form-input"
+              [class.disabled]="!isEditingProfile"
+              [readonly]="!isEditingProfile"
+              formControlName="lastName"
+              placeholder="Pl. Kovács"
+            />
+            @if (profileForm.get('lastName')?.invalid && profileForm.get('lastName')?.touched) {
+            <div class="form-error">Minimum 2 karakter szükséges</div>
+            }
+          </div>
+
+             <!-- Keresztnév -->
+          <div class="form-group">
+            <label class="form-label">Keresztnév</label>
+            <input
+              type="text"
+              class="form-input"
+              [class.disabled]="!isEditingProfile"
+              [readonly]="!isEditingProfile"
+              formControlName="firstName"
+              placeholder="Pl. János"
+            />
+            @if (profileForm.get('firstName')?.invalid && profileForm.get('firstName')?.touched) {
+            <div class="form-error">Minimum 2 karakter szükséges</div>
+            }
+          </div>
+
+          <!-- Email -->
+          <div class="form-group">
+            <label class="form-label">Email cím</label>
+            <input
+              type="email"
+              class="form-input"
+              [class.disabled]="!isEditingProfile"
+              [readonly]="!isEditingProfile"
+              formControlName="email"
+              placeholder="pelda@email.com"
+            />
+            @if (profileForm.get('email')?.invalid && profileForm.get('email')?.touched) {
+            <div class="form-error">Érvényes email cím szükséges</div>
+            }
+          </div>
+
+          <!-- Phone -->
+          <div class="form-group">
+            <label class="form-label">Telefonszám</label>
+            <input
+              type="tel"
+              class="form-input"
+              [class.disabled]="!isEditingProfile"
+              [readonly]="!isEditingProfile"
+              formControlName="phone"
+              placeholder="+36201234567"
+            />
+            @if (profileForm.get('phone')?.invalid && profileForm.get('phone')?.touched) {
+            <div class="form-error">Helyes formátum: +36201234567</div>
+            }
+          </div>
+
+          <!-- Action Buttons -->
+          @if (isEditingProfile) {
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" (click)="cancelProfileEdit()">Mégse</button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              (click)="saveProfile()"
+              [disabled]="profileForm.invalid"
+            >
+              Mentés
+            </button>
+          </div>
+          }
+        </form>
+      </div>
+
+      <!-- Right Column - Avatar -->
+      <div class="profile-avatar-column">
+        <!-- Error Message -->
+        @if (avatarUploadError) {
+        <div class="alert alert-error alert-compact">
+          <span>{{ avatarUploadError }}</span>
+        </div>
+        } @if (avatarDeleteError) {
+        <div class="alert alert-error alert-compact">
+          <span>{{ avatarDeleteError }}</span>
+        </div>
         }
-      </div>
 
-      <!-- Last Name -->
-      <div class="form-group">
-        <label class="form-label">Vezetéknév</label>
-        <input
-          type="text"
-          class="form-input"
-          [class.disabled]="!isEditingProfile"
-          [readonly]="!isEditingProfile"
-          formControlName="lastName"
-          placeholder="Pl. Kovács"
-        />
-        @if (profileForm.get('lastName')?.invalid && profileForm.get('lastName')?.touched) {
-        <div class="form-error">Minimum 2 karakter szükséges</div>
-        }
-      </div>
+        <!-- Avatar Display -->
+        <div class="avatar-display">
+          <div class="avatar-large">
+            @if (currentUser?.avatarUrl) {
+            <img [src]="currentUser!.avatarUrl" [alt]="currentUser!.firstName" class="avatar-img" />
+            } @else {
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <path
+                d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+              />
+            </svg>
+            }
+          </div>
+        </div>
 
-      <!-- Email -->
-      <div class="form-group">
-        <label class="form-label">Email cím</label>
-        <input
-          type="email"
-          class="form-input"
-          [class.disabled]="!isEditingProfile"
-          [readonly]="!isEditingProfile"
-          formControlName="email"
-          placeholder="pelda@email.com"
-        />
-        @if (profileForm.get('email')?.invalid && profileForm.get('email')?.touched) {
-        <div class="form-error">Érvényes email cím szükséges</div>
-        }
-      </div>
+        <!-- Avatar Actions -->
+        <div class="avatar-actions">
+          <input
+            type="file"
+            id="avatarFileInput"
+            accept="image/jpeg,image/png,image/webp"
+            (change)="onAvatarFileSelected($event)"
+            style="display: none"
+          />
 
-      <!-- Phone -->
-      <div class="form-group">
-        <label class="form-label">Telefonszám</label>
-        <input
-          type="tel"
-          class="form-input"
-          [class.disabled]="!isEditingProfile"
-          [readonly]="!isEditingProfile"
-          formControlName="phone"
-          placeholder="+36201234567"
-        />
-        @if (profileForm.get('phone')?.invalid && profileForm.get('phone')?.touched) {
-        <div class="form-error">Helyes formátum: +36201234567</div>
-        }
-      </div>
+          <button
+            type="button"
+            class="btn btn-primary btn-block"
+            (click)="triggerFileInput()"
+            [disabled]="isUploadingAvatar || isDeletingAvatar"
+          >
+            <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z" />
+            </svg>
+            Kép feltöltése
+          </button>
 
-      <!-- Action Buttons -->
-      @if (isEditingProfile) {
-      <div class="form-actions">
-        <button type="button" class="btn btn-secondary" (click)="cancelProfileEdit()">Mégse</button>
-        <button
-          type="button"
-          class="btn btn-primary"
-          (click)="saveProfile()"
-          [disabled]="profileForm.invalid"
-        >
-          Mentés
-        </button>
+          @if (currentUser?.avatarUrl) {
+          <button
+            type="button"
+            class="btn btn-danger btn-block"
+            (click)="showDeleteConfirmModal()"
+            [disabled]="isUploadingAvatar || isDeletingAvatar"
+          >
+            <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <path
+                d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
+              />
+            </svg>
+            Kép törlése
+          </button>
+          }
+        </div>
+
+        <p class="avatar-info">Max 2MB • JPG, PNG, WEBP</p>
       </div>
-      }
-    </form>
+    </div>
   </div>
 
   <!-- Password Change Card -->

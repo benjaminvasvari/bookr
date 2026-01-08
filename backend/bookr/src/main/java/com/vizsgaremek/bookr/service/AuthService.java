@@ -630,60 +630,71 @@ public class AuthService {
         toReturn.put("statusCode", statusCode);
         return toReturn;
     }
-    
+
     public JSONObject resetPassUpdate(String newPassword, String token, String jwt) {
         JSONObject toReturn = new JSONObject();
-        String status = "success";
-        Integer statusCode = 200;
+
+        // ========== JWT validáció ==========
+        Integer userId = JWT.getUserIdFromAccessToken(jwt);
+        String userEmail = JWT.getEmailFromAccessToken(jwt);
 
         try {
-            // ========== JWT PARSING ==========
-            Integer userId = JWT.getUserIdFromAccessToken(jwt);
-            String userEmail = JWT.getEmailFromAccessToken(jwt);
 
             if (userId == null || userEmail == null) {
                 toReturn.put("status", "InvalidToken");
                 toReturn.put("statusCode", 401);
+                toReturn.put("message", "Invalid authentication token");
                 return toReturn;
             }
 
+            // ========== Jelszó validáció ==========
+            if (newPassword == null || newPassword.trim().isEmpty()) {
+                toReturn.put("status", "InvalidPassword");
+                toReturn.put("statusCode", 400);
+                toReturn.put("message", "Password cannot be empty");
+                return toReturn;
+            }
+
+            // Jelszó hash
             String newPasswordHash = passwordHasher.hashPassword(newPassword);
 
-            // ========== Update password ==========
-            Boolean passwordIsUpdated = Users.updatePassword(token, newPasswordHash);
+            // ========== Jelszó frissítés ==========
+            boolean success = Users.resetPasswordWithToken(token, newPasswordHash);
 
-            if (!passwordIsUpdated) {
-                status = "serverError";
-                statusCode = 500;
-                toReturn.put("status", status);
-                toReturn.put("statusCode", statusCode);
+            if (!success) {
+                // Token invalid, expired, vagy már használt
+                toReturn.put("status", "InvalidResetToken");
+                toReturn.put("statusCode", 400);
                 return toReturn;
             }
 
-            // ========== AUDIT LOG ==========
-            try {
-                AuditLogs auditLog = new AuditLogs(
-                        userId,
-                        "client",
-                        userEmail,
-                        "user",
-                        "password_reset"
-                );
-                auditLogService.logAudit(auditLog);
-            } catch (Exception ex) {
-                // Log the error but don't fail the process
-                ex.printStackTrace();
-            }
+            // ========== Siker ==========
+            toReturn.put("status", "success");
+            toReturn.put("statusCode", 200);
 
         } catch (Exception ex) {
             ex.printStackTrace();
-
-            status = "InternalServerError";
-            statusCode = 500;
+            toReturn.put("status", "InternalServerError");
+            toReturn.put("statusCode", 500);
+            toReturn.put("message", "An unexpected error occurred");
+            return toReturn;
         }
 
-        toReturn.put("status", status);
-        toReturn.put("statusCode", statusCode);
+        // ========== Audit log ==========
+        try {
+            AuditLogs auditLog = new AuditLogs(
+                    userId,
+                    "client",
+                    userEmail,
+                    "user",
+                    "password_reset"
+            );
+            auditLogService.logAudit(auditLog);
+        } catch (Exception ex) {
+            System.err.println("Audit log failed: " + ex.getMessage());
+            ex.printStackTrace();
+        }
+
         return toReturn;
     }
 }

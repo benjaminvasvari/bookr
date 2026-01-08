@@ -131,7 +131,7 @@ export class ResetPasswordComponent implements OnInit, OnDestroy {
         // Error message backend-től
         if (error.error?.message) {
           this.errorMessage = error.error.message;
-        } else if (error.status === 401) {
+        } else if (error.status === 400) {
           this.errorMessage = 'A link lejárt vagy érvénytelen. Kérj új jelszó változtatási emailt.';
         } else {
           this.errorMessage = 'Hiba történt a jelszó változtatása során. Próbáld újra később.';

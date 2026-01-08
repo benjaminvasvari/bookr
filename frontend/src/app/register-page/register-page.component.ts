@@ -1,30 +1,22 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
-  AbstractControl,
   FormBuilder,
   FormGroup,
   ReactiveFormsModule,
-  ValidationErrors,
-  ValidatorFn,
   Validators,
 } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from '../core/services/auth.service';
-
-// Custom validator for password matching
-export function passwordMatchValidator(): ValidatorFn {
-  return (control: AbstractControl): ValidationErrors | null => {
-    const password = control.get('password');
-    const confirmPassword = control.get('confirmPassword');
-
-    if (!password || !confirmPassword) {
-      return null;
-    }
-
-    return password.value === confirmPassword.value ? null : { passwordMismatch: true };
-  };
-}
+import { 
+  passwordValidator, 
+  passwordMatchValidator,
+  getPasswordErrorMessages,
+  calculatePasswordStrength,
+  getPasswordStrengthLabel,
+  getPasswordStrengthColor
+} from '../core/utils/password.validator';
+import { CustomValidators, getValidationErrorMessages } from '../core/utils/custom.validator';
 
 @Component({
   selector: 'app-register',
@@ -34,45 +26,79 @@ export function passwordMatchValidator(): ValidatorFn {
   styleUrls: ['./register-page.component.css'],
 })
 
-export class RegisterComponent {
-  registerForm: FormGroup;
+export class RegisterComponent implements OnInit, OnDestroy {
+  registerForm!: FormGroup;
   isLoading = false;
-  hidePassword = true;
-  hideConfirmPassword = true;
   errorMessage = '';
   successMessage = '';
 
-  // Snapshot a form hibáiról submit pillanatában
-  public submittedFormSnapshot: any = null;
+  // Password visibility toggles
+  showPassword = false;
+  showConfirmPassword = false;
+  
+  // Password strength
+  passwordStrength = 0;
+  passwordStrengthLabel = '';
+  passwordStrengthColor = '';
 
-  constructor(private fb: FormBuilder, private router: Router, private authService: AuthService) {
+  constructor(private fb: FormBuilder, private router: Router, private authService: AuthService) {}
+
+  ngOnInit(): void {
+    // Form inicializálás
     this.registerForm = this.fb.group(
       {
-        lastName: ['', [Validators.required, Validators.minLength(2)]],
-        firstName: ['', [Validators.required, Validators.minLength(2)]],
-        email: ['', [Validators.required, Validators.email]],
-        phone: ['', [Validators.required, Validators.pattern(/^[\d\s\+\-\(\)]+$/)]],
-        password: ['', [Validators.required, Validators.minLength(8)]],
-        confirmPassword: ['', [Validators.required]],
+        lastName: ['', [Validators.required, CustomValidators.name()]],
+        firstName: ['', [Validators.required, CustomValidators.name()]],
+        email: ['', [Validators.required, CustomValidators.email()]],
+        phone: ['', [Validators.required, CustomValidators.phone()]],
+        password: ['', [Validators.required, passwordValidator()]],
+        confirmPassword: ['', Validators.required],
       },
       { validators: passwordMatchValidator() }
     );
+    
+    // Password strength tracking
+    this.registerForm.get('password')?.valueChanges.subscribe(value => {
+      this.passwordStrength = calculatePasswordStrength(value);
+      this.passwordStrengthLabel = getPasswordStrengthLabel(this.passwordStrength);
+      this.passwordStrengthColor = getPasswordStrengthColor(this.passwordStrength);
+    });
+  }
+
+  ngOnDestroy(): void {
+    // Cleanup
+  }
+
+  togglePasswordVisibility(): void {
+    this.showPassword = !this.showPassword;
+  }
+
+  toggleConfirmPasswordVisibility(): void {
+    this.showConfirmPassword = !this.showConfirmPassword;
+  }
+
+  getPasswordErrors(): string[] {
+    const passwordControl = this.registerForm.get('password');
+    if (passwordControl?.errors && passwordControl.touched) {
+      return getPasswordErrorMessages(passwordControl.errors);
+    }
+    return [];
+  }
+
+  getConfirmPasswordErrors(): string[] {
+    const confirmControl = this.registerForm.get('confirmPassword');
+    if (confirmControl?.errors && confirmControl.touched) {
+      return getPasswordErrorMessages(confirmControl.errors);
+    }
+    return [];
   }
 
   onSubmit(): void {
-    // Snapshot készítése a jelenlegi form hibáiról
-    this.submittedFormSnapshot = {
-      lastName: this.lastName.errors,
-      firstName: this.firstName.errors,
-      email: this.email.errors,
-      phone: this.phone.errors,
-      password: this.password.errors,
-      confirmPassword: this.confirmPassword.errors,
-      passwordMismatch: this.registerForm.hasError('passwordMismatch'),
-    };
-
-    // Ha invalid form, return (NEM küldi el)
     if (this.registerForm.invalid) {
+      this.errorMessage = 'Kérjük, javítsd ki a hibákat a folytatáshoz.';
+      Object.keys(this.registerForm.controls).forEach(key => {
+        this.registerForm.get(key)?.markAsTouched();
+      });
       return;
     }
 
@@ -117,100 +143,5 @@ export class RegisterComponent {
         console.error('Registration error:', error);
       },
     });
-  }
-
-  // Getters for form controls
-  get lastName() {
-    return this.registerForm.get('lastName')!;
-  }
-
-  get firstName() {
-    return this.registerForm.get('firstName')!;
-  }
-
-  get email() {
-    return this.registerForm.get('email')!;
-  }
-
-  get phone() {
-    return this.registerForm.get('phone')!;
-  }
-
-  get password() {
-    return this.registerForm.get('password')!;
-  }
-
-  get confirmPassword() {
-    return this.registerForm.get('confirmPassword')!;
-  }
-
-  // EGYETLEN validációs hibaüzenet getter - a SNAPSHOT alapján
-  get validationErrorMessage(): string {
-    if (!this.submittedFormSnapshot) return '';
-
-    const snap = this.submittedFormSnapshot;
-    let errorCount = 0;
-
-    // Számoljuk meg hány hiba van
-    if (snap.lastName) errorCount++;
-    if (snap.firstName) errorCount++;
-    if (snap.email) errorCount++;
-    if (snap.phone) errorCount++;
-    if (snap.password) errorCount++;
-    if (snap.confirmPassword) errorCount++;
-    if (snap.passwordMismatch) errorCount++;
-
-    // Ha több mint 1 hiba → általános üzenet
-    if (errorCount > 1) {
-      return 'Kérlek töltsd ki az összes kötelező mezőt';
-    }
-
-    // Ha csak 1 hiba → specifikus üzenet
-    if (snap.lastName?.required) {
-      return 'Kérlek add meg a vezetékneved';
-    }
-    if (snap.lastName?.minlength) {
-      return 'A vezetéknév legalább 2 karakter hosszú legyen';
-    }
-    if (snap.firstName?.required) {
-      return 'Kérlek add meg a keresztneved';
-    }
-    if (snap.firstName?.minlength) {
-      return 'A keresztnév legalább 2 karakter hosszú legyen';
-    }
-    if (snap.email?.required) {
-      return 'Kérlek add meg az email címed';
-    }
-    if (snap.email?.email) {
-      return 'Érvénytelen email formátum';
-    }
-    if (snap.phone?.required) {
-      return 'Kérlek add meg a telefonszámod';
-    }
-    if (snap.phone?.pattern) {
-      return 'Érvénytelen telefonszám formátum';
-    }
-    if (snap.password?.required) {
-      return 'Kérlek add meg a jelszavad';
-    }
-    if (snap.password?.minlength) {
-      return 'A jelszó legalább 8 karakter hosszú legyen';
-    }
-    if (snap.confirmPassword?.required) {
-      return 'Kérlek erősítsd meg a jelszavad';
-    }
-    if (snap.passwordMismatch) {
-      return 'A két jelszó nem egyezik meg';
-    }
-    return '';
-  }
-
-  // Password visibility toggles
-  togglePasswordVisibility(): void {
-    this.hidePassword = !this.hidePassword;
-  }
-
-  toggleConfirmPasswordVisibility(): void {
-    this.hideConfirmPassword = !this.hideConfirmPassword;
   }
 }

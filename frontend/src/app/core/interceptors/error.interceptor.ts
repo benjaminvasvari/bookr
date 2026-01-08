@@ -19,6 +19,9 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
       if (error.status === 401) {
         return throwError(() => error); // Továbbdobjuk az authInterceptor-nak!
       }
+      if (error.status === 400) {
+        return throwError(() => error);
+      }
       
       let errorMessage = 'Ismeretlen hiba történt';
       
@@ -30,9 +33,6 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
         switch (error.status) {
           case 0:
             errorMessage = 'Nem sikerült kapcsolódni a szerverhez. Ellenőrizd az internetkapcsolatot.';
-            break;
-          case 400:
-            errorMessage = error.error?.message || 'Hibás kérés';
             break;
           case 403:
             errorMessage = 'Nincs hozzáférésed ehhez az erőforráshoz.';

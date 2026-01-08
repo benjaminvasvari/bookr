@@ -27,6 +27,7 @@ import javax.persistence.NamedQuery;
 import javax.persistence.OneToMany;
 import javax.persistence.ParameterMode;
 import javax.persistence.Persistence;
+import javax.persistence.PersistenceException;
 import javax.persistence.StoredProcedureQuery;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
@@ -63,6 +64,7 @@ import javax.xml.bind.annotation.XmlTransient;
     @NamedQuery(name = "Users.findByTwoFactorEnabled", query = "SELECT u FROM Users u WHERE u.twoFactorEnabled = :twoFactorEnabled"),
     @NamedQuery(name = "Users.findByTwoFactorSecret", query = "SELECT u FROM Users u WHERE u.twoFactorSecret = :twoFactorSecret"),
     @NamedQuery(name = "Users.findByTwoFactorConfirmedAt", query = "SELECT u FROM Users u WHERE u.twoFactorConfirmedAt = :twoFactorConfirmedAt")})
+
 public class Users implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -1000,9 +1002,9 @@ public class Users implements Serializable {
         try {
             StoredProcedureQuery spq = em.createStoredProcedureQuery("getPassword");
             spq.registerStoredProcedureParameter("idIN", Integer.class, ParameterMode.IN);
-            
+
             spq.setParameter("idIN", userId);
-            
+
             spq.execute();
 
             List<Object> resultList = spq.getResultList();
@@ -1023,12 +1025,11 @@ public class Users implements Serializable {
             }
         }
     }
-    
-        public static Boolean updatePassword(String token, String newPasswordHash) {
+
+    public static boolean resetPasswordWithToken(String token, String newPasswordHash) {
         EntityManager em = emf.createEntityManager();
 
         try {
-
             StoredProcedureQuery spq = em.createStoredProcedureQuery("resetPasswordWithToken");
             spq.registerStoredProcedureParameter("tokenIN", String.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("newPasswordIN", String.class, ParameterMode.IN);
@@ -1038,11 +1039,24 @@ public class Users implements Serializable {
 
             spq.execute();
 
+            // Ha idáig eljutottunk, akkor sikeres volt
             return true;
 
-        } catch (Exception ex) {
+        } catch (PersistenceException ex) {
+            // SQL hiba (pl. SIGNAL hibája)
+            System.err.println("Password reset failed: " + ex.getMessage());
             ex.printStackTrace();
             return false;
+
+        } catch (Exception ex) {
+            System.err.println("Unexpected error during password reset: " + ex.getMessage());
+            ex.printStackTrace();
+            return false;
+
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
         }
     }
 }
