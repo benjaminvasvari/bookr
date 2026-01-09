@@ -9,6 +9,8 @@ import { AppointmentSelectComponent } from './appointment-select/appointment-sel
 import { VerifyEmailComponent } from './verify-email/verify-email.component';
 import { ProfileComponent } from './profile/profile.component';
 import { AppointmentPaymentComponent } from './appointment-payment/appointment-payment.component';
+import { authGuard } from './core/guards/auth.guard';
+import { ResetPasswordComponent } from './reset-password/reset-password.component';
 
 export const appRoutes: Routes = [
   {
@@ -35,6 +37,7 @@ export const appRoutes: Routes = [
     path: 'profile',
     component: ProfileComponent,
     data: { showFooter: false },
+    canActivate: [authGuard],
   },
   {
     path: 'sel-industry/:id',
@@ -53,6 +56,12 @@ export const appRoutes: Routes = [
   },
   {
     path: 'appointment-payment/:companyId',
-    component: AppointmentPaymentComponent
+    component: AppointmentPaymentComponent,
+  },
+  {
+    path: 'reset-password',
+    component: ResetPasswordComponent,
+    data: { showFooter: false },
+    canActivate: [authGuard],
   },
 ];

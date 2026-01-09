@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { API_ENDPOINTS } from '../constants/api-endpoints';
-import { Specialist } from '../models';
+import { Staff } from '../models';
 
 @Injectable({
   providedIn: 'root'
@@ -17,8 +17,8 @@ export class SpecialistsService {
   /**
    * Összes szakember lekérése
    */
-  getSpecialists(): Observable<Specialist[]> {
-    return this.http.get<Specialist[]>(
+  getSpecialists(): Observable<Staff[]> {
+    return this.http.get<Staff[]>(
       `${this.apiUrl}${API_ENDPOINTS.SPECIALISTS.LIST}`
     );
   }
@@ -26,8 +26,8 @@ export class SpecialistsService {
   /**
    * Egy konkrét szakember lekérése ID alapján
    */
-  getSpecialistById(id: number): Observable<Specialist> {
-    return this.http.get<Specialist>(
+  getSpecialistById(id: number): Observable<Staff> {
+    return this.http.get<Staff>(
       `${this.apiUrl}${API_ENDPOINTS.SPECIALISTS.DETAIL(id)}`
     );
   }
@@ -35,8 +35,8 @@ export class SpecialistsService {
   /**
    * Egy cég összes szakemberének lekérése
    */
-  getSpecialistsByCompany(companyId: number): Observable<Specialist[]> {
-    return this.http.get<Specialist[]>(
+  getSpecialistsByCompany(companyId: number): Observable<Staff[]> {
+    return this.http.get<Staff[]>(
       `${this.apiUrl}${API_ENDPOINTS.SPECIALISTS.BY_COMPANY(companyId)}`
     );
   }

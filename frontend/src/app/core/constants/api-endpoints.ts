@@ -5,49 +5,55 @@ export const API_ENDPOINTS = {
     REGISTER: '/auth/register',
     LOGOUT: '/auth/logout',
     REFRESH_TOKEN: '/auth/refresh',
-    VERIFY_EMAIL: '/auth/verify'
+    VERIFY_EMAIL: '/auth/verify',
+    REQUEST_PASSWORD_RESET: '/auth/resetPassRequest',
+    RESET_PASSWORD: '/auth/resetPassUpdate',
   },
-  
+
   COMPANIES: {
     LIST: '/companies',
     DETAIL: (id: number) => `/companies/loadCompanyById?id=${id}`,
+    SHORT: (id: number) => `/companies/short?id=${id}`,
     TOP_RECOMMENDATIONS: '/companies/top',
     FEATURED: '/companies/featured',
     NEW: '/companies/new',
-    SEARCH: '/companies/search'
+    SEARCH: '/companies/search',
   },
-  
+
   SERVICES: {
     LIST: '/services',
     DETAIL: (id: number) => `/services/${id}`,
-    BY_COMPANY: (companyId: number) => `/companies/${companyId}/services`,
-    CATEGORIES: '/services/categories'
+    BY_COMPANY: (companyId: number) =>
+      `/services/getServiceCategoriesWithServicesByCompanyId?id=${companyId}`,
+    CATEGORIES: '/services/categories',
   },
-  
+
   SPECIALISTS: {
     LIST: '/specialists',
     DETAIL: (id: number) => `/specialists/${id}`,
-    BY_COMPANY: (companyId: number) => `/companies/${companyId}/specialists`
+    BY_COMPANY: (companyId: number) => `/companies/${companyId}/specialists`,
   },
-  
+
   BOOKINGS: {
     CREATE: '/bookings',
     LIST: '/bookings',
     USER_BOOKINGS: '/bookings/user',
     DETAIL: (id: number) => `/bookings/${id}`,
     CANCEL: (id: number) => `/bookings/${id}/cancel`,
-    AVAILABLE_SLOTS: '/bookings/available-slots'
+    AVAILABLE_SLOTS: '/bookings/available-slots',
   },
-  
+
   REVIEWS: {
     LIST: '/reviews',
     CREATE: '/reviews',
-    BY_COMPANY: (companyId: number) => `/companies/${companyId}/reviews`
+    BY_COMPANY: (companyId: number) => `/companies/${companyId}/reviews`,
   },
-  
+
   USER: {
     PROFILE: '/user/profile',
-    UPDATE_PROFILE: '/user/profile',
-    CHANGE_PASSWORD: '/user/change-password'
-  }
+    UPDATE_PROFILE: '/user/updateProfile',
+    CHANGE_PASSWORD: '/user/change-password',
+    UPLOAD_AVATAR: '/user/uploadAvatar',
+    DELETE_AVATAR: '/user/deleteAvatar',
+  },
 };

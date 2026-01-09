@@ -1,47 +1,70 @@
 <div class="appointment-container">
+  <!-- Loading state -->
+  @if (isLoading) {
+  <div class="loading-container">
+    <div class="spinner"></div>
+    <p>Adatok betöltése...</p>
+  </div>
+  }
+
+  <!-- Error state -->
+  @else if (loadError) {
+  <div class="error-container">
+    <i class="fas fa-exclamation-circle"></i>
+    <h3>Hiba történt</h3>
+    <p>{{ loadError }}</p>
+    <button class="retry-btn" (click)="retry()"><i class="fas fa-redo"></i> Újrapróbálkozás</button>
+  </div>
+  }
+
+  <!-- Main content -->
+  @else {
   <!-- Bal oldal: Szolgáltatások -->
   <div class="services-section">
     <h2>Szolgáltatások</h2>
-    
+
     <!-- Kategória gombok -->
     <div class="category-buttons">
-      <button 
+      <button
         class="category-btn"
         [class.active]="selectedCategory === null"
-        (click)="filterByCategory(null)">
+        (click)="filterByCategory(null)"
+      >
         Összes
       </button>
-      <button 
-        *ngFor="let category of categories"
+      @for (category of categories; track category.id) {
+      <button
         class="category-btn"
         [class.active]="selectedCategory === category.id"
-        (click)="filterByCategory(category.id)">
+        (click)="filterByCategory(category.id)"
+      >
         {{ category.name }}
       </button>
+      }
     </div>
 
     <h3>Kiemelt</h3>
-    
+
     <!-- Szolgáltatás lista -->
     <div class="services-list">
-      <div *ngFor="let service of filteredServices" class="service-card">
+      @for (service of filteredServices; track service.id) {
+      <div (click)="addToCart(service)" class="service-card">
         <div class="service-info">
           <h4>{{ service.name }}</h4>
-          <p class="service-duration">{{ service.duration }} p - {{ (service.duration / 60).toFixed(0) }} ó</p>
-          <p class="service-price">{{ service.price }} Ft-tól</p>
+          <p class="service-duration">{{ service.duration }}</p>
+          <p class="service-price">{{ service.price | hungarianCurrency:service.currency }}</p>
         </div>
-        <button 
-          class="add-btn"
-          [disabled]="isInCart(service.id)"
-          (click)="addToCart(service)">
+        <button class="add-btn" [disabled]="isInCart(service.id)" (click)="addToCart(service)">
           <i class="fas fa-plus"></i>
         </button>
       </div>
-
+      } @empty {
       <!-- Ha nincs szolgáltatás -->
-      <div *ngIf="filteredServices.length === 0" class="no-services">
+      <div class="no-services">
+        <i class="fas fa-info-circle"></i>
         <p>Jelenleg nincs elérhető szolgáltatás ebben a kategóriában.</p>
       </div>
+      }
     </div>
   </div>
 
@@ -49,57 +72,71 @@
   <div class="cart-section">
     <div class="cart-card">
       <!-- Cég info -->
+      @if (company) {
       <div class="company-info">
         <div class="company-image">
-          <img [src]="company?.imageUrl || 'assets/placeholder.jpg'" [alt]="company?.name">
+          <img
+            [src]="company.imageUrl || 'assets/placeholder.jpg'"
+            [alt]="company.name"
+            (error)="$event.target.src = 'assets/placeholder.jpg'"
+          />
         </div>
         <div class="company-details">
-          <h3>{{ company?.name }}</h3>
+          <h3>{{ company.name }}</h3>
           <div class="rating">
-            <span>{{ company?.rating }}</span>
+            <span class="rating-value">{{ company.rating }}</span>
             <span class="stars">
-              <i class="fas fa-star"></i>
-              <i class="fas fa-star"></i>
-              <i class="fas fa-star"></i>
-              <i class="fas fa-star"></i>
-              <i class="fas fa-star"></i>
+              @for (star of [1,2,3,4,5]; track star) {
+              <i class="fas fa-star" [class.filled]="star <= company.rating"></i>
+              }
             </span>
+            <span class="review-count">({{ company.reviewCount }})</span>
           </div>
-          <p class="address">{{ company?.address }}</p>
+          <p class="address">
+            <i class="fas fa-map-marker-alt"></i>
+            {{ company.address }}
+          </p>
         </div>
       </div>
+      }
 
       <!-- Összesen sor -->
       <div class="cart-summary">
         <span>Összesen</span>
-        <span>{{ getCartTotal() }} Ft</span>
+        <span class="total-price">{{ getCartTotal() | hungarianCurrency:"HUF" }}</span>
       </div>
 
       <!-- Kosár tartalom -->
       <div class="cart-items">
-        <div *ngIf="cart.length === 0" class="empty-cart">
+        @if (cart.length === 0) {
+        <div class="empty-cart">
+          <i class="fas fa-shopping-cart"></i>
           <p>A kosár üres</p>
+          <small>Válassz szolgáltatásokat a folytatáshoz</small>
         </div>
-
-        <div *ngFor="let item of cart" class="cart-item">
+        } @else { @for (item of cart; track item.id) {
+        <div class="cart-item">
           <div class="cart-item-info">
             <h4>{{ item.name }}</h4>
-            <p>{{ item.duration }} perc</p>
-            <p class="cart-item-price">{{ item.price }} Ft</p>
+            <p class="duration">
+              <i class="far fa-clock"></i>
+              {{ item.duration }}
+            </p>
+            <p class="cart-item-price">{{ item.price | hungarianCurrency:item.currency }}</p>
           </div>
-          <button class="remove-btn" (click)="removeFromCart(item.id)">
+          <button class="remove-btn" (click)="removeFromCart(item.id)" title="Eltávolítás">
             <i class="fas fa-times"></i>
           </button>
         </div>
+        } }
       </div>
 
       <!-- Folytatás gomb -->
-      <button 
-        class="continue-btn"
-        [disabled]="cart.length === 0"
-        (click)="continue()">
+      <button class="continue-btn" [disabled]="cart.length === 0" (click)="continue()">
         Folytatás
+        <i class="fas fa-arrow-right"></i>
       </button>
     </div>
   </div>
+  }
 </div>

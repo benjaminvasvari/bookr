@@ -76,6 +76,7 @@
   border: 2px solid #dee2e6;
   border-radius: 12px;
   transition: all 0.2s;
+  cursor: pointer;
 }
 
 .service-card:hover {

@@ -1,11 +1,16 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 
+/**
+ * CartItem - kosárban tárolt szolgáltatás
+ * A Service interfészből származik + categoryId a szűréshez
+ */
 export interface CartItem {
   id: number;
   name: string;
-  duration: number;
+  duration: string;
   price: number;
+  currency: string;
   categoryId: number;
 }
 
@@ -28,9 +33,6 @@ export class CartService {
   private cartItems = new BehaviorSubject<CartItem[]>([]);
   private selectedSpecialist = new BehaviorSubject<SelectedSpecialist | null>(null);
   private selectedAppointment = new BehaviorSubject<SelectedAppointment | null>(null);
-  private cartSubject = this.cartItems;
-  private specialistSubject = this.selectedSpecialist
-  private appointmentSubject = this.selectedAppointment;
 
   cart$: Observable<CartItem[]> = this.cartItems.asObservable();
   specialist$: Observable<SelectedSpecialist | null> = this.selectedSpecialist.asObservable();
@@ -66,9 +68,7 @@ export class CartService {
   }
 
   clearCart(): void {
-    this.cartSubject.next([]);
-    this.specialistSubject.next(null);
-    this.appointmentSubject.next(null);
+    this.cartItems.next([]);
   }
 
   // Szakember metódusok
@@ -91,7 +91,7 @@ export class CartService {
 
   // Teljes foglalás törlése
   clearBooking(): void {
-    this.clearCart();
+    this.cartItems.next([]);
     this.selectedSpecialist.next(null);
     this.selectedAppointment.next(null);
   }

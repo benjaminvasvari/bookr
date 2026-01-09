@@ -5,221 +5,379 @@
     <p class="section-subtitle">Kezeld a személyes adataidat</p>
   </div>
 
-  <!-- Success Message -->
-  <div *ngIf="profileSaveSuccess" class="alert alert-success">
+  <!-- Success Messages -->
+  @if (profileSaveSuccess) {
+  <div class="alert alert-success">
     <svg class="alert-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
     </svg>
     <span>Profil adatok sikeresen mentve!</span>
   </div>
-
-  <div *ngIf="passwordSaveSuccess" class="alert alert-success">
+  } @if (avatarUploadSuccess) {
+  <div class="alert alert-success">
     <svg class="alert-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
     </svg>
-    <span>Jelszó sikeresen megváltoztatva!</span>
+    <span>Profilkép sikeresen feltöltve!</span>
   </div>
+  } @if (avatarDeleteSuccess) {
+  <div class="alert alert-success">
+    <svg class="alert-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+    </svg>
+    <span>Profilkép sikeresen törölve!</span>
+  </div>
+  }
 
-  <!-- Profile Form Card -->
+  <!-- Combined Profile & Avatar Card -->
   <div class="card">
     <div class="card-header">
       <h2 class="card-title">Személyes adatok</h2>
-      <button 
-        *ngIf="!isEditingProfile" 
-        class="btn-edit"
-        (click)="enableProfileEdit()"
-      >
+      @if (!isEditingProfile) {
+      <button class="btn-edit" (click)="enableProfileEdit()">
         <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-          <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+          <path
+            d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
+          />
         </svg>
         Szerkesztés
       </button>
+      }
     </div>
 
-    <form [formGroup]="profileForm" class="card-body">
-      <!-- Error Message -->
-      <div *ngIf="profileSaveError" class="alert alert-error">
-        <span>{{ profileSaveError }}</span>
+    <div class="card-body profile-grid">
+      <!-- Left Column - Form -->
+      <div class="profile-form-column">
+        <form [formGroup]="profileForm">
+          <!-- Error Message -->
+          @if (profileSaveError) {
+          <div class="alert alert-error alert-compact">
+            <span>{{ profileSaveError }}</span>
+          </div>
+          }
+
+          <!-- Vezetéknév -->
+          <div class="form-group">
+            <label class="form-label">Vezetéknév</label>
+            <input
+              type="text"
+              class="form-input"
+              [class.disabled]="!isEditingProfile"
+              [readonly]="!isEditingProfile"
+              formControlName="lastName"
+              placeholder="Pl. Kovács"
+            />
+            @if (profileForm.get('lastName')?.invalid && profileForm.get('lastName')?.touched) {
+            <div class="form-error">Minimum 2 karakter szükséges</div>
+            }
+          </div>
+
+             <!-- Keresztnév -->
+          <div class="form-group">
+            <label class="form-label">Keresztnév</label>
+            <input
+              type="text"
+              class="form-input"
+              [class.disabled]="!isEditingProfile"
+              [readonly]="!isEditingProfile"
+              formControlName="firstName"
+              placeholder="Pl. János"
+            />
+            @if (profileForm.get('firstName')?.invalid && profileForm.get('firstName')?.touched) {
+            <div class="form-error">Minimum 2 karakter szükséges</div>
+            }
+          </div>
+
+          <!-- Email -->
+          <div class="form-group">
+            <label class="form-label">Email cím</label>
+            <input
+              type="email"
+              class="form-input"
+              [class.disabled]="!isEditingProfile"
+              [readonly]="!isEditingProfile"
+              formControlName="email"
+              placeholder="pelda@email.com"
+            />
+            @if (profileForm.get('email')?.invalid && profileForm.get('email')?.touched) {
+            <div class="form-error">Érvényes email cím szükséges</div>
+            }
+          </div>
+
+          <!-- Phone -->
+          <div class="form-group">
+            <label class="form-label">Telefonszám</label>
+            <input
+              type="tel"
+              class="form-input"
+              [class.disabled]="!isEditingProfile"
+              [readonly]="!isEditingProfile"
+              formControlName="phone"
+              placeholder="+36201234567"
+            />
+            @if (profileForm.get('phone')?.invalid && profileForm.get('phone')?.touched) {
+            <div class="form-error">Helyes formátum: +36201234567</div>
+            }
+          </div>
+
+          <!-- Action Buttons -->
+          @if (isEditingProfile) {
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" (click)="cancelProfileEdit()">Mégse</button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              (click)="saveProfile()"
+              [disabled]="profileForm.invalid"
+            >
+              Mentés
+            </button>
+          </div>
+          }
+        </form>
       </div>
 
-      <!-- First Name -->
-      <div class="form-group">
-        <label class="form-label">Keresztnév</label>
-        <input 
-          type="text" 
-          class="form-input"
-          [class.disabled]="!isEditingProfile"
-          [readonly]="!isEditingProfile"
-          formControlName="firstName"
-          placeholder="Pl. János"
-        />
-        <div 
-          *ngIf="profileForm.get('firstName')?.invalid && profileForm.get('firstName')?.touched" 
-          class="form-error"
-        >
-          Minimum 2 karakter szükséges
+      <!-- Right Column - Avatar -->
+      <div class="profile-avatar-column">
+        <!-- Error Message -->
+        @if (avatarUploadError) {
+        <div class="alert alert-error alert-compact">
+          <span>{{ avatarUploadError }}</span>
         </div>
-      </div>
-
-      <!-- Last Name -->
-      <div class="form-group">
-        <label class="form-label">Vezetéknév</label>
-        <input 
-          type="text" 
-          class="form-input"
-          [class.disabled]="!isEditingProfile"
-          [readonly]="!isEditingProfile"
-          formControlName="lastName"
-          placeholder="Pl. Kovács"
-        />
-        <div 
-          *ngIf="profileForm.get('lastName')?.invalid && profileForm.get('lastName')?.touched" 
-          class="form-error"
-        >
-          Minimum 2 karakter szükséges
+        } @if (avatarDeleteError) {
+        <div class="alert alert-error alert-compact">
+          <span>{{ avatarDeleteError }}</span>
         </div>
-      </div>
+        }
 
-      <!-- Email -->
-      <div class="form-group">
-        <label class="form-label">Email cím</label>
-        <input 
-          type="email" 
-          class="form-input"
-          [class.disabled]="!isEditingProfile"
-          [readonly]="!isEditingProfile"
-          formControlName="email"
-          placeholder="pelda@email.com"
-        />
-        <div 
-          *ngIf="profileForm.get('email')?.invalid && profileForm.get('email')?.touched" 
-          class="form-error"
-        >
-          Érvényes email cím szükséges
+        <!-- Avatar Display -->
+        <div class="avatar-display">
+          <div class="avatar-large">
+            @if (currentUser?.avatarUrl) {
+            <img [src]="currentUser!.avatarUrl" [alt]="currentUser!.firstName" class="avatar-img" />
+            } @else {
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <path
+                d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+              />
+            </svg>
+            }
+          </div>
         </div>
-      </div>
 
-      <!-- Phone -->
-      <div class="form-group">
-        <label class="form-label">Telefonszám</label>
-        <input 
-          type="tel" 
-          class="form-input"
-          [class.disabled]="!isEditingProfile"
-          [readonly]="!isEditingProfile"
-          formControlName="phone"
-          placeholder="+36201234567"
-        />
-        <div 
-          *ngIf="profileForm.get('phone')?.invalid && profileForm.get('phone')?.touched" 
-          class="form-error"
-        >
-          Helyes formátum: +36201234567
+        <!-- Avatar Actions -->
+        <div class="avatar-actions">
+          <input
+            type="file"
+            id="avatarFileInput"
+            accept="image/jpeg,image/png,image/webp"
+            (change)="onAvatarFileSelected($event)"
+            style="display: none"
+          />
+
+          <button
+            type="button"
+            class="btn btn-primary btn-block"
+            (click)="triggerFileInput()"
+            [disabled]="isUploadingAvatar || isDeletingAvatar"
+          >
+            <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z" />
+            </svg>
+            Kép feltöltése
+          </button>
+
+          @if (currentUser?.avatarUrl) {
+          <button
+            type="button"
+            class="btn btn-danger btn-block"
+            (click)="showDeleteConfirmModal()"
+            [disabled]="isUploadingAvatar || isDeletingAvatar"
+          >
+            <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <path
+                d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
+              />
+            </svg>
+            Kép törlése
+          </button>
+          }
         </div>
-      </div>
 
-      <!-- Action Buttons -->
-      <div *ngIf="isEditingProfile" class="form-actions">
-        <button 
-          type="button" 
-          class="btn btn-secondary"
-          (click)="cancelProfileEdit()"
-        >
-          Mégse
-        </button>
-        <button 
-          type="button" 
-          class="btn btn-primary"
-          (click)="saveProfile()"
-          [disabled]="profileForm.invalid"
-        >
-          Mentés
-        </button>
+        <p class="avatar-info">Max 2MB • JPG, PNG, WEBP</p>
       </div>
-    </form>
+    </div>
   </div>
 
   <!-- Password Change Card -->
   <div class="card">
     <div class="card-header">
       <h2 class="card-title">Jelszó megváltoztatása</h2>
-      <button 
-        class="btn-toggle"
-        (click)="togglePasswordChange()"
-      >
-        {{ isChangingPassword ? 'Mégse' : 'Jelszó változtatás' }}
+      <button class="btn-toggle" (click)="openPasswordModal()">Jelszó változtatás</button>
+    </div>
+  </div>
+</div>
+
+<!-- Avatar Preview Modal -->
+@if (showAvatarPreview) {
+<div class="modal-backdrop" (click)="closeAvatarPreview()"></div>
+<div class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title">Profilkép előnézet</h3>
+      <button class="modal-close" (click)="closeAvatarPreview()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+          <path
+            d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+          />
+        </svg>
       </button>
     </div>
 
-    <form *ngIf="isChangingPassword" [formGroup]="passwordForm" class="card-body">
-      <!-- Error Message -->
-      <div *ngIf="passwordSaveError" class="alert alert-error">
-        <span>{{ passwordSaveError }}</span>
-      </div>
+    <div class="modal-body">
+      @if (avatarPreview) {
+      <img [src]="avatarPreview" alt="Avatar preview" class="avatar-preview-img" />
+      }
+    </div>
 
-      <!-- Current Password -->
+    <div class="modal-footer">
+      <button
+        type="button"
+        class="btn btn-secondary"
+        (click)="closeAvatarPreview()"
+        [disabled]="isUploadingAvatar"
+      >
+        Mégse
+      </button>
+      <button
+        type="button"
+        class="btn btn-primary"
+        (click)="uploadAvatar()"
+        [disabled]="isUploadingAvatar"
+      >
+        @if (isUploadingAvatar) {
+        <span>Feltöltés...</span>
+        } @else {
+        <span>Feltöltés</span>
+        }
+      </button>
+    </div>
+  </div>
+</div>
+}
+
+<!-- Password Reset Modal -->
+@if (showPasswordModal) {
+<div class="modal-backdrop" (click)="closePasswordModal()"></div>
+<div class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title">Jelszó változtatás</h3>
+      <button class="modal-close" (click)="closePasswordModal()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+          <path
+            d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+          />
+        </svg>
+      </button>
+    </div>
+
+    <form [formGroup]="passwordForm" class="modal-body">
+      @if (passwordResetSuccess) {
+      <div class="alert alert-success">
+        <svg class="alert-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+        </svg>
+        <span>Email elküldve! Kérjük, ellenőrizd a postaládádat.</span>
+      </div>
+      } @if (passwordResetError) {
+      <div class="alert alert-error">
+        <span>{{ passwordResetError }}</span>
+      </div>
+      } @if (!passwordResetSuccess) {
+      <p class="modal-description">
+        Add meg a jelenlegi jelszavadat. Ha helyes, emailben küldjük el a jelszó változtatási
+        linket.
+      </p>
+
       <div class="form-group">
         <label class="form-label">Jelenlegi jelszó</label>
-        <input 
-          type="password" 
+        <input
+          type="password"
           class="form-input"
           formControlName="currentPassword"
           placeholder="••••••••"
         />
       </div>
-
-      <!-- New Password -->
-      <div class="form-group">
-        <label class="form-label">Új jelszó</label>
-        <input 
-          type="password" 
-          class="form-input"
-          formControlName="newPassword"
-          placeholder="••••••••"
-        />
-        <div 
-          *ngIf="passwordForm.get('newPassword')?.invalid && passwordForm.get('newPassword')?.touched" 
-          class="form-error"
-        >
-          Minimum 6 karakter szükséges
-        </div>
-      </div>
-
-      <!-- Confirm Password -->
-      <div class="form-group">
-        <label class="form-label">Új jelszó megerősítése</label>
-        <input 
-          type="password" 
-          class="form-input"
-          formControlName="confirmPassword"
-          placeholder="••••••••"
-        />
-        <div 
-          *ngIf="passwordForm.hasError('passwordMismatch') && passwordForm.get('confirmPassword')?.touched" 
-          class="form-error"
-        >
-          A jelszavak nem egyeznek
-        </div>
-      </div>
-
-      <!-- Action Buttons -->
-      <div class="form-actions">
-        <button 
-          type="button" 
-          class="btn btn-secondary"
-          (click)="togglePasswordChange()"
-        >
-          Mégse
-        </button>
-        <button 
-          type="button" 
-          class="btn btn-primary"
-          (click)="savePassword()"
-          [disabled]="passwordForm.invalid"
-        >
-          Jelszó mentése
-        </button>
-      </div>
+      }
     </form>
+
+    @if (!passwordResetSuccess) {
+    <div class="modal-footer">
+      <button
+        type="button"
+        class="btn btn-secondary"
+        (click)="closePasswordModal()"
+        [disabled]="isRequestingReset"
+      >
+        Mégse
+      </button>
+      <button
+        type="button"
+        class="btn btn-primary"
+        (click)="requestPasswordReset()"
+        [disabled]="passwordForm.invalid || isRequestingReset"
+      >
+        @if (isRequestingReset) {
+        <span>Küldés...</span>
+        } @else {
+        <span>Email küldése</span>
+        }
+      </button>
+    </div>
+    }
   </div>
 </div>
+}
+
+<!-- Delete Confirmation Modal -->
+@if (showDeleteConfirm) {
+<div class="modal-backdrop" (click)="closeDeleteConfirmModal()"></div>
+<div class="modal modal-center">
+  <div class="modal-content modal-confirm">
+    <div class="modal-icon-danger">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="48" height="48">
+        <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
+      </svg>
+    </div>
+
+    <h3 class="modal-title-center">Biztosan törlöd?</h3>
+    <p class="modal-description-center">
+      A profilképed véglegesen törlődik. Bármikor feltölthetsz újat.
+    </p>
+
+    <div class="modal-actions-center">
+      <button
+        type="button"
+        class="btn btn-secondary"
+        (click)="closeDeleteConfirmModal()"
+        [disabled]="isDeletingAvatar"
+      >
+        Mégse
+      </button>
+      <button
+        type="button"
+        class="btn btn-danger"
+        (click)="confirmDeleteAvatar()"
+        [disabled]="isDeletingAvatar"
+      >
+        @if (isDeletingAvatar) {
+        <span>Törlés...</span>
+        } @else {
+        <span>Igen, törlöm</span>
+        }
+      </button>
+    </div>
+  </div>
+</div>
+}

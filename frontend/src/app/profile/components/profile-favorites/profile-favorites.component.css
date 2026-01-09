@@ -1,0 +1,357 @@
+.favorites-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+/* Section Header - STICKY */
+.section-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #f8f9fa;
+    padding: 20px 0 16px 0;
+    margin: -20px 0 8px 0;
+    transition: box-shadow 0.3s ease;
+}
+
+.section-header.scrolled {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.section-title {
+    font-size: 32px;
+    font-weight: 700;
+    color: #2c3e50;
+    margin: 0 0 8px 0;
+}
+
+.section-subtitle {
+    font-size: 16px;
+    color: #6c757d;
+    margin: 0;
+}
+
+/* Favorites List */
+.favorites-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-top: 8px;
+}
+
+/* Empty State */
+.empty-state {
+    background: white;
+    padding: 60px 40px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.empty-icon {
+    width: 80px;
+    height: 80px;
+    fill: #e9ecef;
+    margin: 0 auto 20px;
+}
+
+.empty-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #2c3e50;
+    margin: 0 0 12px 0;
+}
+
+.empty-text {
+    font-size: 16px;
+    color: #6c757d;
+    margin: 0;
+    max-width: 500px;
+    margin: 0 auto;
+    line-height: 1.6;
+}
+
+/* Favorite Card */
+.favorite-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+}
+
+.favorite-card:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+}
+
+/* Company Image */
+.favorite-image {
+    position: relative;
+    width: 100%;
+    height: 220px;
+    overflow: hidden;
+}
+
+.favorite-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.favorite-card:hover .favorite-image img {
+    transform: scale(1.05);
+}
+
+/* Favorite Button (Heart Icon) */
+.favorite-button {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: none;
+    background-color: rgba(255, 255, 255, 0.95);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    z-index: 2;
+}
+
+.favorite-button:hover {
+    transform: scale(1.1);
+    background-color: #fff;
+}
+
+.heart-icon {
+    width: 24px;
+    height: 24px;
+    fill: #e74c3c;
+    transition: all 0.2s ease;
+}
+
+.favorite-button:hover .heart-icon {
+    transform: scale(1.1);
+}
+
+/* Company Info Section */
+.favorite-info {
+    padding: 20px;
+}
+
+.favorite-header {
+    margin-bottom: 12px;
+}
+
+.company-name {
+    font-size: 24px;
+    font-weight: 700;
+    color: #2c3e50;
+    margin: 0 0 6px 0;
+}
+
+.company-category {
+    font-size: 14px;
+    color: #6c757d;
+    margin: 0;
+}
+
+/* Rating Section */
+.rating-section {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.rating-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: #2c3e50;
+}
+
+.rating-stars {
+    display: flex;
+    gap: 2px;
+}
+
+.rating-stars .star {
+    color: #ffd700;
+    font-size: 16px;
+}
+
+.review-count {
+    font-size: 14px;
+    color: #6c757d;
+}
+
+/* Company Address */
+.company-address {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.address-icon {
+    width: 18px;
+    height: 18px;
+    fill: #6c757d;
+    flex-shrink: 0;
+}
+
+.company-address span {
+    font-size: 14px;
+    color: #6c757d;
+}
+
+/* Company Description */
+.company-description {
+    font-size: 14px;
+    color: #2c3e50;
+    line-height: 1.6;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-clamp: 2;
+    overflow: hidden;
+}
+
+/* Actions */
+.favorite-actions {
+    padding: 16px 20px;
+    background-color: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    gap: 12px;
+}
+
+.btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 12px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex: 1;
+}
+
+.btn-icon {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
+.btn-primary {
+    background-color: #38a179;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #2d8a62;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(56, 161, 121, 0.3);
+}
+
+.btn-secondary {
+    background-color: transparent;
+    color: #6c757d;
+    border: 2px solid #e9ecef;
+}
+
+.btn-secondary:hover {
+    background-color: #f8f9fa;
+    border-color: #38a179;
+    color: #38a179;
+}
+
+/* Loading State */
+.loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 400px;
+    font-size: 1.2rem;
+    color: #7f8c8d;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .section-header {
+        padding: 16px 0;
+    }
+
+    .section-title {
+        font-size: 28px;
+    }
+
+    .favorite-card {
+        flex-direction: column;
+    }
+
+    .favorite-image {
+        height: 200px;
+    }
+
+    .favorite-actions {
+        flex-direction: column;
+    }
+
+    .btn {
+        width: 100%;
+    }
+
+    .company-name {
+        font-size: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .section-title {
+        font-size: 24px;
+    }
+
+    .empty-state {
+        padding: 40px 20px;
+    }
+
+    .empty-icon {
+        width: 60px;
+        height: 60px;
+    }
+
+    .empty-title {
+        font-size: 20px;
+    }
+
+    .favorite-image {
+        height: 180px;
+    }
+
+    .favorite-button {
+        width: 40px;
+        height: 40px;
+        top: 12px;
+        right: 12px;
+    }
+
+    .heart-icon {
+        width: 20px;
+        height: 20px;
+    }
+}
