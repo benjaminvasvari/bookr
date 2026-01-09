@@ -4,10 +4,13 @@
  */
 package com.vizsgaremek.bookr.model;
 
+import static com.vizsgaremek.bookr.model.OpeningHours.timeFormatter;
 import static com.vizsgaremek.bookr.model.Users.emf;
-import static com.vizsgaremek.bookr.model.Users.formatter;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -34,6 +37,7 @@ import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
+import org.json.JSONObject;
 
 /**
  *
@@ -135,21 +139,33 @@ public class Appointments implements Serializable {
 
     @javax.persistence.Transient
     private String clientEmail;
-    
+
     @javax.persistence.Transient
     private Integer companyIdInt;
-    
+
     @javax.persistence.Transient
     private Integer serviceIdInt;
-    
+
     @javax.persistence.Transient
     private Integer staffIdInt;
-    
+
     @javax.persistence.Transient
     private Integer clientIdInt;
-    
+
     @javax.persistence.Transient
     private Integer cancelledByInt;
+
+    @javax.persistence.Transient
+    private Date date;
+
+    @javax.persistence.Transient
+    private String dayOfWeek;
+
+    @javax.persistence.Transient
+    private String reason;
+
+    @javax.persistence.Transient
+    private Boolean isAvailable;
 
     public Appointments() {
     }
@@ -164,31 +180,28 @@ public class Appointments implements Serializable {
         this.endTime = endTime;
         this.currency = currency;
     }
-    
-    // getAppointmentsByStaff
-    public Appointments(Integer id, Integer companyIdInt, Integer serviceIdInt, Integer staffIdInt, Integer clientIdInt, Date startTime, Date endTime, String status, String notes, String internalNotes, BigDecimal price, String currency, Integer cancelledByInt, String cancelledReason, Date cancelledAt, Date createdAt, Date updatedAt, String serviceName, Integer durationMinutes, String clientName, String clientPhone, String clientEmail) {
-        this.id = id;
-        this.companyIdInt = companyIdInt;
-        this.serviceIdInt = serviceIdInt;
-        this.staffIdInt = staffIdInt;
-        this.clientIdInt = clientIdInt;
+
+    // 
+    public Appointments(Date date, String dayOfWeek, String reason) {
+        this.date = date;
+        this.dayOfWeek = dayOfWeek;
+        this.reason = reason;
+
+    }
+
+    public Appointments(Date startTime, Date endTime, Boolean isAvailable, String reason) {
         this.startTime = startTime;
         this.endTime = endTime;
-        this.status = status;
-        this.notes = notes;
-        this.internalNotes = internalNotes;
-        this.price = price;
-        this.currency = currency;
-        this.cancelledByInt = cancelledByInt;
-        this.cancelledReason = cancelledReason;
-        this.cancelledAt = cancelledAt;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
-        this.serviceName = serviceName;
+        this.isAvailable = isAvailable;
+        this.reason = reason;
+    }
+
+    public Appointments(Integer id, Date startTime, Date endTime, Integer serviceIdInt, Integer durationMinutes) {
+        this.id = id;
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.serviceIdInt = serviceIdInt;
         this.durationMinutes = durationMinutes;
-        this.clientName = clientName;
-        this.clientPhone = clientPhone;
-        this.clientEmail = clientEmail;
     }
 
     public Integer getId() {
@@ -326,8 +339,7 @@ public class Appointments implements Serializable {
     public void setCancelledBy(Users cancelledBy) {
         this.cancelledBy = cancelledBy;
     }
-    
-    
+
     public String getServiceName() {
         return serviceName;
     }
@@ -335,7 +347,7 @@ public class Appointments implements Serializable {
     public void setServiceName(String serviceName) {
         this.serviceName = serviceName;
     }
-    
+
     public Integer getDurationMinutes() {
         return durationMinutes;
     }
@@ -343,7 +355,7 @@ public class Appointments implements Serializable {
     public void setDurationMinutes(Integer durationMinutes) {
         this.durationMinutes = durationMinutes;
     }
-    
+
     public String getClientName() {
         return clientName;
     }
@@ -351,7 +363,7 @@ public class Appointments implements Serializable {
     public void setClientName(String clientName) {
         this.clientName = clientName;
     }
-    
+
     public String getClientPhone() {
         return clientPhone;
     }
@@ -359,7 +371,7 @@ public class Appointments implements Serializable {
     public void setClientPhone(String clientPhone) {
         this.clientPhone = clientPhone;
     }
-    
+
     public String getClientEmail() {
         return clientEmail;
     }
@@ -367,7 +379,7 @@ public class Appointments implements Serializable {
     public void setClientEmail(String clientEmail) {
         this.clientEmail = clientEmail;
     }
-    
+
     public Integer getCompanyIdInt() {
         return companyIdInt;
     }
@@ -375,7 +387,7 @@ public class Appointments implements Serializable {
     public void setCompanyIdInt(Integer companyIdInt) {
         this.companyIdInt = companyIdInt;
     }
-    
+
     public Integer getServiceIdInt() {
         return serviceIdInt;
     }
@@ -383,7 +395,7 @@ public class Appointments implements Serializable {
     public void setServiceIdInt(Integer serviceIdInt) {
         this.serviceIdInt = serviceIdInt;
     }
-    
+
     public Integer getStaffIdInt() {
         return staffIdInt;
     }
@@ -391,7 +403,7 @@ public class Appointments implements Serializable {
     public void setStaffIdInt(Integer staffIdInt) {
         this.staffIdInt = staffIdInt;
     }
-    
+
     public Integer getClientIdInt() {
         return clientIdInt;
     }
@@ -399,7 +411,7 @@ public class Appointments implements Serializable {
     public void setClientIdInt(Integer clientIdInt) {
         this.clientIdInt = clientIdInt;
     }
-    
+
     public Integer getCancelledByInt() {
         return cancelledByInt;
     }
@@ -407,11 +419,39 @@ public class Appointments implements Serializable {
     public void setCancelledByInt(Integer cancelledByInt) {
         this.cancelledByInt = cancelledByInt;
     }
-   
-    
-    
 
-    
+    public Date getDate() {
+        return date;
+    }
+
+    public void setDate(Date date) {
+        this.date = date;
+    }
+
+    public String getDayOfWeek() {
+        return dayOfWeek;
+    }
+
+    public void setDayOfWeek(String dayOfWeek) {
+        this.dayOfWeek = dayOfWeek;
+    }
+
+    public String getReason() {
+        return reason;
+    }
+
+    public void setReason(String reason) {
+        this.reason = reason;
+    }
+
+    public Boolean getIsAvailable() {
+        return isAvailable;
+    }
+
+    public void setIsAvailable(Boolean isAvailable) {
+        this.isAvailable = isAvailable;
+    }
+
     @XmlTransient
     public Collection<Reviews> getReviewsCollection() {
         return reviewsCollection;
@@ -446,12 +486,56 @@ public class Appointments implements Serializable {
         return "com.vizsgaremek.bookr.model.Appointments[ id=" + id + " ]";
     }
 
-    public static ArrayList<Appointments> getAvalaibleTimeSlots(Integer companyId, Integer staffId, Date month) {
+    static SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+    public static ArrayList<Appointments> getUnavailableDatesInRange(Integer companyId, Integer staffId, LocalDate dateFrom, LocalDate dateTo) {
+
         EntityManager em = emf.createEntityManager();
 
         try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getUnavailableDatesInRange");
 
-            StoredProcedureQuery spq = em.createStoredProcedureQuery("getAvalaibleTimeSlots");
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("dateFromIN", Date.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("dateToIN", Date.class, ParameterMode.IN);
+
+            spq.setParameter("companyIdIN", companyId);
+            spq.setParameter("staffIdIN", staffId);
+            spq.setParameter("dateFromIN", java.sql.Date.valueOf(dateFrom));
+            spq.setParameter("dateToIN", java.sql.Date.valueOf(dateTo));
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+            ArrayList<Appointments> toReturn = new ArrayList<>();
+
+            for (Object[] record : resultList) {
+
+                Appointments a = new Appointments(
+                        (Date) record[0],
+                        record[1].toString(),
+                        record[2] != null ? record[2].toString() : ""
+                );
+
+                toReturn.add(a);
+            }
+
+            return toReturn;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            em.close();
+        }
+    }
+
+    public static Appointments getWorkingHoursForDate(Integer companyId, Integer staffId, Date date) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getWorkingHoursForDate");
 
             spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
@@ -459,42 +543,70 @@ public class Appointments implements Serializable {
 
             spq.setParameter("companyIdIN", companyId);
             spq.setParameter("staffIdIN", staffId);
-            spq.setParameter("dateIN", month);
+            spq.setParameter("dateIN", date);
 
             spq.execute();
 
             List<Object[]> resultList = spq.getResultList();
-            ArrayList<Appointments> toReturn = new ArrayList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            // Csak az első rekord kell (LIMIT 1 a stored procedure-ben)
+            Object[] record = resultList.get(0);
+
+            Appointments workingHours = new Appointments(
+                    timeFormatter.parse(record[0].toString()),
+                    timeFormatter.parse(record[1].toString()),
+                    Boolean.parseBoolean(record[2].toString()),
+                    record[3] != null ? record[3].toString() : null
+            );
+
+            return workingHours;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static ArrayList<Appointments> getOccupiedSlotsForDate(Integer staffId, Date date) {
+        EntityManager em = emf.createEntityManager();
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getOccupiedSlotsForDate");
+            spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("dateIN", Date.class, ParameterMode.IN);
+            spq.setParameter("staffIdIN", staffId);
+            spq.setParameter("dateIN", date);
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+            ArrayList<Appointments> toReturn = new ArrayList<>();
 
             for (Object[] record : resultList) {
+                Appointments a = new Appointments();
 
-                Appointments a = new Appointments(
-                        Integer.valueOf(record[0].toString()),
-                        Integer.valueOf(record[1].toString()),
-                        Integer.valueOf(record[2].toString()),
-                        Integer.valueOf(record[3].toString()),
-                        Integer.valueOf(record[4].toString()),
-                        formatter.parse(record[5].toString()),
-                        formatter.parse(record[6].toString()),
-                        record[7].toString(),
-                        record[8] != null ? record[8].toString() : null, // notes
-                        record[9] != null ? record[9].toString() : null, // internalNotes
-                        record[10] != null ? new BigDecimal(record[10].toString()) : null, // price
-                        record[11].toString(),
-                        record[12] != null ? Integer.valueOf(record[12].toString()) : null, // cancelledByInt
-                        record[13] != null ? record[13].toString() : null,
-                        record[14] != null ? formatter.parse(record[14].toString()) : null, // cancelledAt
-                        formatter.parse(record[15].toString()),
-                        record[16] != null ? formatter.parse(record[16].toString()) : null, // updatedAt
-                        record[17].toString(),
-                        Integer.valueOf(record[18].toString()),
-                        record[19].toString(),
-                        record[20].toString(),
-                        record[21].toString()
-                );
+                // appointment_id
+                a.setId(Integer.valueOf(record[0].toString()));
+
+                // start_time és end_time - Timestamp típusként jön vissza
+                Timestamp startTimestamp = (Timestamp) record[1];
+                Timestamp endTimestamp = (Timestamp) record[2];
+                a.setStartTime(new Date(startTimestamp.getTime()));
+                a.setEndTime(new Date(endTimestamp.getTime()));
+
+                // service_id
+                a.setServiceIdInt(Integer.valueOf(record[3].toString()));
+
+                // duration_minutes
+                a.setDurationMinutes(Integer.valueOf(record[6].toString()));
 
                 toReturn.add(a);
-
             }
 
             return toReturn;

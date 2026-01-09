@@ -245,6 +245,11 @@ public class Companies implements Serializable {
         this.imageUrl = imageUrl;
     }
 
+    public Companies(Integer id, Integer bookingAdvanceDays) {
+        this.id = id;
+        this.bookingAdvanceDays = bookingAdvanceDays;
+    }
+    
     public Integer getId() {
         return id;
     }
@@ -446,6 +451,15 @@ public class Companies implements Serializable {
     @XmlTransient
     public Collection<Users> getUsersCollection() {
         return usersCollection;
+    }
+
+    @XmlTransient
+    public Collection<Favorites> getFavoritesCollection() {
+        return favoritesCollection;
+    }
+
+    public void setFavoritesCollection(Collection<Favorites> favoritesCollection) {
+        this.favoritesCollection = favoritesCollection;
     }
 
     public void setUsersCollection(Collection<Users> usersCollection) {
@@ -876,12 +890,41 @@ public class Companies implements Serializable {
         }
     }
 
-    @XmlTransient
-    public Collection<Favorites> getFavoritesCollection() {
-        return favoritesCollection;
-    }
+    public static Companies getCompanyBookingAdvanceDays(Integer id) {
+        EntityManager em = emf.createEntityManager();
 
-    public void setFavoritesCollection(Collection<Favorites> favoritesCollection) {
-        this.favoritesCollection = favoritesCollection;
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getCompanyBookingAdvanceDays");
+            
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            
+            spq.setParameter("companyIdIN", id);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            Object[] record = resultList.get(0);
+
+            // Create Companies object with basic data
+            Companies company = new Companies(
+                    Integer.valueOf(record[0].toString()),
+                    Integer.valueOf(record[1].toString())
+            );
+
+            return company;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
     }
 }

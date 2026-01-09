@@ -59,7 +59,6 @@ import javax.xml.bind.annotation.XmlTransient;
     @NamedQuery(name = "Users.findByIsDeleted", query = "SELECT u FROM Users u WHERE u.isDeleted = :isDeleted"),
     @NamedQuery(name = "Users.findByLastLogin", query = "SELECT u FROM Users u WHERE u.lastLogin = :lastLogin"),
     @NamedQuery(name = "Users.findByRegisterFinishedAt", query = "SELECT u FROM Users u WHERE u.registerFinishedAt = :registerFinishedAt"),
-    @NamedQuery(name = "Users.findByRegToken", query = "SELECT u FROM Users u WHERE u.regToken = :regToken"),
     @NamedQuery(name = "Users.findByIsActive", query = "SELECT u FROM Users u WHERE u.isActive = :isActive"),
     @NamedQuery(name = "Users.findByTwoFactorEnabled", query = "SELECT u FROM Users u WHERE u.twoFactorEnabled = :twoFactorEnabled"),
     @NamedQuery(name = "Users.findByTwoFactorSecret", query = "SELECT u FROM Users u WHERE u.twoFactorSecret = :twoFactorSecret"),
@@ -128,9 +127,7 @@ public class Users implements Serializable {
     @Column(name = "register_finished_at")
     @Temporal(TemporalType.TIMESTAMP)
     private Date registerFinishedAt;
-    @Size(max = 64)
-    @Column(name = "reg_token")
-    private String regToken;
+
     @Basic(optional = false)
     @NotNull
     @Column(name = "is_active")
@@ -393,14 +390,6 @@ public class Users implements Serializable {
 
     public void setRegisterFinishedAt(Date registerFinishedAt) {
         this.registerFinishedAt = registerFinishedAt;
-    }
-
-    public String getRegToken() {
-        return regToken;
-    }
-
-    public void setRegToken(String regToken) {
-        this.regToken = regToken;
     }
 
     public boolean getIsActive() {
