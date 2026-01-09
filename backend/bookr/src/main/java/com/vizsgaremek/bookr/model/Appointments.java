@@ -446,20 +446,20 @@ public class Appointments implements Serializable {
         return "com.vizsgaremek.bookr.model.Appointments[ id=" + id + " ]";
     }
 
-    public static ArrayList<Appointments> getAppointmentsByStaff(Integer staffId, Date dateFrom, Date dateTo) {
+    public static ArrayList<Appointments> getAvalaibleTimeSlots(Integer companyId, Integer staffId, Date month) {
         EntityManager em = emf.createEntityManager();
 
         try {
 
-            StoredProcedureQuery spq = em.createStoredProcedureQuery("getAppointmentsByStaff");
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getAvalaibleTimeSlots");
 
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
-            spq.registerStoredProcedureParameter("dateFromIN", Date.class, ParameterMode.IN);
-            spq.registerStoredProcedureParameter("dateToIN", Date.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("dateIN", Date.class, ParameterMode.IN);
 
+            spq.setParameter("companyIdIN", companyId);
             spq.setParameter("staffIdIN", staffId);
-            spq.setParameter("dateFromIN", dateFrom);
-            spq.setParameter("dateToIN", dateTo);
+            spq.setParameter("dateIN", month);
 
             spq.execute();
 

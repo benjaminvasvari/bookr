@@ -16,14 +16,14 @@ import org.json.JSONObject;
  */
 public class AppointmentsService {
     
-        public JSONObject getFilteredStaffByServices(Integer staffId, Date dateFrom, Date dateTo) {
+        public JSONObject getAvalaibleDatesByStaff(Integer companyId, Integer staffId, Date month) {
 
         JSONObject toReturn = new JSONObject();
         String status = "success";
         Integer statusCode = 200;
 
         //code
-        ArrayList<Appointments> modelResult = Appointments.getAppointmentsByStaff(staffId, dateFrom, dateTo);
+        ArrayList<Appointments> modelResult = Appointments.getAvalaibleTimeSlots(companyId, staffId, month);
 
         if (modelResult == null) {
             statusCode = 500;
@@ -39,18 +39,15 @@ public class AppointmentsService {
                 JSONObject actualAppointmentObject = new JSONObject();
 
                 actualAppointmentObject.put("id", actualAppointment.getId());
-                actualAppointmentObject.put("userId", actualAppointment.getUserIdInt());
-                actualAppointmentObject.put("displayName", actualAppointment.getDisplayName());
-                actualAppointmentObject.put("specialties", actualAppointment.getSpecialties());
-                actualAppointmentObject.put("bio", actualAppointment.getBio());
-                actualAppointmentObject.put("isActive", actualAppointment.getIsActive());
                 actualAppointmentObject.put("companyId", actualAppointment.getCompanyIdInt());
-                actualAppointmentObject.put("firstName", actualAppointment.getFirstName());
-                actualAppointmentObject.put("lastName", actualAppointment.getLastName());
+                actualAppointmentObject.put("serviceId", actualAppointment.getServiceIdInt());
+                actualAppointmentObject.put("staffId", actualAppointment.getStaffIdInt());
+                actualAppointmentObject.put("clientId", actualAppointment.getClientIdInt());
                 
-                actualStaffObject.put("servicesCount", actualStaff.getServicesCount());
 
-                result.put(actualStaffObject);
+
+
+                result.put(actualAppointmentObject);
             }
 
             toReturn.put("result", result);
