@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3307
--- Generation Time: Jan 09, 2026 at 11:26 AM
+-- Generation Time: Jan 09, 2026 at 11:51 AM
 -- Server version: 5.7.24
 -- PHP Version: 8.3.1
 
@@ -381,18 +381,23 @@ END$$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `createAppointment` (IN `companyIdIN` INT, IN `serviceIdIN` INT, IN `staffIdIN` INT, IN `clientIdIN` INT, IN `startTimeIN` DATETIME, IN `endTimeIN` DATETIME, IN `notesIN` TEXT, IN `priceIN` DECIMAL(10,2), IN `currencyIN` VARCHAR(10))   BEGIN
     DECLARE newAppointmentId INT;
     
-    -- Időpont létrehozása
-    INSERT INTO `appointments` (
-        `company_id`,
-        `service_id`,
-        `staff_id`,
-        `client_id`,
-        `start_time`,
-        `end_time`,
-        `status`,
-        `notes`,
-        `price`,
-        `currency`
+    -- Validáljuk a foglalási időpontot
+    CALL validateBookingTime(companyIdIN, startTimeIN);
+    
+    -- Ha nem volt hiba (nem dobott SIGNAL-t a validateBookingTime),
+    -- akkor folytatjuk az időpont létrehozásával
+    
+    INSERT INTO appointments (
+        company_id,
+        service_id,
+        staff_id,
+        client_id,
+        start_time,
+        end_time,
+        status,
+        notes,
+        price,
+        currency
     )
     VALUES (
         companyIdIN,
@@ -414,21 +419,33 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `createAppointment` (IN `companyIdIN
     SELECT newAppointmentId AS appointment_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `createCompany` (IN `nameIN` VARCHAR(255), IN `descriptionIN` TEXT, IN `addressIN` TEXT, IN `cityIN` VARCHAR(100), IN `postalCodeIN` VARCHAR(20), IN `countryIN` VARCHAR(100), IN `phoneIN` VARCHAR(30), IN `emailIN` VARCHAR(100), IN `websiteIN` VARCHAR(255), IN `ownerIdIN` INT)   BEGIN
+CREATE DEFINER=`root`@`localhost` PROCEDURE `createCompany` (IN `nameIN` VARCHAR(255), IN `descriptionIN` TEXT, IN `addressIN` TEXT, IN `cityIN` VARCHAR(100), IN `postalCodeIN` VARCHAR(20), IN `countryIN` VARCHAR(100), IN `phoneIN` VARCHAR(30), IN `emailIN` VARCHAR(100), IN `websiteIN` VARCHAR(255), IN `ownerIdIN` INT, IN `allowSameDayBookingIN` TINYINT(1), IN `minimumBookingHoursAheadIN` INT)   BEGIN
     DECLARE newCompanyId INT;
     
+    -- Validáció: Ha same-day booking tiltva, akkor minimum_hours_ahead NULL lehet
+    IF allowSameDayBookingIN = FALSE THEN
+        SET minimumBookingHoursAheadIN = NULL;
+    END IF;
+    
+    -- Validáció: Ha same-day booking engedélyezve, akkor minimum_hours_ahead kötelező
+    IF allowSameDayBookingIN = TRUE AND (minimumBookingHoursAheadIN IS NULL OR minimumBookingHoursAheadIN < 1) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'If same-day booking is allowed, minimum_booking_hours_ahead must be at least 1';
+    END IF;
+    
     -- Cég létrehozása
-    INSERT INTO `companies` (
-        `name`,
-        `description`,
-        `address`,
-        `city`,
-        `postal_code`,
-        `country`,
-        `phone`,
-        `email`,
-        `website`,
-        `owner_id`
+    INSERT INTO companies (
+        name,
+        description,
+        address,
+        city,
+        postal_code,
+        country,
+        phone,
+        email,
+        website,
+        owner_id,
+        allow_same_day_booking,
+        minimum_booking_hours_ahead
     )
     VALUES (
         nameIN,
@@ -440,18 +457,20 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `createCompany` (IN `nameIN` VARCHAR
         phoneIN,
         emailIN,
         websiteIN,
-        ownerIdIN
+        ownerIdIN,
+        allowSameDayBookingIN,
+        minimumBookingHoursAheadIN
     );
     
     -- Új company ID lekérése
     SET newCompanyId = LAST_INSERT_ID();
     
     -- Owner user company_id frissítése
-    UPDATE `users`
+    UPDATE users
     SET 
-        `company_id` = newCompanyId,
-        `updated_at` = NOW()
-    WHERE `id` = ownerIdIN;
+        company_id = newCompanyId,
+        updated_at = NOW()
+    WHERE id = ownerIdIN;
     
     -- Visszaadjuk az új company ID-t
     SELECT newCompanyId AS company_id;
@@ -2832,23 +2851,35 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `updateAppointmentStatus` (IN `appoi
     WHERE `id` = appointmentIdIN;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `updateCompany` (IN `companyIdIN` INT, IN `nameIN` VARCHAR(255), IN `descriptionIN` TEXT, IN `addressIN` TEXT, IN `cityIN` VARCHAR(100), IN `postalCodeIN` VARCHAR(20), IN `countryIN` VARCHAR(100), IN `phoneIN` VARCHAR(30), IN `emailIN` VARCHAR(100), IN `websiteIN` VARCHAR(255), IN `bookingAdvanceDaysIN` INT, IN `cancellationHoursIN` INT)   BEGIN
-    UPDATE `companies`
+CREATE DEFINER=`root`@`localhost` PROCEDURE `updateCompany` (IN `companyIdIN` INT, IN `nameIN` VARCHAR(255), IN `descriptionIN` TEXT, IN `addressIN` TEXT, IN `cityIN` VARCHAR(100), IN `postalCodeIN` VARCHAR(20), IN `countryIN` VARCHAR(100), IN `phoneIN` VARCHAR(30), IN `emailIN` VARCHAR(100), IN `websiteIN` VARCHAR(255), IN `bookingAdvanceDaysIN` INT, IN `cancellationHoursIN` INT, IN `allowSameDayBookingIN` TINYINT(1), IN `minimumBookingHoursAheadIN` INT)   BEGIN
+    -- Validáció: Ha same-day booking tiltva, akkor minimum_hours_ahead NULL legyen
+    IF allowSameDayBookingIN = FALSE THEN
+        SET minimumBookingHoursAheadIN = NULL;
+    END IF;
+    
+    -- Validáció: Ha same-day booking engedélyezve, akkor minimum_hours_ahead kötelező
+    IF allowSameDayBookingIN = TRUE AND (minimumBookingHoursAheadIN IS NULL OR minimumBookingHoursAheadIN < 1) THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'If same-day booking is allowed, minimum_booking_hours_ahead must be at least 1';
+    END IF;
+    
+    UPDATE companies
     SET 
-        `name` = nameIN,
-        `description` = descriptionIN,
-        `address` = addressIN,
-        `city` = cityIN,
-        `postal_code` = postalCodeIN,
-        `country` = countryIN,
-        `phone` = phoneIN,
-        `email` = emailIN,
-        `website` = websiteIN,
-        `booking_advance_days` = bookingAdvanceDaysIN,
-        `cancellation_hours` = cancellationHoursIN,
-        `updated_at` = NOW()
-    WHERE `id` = companyIdIN
-      AND `is_deleted` = FALSE;
+        name = nameIN,
+        description = descriptionIN,
+        address = addressIN,
+        city = cityIN,
+        postal_code = postalCodeIN,
+        country = countryIN,
+        phone = phoneIN,
+        email = emailIN,
+        website = websiteIN,
+        booking_advance_days = bookingAdvanceDaysIN,
+        cancellation_hours = cancellationHoursIN,
+        allow_same_day_booking = allowSameDayBookingIN,
+        minimum_booking_hours_ahead = minimumBookingHoursAheadIN,
+        updated_at = NOW()
+    WHERE id = companyIdIN
+      AND is_deleted = FALSE;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `updateEmail` (IN `userIdIN` INT, IN `newEmailIN` VARCHAR(100))   BEGIN
@@ -3102,6 +3133,90 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `uploadUserImage` (IN `userIdIN` INT
     
     -- Visszaadjuk az új kép ID-t
     SELECT LAST_INSERT_ID() AS image_id;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `validateBookingTime` (IN `companyIdIN` INT, IN `requestedStartTimeIN` DATETIME)   BEGIN
+    DECLARE companyAllowSameDay TINYINT(1);
+    DECLARE companyMinHoursAhead INT;
+    DECLARE companyMaxAdvanceDays INT;
+    DECLARE currentTime DATETIME;
+    DECLARE requestedDate DATE;
+    DECLARE currentDate DATE;
+    DECLARE hoursDifference DECIMAL(10,2);
+    DECLARE daysDifference INT;
+    
+    -- Jelenlegi időpont
+    SET currentTime = NOW();
+    SET currentDate = DATE(currentTime);
+    SET requestedDate = DATE(requestedStartTimeIN);
+    
+    -- Company beállítások lekérése
+    SELECT 
+        allow_same_day_booking,
+        minimum_booking_hours_ahead,
+        booking_advance_days
+    INTO 
+        companyAllowSameDay,
+        companyMinHoursAhead,
+        companyMaxAdvanceDays
+    FROM companies
+    WHERE id = companyIdIN
+      AND is_deleted = FALSE
+      AND is_active = TRUE;
+    
+    -- Ellenőrzés: Létezik-e a cég
+    IF companyAllowSameDay IS NULL THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Company not found or inactive';
+    END IF;
+    
+    -- Ellenőrzés: Múltbeli időpont
+    IF requestedStartTimeIN <= currentTime THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Cannot book appointments in the past';
+    END IF;
+    
+    -- Számítások
+    SET hoursDifference = TIMESTAMPDIFF(HOUR, currentTime, requestedStartTimeIN);
+    SET daysDifference = DATEDIFF(requestedDate, currentDate);
+    
+    -- Ellenőrzés: Aznapi foglalás
+    IF daysDifference = 0 THEN
+        -- Aznapi foglalás - ellenőrizzük hogy engedélyezett-e
+        IF companyAllowSameDay = FALSE THEN
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Same-day booking is not allowed for this company';
+        END IF;
+        
+        -- Aznapi foglalás - minimum órák előtte
+        IF hoursDifference < companyMinHoursAhead THEN
+            SET @errorMsg = CONCAT(
+                'Appointments must be booked at least ', 
+                companyMinHoursAhead, 
+                ' hours in advance. You are trying to book in ', 
+                ROUND(hoursDifference, 1), 
+                ' hours.'
+            );
+            SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = @errorMsg;
+        END IF;
+    END IF;
+    
+    -- Ellenőrzés: Maximum előre foglalható napok
+    IF daysDifference > companyMaxAdvanceDays THEN
+        SET @errorMsg = CONCAT(
+            'Bookings can only be made up to ', 
+            companyMaxAdvanceDays, 
+            ' days in advance. You are trying to book ', 
+            daysDifference, 
+            ' days ahead.'
+        );
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = @errorMsg;
+    END IF;
+    
+    -- Minden rendben - visszaad sikeres választ
+    SELECT 
+        'SUCCESS' AS result,
+        'Booking time is valid' AS message,
+        requestedStartTimeIN AS requested_time,
+        hoursDifference AS hours_ahead,
+        daysDifference AS days_ahead;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `validatePasswordResetToken` (IN `tokenIN` VARCHAR(64))   BEGIN
@@ -3404,29 +3519,31 @@ CREATE TABLE `companies` (
   `updated_at` datetime DEFAULT NULL,
   `deleted_at` datetime DEFAULT NULL,
   `is_deleted` tinyint(1) DEFAULT '0',
-  `is_active` tinyint(1) NOT NULL DEFAULT '1'
+  `is_active` tinyint(1) NOT NULL DEFAULT '1',
+  `allow_same_day_booking` tinyint(1) DEFAULT '1' COMMENT 'Can clients book appointments on the same day? TRUE = yes, FALSE = only next day onwards',
+  `minimum_booking_hours_ahead` int(11) DEFAULT '2' COMMENT 'If same-day booking allowed, minimum hours in advance (e.g. 2 hours). Only used if allow_same_day_booking = TRUE'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data for table `companies`
 --
 
-INSERT INTO `companies` (`id`, `name`, `description`, `address`, `city`, `postal_code`, `country`, `phone`, `email`, `website`, `business_category_id`, `owner_id`, `booking_advance_days`, `cancellation_hours`, `created_at`, `updated_at`, `deleted_at`, `is_deleted`, `is_active`) VALUES
-(1, 'Bella Szépségszalon', 'Modern szépségszalon a belvárosban, teljes körű kozmetikai szolgáltatásokkal', 'Váci utca 15.', 'Budapest', '1052', 'Hungary', '+36301234501', 'info@bella-szalon.hu', 'www.bella-szalon.hu', 1, 2, 30, 24, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
-(2, 'Jungle Pécs', 'Ahol TE vagy a lényeg! Próbáld ki bármelyik szolgáltatásunkat, nem fogsz csalódni. Szakmai tudásunk folyamatos fejlesztése nagyon fontos számunkra. Itt kerülsz TE a középpontba! Szolgáltatásaink során figyelünk az egyéniségedre, fejformádra, hajtípusodra és persze a kezelhetőségre is. Várunk sok szeretettel szalonunkban!', 'Koller utca 7', 'Pécs', '7626', 'Hungary', '+36301234502', 'info@exclusivebeauty.hu', 'www.exclusivebeauty.hu', 3, 3, 45, 48, '2025-10-09 16:14:23', '2025-12-05 22:47:07', NULL, 0, 1),
-(3, 'Naturál Szépségstúdió', 'Természetes alapanyagokkal dolgozó családias szalon', 'Fő utca 23.', 'Győr', '9021', 'Hungary', '+36301234503', 'hello@naturalszepseg.hu', 'www.naturalszepseg.hu', 1, 2, 21, 24, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
-(4, 'Harmónia Wellness', 'Wellness központ masszázzsal és spa kezelésekkel', 'Thermal utca 8.', 'Budapest', '1039', 'Hungary', '+36301234504', 'foglalas@harmoniawellness.hu', 'www.harmoniawellness.hu', 2, 3, 30, 24, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
-(5, 'Relaxa Masszázsszalon', 'Professzionális masszázs szolgáltatások nyugodt környezetben', 'Kossuth utca 12.', 'Debrecen', '4024', 'Hungary', '+36301234505', 'info@relaxa.hu', 'www.relaxa.hu', 2, 2, 14, 12, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
-(6, 'ZenSpa Központ', 'Ázsiai ihletésű spa és wellness központ', 'Dózsa György út 34.', 'Szeged', '6720', 'Hungary', '+36301234506', 'reception@zenspa.hu', 'www.zenspa.hu', 2, 3, 60, 48, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
-(7, 'StyleCut Fodrászat', 'Trendi frizurák és hajkezelések minden korosztálynak', 'Rákóczi út 56.', 'Budapest', '1074', 'Hungary', '+36301234507', 'időpont@stylecut.hu', 'www.stylecut.hu', 3, 2, 21, 24, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
-(8, 'Hair Art Studio', 'Kreatív fodrászat speciális színezési technikákkal', 'Bajcsy-Zsilinszky út 19.', 'Pécs', '7621', 'Hungary', '+36301234508', 'info@hairstudio.hu', 'www.hairstudio.hu', 3, 3, 30, 24, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
-(9, 'Perfect Nails Studio', 'Professzionális körömépítés és díszítés', 'Ferenciek tere 3.', 'Budapest', '1053', 'Hungary', '+36301234509', 'booking@perfectnails.hu', 'www.perfectnails.hu', 4, 2, 21, 12, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
-(10, 'Glamour Nails', 'Minőségi műköröm és géllakk szolgáltatások', 'Arany János utca 7.', 'Győr', '9022', 'Hungary', '+36301234510', 'info@glamournails.hu', 'www.glamournails.hu', 4, 3, 14, 24, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
-(11, 'FitZone Edzőterem', 'Modern edzőterem személyi edzőkkel és csoportos órákkal', 'Október 6. utca 22.', 'Budapest', '1051', 'Hungary', '+36301234511', 'info@fitzone.hu', 'www.fitzone.hu', 5, 2, 7, 6, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
-(12, 'Yoga & Balance Stúdió', 'Jóga és meditációs stúdió minden szintű gyakorlóknak', 'Bem rakpart 15.', 'Budapest', '1011', 'Hungary', '+36301234512', 'hello@yogabalance.hu', 'www.yogabalance.hu', 5, 3, 14, 12, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
-(13, 'Vital Med Magánrendelő', 'Magán egészségügyi központ szakorvosi rendelésekkel', 'Üllői út 82.', 'Budapest', '1082', 'Hungary', '+36301234513', 'rendeles@vitalmed.hu', 'www.vitalmed.hu', 6, 2, 30, 48, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
-(14, 'PhysioActive Gyógytorna', 'Gyógytorna és rehabilitációs központ', 'Kálvin tér 9.', 'Szeged', '6722', 'Hungary', '+36301234514', 'info@physioactive.hu', 'www.physioactive.hu', 6, 3, 21, 24, '2025-10-09 16:14:23', NULL, NULL, 0, 1),
-(15, 'BarberShop Budapest', 'Férfi fodrászat és borbély szolgáltatások', 'Wesselényi utca 18.', 'Budapest', '1077', 'Hungary', '+36301234515', 'booking@barbershop.hu', 'www.barbershop-bp.hu', 3, 2, 14, 12, '2025-10-09 16:14:23', NULL, NULL, 0, 1);
+INSERT INTO `companies` (`id`, `name`, `description`, `address`, `city`, `postal_code`, `country`, `phone`, `email`, `website`, `business_category_id`, `owner_id`, `booking_advance_days`, `cancellation_hours`, `created_at`, `updated_at`, `deleted_at`, `is_deleted`, `is_active`, `allow_same_day_booking`, `minimum_booking_hours_ahead`) VALUES
+(1, 'Bella Szépségszalon', 'Modern szépségszalon a belvárosban, teljes körű kozmetikai szolgáltatásokkal', 'Váci utca 15.', 'Budapest', '1052', 'Hungary', '+36301234501', 'info@bella-szalon.hu', 'www.bella-szalon.hu', 1, 2, 30, 24, '2025-10-09 16:14:23', '2026-01-09 12:50:46', NULL, 0, 1, 1, 2),
+(2, 'Jungle Pécs', 'Ahol TE vagy a lényeg! Próbáld ki bármelyik szolgáltatásunkat, nem fogsz csalódni. Szakmai tudásunk folyamatos fejlesztése nagyon fontos számunkra. Itt kerülsz TE a középpontba! Szolgáltatásaink során figyelünk az egyéniségedre, fejformádra, hajtípusodra és persze a kezelhetőségre is. Várunk sok szeretettel szalonunkban!', 'Koller utca 7', 'Pécs', '7626', 'Hungary', '+36301234502', 'info@exclusivebeauty.hu', 'www.exclusivebeauty.hu', 3, 3, 45, 48, '2025-10-09 16:14:23', '2026-01-09 12:50:46', NULL, 0, 1, 1, 2),
+(3, 'Naturál Szépségstúdió', 'Természetes alapanyagokkal dolgozó családias szalon', 'Fő utca 23.', 'Győr', '9021', 'Hungary', '+36301234503', 'hello@naturalszepseg.hu', 'www.naturalszepseg.hu', 1, 2, 21, 24, '2025-10-09 16:14:23', '2026-01-09 12:50:46', NULL, 0, 1, 1, 2),
+(4, 'Harmónia Wellness', 'Wellness központ masszázzsal és spa kezelésekkel', 'Thermal utca 8.', 'Budapest', '1039', 'Hungary', '+36301234504', 'foglalas@harmoniawellness.hu', 'www.harmoniawellness.hu', 2, 3, 30, 24, '2025-10-09 16:14:23', '2026-01-09 12:50:46', NULL, 0, 1, 1, 2),
+(5, 'Relaxa Masszázsszalon', 'Professzionális masszázs szolgáltatások nyugodt környezetben', 'Kossuth utca 12.', 'Debrecen', '4024', 'Hungary', '+36301234505', 'info@relaxa.hu', 'www.relaxa.hu', 2, 2, 14, 12, '2025-10-09 16:14:23', '2026-01-09 12:50:46', NULL, 0, 1, 1, 2),
+(6, 'ZenSpa Központ', 'Ázsiai ihletésű spa és wellness központ', 'Dózsa György út 34.', 'Szeged', '6720', 'Hungary', '+36301234506', 'reception@zenspa.hu', 'www.zenspa.hu', 2, 3, 60, 48, '2025-10-09 16:14:23', '2026-01-09 12:50:46', NULL, 0, 1, 1, 2),
+(7, 'StyleCut Fodrászat', 'Trendi frizurák és hajkezelések minden korosztálynak', 'Rákóczi út 56.', 'Budapest', '1074', 'Hungary', '+36301234507', 'időpont@stylecut.hu', 'www.stylecut.hu', 3, 2, 21, 24, '2025-10-09 16:14:23', '2026-01-09 12:50:46', NULL, 0, 1, 1, 2),
+(8, 'Hair Art Studio', 'Kreatív fodrászat speciális színezési technikákkal', 'Bajcsy-Zsilinszky út 19.', 'Pécs', '7621', 'Hungary', '+36301234508', 'info@hairstudio.hu', 'www.hairstudio.hu', 3, 3, 30, 24, '2025-10-09 16:14:23', '2026-01-09 12:50:46', NULL, 0, 1, 1, 2),
+(9, 'Perfect Nails Studio', 'Professzionális körömépítés és díszítés', 'Ferenciek tere 3.', 'Budapest', '1053', 'Hungary', '+36301234509', 'booking@perfectnails.hu', 'www.perfectnails.hu', 4, 2, 21, 12, '2025-10-09 16:14:23', '2026-01-09 12:50:46', NULL, 0, 1, 1, 2),
+(10, 'Glamour Nails', 'Minőségi műköröm és géllakk szolgáltatások', 'Arany János utca 7.', 'Győr', '9022', 'Hungary', '+36301234510', 'info@glamournails.hu', 'www.glamournails.hu', 4, 3, 14, 24, '2025-10-09 16:14:23', '2026-01-09 12:50:46', NULL, 0, 1, 1, 2),
+(11, 'FitZone Edzőterem', 'Modern edzőterem személyi edzőkkel és csoportos órákkal', 'Október 6. utca 22.', 'Budapest', '1051', 'Hungary', '+36301234511', 'info@fitzone.hu', 'www.fitzone.hu', 5, 2, 7, 6, '2025-10-09 16:14:23', '2026-01-09 12:50:46', NULL, 0, 1, 1, 2),
+(12, 'Yoga & Balance Stúdió', 'Jóga és meditációs stúdió minden szintű gyakorlóknak', 'Bem rakpart 15.', 'Budapest', '1011', 'Hungary', '+36301234512', 'hello@yogabalance.hu', 'www.yogabalance.hu', 5, 3, 14, 12, '2025-10-09 16:14:23', '2026-01-09 12:50:46', NULL, 0, 1, 1, 2),
+(13, 'Vital Med Magánrendelő', 'Magán egészségügyi központ szakorvosi rendelésekkel', 'Üllői út 82.', 'Budapest', '1082', 'Hungary', '+36301234513', 'rendeles@vitalmed.hu', 'www.vitalmed.hu', 6, 2, 30, 48, '2025-10-09 16:14:23', '2026-01-09 12:50:46', NULL, 0, 1, 1, 2),
+(14, 'PhysioActive Gyógytorna', 'Gyógytorna és rehabilitációs központ', 'Kálvin tér 9.', 'Szeged', '6722', 'Hungary', '+36301234514', 'info@physioactive.hu', 'www.physioactive.hu', 6, 3, 21, 24, '2025-10-09 16:14:23', '2026-01-09 12:50:46', NULL, 0, 1, 1, 2),
+(15, 'BarberShop Budapest', 'Férfi fodrászat és borbély szolgáltatások', 'Wesselényi utca 18.', 'Budapest', '1077', 'Hungary', '+36301234515', 'booking@barbershop.hu', 'www.barbershop-bp.hu', 3, 2, 14, 12, '2025-10-09 16:14:23', '2026-01-09 12:50:46', NULL, 0, 1, 1, 2);
 
 -- --------------------------------------------------------
 
