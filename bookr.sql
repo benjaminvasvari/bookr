@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3307
--- Generation Time: Jan 09, 2026 at 11:51 AM
+-- Generation Time: Jan 12, 2026 at 12:37 PM
 -- Server version: 5.7.24
 -- PHP Version: 8.3.1
 
@@ -1339,6 +1339,25 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getNewCompanies` (IN `limitIN` INT)
     LIMIT limitIN;
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getOccupiedSlotsForDate` (IN `staffIdIN` INT, IN `dateIN` DATE)   BEGIN
+
+    SELECT 
+        a.id AS appointment_id,
+        a.start_time,
+        a.end_time,
+        a.service_id,
+        a.client_id,
+        s.name AS service_name,
+        s.duration_minutes
+    FROM appointments a
+    INNER JOIN services s ON a.service_id = s.id
+    WHERE a.staff_id = staffIdIN
+      AND DATE(a.start_time) = dateIN
+      AND a.status NOT IN ('cancelled', 'no_show')
+    ORDER BY a.start_time;
+
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getOpeningHours` (IN `companyIdIN` INT)   BEGIN
     SELECT 
         `day_of_week`,
@@ -1753,6 +1772,91 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getTopRecommendations` (IN `limitIN
     LIMIT limitIN;
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getUnavailableDatesInRange` (IN `companyIdIN` INT, IN `staffIdIN` INT, IN `dateFromIN` DATE, IN `dateToIN` DATE)   BEGIN
+    DECLARE currentDate DATE;
+    DECLARE dayName VARCHAR(20);
+    DECLARE isCompanyOpen BOOLEAN;
+    DECLARE isStaffWorking BOOLEAN;
+    DECLARE hasException BOOLEAN;
+    DECLARE exceptionType VARCHAR(20);
+   
+    -- Bemeneti dátumok ellenőrzése (opcionális, de ajánlott)
+    IF dateFromIN IS NULL OR dateToIN IS NULL OR dateFromIN > dateToIN THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Érvénytelen dátumtartomány';
+    END IF;
+   
+    -- Ideiglenes tábla a tiltott napoknak
+    CREATE TEMPORARY TABLE temp_unavailable_dates (
+        date DATE,
+        day_of_week VARCHAR(20),
+        reason VARCHAR(255)
+    );
+   
+    -- Bejárjuk a dátumtartomány napjait
+    SET currentDate = dateFromIN;
+   
+    WHILE currentDate <= dateToIN DO
+        SET dayName = LOWER(DATE_FORMAT(currentDate, '%W'));
+        SET isCompanyOpen = FALSE;
+        SET isStaffWorking = FALSE;
+        SET hasException = FALSE;
+        SET exceptionType = NULL;
+       
+        -- Cég nyitva van-e az adott hétköznapon?
+        SELECT (oh.is_closed = FALSE AND oh.open_time IS NOT NULL)
+        INTO isCompanyOpen
+        FROM opening_hours oh
+        WHERE oh.company_id = companyIdIN
+          AND oh.day_of_week = dayName
+        LIMIT 1;
+       
+        -- Staff dolgozik-e az adott hétköznapon?
+        SELECT (swh.is_available = TRUE AND swh.start_time IS NOT NULL)
+        INTO isStaffWorking
+        FROM staff_working_hours swh
+        WHERE swh.staff_id = staffIdIN
+          AND swh.day_of_week = dayName
+        LIMIT 1;
+       
+        -- Van-e kivétel (exception) az adott konkrét dátumra?
+        SELECT TRUE, se.type
+        INTO hasException, exceptionType
+        FROM staff_exceptions se
+        WHERE se.staff_id = staffIdIN
+          AND se.date = currentDate
+          AND se.is_deleted = FALSE
+        LIMIT 1;
+       
+        -- Csak akkor insertálunk, ha a nap TILTOTT (nem foglalható)
+        IF currentDate < CURDATE() THEN
+            -- Múltbeli nap
+            INSERT INTO temp_unavailable_dates VALUES (currentDate, dayName, 'Past date');
+           
+        ELSEIF hasException = TRUE AND exceptionType = 'day_off' THEN
+            -- Staff szabadnapja
+            INSERT INTO temp_unavailable_dates VALUES (currentDate, dayName, 'Staff day off');
+           
+        ELSEIF isCompanyOpen = FALSE THEN
+            -- Cég zárva van azon a hétköznapon
+            INSERT INTO temp_unavailable_dates VALUES (currentDate, dayName, 'Company closed');
+           
+        ELSEIF isStaffWorking = FALSE THEN
+            -- Staff nem dolgozik azon a hétköznapon
+            INSERT INTO temp_unavailable_dates VALUES (currentDate, dayName, 'Staff not working');
+        END IF;
+       
+        -- Következő nap
+        SET currentDate = DATE_ADD(currentDate, INTERVAL 1 DAY);
+    END WHILE;
+   
+    -- Visszaadjuk a tiltott napokat rendezve
+    SELECT * FROM temp_unavailable_dates ORDER BY date;
+   
+    -- Ideiglenes tábla törlése
+    DROP TEMPORARY TABLE temp_unavailable_dates;
+   
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getUserActiveSessions` (IN `userIdIN` INT)   BEGIN
     SELECT 
         `id`,
@@ -1878,22 +1982,19 @@ END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getUserProfile` (IN `userIdIN` INT)   BEGIN
     SELECT 
-        u.*,
-        GROUP_CONCAT(r.name SEPARATOR ', ') AS role_names,
-        GROUP_CONCAT(r.description SEPARATOR '; ') AS role_descriptions,
-        c.name AS company_name,
-        c.address AS company_address,
-        c.city AS company_city,
-        c.country AS company_country
-    FROM `users` u
-    INNER JOIN `user_x_role` uxr ON u.id = uxr.user_id
-    INNER JOIN `roles` r ON uxr.role_id = r.id
-    LEFT JOIN `companies` c ON u.company_id = c.id
-    WHERE u.id = userIdIN
-      AND u.is_deleted = FALSE
-      AND u.is_active = TRUE
-      AND uxr.is_un_assigned = FALSE
-    GROUP BY u.id;
+        users.id,
+        users.first_name,
+        users.last_name,
+        users.email,
+        users.phone,
+        images.url,
+        users.created_at
+    FROM users
+    LEFT JOIN images ON users.id = images.user_id
+    WHERE users.id = userIdIN
+      AND users.is_deleted = FALSE
+      AND users.is_active = TRUE
+      AND images.is_deleted = false;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getUserProfilePicture` (IN `userIdIN` INT)   BEGIN
@@ -1932,6 +2033,115 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getUsers` (IN `companyIdIN` INT, IN
       AND (isActiveIN IS NULL OR u.is_active = isActiveIN)
     GROUP BY u.id
     ORDER BY u.created_at DESC;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getWorkingHoursForDate` (IN `companyIdIN` INT, IN `staffIdIN` INT, IN `dateIN` DATE)   BEGIN
+    DECLARE dayName VARCHAR(20);
+    DECLARE companyOpen TIME;
+    DECLARE companyClose TIME;
+    DECLARE companyIsClosed BOOLEAN;
+    DECLARE staffStart TIME;
+    DECLARE staffEnd TIME;
+    DECLARE staffIsAvailable BOOLEAN;
+    DECLARE hasException BOOLEAN DEFAULT FALSE;
+    DECLARE exceptionType VARCHAR(20);
+    DECLARE exceptionStart TIME;
+    DECLARE exceptionEnd TIME;
+    
+    -- Result változók
+    DECLARE finalStartTime TIME DEFAULT NULL;
+    DECLARE finalEndTime TIME DEFAULT NULL;
+    DECLARE finalIsAvailable BOOLEAN DEFAULT TRUE;
+    DECLARE finalReason VARCHAR(100) DEFAULT NULL;
+    
+    -- Hét napja
+    SET dayName = LOWER(DATE_FORMAT(dateIN, '%W'));
+    
+    -- Company nyitvatartás
+    SELECT 
+        oh.open_time,
+        oh.close_time,
+        oh.is_closed
+    INTO 
+        companyOpen,
+        companyClose,
+        companyIsClosed
+    FROM opening_hours oh
+    WHERE oh.company_id = companyIdIN
+      AND oh.day_of_week = dayName
+    LIMIT 1;
+    
+    -- Staff munkaidő
+    SELECT 
+        swh.start_time,
+        swh.end_time,
+        swh.is_available
+    INTO 
+        staffStart,
+        staffEnd,
+        staffIsAvailable
+    FROM staff_working_hours swh
+    WHERE swh.staff_id = staffIdIN
+      AND swh.day_of_week = dayName
+    LIMIT 1;
+    
+    -- Staff exception
+    SELECT 
+        TRUE,
+        se.type,
+        se.start_time,
+        se.end_time
+    INTO 
+        hasException,
+        exceptionType,
+        exceptionStart,
+        exceptionEnd
+    FROM staff_exceptions se
+    WHERE se.staff_id = staffIdIN
+      AND se.date = dateIN
+      AND se.is_deleted = FALSE
+    LIMIT 1;
+    
+    -- LOGIKA
+    IF hasException = TRUE AND exceptionType = 'day_off' THEN
+        SET finalStartTime = NULL;
+        SET finalEndTime = NULL;
+        SET finalIsAvailable = FALSE;
+        SET finalReason = 'Staff day off';
+        
+    ELSEIF companyIsClosed = TRUE THEN
+        SET finalStartTime = NULL;
+        SET finalEndTime = NULL;
+        SET finalIsAvailable = FALSE;
+        SET finalReason = 'Company closed';
+        
+    ELSEIF staffIsAvailable = FALSE THEN
+        SET finalStartTime = NULL;
+        SET finalEndTime = NULL;
+        SET finalIsAvailable = FALSE;
+        SET finalReason = 'Staff not working';
+        
+    ELSE
+        -- Custom hours exception kezelése
+        IF hasException = TRUE AND exceptionType = 'custom_hours' THEN
+            SET staffStart = exceptionStart;
+            SET staffEnd = exceptionEnd;
+        END IF;
+        
+        -- Metszet számítása
+        SET finalStartTime = GREATEST(companyOpen, staffStart);
+        SET finalEndTime = LEAST(companyClose, staffEnd);
+        SET finalIsAvailable = TRUE;
+        SET finalReason = NULL;
+    END IF;
+    
+    -- Egyetlen result set
+    SELECT 
+        finalStartTime AS start_time,
+        finalEndTime AS end_time,
+        finalIsAvailable AS is_available,
+        finalReason AS reason;
+    
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `isFavorite` (IN `userIdIN` INT, IN `companyIdIN` INT)   BEGIN
@@ -1981,6 +2191,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `login` (IN `emailIN` VARCHAR(200)) 
         `users`.`last_name`,
         `users`.`email`,
         `users`.`password`,
+       	`users`.`phone`,
         `users`.`company_id`,
         `images`.`url` AS "imageUrl",  -- Ez lehet NULL, ha nincs kép!
         GROUP_CONCAT(`roles`.`name` SEPARATOR ', ') AS "roles"
