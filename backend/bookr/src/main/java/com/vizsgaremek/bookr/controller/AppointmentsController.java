@@ -178,9 +178,9 @@ public class AppointmentsController {
         Integer clientId = JWT.getUserIdFromAccessToken(jwtToken);
         String userRoles = JWT.getRolesFromAccessToken(jwtToken);
 
-        Integer companyId = bodyObject.getInt("token");
-        Integer serviceId = bodyObject.getInt("token");
-        Integer staffId = bodyObject.getInt("token");
+        Integer companyId = bodyObject.getInt("companyId");
+        Integer serviceId = bodyObject.getInt("serviceId");
+        Integer staffId = bodyObject.getInt("staffId");
         String startTime = bodyObject.getString("startTime");
         String endTime = bodyObject.getString("endTime");
         String notes = bodyObject.getString("notes");
@@ -196,6 +196,7 @@ public class AppointmentsController {
         } else {
             // Valid token
             JSONObject toReturn = appointmentsService.createAppointment(jwtToken, companyId, serviceId, staffId, clientId, startTime, endTime, notes, price);
+            
             return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
                     .entity(toReturn.toString())
                     .type(MediaType.APPLICATION_JSON)

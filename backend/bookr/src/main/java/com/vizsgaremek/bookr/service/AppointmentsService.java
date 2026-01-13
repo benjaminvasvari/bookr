@@ -1,16 +1,30 @@
 package com.vizsgaremek.bookr.service;
 
 import com.vizsgaremek.bookr.model.Appointments;
+import com.vizsgaremek.bookr.model.AuditLogs;
 import com.vizsgaremek.bookr.model.Companies;
+import com.vizsgaremek.bookr.security.JWT;
+import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
+import javax.inject.Inject;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class AppointmentsService {
+
+    @Inject
+    private AuditLogService auditLogService;
+
+    @Inject
+    private EmailService EmailService;
+
+    static SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     public JSONObject getUnavailableDates(Integer companyId, Integer staffId) {
 
@@ -88,7 +102,7 @@ public class AppointmentsService {
         JSONObject toReturn = new JSONObject();
         String status = "success";
         Integer statusCode = 200;
-        
+
         SimpleDateFormat timeFormatter = new SimpleDateFormat("HH:mm");
 
         // Model hívás
@@ -107,16 +121,15 @@ public class AppointmentsService {
 
             JSONArray workingHoursArray = new JSONArray();
             JSONObject workingHoursObj = new JSONObject();
-            
+
             workingHoursObj.put("startTime", timeFormatter.format(workingHModelResult.getStartTime()));
             workingHoursObj.put("endTime", timeFormatter.format(workingHModelResult.getEndTime()));
             workingHoursObj.put("isAvailable", workingHModelResult.getIsAvailable());
             workingHoursObj.put("reason", workingHModelResult.getReason());
-            
+
             workingHoursArray.put(workingHoursObj);
             data.put("workingHours", workingHoursArray);
 
-            
             ArrayList<Appointments> OccupiedModelResult = Appointments.getOccupiedSlotsForDate(staffId, date);
 
             if (OccupiedModelResult == null) {
@@ -160,4 +173,71 @@ public class AppointmentsService {
 
         return toReturn;
     }
-}
+
+    public JSONObject createAppointment(String jwtToken, Integer companyId, Integer serviceId, Integer staffId, Integer clientId, String startTimeString, String endTimeString, String notes, BigDecimal price) {
+
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        Timestamp startTime = Timestamp.valueOf(startTimeString);
+        Timestamp endTime = Timestamp.valueOf(endTimeString);
+
+        //code
+        Boolean modelResult = Appointments.createAppointment(companyId, serviceId, staffId, clientId, startTime, endTime, notes, price);
+
+        if (modelResult == false) {
+            status = "serverError";
+            statusCode = 500;
+        } else {
+            // ========== AUDIT LOG ==========
+
+            Integer userId = JWT.getUserIdFromAccessToken(jwtToken);
+            String userRoles = JWT.getRolesFromAccessToken(jwtToken);
+            String userEmail = JWT.getEmailFromAccessToken(jwtToken);
+
+            try {
+                AuditLogs auditLog = new AuditLogs(
+                        userId,
+                        userRoles.split(",")[0].trim(),
+                        userEmail,
+                        "user",
+                        "bookAppointment"
+                );
+                auditLog.addNewValue("companyId", companyId);
+                auditLog.addNewValue("serviceId", serviceId);
+                auditLog.addNewValue("staffId", staffId);
+                auditLog.addNewValue("clientId", clientId);
+                auditLog.addNewValue("startTime", startTime);
+                auditLog.addNewValue("endTime", endTime);
+                auditLog.addNewValue("notes", notes);
+                auditLog.addNewValue("price", price);
+
+                auditLogService.logAudit(auditLog);
+
+            } catch (Exception ex) {
+                // Log the error but don't fail the registration
+                ex.printStackTrace();
+            }
+
+            // ========== EMAIL KÜLDÉS ==========
+            try {
+                
+                
+         
+                EmailService.sendAppointmentConfirmationEmail(userEmail, , userEmail, userEmail, status, notes, endTimeString, userId, price, notes, notes, notes);
+
+            } catch (Exception ex) {
+                // Log the error but don't fail the registration
+                System.err.println("Failed to send verification email: " + ex.getMessage());
+                ex.printStackTrace();
+            }
+            // ===============================
+
+            toReturn.put("result", modelResult);
+
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+            return toReturn;
+        }
+    }

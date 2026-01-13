@@ -621,16 +621,17 @@ public class Appointments implements Serializable {
         }
     }
 
-    public static Boolean createAppointment(Integer companyId, Integer serviceId, Integer staffId, Integer clientId, Date startTime, Date endTime, String notes, BigDecimal price) {
+    public static Boolean createAppointment(Integer companyId, Integer serviceId, Integer staffId, Integer clientId, Timestamp startTime, Timestamp endTime, String notes, BigDecimal price) {
         EntityManager em = emf.createEntityManager();
+        
         try {
             StoredProcedureQuery spq = em.createStoredProcedureQuery("createAppointment");
             spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("serviceIdIN", Integer.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("clientIdIN", Integer.class, ParameterMode.IN);
-            spq.registerStoredProcedureParameter("startTimeIN", Date.class, ParameterMode.IN);
-            spq.registerStoredProcedureParameter("endTimeIN", Date.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("startTimeIN", Timestamp.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("endTimeIN", Timestamp.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("notesIN", String.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("priceIN", BigDecimal.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("currencyIN", String.class, ParameterMode.IN);
