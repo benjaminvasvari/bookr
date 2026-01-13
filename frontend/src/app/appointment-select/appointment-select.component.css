@@ -1,17 +1,191 @@
-.appointment-container {
-  display: grid;
-  grid-template-columns: 1fr 400px;
-  gap: 2rem;
-  max-width: 1400px;
-  margin-top: 100px;
-  padding: 2rem;
-  min-height: calc(100vh - 80px);
+/* ============================================
+   PAGE WRAPPER ÉS PROGRESS STEPPER
+   ============================================ */
+
+.page-wrapper {
+  margin-top: 80px;
+  width: 100%;
 }
 
-/* BAL OLDAL - Szakemberek és Naptár */
+/* BOOKING PROGRESS STEPPER */
+.booking-progress {
+  width: 100%;
+  padding: 2rem 0;
+  background: white;
+  border-bottom: 2px solid #e9ecef;
+  margin-bottom: 2rem;
+}
+
+.progress-container {
+  max-width: 800px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 2rem;
+}
+
+.step-wrapper {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.step-wrapper:last-child {
+  flex: 0;
+}
+
+/* Lépés */
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  position: relative;
+  z-index: 2;
+}
+
+/* Ikon/Szám kör */
+.step-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e9ecef;
+  border: 3px solid #e9ecef;
+  color: #6c757d;
+  font-weight: 700;
+  transition: all 0.3s;
+}
+
+.step-number {
+  font-size: 1.25rem;
+}
+
+.step-icon i {
+  font-size: 1.25rem;
+}
+
+/* Aktív lépés */
+.step.active .step-icon {
+  background: #38a179;
+  border-color: #38a179;
+  color: white;
+  box-shadow: 0 4px 12px rgba(56, 161, 121, 0.3);
+  transform: scale(1.1);
+}
+
+/* Befejezett lépés */
+.step.completed .step-icon {
+  background: #38a179;
+  border-color: #38a179;
+  color: white;
+}
+
+/* Címke */
+.step-label {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #6c757d;
+  text-align: center;
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+
+.step.active .step-label {
+  color: #38a179;
+  font-weight: 700;
+}
+
+.step.completed .step-label {
+  color: #2c3e50;
+}
+
+/* Összekötő vonal */
+.step-connector {
+  height: 3px;
+  background: #e9ecef;
+  flex: 1;
+  margin: 0 1rem;
+  margin-bottom: 2rem;
+  position: relative;
+  z-index: 1;
+  transition: all 0.3s;
+}
+
+.step-connector.completed {
+  background: #38a179;
+}
+
+/* ============================================
+   APPOINTMENT CONTAINER
+   ============================================ */
+
+.appointment-container {
+  display: grid;
+  grid-template-columns: 1fr 380px; /* Keskenyebb kosár = szélesebb naptár */
+  gap: 2rem;
+  max-width: 1400px;
+  margin: 0;
+  padding: 0 2rem 2rem 2rem;
+  min-height: calc(100vh - 80px);
+  position: relative;
+}
+
+.error-banner {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  background: #fee;
+  border: 2px solid #dc3545;
+  border-radius: 12px;
+  color: #dc3545;
+  font-weight: 600;
+  font-size: 0.95rem;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.2);
+  min-width: 300px;
+  max-width: 600px;
+}
+
+.error-banner i {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.dismiss-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: #dc3545;
+  cursor: pointer;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.dismiss-btn:hover {
+  color: #c82333;
+  transform: scale(1.1);
+}
+
+/* ============================================
+   BAL OLDAL - SZAKEMBEREK ÉS NAPTÁR
+   ============================================ */
+
 .specialists-section {
   display: flex;
   flex-direction: column;
+  width: 60vw;
   gap: 2rem;
 }
 
@@ -34,6 +208,72 @@
   font-weight: 600;
   color: #2c3e50;
   margin: 0 0 1rem 0;
+}
+
+/* Loading specialists */
+.loading-specialists {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  text-align: center;
+  color: #6c757d;
+  background: white;
+  border: 2px dashed #dee2e6;
+  border-radius: 16px;
+}
+
+.loading-specialists i {
+  font-size: 3rem;
+  color: #38a179;
+  margin-bottom: 1rem;
+}
+
+.loading-specialists p {
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+/* No specialists */
+.no-specialists {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  text-align: center;
+  color: #6c757d;
+  background: white;
+  border: 2px dashed #dee2e6;
+  border-radius: 16px;
+}
+
+.no-specialists i {
+  font-size: 4rem;
+  color: #dee2e6;
+  margin-bottom: 1rem;
+}
+
+.no-specialists p {
+  font-size: 1.1rem;
+  margin: 0 0 1.5rem 0;
+}
+
+.secondary-btn {
+  padding: 0.75rem 1.5rem;
+  border: 2px solid #38a179;
+  background: white;
+  color: #38a179;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.secondary-btn:hover {
+  background: #38a179;
+  color: white;
 }
 
 /* Szakemberek grid */
@@ -60,6 +300,11 @@
   border-color: #38a179;
   transform: translateY(-4px);
   box-shadow: 0 6px 20px rgba(56, 161, 121, 0.2);
+}
+
+.specialist-card:focus-visible {
+  outline: 3px solid #38a179;
+  outline-offset: 2px;
 }
 
 .specialist-card.selected {
@@ -103,7 +348,10 @@
   text-align: center;
 }
 
-/* Naptár szekció */
+/* ============================================
+   NAPTÁR SZEKCIÓ
+   ============================================ */
+
 .calendar-section {
   display: flex;
   flex-direction: column;
@@ -113,13 +361,18 @@
   background: white;
   border: 2px solid #dee2e6;
   border-radius: 16px;
-  max-width: 630px;
+  max-width: 70vw; /* Teljes szélesség kihasználása */
 }
 
 .calendar-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.calendar-nav {
+  display: flex;
+  gap: 0.75rem;
 }
 
 .nav-btn {
@@ -137,9 +390,21 @@
   gap: 0.5rem;
 }
 
-.nav-btn:hover {
+.nav-btn:hover:not(:disabled) {
   background: #38a179;
   color: white;
+}
+
+.nav-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  border-color: #dee2e6;
+  color: #6c757d;
+}
+
+.nav-btn:focus-visible {
+  outline: 3px solid #38a179;
+  outline-offset: 2px;
 }
 
 /* Heti naptár */
@@ -161,7 +426,10 @@
   transition: all 0.2s;
 }
 
-
+.day-column:focus-visible {
+  outline: 3px solid #38a179;
+  outline-offset: 2px;
+}
 
 .day-column.selected {
   border-color: #38a179;
@@ -202,19 +470,64 @@
   border-color: #38a179;
   background: #f0fdf7;
   transform: translateY(-2px);
-  color: black;
 }
 
-.day-column.selected:hover{
+.day-column.selected:hover {
   border-color: #38a179;
   background: #2d8763;
 }
 
-/* Időpontok szekció */
+/* ============================================
+   IDŐPONTOK SZEKCIÓ
+   ============================================ */
+
 .time-slots-section {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+/* Loading slots */
+.loading-slots {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem;
+  color: #6c757d;
+}
+
+.loading-slots i {
+  font-size: 2rem;
+  color: #38a179;
+  margin-bottom: 0.75rem;
+}
+
+/* No slots available */
+.no-slots-available {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 3rem 2rem;
+  text-align: center;
+  color: #6c757d;
+  background: #f8f9fa;
+  border-radius: 12px;
+}
+
+.no-slots-available i {
+  font-size: 3rem;
+  color: #dee2e6;
+  margin-bottom: 1rem;
+}
+
+.no-slots-available p {
+  font-size: 1.1rem;
+  margin: 0 0 0.5rem 0;
+}
+
+.no-slots-available small {
+  font-size: 0.9rem;
+  color: #adb5bd;
 }
 
 .time-slots-grid {
@@ -241,15 +554,20 @@
   transform: scale(1.05);
 }
 
-.time-slot-btn.selected:hover{
-  border-color: #38a179;
-  background: #2d8763;
+.time-slot-btn:focus-visible {
+  outline: 3px solid #38a179;
+  outline-offset: 2px;
 }
 
 .time-slot-btn.selected {
   background: #38a179;
   border-color: #38a179;
   color: white;
+}
+
+.time-slot-btn.selected:hover {
+  border-color: #38a179;
+  background: #2d8763;
 }
 
 .time-slot-btn.unavailable {
@@ -260,38 +578,15 @@
   text-decoration: line-through;
 }
 
-/* Nincs kiválasztás */
-.no-selection {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 4rem 2rem;
-  width: 630px;
-  text-align: center;
-  color: #6c757d;
-  background: white;
-  border: 2px dashed #dee2e6;
-  border-radius: 16px;
-}
+/* ============================================
+   JOBB OLDAL - KOSÁR
+   ============================================ */
 
-.no-selection i {
-  font-size: 4rem;
-  color: #dee2e6;
-  margin-bottom: 1rem;
-}
-
-.no-selection p {
-  font-size: 1.1rem;
-  margin: 0;
-}
-
-/* JOBB OLDAL - Kosár */
 .cart-section {
   position: sticky;
   top: 2rem;
-  right: 50px;
-  margin-top: 60px;
+  right: 20px;
+  margin-top: 0;
   height: fit-content;
   max-height: calc(100vh - 4rem);
   overflow-y: auto;
@@ -313,10 +608,10 @@
   align-items: center;
   gap: 0.75rem;
   padding: 1rem 1.25rem;
-  background: #fee;
-  border: 2px solid #dc3545;
+  background: #fff3cd;
+  border: 2px solid #ffc107;
   border-radius: 12px;
-  color: #dc3545;
+  color: #856404;
   font-weight: 600;
   font-size: 0.95rem;
 }
@@ -373,6 +668,10 @@
   font-size: 0.9rem;
 }
 
+.stars i.half {
+  color: #dee2e6;
+}
+
 .address {
   font-size: 0.9rem;
   color: #6c757d;
@@ -426,9 +725,22 @@
 }
 
 .empty-cart {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
   padding: 2rem 0;
   color: #6c757d;
+}
+
+.empty-cart i {
+  font-size: 2.5rem;
+  color: #dee2e6;
+  margin-bottom: 0.75rem;
+}
+
+.empty-cart p {
+  margin: 0;
 }
 
 .cart-item {
@@ -477,6 +789,11 @@
   transform: scale(1.1);
 }
 
+.remove-btn:focus-visible {
+  outline: 3px solid #dc3545;
+  outline-offset: 2px;
+}
+
 /* Folytatás gomb */
 .continue-btn {
   width: 100%;
@@ -494,7 +811,7 @@
 .continue-btn:hover:not(:disabled) {
   background: #34495e;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(56, 161, 121, 0.3);
+  box-shadow: 0 4px 12px rgba(44, 62, 80, 0.3);
 }
 
 .continue-btn:disabled {
@@ -503,10 +820,71 @@
   opacity: 0.5;
 }
 
-/* Responsive */
+.continue-btn:focus-visible {
+  outline: 3px solid #38a179;
+  outline-offset: 2px;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+/* Progress stepper responsive */
+@media (max-width: 768px) {
+  .progress-container {
+    padding: 0 1rem;
+  }
+
+  .step-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .step-number {
+    font-size: 1.1rem;
+  }
+
+  .step-label {
+    font-size: 0.8rem;
+  }
+
+  .step-connector {
+    margin: 0 0.5rem;
+    margin-bottom: 1.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .booking-progress {
+    padding: 1.5rem 0;
+  }
+
+  .step-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .step-number {
+    font-size: 1rem;
+  }
+
+  .step-label {
+    font-size: 0.75rem;
+    max-width: 80px;
+    white-space: normal;
+    line-height: 1.2;
+  }
+
+  .step-connector {
+    margin-bottom: 1.5rem;
+  }
+}
+
+/* Appointment container responsive */
 @media (max-width: 992px) {
   .appointment-container {
     grid-template-columns: 1fr;
+    padding: 0 1rem 1rem 1rem;
   }
 
   .cart-section {
@@ -520,6 +898,7 @@
     padding: 1rem;
     z-index: 1000;
     max-height: none;
+    margin-top: 0;
   }
 
   .cart-card {
@@ -545,7 +924,7 @@
 
 @media (max-width: 768px) {
   .appointment-container {
-    padding: 1rem;
+    padding: 0 1rem 1rem 1rem;
   }
 
   .specialists-grid {
@@ -571,6 +950,13 @@
   .time-slots-grid {
     grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
   }
+
+  .error-banner {
+    left: 1rem;
+    right: 1rem;
+    transform: none;
+    min-width: auto;
+  }
 }
 
 @media (max-width: 480px) {
@@ -586,5 +972,15 @@
 
   .calendar-section {
     padding: 1rem;
+  }
+
+  .calendar-nav {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .nav-btn {
+    width: 100%;
+    justify-content: center;
   }
 }

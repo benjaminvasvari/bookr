@@ -47,16 +47,17 @@ export const appRoutes: Routes = [
   {
     path: 'appointment/:companyId/services',
     component: AppointmentComponent,
-    data: { showFooter: true },
+    data: { showFooter: false },
   },
   {
     path: 'appointment/:companyId/specialists',
     component: AppointmentSelectComponent,
-    data: { showFooter: true },
+    data: { showFooter: false },
   },
   {
     path: 'appointment-payment/:companyId',
     component: AppointmentPaymentComponent,
+    data: { showFooter: false },
   },
   {
     path: 'reset-password',
