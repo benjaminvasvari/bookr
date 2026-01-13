@@ -1,10 +1,15 @@
 package com.vizsgaremek.bookr.controller;
 
+import com.vizsgaremek.bookr.security.JWT;
 import com.vizsgaremek.bookr.service.AppointmentsService;
+import com.vizsgaremek.bookr.util.RoleChecker;
+import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.ZoneId;
-import java.util.Date;
+import javax.inject.Inject;
+import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
+import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
@@ -20,6 +25,9 @@ import org.json.JSONObject;
 public class AppointmentsController {
 
     private final AppointmentsService appointmentsService = new AppointmentsService();
+
+    @Inject
+    private RoleChecker roleChecker;
 
     /**
      * Default XML endpoint - not used, kept for template compatibility
@@ -140,7 +148,7 @@ public class AppointmentsController {
                     .entity(result.toString())
                     .type(MediaType.APPLICATION_JSON)
                     .build();
-            
+
         } catch (Exception e) {
             e.printStackTrace();
             errorResponse.put("status", "error");
@@ -149,5 +157,49 @@ public class AppointmentsController {
             return Response.status(500).entity(errorResponse.toString()).type(MediaType.APPLICATION_JSON).build();
         }
     }
-    
+
+    @POST
+    @Path("createAppointment")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response createAppointment(@HeaderParam("Authorization") String authHeader, String body) {
+        JSONObject bodyObject = new JSONObject(body);
+
+        // Extract token from "Bearer <token>"
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            System.out.println("Missing or invalid Authorization header");
+            return Response.status(401).entity("missingToken").build();
+        }
+
+        // Remove "Bearer " prefix
+        String jwtToken = authHeader.substring(7);
+
+        //
+        Boolean validJwt = JWT.validateAccessToken(jwtToken);
+        Integer clientId = JWT.getUserIdFromAccessToken(jwtToken);
+        String userRoles = JWT.getRolesFromAccessToken(jwtToken);
+
+        Integer companyId = bodyObject.getInt("token");
+        Integer serviceId = bodyObject.getInt("token");
+        Integer staffId = bodyObject.getInt("token");
+        String startTime = bodyObject.getString("startTime");
+        String endTime = bodyObject.getString("endTime");
+        String notes = bodyObject.getString("notes");
+        BigDecimal price = bodyObject.getBigDecimal("price");
+        
+
+        if (validJwt == null) {
+            // Lejárt JWT
+            return Response.status(401).entity("tokenExpired").build();
+        } else if (validJwt == false) {
+            // Invalid JWT
+            return Response.status(401).entity("invalidToken").build();
+        } else {
+            // Valid token
+            JSONObject toReturn = appointmentsService.createAppointment(jwtToken, companyId, serviceId, staffId, clientId, startTime, endTime, notes, price);
+            return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                    .entity(toReturn.toString())
+                    .type(MediaType.APPLICATION_JSON)
+                    .build();
+        }
+    }
 }

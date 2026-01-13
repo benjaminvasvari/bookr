@@ -180,7 +180,7 @@ public class Users implements Serializable {
     private String rolesString;
 
     @Transient
-    private String roleName;  // Az első role neve
+    private String roleName;
 
     @Transient
     private String imageUrl;

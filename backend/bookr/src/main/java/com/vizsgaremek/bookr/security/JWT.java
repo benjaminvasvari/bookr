@@ -66,9 +66,9 @@ public class JWT {
             claims.put("id", user.getId());
             claims.put("email", user.getEmail());
 
-            String roleName = user.getRoleName();
-            if (roleName != null) {
-                claims.put("role_name", roleName);
+            String roles = user.getRolesString();
+            if (roles != null) {
+                claims.put("role_names", roles);
             }
 
             // role_id megtartása (opcionális, de hasznos)
@@ -271,7 +271,7 @@ public class JWT {
     /**
      * Role name kinyerése access tokenből
      */
-    public static String getRoleNameFromAccessToken(String token) {
+    public static String getRolesFromAccessToken(String token) {
         try {
             Claims claims = getClaimsFromAccessToken(token);
             return claims != null ? claims.get("role_name", String.class) : null;

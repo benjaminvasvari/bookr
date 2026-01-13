@@ -33,7 +33,7 @@ public class UsersService {
         Integer statusCode = 200;
 
         Integer userId = JWT.getUserIdFromAccessToken(token);
-        String userRoles = JWT.getRoleNameFromAccessToken(token);
+        String userRoles = JWT.getRolesFromAccessToken(token);
 
         // Permission Validation
         if (!userRoles.contains("client")) {
@@ -77,7 +77,7 @@ public class UsersService {
         Integer statusCode = 200;
 
         Integer userId = JWT.getUserIdFromAccessToken(token);
-        String userRoles = JWT.getRoleNameFromAccessToken(token);
+        String userRoles = JWT.getRolesFromAccessToken(token);
         String userEmail = JWT.getEmailFromAccessToken(token);
 
         // Permission Validation
@@ -136,7 +136,7 @@ public class UsersService {
         Integer statusCode = 200;
 
         Integer performedId = JWT.getUserIdFromAccessToken(jwtToken);
-        String performedUserRoles = JWT.getRoleNameFromAccessToken(jwtToken);
+        String performedUserRoles = JWT.getRolesFromAccessToken(jwtToken);
 
         //code
         Users userToUpdate = new Users(updatedUser.getId());

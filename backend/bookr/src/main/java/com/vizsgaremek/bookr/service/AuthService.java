@@ -267,13 +267,6 @@ public class AuthService {
             userData.put("avatarUrl", JSONObject.NULL);
         }
 
-        // Role ID
-        if (userFromDB.getRoleId() != null) {
-            userData.put("roleId", userFromDB.getRoleId());
-        } else {
-            userData.put("roleId", JSONObject.NULL);
-        }
-
         // Roles String (comma-separated role names)
         userData.put("roles", userFromDB.getRolesString());
 
