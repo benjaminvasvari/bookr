@@ -1,181 +1,306 @@
-<div class="appointment-container">
-  <!-- Bal oldal: Szakemberek és Naptár -->
-  <div class="specialists-section">
-    <h2>Szakemberek</h2>
+<div class="page-wrapper">
+  <div class="booking-progress">
+    <div class="progress-container">
+      <!-- Lépés 1: Szolgáltatások -->
+      <div class="step-wrapper">
+        <div class="step completed" (click)="goBackToServices()">
+          <div class="step-icon">
+            <i class="fas fa-check"></i>
+          </div>
+          <span class="step-label">Szolgáltatások</span>
+        </div>
+        <div class="step-connector completed"></div>
+      </div>
 
-    <!-- Szakemberek lista -->
-    <div class="specialists-grid">
-      @for (specialist of specialists; track specialist.id) {
+      <!-- Lépés 2: Időpont választás -->
+      <div class="step-wrapper">
+        <div class="step active">
+          <div class="step-icon">
+            <span class="step-number">2</span>
+          </div>
+          <span class="step-label">Időpont választás</span>
+        </div>
+        <div class="step-connector"></div>
+      </div>
+
+      <!-- Lépés 3: Összegzés -->
+      <div class="step-wrapper">
+        <div class="step">
+          <div class="step-icon">
+            <span class="step-number">3</span>
+          </div>
+          <span class="step-label">Összegzés</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="appointment-container">
+    @if (errorMessage) {
+    <div class="error-banner" role="alert">
+      <i class="fas fa-exclamation-triangle"></i>
+      <span>{{ errorMessage }}</span>
+      <button class="dismiss-btn" (click)="dismissError()" aria-label="Bezárás">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    }
+
+    <!-- Bal oldal: Szakemberek és Naptár -->
+    <div class="specialists-section">
+      <h2>Szakemberek</h2>
+
+      @if (loadingSpecialists) {
+      <div class="loading-specialists">
+        <i class="fas fa-spinner fa-spin"></i>
+        <p>Szakemberek betöltése...</p>
+      </div>
+      }
+
+      @if (!loadingSpecialists && specialists.length === 0 && cart.length > 0) {
+      <div class="no-specialists">
+        <i class="fas fa-user-slash"></i>
+        <p>Nincs elérhető szakember a választott szolgáltatásokhoz</p>
+        <button class="secondary-btn" (click)="goBackToServices()">
+          Szolgáltatások módosítása
+        </button>
+      </div>
+      }
+
+      <!-- Szakemberek lista -->
+      @if (!loadingSpecialists && specialists.length > 0) {
+      <div class="specialists-grid">
+        @for (specialist of specialists; track specialist.id) {
         <div
           class="specialist-card"
           [class.selected]="selectedSpecialist?.id === specialist.id"
+          role="button"
+          tabindex="0"
+          [attr.aria-pressed]="selectedSpecialist?.id === specialist.id"
+          [attr.aria-label]="'Szakember: ' + specialist.displayName + (specialist.specialties ? ', Szakterület: ' + specialist.specialties : '')"
           (click)="selectSpecialist(specialist)"
+          (keydown.enter)="selectSpecialist(specialist)"
+          (keydown.space)="selectSpecialist(specialist); $event.preventDefault()"
         >
           <div class="specialist-image">
-            <img [src]="specialist.imageUrl" [alt]="specialist.name" />
+            <img [src]="specialist.imageUrl || 'assets/placeholder-user.jpg'" [alt]="specialist.displayName" />
           </div>
-          <h4>{{ specialist.name }}</h4>
-          <p class="specialization">{{ specialist.specialization }}</p>
+          <h4>{{ specialist.displayName }}</h4>
+          @if (specialist.specialties) {
+          <p class="specialization">{{ specialist.specialties }}</p>
+          }
         </div>
+        }
+      </div>
       }
-    </div>
 
-    <!-- Naptár (csak ha van kiválasztott szakember) -->
-    @if (selectedSpecialist) {
+      <!-- Naptár (csak ha van kiválasztott szakember) -->
+      @if (selectedSpecialist) {
       <div class="calendar-section">
         <div class="calendar-header">
-          <h3>Időpont választás</h3>
-          <button class="nav-btn" (click)="previousWeek()">
-            Előző hét <i class="fas fa-chevron-left"></i>
-          </button>
-          <button class="nav-btn" (click)="nextWeek()">
-            Következő hét <i class="fas fa-chevron-right"></i>
-          </button>
+          <h3>{{ currentMonthYear }}</h3>
+
+          <div class="calendar-nav">
+            <!-- Előző hét gomb (letiltva ha nem lehet visszamenni) -->
+            <button
+              class="nav-btn"
+              (click)="previousWeek()"
+              [disabled]="!canGoBack"
+              [attr.aria-label]="'Előző hét' + (!canGoBack ? ' - Nem elérhető' : '')"
+            >
+              <i class="fas fa-chevron-left"></i>
+              Előző hét
+            </button>
+
+            <!-- Következő hét gomb -->
+            <button class="nav-btn" (click)="nextWeek()" [disabled]="!canGoForward" [attr.aria-label]="'Következő hét' + (!canGoForward ? ' - Nem elérhető' : '')">
+              Következő hét
+              <i class="fas fa-chevron-right"></i>
+            </button>
+          </div>
         </div>
 
         <!-- Heti naptár -->
-        <div class="week-calendar">
+        <div class="week-calendar" role="radiogroup" aria-label="Dátum választása">
           @for (day of weekDays; track day.date.getTime()) {
-            <div
-              class="day-column"
-              [class.disabled]="day.isDisabled"
-              [class.selected]="selectedDate?.getTime() === day.date.getTime()"
-              [class.today]="day.isToday"
-              (click)="selectDay(day)"
-            >
-              <div class="day-name">{{ day.dayName }}</div>
-              <div class="day-number">{{ day.dayNumber }}</div>
-            </div>
+          <div
+            class="day-column"
+            [class.disabled]="day.isDisabled"
+            [class.selected]="selectedDate?.getTime() === day.date.getTime()"
+            [class.today]="day.isToday"
+            role="radio"
+            [attr.aria-checked]="selectedDate?.getTime() === day.date.getTime()"
+            [attr.aria-disabled]="day.isDisabled"
+            [attr.aria-label]="day.dayName + ', ' + day.dayNumber + (day.isToday ? ' (ma)' : '') + (day.isDisabled ? ' - Nem elérhető' : '')"
+            tabindex="0"
+            (click)="selectDay(day)"
+            (keydown.enter)="selectDay(day)"
+            (keydown.space)="selectDay(day); $event.preventDefault()"
+          >
+            <div class="day-name">{{ day.dayName }}</div>
+            <div class="day-number">{{ day.dayNumber }}</div>
+          </div>
           }
         </div>
 
         <!-- Időpontok (csak ha van kiválasztott nap) -->
         @if (selectedDate) {
-          <div class="time-slots-section">
-            <h4>Elérhető időpontok - {{ formatDate(selectedDate) }}</h4>
-            <div class="time-slots-grid">
-              @for (slot of timeSlots; track slot.time) {
-                <button
-                  class="time-slot-btn"
-                  [class.selected]="selectedTimeSlot?.time === slot.time"
-                  [class.unavailable]="!slot.available"
-                  [disabled]="!slot.available"
-                  (click)="selectTimeSlot(slot)"
-                >
-                  {{ slot.time }}
-                </button>
-              }
-            </div>
+        <div class="time-slots-section">
+          <h4>Elérhető időpontok - {{ formatDate(selectedDate) }}</h4>
+
+          <!-- Loading state -->
+          @if (loadingTimeSlots) {
+          <div class="loading-slots">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Időpontok betöltése...</p>
           </div>
+          }
+
+          <!-- Időpontok grid -->
+          @if (!loadingTimeSlots && timeSlots.length > 0) {
+          <div class="time-slots-grid" role="radiogroup" aria-label="Időpont választása">
+            @for (slot of timeSlots; track slot.time) {
+            <button
+              class="time-slot-btn"
+              [class.selected]="selectedTimeSlot?.time === slot.time"
+              [class.unavailable]="!slot.available"
+              [disabled]="!slot.available"
+              role="radio"
+              [attr.aria-checked]="selectedTimeSlot?.time === slot.time"
+              [attr.aria-label]="slot.time + (slot.available ? '' : ' - Foglalt')"
+              (click)="selectTimeSlot(slot)"
+            >
+              {{ slot.time }}
+            </button>
+            }
+          </div>
+          }
+
+          <!-- Nincs elérhető időpont -->
+          @if (!loadingTimeSlots && timeSlots.length === 0) {
+          <div class="no-slots-available">
+            <i class="fas fa-calendar-times"></i>
+            <p>Ezen a napon nincs elérhető időpont</p>
+            <small>Kérjük válasszon másik napot</small>
+          </div>
+          }
+        </div>
         }
       </div>
-    }
+      }
+    </div>
 
-    <!-- Ha nincs kiválasztott szakember -->
-    @if (!selectedSpecialist) {
-      <div class="no-selection">
-        <i class="fas fa-user-clock"></i>
-        <p>Válassz szakembert az időpont foglalásához</p>
-      </div>
-    }
-  </div>
-
-  <!-- Jobb oldal: Kosár -->
-  <div class="cart-section">
-    <div class="cart-card">
-      <!-- Cég info -->
-      <div class="company-info">
-        <div class="company-image">
-          <img [src]="company?.imageUrl || 'assets/placeholder.jpg'" [alt]="company?.name" />
-        </div>
-        <div class="company-details">
-          <h3>{{ company?.name }}</h3>
-          <div class="rating">
-            <span>{{ company?.rating }}</span>
-            <span class="stars">
-              <i class="fas fa-star"></i>
-              <i class="fas fa-star"></i>
-              <i class="fas fa-star"></i>
-              <i class="fas fa-star"></i>
-              <i class="fas fa-star"></i>
-            </span>
+    <!-- Jobb oldal: Kosár -->
+    <div class="cart-section">
+      <div class="cart-card">
+        <!-- Cég info -->
+        @if (company) {
+        <div class="company-info">
+          <div class="company-image">
+            <img [src]="company.imageUrl || 'assets/placeholder.jpg'" [alt]="company.name" />
           </div>
-          <p class="address">{{ company?.address }}</p>
+          <div class="company-details">
+            <h3>{{ company.name }}</h3>
+            @if (company.rating > 0) {
+            <div class="rating">
+              <span>{{ company.rating }}</span>
+              <span class="stars" [attr.aria-label]="company.rating + ' csillag'">
+                @for (star of [1,2,3,4,5]; track star) {
+                  <i class="fas fa-star" [class.half]="company.rating >= star - 0.5 && company.rating < star"></i>
+                }
+              </span>
+            </div>
+            }
+            <p class="address">{{ company.address }}</p>
+          </div>
         </div>
-      </div>
+        }
 
-      <!-- Kiválasztott szakember (ha van) -->
-      @if (selectedSpecialist) {
+        <!-- Kiválasztott szakember (ha van) -->
+        @if (selectedSpecialist) {
         <div class="selected-specialist-info">
           <div class="info-row">
             <span class="label">Szakember:</span>
-            <span class="value">{{ selectedSpecialist.name }}</span>
+            <span class="value">{{ selectedSpecialist.displayName }}</span>
           </div>
         </div>
-      }
+        }
 
-      <!-- Kiválasztott időpont (ha van) -->
-      @if (selectedTimeSlot && selectedDate) {
+        <!-- Kiválasztott időpont (ha van) -->
+        @if (selectedTimeSlot && selectedDate) {
         <div class="selected-appointment-info">
           <div class="info-row">
             <span class="label">Időpont:</span>
             <span class="value">{{ formatDate(selectedDate) }} {{ selectedTimeSlot.time }}</span>
           </div>
         </div>
-      }
+        }
 
-      <!-- Összesen sor -->
-      <div class="cart-summary">
-        <span>Összesen</span>
-        <span>{{ getCartTotal() }} Ft</span>
-      </div>
+        <!-- Összesen sor -->
+        <div class="cart-summary">
+          <span>Összesen</span>
+          <span>{{ getCartTotal() }} Ft</span>
+        </div>
 
-      <!-- Kosár tartalom -->
-      <div class="cart-items">
-        @if (cart.length === 0) {
+        <!-- Kosár tartalom -->
+        <div class="cart-items">
+          @if (cart.length === 0) {
           <div class="empty-cart">
+            <i class="fas fa-shopping-cart"></i>
             <p>A kosár üres</p>
           </div>
-        }
-
-        @for (item of cart; track item.id) {
-          <div class="cart-item">
-            <div class="cart-item-info">
-              <h4>{{ item.name }}</h4>
-              <p>{{ item.duration }} perc</p>
-              <p class="cart-item-price">{{ item.price }} Ft</p>
+          } @else {
+            @for (item of cart; track item.id) {
+            <div class="cart-item">
+              <div class="cart-item-info">
+                <h4>{{ item.name }}</h4>
+                <p>{{ item.duration }} perc</p>
+                <p class="cart-item-price">{{ item.price }} Ft</p>
+              </div>
+              <button 
+                class="remove-btn" 
+                (click)="removeFromCart(item.id)"
+                [attr.aria-label]="'Eltávolítás: ' + item.name"
+              >
+                <i class="fas fa-times"></i>
+              </button>
             </div>
-            <button class="remove-btn" (click)="removeFromCart(item.id)">
-              <i class="fas fa-times"></i>
-            </button>
-          </div>
-        }
+            }
+          }
 
-        <!-- Hibaüzenetek/figyelmeztetések -->
-        @if (cart.length === 0) {
+          <!-- Hibaüzenetek/figyelmeztetések -->
+          @if (cart.length === 0) {
           <div class="warning-message">
             <i class="fas fa-exclamation-circle"></i>
             Válassz szolgáltatásokat a foglaláshoz
           </div>
-        }
-        @if (cart.length > 0 && !selectedSpecialist) {
+          } @else if (cart.length > 0 && !selectedSpecialist) {
           <div class="warning-message">
             <i class="fas fa-exclamation-circle"></i>
             Válassz szakembert a folytatáshoz
           </div>
-        }
-        @if (selectedSpecialist && !selectedTimeSlot) {
+          } @else if (selectedSpecialist && !selectedTimeSlot) {
           <div class="warning-message">
             <i class="fas fa-exclamation-circle"></i>
             Válassz időpontot a folytatáshoz
           </div>
-        }
-      </div>
+          }
+        </div>
 
-      <!-- Folytatás gomb -->
-      <button class="continue-btn" [disabled]="cart.length === 0" (click)="continue()">
-        Összegzés
-      </button>
+        <!-- Folytatás gomb -->
+        <button
+          class="continue-btn"
+          [disabled]="!selectedSpecialist || !selectedTimeSlot || cart.length === 0"
+          (click)="continue()"
+          [attr.aria-label]="'Folytatás' + (!selectedSpecialist || !selectedTimeSlot || cart.length === 0 ? ' - Töltsd ki az összes mezőt' : '')"
+        >
+          @if (selectedSpecialist && selectedTimeSlot && cart.length > 0) {
+            Összegzés
+          } @else {
+            Válassz időpontot
+          }
+        </button>
+      </div>
     </div>
   </div>
 </div>

@@ -222,12 +222,13 @@ public class Users implements Serializable {
     }
 
     // login response constructor (data from stored procedure)
-    public Users(Integer id, String firstName, String lastName, String email, String password, Integer companyId, String avatarUrl, String rolesString) {
+    public Users(Integer id, String firstName, String lastName, String email, String password, String phone, Integer companyId, String avatarUrl, String rolesString) {
         this.id = id;
         this.firstName = firstName;
         this.lastName = lastName;
         this.email = email;
         this.password = password;
+        this.phone = phone;
         this.companyId = companyId;
         this.imageUrl = avatarUrl;
         this.rolesString = rolesString;
@@ -717,14 +718,15 @@ public class Users implements Serializable {
             Object[] record = resultList.get(0);
 
             Users user = new Users(
-                    Integer.valueOf(record[0].toString()), // user_id
-                    record[1].toString(), // first_name
-                    record[2].toString(), // last_name
-                    record[3].toString(), // email
-                    record[4].toString(), // password (hashed)
-                    record[5] == null ? null : Integer.valueOf(record[5].toString()), // company_id (can be NULL)
-                    record[6] == null ? null : record[6].toString(), // avatarUrl
-                    record[7] == null ? null : record[7].toString() // roles (GROUP_CONCAT string)
+                    Integer.valueOf(record[0].toString()),
+                    record[1].toString(),
+                    record[2].toString(),
+                    record[3].toString(),
+                    record[4].toString(),
+                    record[5].toString(),
+                    record[6] == null ? null : Integer.valueOf(record[6].toString()), // company_id (can be NULL)
+                    record[7] == null ? null : record[7].toString(), // avatarUrl
+                    record[8] == null ? null : record[8].toString() // roles (GROUP_CONCAT string)
             );
 
             return user;

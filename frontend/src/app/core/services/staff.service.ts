@@ -1,43 +1,34 @@
+// src/app/core/services/staff.service.ts
+
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { API_ENDPOINTS } from '../constants/api-endpoints';
-import { Staff } from '../models';
+import { StaffByServicesResponse } from '../models/staff.model';
 
 @Injectable({
   providedIn: 'root'
 })
-export class SpecialistsService {
+export class StaffService {
   private apiUrl = environment.apiUrl;
 
   constructor(private http: HttpClient) {}
 
   /**
-   * Összes szakember lekérése
+   * Szakemberek lekérése cég + szolgáltatások alapján
+   * 
+   * Endpoint: GET /api/staff/by-company-and-services?companyId={id}&serviceIds={id1,id2}
    */
-  getSpecialists(): Observable<Staff[]> {
-    return this.http.get<Staff[]>(
-      `${this.apiUrl}${API_ENDPOINTS.SPECIALISTS.LIST}`
-    );
-  }
+  getStaffByServices(companyId: number, serviceIds: number[]): Observable<StaffByServicesResponse> {
+    const params = new HttpParams()
+      .set('companyId', companyId.toString())
+      .set('serviceIds', serviceIds.join(','));
 
-  /**
-   * Egy konkrét szakember lekérése ID alapján
-   */
-  getSpecialistById(id: number): Observable<Staff> {
-    return this.http.get<Staff>(
-      `${this.apiUrl}${API_ENDPOINTS.SPECIALISTS.DETAIL(id)}`
-    );
-  }
-
-  /**
-   * Egy cég összes szakemberének lekérése
-   */
-  getSpecialistsByCompany(companyId: number): Observable<Staff[]> {
-    return this.http.get<Staff[]>(
-      `${this.apiUrl}${API_ENDPOINTS.SPECIALISTS.BY_COMPANY(companyId)}`
+    return this.http.get<StaffByServicesResponse>(
+      `${this.apiUrl}${API_ENDPOINTS.STAFF.BY_COMPANY_AND_SERVICES}`,
+      { params }
     );
   }
 }

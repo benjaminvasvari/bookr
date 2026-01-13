@@ -140,8 +140,8 @@ public class AppointmentsService {
                         JSONObject slotObject = new JSONObject();
 
                         slotObject.put("appointmentId", occupiedSlot.getId());
-                        slotObject.put("startTime", timeFormatter.format(workingHModelResult.getStartTime()));
-                        slotObject.put("endTime", timeFormatter.format(workingHModelResult.getEndTime()));
+                        slotObject.put("startTime", timeFormatter.format(occupiedSlot.getStartTime()));
+                        slotObject.put("endTime", timeFormatter.format(occupiedSlot.getEndTime()));
                         slotObject.put("serviceId", occupiedSlot.getServiceIdInt());
                         slotObject.put("durationMinutes", occupiedSlot.getDurationMinutes());
 

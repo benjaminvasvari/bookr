@@ -38,6 +38,7 @@ import javax.validation.constraints.Size;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 import org.json.JSONObject;
+import sun.security.jca.ServiceId;
 
 /**
  *
@@ -610,6 +611,43 @@ public class Appointments implements Serializable {
             }
 
             return toReturn;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+
+        } finally {
+            em.close();
+        }
+    }
+
+    public static Boolean createAppointment(Integer companyId, Integer serviceId, Integer staffId, Integer clientId, Date startTime, Date endTime, String notes, BigDecimal price) {
+        EntityManager em = emf.createEntityManager();
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("createAppointment");
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("serviceIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("clientIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("startTimeIN", Date.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("endTimeIN", Date.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("notesIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("priceIN", BigDecimal.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("currencyIN", String.class, ParameterMode.IN);
+            
+            spq.setParameter("companyIdIN", companyId);
+            spq.setParameter("serviceIdIN", serviceId);
+            spq.setParameter("staffIdIN", staffId);
+            spq.setParameter("clientIdIN", clientId);
+            spq.setParameter("startTimeIN", startTime);
+            spq.setParameter("endTimeIN", endTime);
+            spq.setParameter("notesIN", notes);
+            spq.setParameter("priceIN", price);
+            spq.setParameter("currencyIN", "HUF"); // beégetve, de integrálása az oldalra adott
+            
+            spq.execute();
+
+            return true;
 
         } catch (Exception ex) {
             ex.printStackTrace();

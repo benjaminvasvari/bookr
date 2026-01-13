@@ -1,4 +1,4 @@
-// API endpoint konstansok - egy helyen minden endpoint
+// api-endpoints.ts - FRISSÍTETT
 export const API_ENDPOINTS = {
   AUTH: {
     LOGIN: '/auth/login',
@@ -32,6 +32,7 @@ export const API_ENDPOINTS = {
     LIST: '/specialists',
     DETAIL: (id: number) => `/specialists/${id}`,
     BY_COMPANY: (companyId: number) => `/companies/${companyId}/specialists`,
+    BY_COMPANY_AND_SERVICES: '/staff/by-company-and-services',
   },
 
   BOOKINGS: {
@@ -41,6 +42,12 @@ export const API_ENDPOINTS = {
     DETAIL: (id: number) => `/bookings/${id}`,
     CANCEL: (id: number) => `/bookings/${id}/cancel`,
     AVAILABLE_SLOTS: '/bookings/available-slots',
+  },
+
+  APPOINTMENTS: {
+    UNAVAILABLE_DATES: '/appointments/unavailable-dates',
+    OCCUPIED_SLOTS: '/appointments/occupied-slots',
+    CREATE: '/create-appointment',
   },
 
   REVIEWS: {
@@ -55,5 +62,9 @@ export const API_ENDPOINTS = {
     CHANGE_PASSWORD: '/user/change-password',
     UPLOAD_AVATAR: '/user/uploadAvatar',
     DELETE_AVATAR: '/user/deleteAvatar',
+  },
+
+  STAFF: {
+    BY_COMPANY_AND_SERVICES: '/staff/by-company-and-services',
   },
 };

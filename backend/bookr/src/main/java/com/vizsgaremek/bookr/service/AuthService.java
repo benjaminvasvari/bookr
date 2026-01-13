@@ -251,6 +251,7 @@ public class AuthService {
         userData.put("firstName", userFromDB.getFirstName());
         userData.put("lastName", userFromDB.getLastName());
         userData.put("email", userFromDB.getEmail());
+        userData.put("phone", userFromDB.getPhone());
 
         // Company ID kezelése (lehet null)
         if (userFromDB.getCompanyId() != null) {

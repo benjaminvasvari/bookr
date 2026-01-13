@@ -149,4 +149,5 @@ public class AppointmentsController {
             return Response.status(500).entity(errorResponse.toString()).type(MediaType.APPLICATION_JSON).build();
         }
     }
+    
 }

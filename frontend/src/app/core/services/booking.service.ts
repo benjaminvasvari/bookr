@@ -1,14 +1,17 @@
+// src/app/core/services/booking.service.ts
+
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 import { environment } from '../../../environments/environment';
 import { API_ENDPOINTS } from '../constants/api-endpoints';
 import { 
-  Booking, 
-  CreateBookingRequest, 
-  AvailableTimeSlotsResponse 
-} from '../models';
+  UnavailableDate,
+  UnavailableDatesResponse,
+  OccupiedSlotsResponse
+} from '../models/booking.model';
 
 @Injectable({
   providedIn: 'root'
@@ -19,67 +22,47 @@ export class BookingService {
   constructor(private http: HttpClient) {}
 
   /**
-   * Új foglalás létrehozása
+   * Unavailable dates lekérése
    */
-  createBooking(bookingData: CreateBookingRequest): Observable<Booking> {
-    return this.http.post<Booking>(
-      `${this.apiUrl}${API_ENDPOINTS.BOOKINGS.CREATE}`,
-      bookingData
-    );
+  getUnavailableDates(
+    companyId: number,
+    staffId: number
+  ): Observable<UnavailableDate[]> {
+    const params = new HttpParams()
+      .set('companyId', companyId.toString())
+      .set('staffId', staffId.toString());
+
+    return this.http
+      .get<UnavailableDatesResponse>(
+        `${this.apiUrl}${API_ENDPOINTS.APPOINTMENTS.UNAVAILABLE_DATES}`,
+        { params }
+      )
+      .pipe(
+        map(response => response.data.unavailableDates || [])
+      );
   }
 
   /**
-   * Felhasználó foglalásainak lekérése
+   * Occupied slots lekérése
+   * ⚠️ FIGYELEM: workingHours TÖMB, nem object!
    */
-  getUserBookings(): Observable<Booking[]> {
-    return this.http.get<Booking[]>(
-      `${this.apiUrl}${API_ENDPOINTS.BOOKINGS.USER_BOOKINGS}`
-    );
-  }
-
-  /**
-   * Egy konkrét foglalás lekérése
-   */
-  getBookingById(id: number): Observable<Booking> {
-    return this.http.get<Booking>(
-      `${this.apiUrl}${API_ENDPOINTS.BOOKINGS.DETAIL(id)}`
-    );
-  }
-
-  /**
-   * Foglalás lemondása
-   */
-  cancelBooking(id: number, reason?: string): Observable<Booking> {
-    const body = reason ? { reason } : {};
-    return this.http.put<Booking>(
-      `${this.apiUrl}${API_ENDPOINTS.BOOKINGS.CANCEL(id)}`,
-      body
-    );
-  }
-
-  /**
-   * Elérhető időpontok lekérése egy szakemberhez egy adott napon
-   * ÚJ PARAMÉTEREK: companyId is kell
-   */
-  getAvailableTimeSlots(
+  getOccupiedSlots(
     companyId: number,
     staffId: number,
-    date: string, // YYYY-MM-DD formátum
-    serviceIds: number[]
-  ): Observable<AvailableTimeSlotsResponse> {
-    let params = new HttpParams()
+    date: string
+  ): Observable<OccupiedSlotsResponse['data']> {
+    const params = new HttpParams()
       .set('companyId', companyId.toString())
       .set('staffId', staffId.toString())
       .set('date', date);
-    
-    // ServiceIds hozzáadása (több érték esetén)
-    serviceIds.forEach(id => {
-      params = params.append('serviceIds', id.toString());
-    });
-    
-    return this.http.get<AvailableTimeSlotsResponse>(
-      `${this.apiUrl}${API_ENDPOINTS.BOOKINGS.AVAILABLE_SLOTS}`,
-      { params }
-    );
+
+    return this.http
+      .get<OccupiedSlotsResponse>(
+        `${this.apiUrl}${API_ENDPOINTS.APPOINTMENTS.OCCUPIED_SLOTS}`,
+        { params }
+      )
+      .pipe(
+        map(response => response.data)
+      );
   }
 }
