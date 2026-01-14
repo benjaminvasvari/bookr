@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3307
--- Generation Time: Jan 13, 2026 at 11:30 AM
+-- Generation Time: Jan 14, 2026 at 10:13 AM
 -- Server version: 5.7.24
 -- PHP Version: 8.3.1
 
@@ -406,7 +406,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `createAppointment` (IN `companyIdIN
         clientIdIN,
         startTimeIN,
         endTimeIN,
-        'pending',
+        'confirmed',
         notesIN,
         priceIN,
         currencyIN
@@ -1312,6 +1312,29 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getFeaturedCompanies` (IN `limitIN`
     HAVING reviewCount > 0
     ORDER BY reviewCount DESC, rating DESC
     LIMIT limitIN;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getInfoForBookingEmail` (IN `appointmentIdIN` INT)   BEGIN
+
+    SELECT
+    	appointments.id AS appointment_id,
+        companies.name AS company_name,
+        services.name AS service_name,
+        CONCAT(users.first_name, ' ', users.last_name) AS staff_name,
+        services.duration_minutes AS service_duration,
+        companies.address AS company_address,
+        companies.phone AS company_phone,
+        companies.email AS company_email
+
+    FROM appointments
+        INNER JOIN services ON appointments.service_id = services.id
+        INNER JOIN companies ON appointments.company_id = companies.id
+        LEFT JOIN staff ON appointments.staff_id = staff.id
+        LEFT JOIN users ON staff.user_id = users.id
+
+WHERE appointments.id = appointmentIdIN
+LIMIT 1;
+
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getNewCompanies` (IN `limitIN` INT)   BEGIN
@@ -3774,7 +3797,37 @@ INSERT INTO `companies` (`id`, `name`, `description`, `address`, `city`, `postal
 (7, 'Relaxa Masszázsszalon', 'Professzionális masszázs szolgáltatások nyugodt környezetben', 'Kossuth utca 12.', 'Debrecen', '4024', 'Hungary', '+36301111007', 'info@relaxa.hu', 'www.relaxa.hu', 2, 8, 14, 12, '2024-03-01 15:30:00', NULL, NULL, 0, 1, 1, 2),
 (8, 'BarberShop Budapest', 'Férfi fodrászat és borbély szolgáltatások', 'Wesselényi utca 18.', 'Budapest', '1077', 'Hungary', '+36301111008', 'booking@barbershop.hu', 'www.barbershop-bp.hu', 3, 9, 14, 12, '2024-03-05 16:30:00', NULL, NULL, 0, 1, 1, 2),
 (9, 'Naturál Szépségstúdió', 'Természetes alapanyagokkal dolgozó családias szalon', 'Fő utca 23.', 'Győr', '9021', 'Hungary', '+36301111009', 'hello@naturalszepseg.hu', 'www.naturalszepseg.hu', 1, 10, 21, 24, '2024-03-10 17:30:00', NULL, NULL, 0, 1, 1, 2),
-(10, 'ZenSpa Központ', 'Ázsiai ihletésű spa és wellness központ', 'Dózsa György út 34.', 'Szeged', '6720', 'Hungary', '+36301111010', 'reception@zenspa.hu', 'www.zenspa.hu', 2, 11, 60, 48, '2024-03-15 18:30:00', NULL, NULL, 0, 1, 1, 2);
+(10, 'ZenSpa Központ', 'Ázsiai ihletésű spa és wellness központ', 'Dózsa György út 34.', 'Szeged', '6720', 'Hungary', '+36301111010', 'reception@zenspa.hu', 'www.zenspa.hu', 2, 11, 60, 48, '2024-03-15 18:30:00', NULL, NULL, 0, 1, 1, 2),
+(11, 'Glamour Beauty Pécs', 'Elegáns szépségszalon a pécsi belvárosban', 'Király utca 45.', 'Pécs', '7621', 'Hungary', '+36301234511', 'info@glamourbeauty.hu', 'www.glamourbeauty.hu', 1, 2, 30, 24, '2024-01-15 10:00:00', NULL, NULL, 0, 1, 1, 2),
+(12, 'Diamond Nails Szeged', 'Exkluzív körömstúdió műköröm specialistákkal', 'Kárász utca 12.', 'Szeged', '6720', 'Hungary', '+36301234512', 'hello@diamondnails.hu', 'www.diamondnails.hu', 4, 3, 21, 12, '2024-01-20 11:00:00', NULL, NULL, 0, 1, 1, 2),
+(13, 'Fresh Look Debrecen', 'Modern fodrászat és szépségápolás', 'Piac utca 28.', 'Debrecen', '4024', 'Hungary', '+36301234513', 'booking@freshlook.hu', 'www.freshlook.hu', 3, 4, 14, 24, '2024-01-25 12:00:00', NULL, NULL, 0, 1, 1, 2),
+(14, 'Royal Spa Győr', 'Luxus wellness központ gyógyfürdővel', 'Baross utca 56.', 'Győr', '9021', 'Hungary', '+36301234514', 'reservation@royalspa.hu', 'www.royalspa.hu', 2, 5, 45, 48, '2024-02-01 13:00:00', NULL, NULL, 0, 1, 1, 2),
+(15, 'Beauty Zone Miskolc', 'Teljes körű kozmetikai szolgáltatások', 'Széchenyi utca 34.', 'Miskolc', '3525', 'Hungary', '+36301234515', 'info@beautyzone.hu', 'www.beautyzone.hu', 1, 6, 30, 24, '2024-02-05 14:00:00', NULL, NULL, 0, 1, 1, 2),
+(16, 'ActiveLife Eger', 'Modern fitness terem és wellness részleg', 'Dobó tér 8.', 'Eger', '3300', 'Hungary', '+36301234516', 'info@activelife.hu', 'www.activelife.hu', 5, 7, 7, 6, '2024-02-10 15:00:00', NULL, NULL, 0, 1, 1, 2),
+(17, 'Thermal Relax Hévíz', 'Gyógyfürdő és masszázs központ', 'Kossuth utca 22.', 'Hévíz', '8380', 'Hungary', '+36301234517', 'foglalas@thermalrelax.hu', 'www.thermalrelax.hu', 2, 8, 30, 24, '2024-02-15 16:00:00', NULL, NULL, 0, 1, 1, 2),
+(18, 'PowerGym Sopron', 'Erőnléti központ személyi edzőkkel', 'Fő tér 15.', 'Sopron', '9400', 'Hungary', '+36301234518', 'info@powergym.hu', 'www.powergym.hu', 5, 9, 7, 6, '2024-02-20 17:00:00', NULL, NULL, 0, 1, 1, 2),
+(19, 'Zen Garden Veszprém', 'Jógastúdió és meditációs központ', 'Óváros tér 5.', 'Veszprém', '8200', 'Hungary', '+36301234519', 'hello@zengarden.hu', 'www.zengarden.hu', 5, 10, 14, 12, '2024-02-25 18:00:00', NULL, NULL, 0, 1, 1, 2),
+(20, 'AquaFit Keszthely', 'Fitness és úszás komplexum', 'Balaton utca 18.', 'Keszthely', '8360', 'Hungary', '+36301234520', 'info@aquafit.hu', 'www.aquafit.hu', 5, 11, 7, 6, '2024-03-01 19:00:00', NULL, NULL, 0, 1, 1, 2),
+(21, 'Style Masters Székesfehérvár', 'Trendi fodrászat minden korosztálynak', 'Fő utca 67.', 'Székesfehérvár', '8000', 'Hungary', '+36301234521', 'booking@stylemasters.hu', 'www.stylemasters.hu', 3, 2, 21, 24, '2024-03-05 10:00:00', NULL, NULL, 0, 1, 1, 2),
+(22, 'Hair Perfection Nyíregyháza', 'Professzionális hajfestés és styling', 'Kossuth tér 12.', 'Nyíregyháza', '4400', 'Hungary', '+36301234522', 'info@hairperfection.hu', 'www.hairperfection.hu', 3, 3, 14, 12, '2024-03-10 11:00:00', NULL, NULL, 0, 1, 1, 2),
+(23, 'Gentleman Barber Kaposvár', 'Férfi fodrászat és borbély', 'Fő utca 89.', 'Kaposvár', '7400', 'Hungary', '+36301234523', 'hello@gentlemanbarber.hu', 'www.gentlemanbarber.hu', 3, 4, 14, 12, '2024-03-15 12:00:00', NULL, NULL, 0, 1, 1, 2),
+(24, 'Chic Hair Szolnok', 'Modern női fodrászat', 'Kossuth utca 45.', 'Szolnok', '5000', 'Hungary', '+36301234524', 'booking@chichair.hu', 'www.chichair.hu', 3, 5, 21, 24, '2024-03-20 13:00:00', NULL, NULL, 0, 1, 1, 2),
+(25, 'Urban Cuts Zalaegerszeg', 'Városi fodrászstúdió', 'Széchenyi tér 8.', 'Zalaegerszeg', '8900', 'Hungary', '+36301234525', 'info@urbancuts.hu', 'www.urbancuts.hu', 3, 6, 14, 12, '2024-03-25 14:00:00', NULL, NULL, 0, 1, 1, 2),
+(26, 'HealthCare Plus Tatabánya', 'Magán egészségügyi központ', 'Fő tér 23.', 'Tatabánya', '2800', 'Hungary', '+36301234526', 'rendeles@healthcareplus.hu', 'www.healthcareplus.hu', 6, 7, 30, 48, '2024-03-30 15:00:00', NULL, NULL, 0, 1, 1, 2),
+(27, 'FysioTherapy Szombathely', 'Gyógytorna és rehabilitáció', 'Király utca 34.', 'Szombathely', '9700', 'Hungary', '+36301234527', 'info@fysiotherapy.hu', 'www.fysiotherapy.hu', 6, 8, 21, 24, '2024-04-01 16:00:00', NULL, NULL, 0, 1, 1, 2),
+(28, 'DentalCare Békéscsaba', 'Modern fogászati rendelő', 'Andrássy út 56.', 'Békéscsaba', '5600', 'Hungary', '+36301234528', 'fogaszat@dentalcare.hu', 'www.dentalcare.hu', 7, 9, 30, 48, '2024-04-05 17:00:00', NULL, NULL, 0, 1, 1, 2),
+(29, 'VetClinic Érd', 'Állatorvosi rendelő és klinika', 'Budai út 78.', 'Érd', '2030', 'Hungary', '+36301234529', 'info@vetclinic.hu', 'www.vetclinic.hu', 8, 10, 14, 24, '2024-04-10 18:00:00', NULL, NULL, 0, 1, 1, 2),
+(30, 'PhysioActive Budaörs', 'Gyógytorna és sportrehabilitáció', 'Szabadság út 12.', 'Budaörs', '2040', 'Hungary', '+36301234530', 'info@physioactive.hu', 'www.physioactive.hu', 6, 11, 21, 24, '2024-04-15 19:00:00', NULL, NULL, 0, 1, 1, 2),
+(31, 'Nail Art Studio Dunaújváros', 'Kreatív körömművészet', 'Vasmű utca 45.', 'Dunaújváros', '2400', 'Hungary', '+36301234531', 'booking@nailart.hu', 'www.nailart.hu', 4, 2, 14, 12, '2024-04-20 10:00:00', NULL, NULL, 0, 1, 1, 2),
+(32, 'Luxury Nails Salgótarján', 'Exkluzív műköröm szolgáltatások', 'Rákóczi út 23.', 'Salgótarján', '3100', 'Hungary', '+36301234532', 'info@luxurynails.hu', 'www.luxurynails.hu', 4, 3, 21, 24, '2024-04-25 11:00:00', NULL, NULL, 0, 1, 1, 2),
+(33, 'Perfect Hands Esztergom', 'Körömápolás és kézápolás', 'Szent István tér 6.', 'Esztergom', '2500', 'Hungary', '+36301234533', 'hello@perfecthands.hu', 'www.perfecthands.hu', 4, 4, 14, 12, '2024-04-30 12:00:00', NULL, NULL, 0, 1, 1, 2),
+(34, 'AutoService Pro Vác', 'Autószerviz és karbantartás', 'Ipari utca 12.', 'Vác', '2600', 'Hungary', '+36301234534', 'info@autoservicepro.hu', 'www.autoservicepro.hu', 9, 5, 7, 24, '2024-05-01 13:00:00', NULL, NULL, 0, 1, 1, 2),
+(35, 'English Academy Gödöllő', 'Nyelviskola és magánoktatás', 'Dózsa György út 34.', 'Gödöllő', '2100', 'Hungary', '+36301234535', 'info@englishacademy.hu', 'www.englishacademy.hu', 10, 6, 14, 48, '2024-05-05 14:00:00', NULL, NULL, 0, 1, 1, 2),
+(36, 'Music School Cegléd', 'Zenei oktatás minden szinten', 'Kossuth tér 8.', 'Cegléd', '2700', 'Hungary', '+36301234536', 'info@musicschool.hu', 'www.musicschool.hu', 10, 7, 14, 48, '2024-05-10 15:00:00', NULL, NULL, 0, 1, 1, 2),
+(37, 'CarWash Express Szentendre', 'Autómosó és tisztítás', 'Duna korzó 5.', 'Szentendre', '2000', 'Hungary', '+36301234537', 'info@carwashexpress.hu', 'www.carwashexpress.hu', 9, 8, 3, 6, '2024-05-15 16:00:00', NULL, NULL, 0, 1, 1, 2),
+(38, 'Massage Therapy Pápa', 'Terápiás masszázsok', 'Fő utca 56.', 'Pápa', '8500', 'Hungary', '+36301234538', 'info@massagetherapy.hu', 'www.massagetherapy.hu', 2, 9, 14, 12, '2024-05-20 17:00:00', NULL, NULL, 0, 1, 1, 2),
+(39, 'Beauty Clinic Mosonmagyaróvár', 'Szépségklinika és esztétikai centrum', 'Szent István utca 23.', 'Mosonmagyaróvár', '9200', 'Hungary', '+36301234539', 'info@beautyclinic.hu', 'www.beautyclinic.hu', 1, 10, 30, 24, '2024-05-25 18:00:00', NULL, NULL, 0, 1, 1, 2),
+(40, 'SportFit Gyula', 'Sport és fitness központ', 'Erzsébet tér 12.', 'Gyula', '5700', 'Hungary', '+36301234540', 'info@sportfit.hu', 'www.sportfit.hu', 5, 11, 7, 6, '2024-05-30 19:00:00', NULL, NULL, 0, 1, 1, 2);
 
 -- --------------------------------------------------------
 
@@ -3842,7 +3895,10 @@ INSERT INTO `favorites` (`id`, `user_id`, `company_id`, `created_at`, `deleted_a
 (44, 39, 9, '2024-03-18 14:00:00', NULL, 0),
 (45, 40, 4, '2024-03-20 11:00:00', NULL, 0),
 (46, 40, 7, '2024-03-25 12:00:00', NULL, 0),
-(47, 40, 10, '2024-03-28 13:00:00', NULL, 0);
+(47, 40, 10, '2024-03-28 13:00:00', NULL, 0),
+(48, 27, 15, '2024-05-01 08:00:00', NULL, 0),
+(49, 28, 16, '2024-05-05 09:00:00', NULL, 0),
+(50, 29, 20, '2024-05-10 10:00:00', NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -4211,7 +4267,31 @@ INSERT INTO `services` (`id`, `company_id`, `name`, `description`, `duration_min
 (51, 10, 'Zen spa rituálé', 'Komplex ázsiai spa élmény', 120, '29900.00', 'HUF', 1, '2024-03-15 21:00:00', NULL, NULL, 0),
 (52, 10, 'Infra szauna', 'Infra szauna használat', 45, '5900.00', 'HUF', 1, '2024-03-15 21:00:00', NULL, NULL, 0),
 (53, 10, 'Gyógyfürdő belépő', 'Ásványvizes gyógyfürdő', 90, '6900.00', 'HUF', 1, '2024-03-15 21:00:00', NULL, NULL, 0),
-(54, 10, 'Teljes Zen csomag', 'Masszázs + szauna + fürdő', 180, '42900.00', 'HUF', 1, '2024-03-15 21:00:00', NULL, NULL, 0);
+(54, 10, 'Teljes Zen csomag', 'Masszázs + szauna + fürdő', 180, '42900.00', 'HUF', 1, '2024-03-15 21:00:00', NULL, NULL, 0),
+(55, 11, 'Klasszikus arckezelés', 'Arctisztítás és pakolás', 60, '8900.00', 'HUF', 1, '2024-02-01 10:00:00', NULL, NULL, 0),
+(56, 11, 'Műszempilla építés', 'Dús pillák műszempillával', 90, '12900.00', 'HUF', 1, '2024-02-01 10:00:00', NULL, NULL, 0),
+(57, 11, 'Teljes láb szőrtelenítés', 'Professzionális viaszolás', 45, '7900.00', 'HUF', 1, '2024-02-01 10:00:00', NULL, NULL, 0),
+(58, 12, 'Zselés műköröm építés', 'Tartós zselés műköröm', 120, '13900.00', 'HUF', 1, '2024-02-05 11:00:00', NULL, NULL, 0),
+(59, 12, 'Babyboomer műköröm', 'Természetes átmenet', 120, '14900.00', 'HUF', 1, '2024-02-05 11:00:00', NULL, NULL, 0),
+(60, 12, 'Műköröm töltés', 'Karbantartás 2-3 hetente', 90, '9900.00', 'HUF', 1, '2024-02-05 11:00:00', NULL, NULL, 0),
+(61, 13, 'Női hajvágás mosással', 'Professzionális hajvágás', 60, '7900.00', 'HUF', 1, '2024-02-10 12:00:00', NULL, NULL, 0),
+(62, 13, 'Teljes hajfestés', 'Komplett hajfestés tartós festékkel', 120, '16900.00', 'HUF', 1, '2024-02-10 12:00:00', NULL, NULL, 0),
+(63, 13, 'Férfi hajvágás', 'Modern férfi frizura', 30, '4900.00', 'HUF', 1, '2024-02-10 12:00:00', NULL, NULL, 0),
+(64, 14, 'Royal wellness csomag', 'Teljes napos wellness élmény', 240, '45900.00', 'HUF', 1, '2024-02-15 13:00:00', NULL, NULL, 0),
+(65, 14, 'Hot stone masszázs', 'Forró kő masszázs 90 perc', 90, '17900.00', 'HUF', 1, '2024-02-15 13:00:00', NULL, NULL, 0),
+(66, 14, 'Aromaterápiás masszázs', 'Illóolajos masszázs', 75, '14900.00', 'HUF', 1, '2024-02-15 13:00:00', NULL, NULL, 0),
+(67, 15, 'Anti-aging arckezelés', 'Bőrmegújító kezelés', 75, '13900.00', 'HUF', 1, '2024-02-20 14:00:00', NULL, NULL, 0),
+(68, 15, 'Gyógymasszázs', 'Terápiás masszázs', 60, '11900.00', 'HUF', 1, '2024-02-20 14:00:00', NULL, NULL, 0),
+(69, 16, 'Személyi edzés 1 alkalom', 'Egyéni edzés tervvel', 60, '9900.00', 'HUF', 1, '2024-02-25 15:00:00', NULL, NULL, 0),
+(70, 16, 'Spinning óra', 'Csoportos spinning', 45, '2900.00', 'HUF', 1, '2024-02-25 15:00:00', NULL, NULL, 0),
+(71, 17, 'Gyógyfürdő belépő + masszázs', 'Komplett wellness csomag', 120, '19900.00', 'HUF', 1, '2024-03-01 16:00:00', NULL, NULL, 0),
+(72, 17, 'Vízalatti masszázs', 'Egyedi hidroterápia', 60, '14900.00', 'HUF', 1, '2024-03-01 16:00:00', NULL, NULL, 0),
+(73, 18, 'Erőnléti edzés', 'Súlyzós edzés egyénileg', 60, '8900.00', 'HUF', 1, '2024-03-05 17:00:00', NULL, NULL, 0),
+(74, 18, 'CrossFit edzés', 'Funkcionális csoportos edzés', 60, '3900.00', 'HUF', 1, '2024-03-05 17:00:00', NULL, NULL, 0),
+(75, 19, 'Hatha jóga óra', 'Klasszikus jóga', 75, '3900.00', 'HUF', 1, '2024-03-10 18:00:00', NULL, NULL, 0),
+(76, 19, 'Meditációs gyakorlat', 'Vezetett meditáció', 45, '2900.00', 'HUF', 1, '2024-03-10 18:00:00', NULL, NULL, 0),
+(77, 20, 'Aqua aerobik', 'Vízi aerobik óra', 45, '3500.00', 'HUF', 1, '2024-03-15 19:00:00', NULL, NULL, 0),
+(78, 20, 'Úszásoktatás', 'Egyéni úszásoktatás', 45, '6900.00', 'HUF', 1, '2024-03-15 19:00:00', NULL, NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -4391,7 +4471,42 @@ INSERT INTO `staff` (`id`, `user_id`, `company_id`, `display_name`, `specialties
 (12, 23, 7, 'István - Masszőr', 'Svéd masszázs, Sportmasszázs, Talpmasszázs', 'Professzionális masszőr vagyok, specializációm a sportmasszázs.', 1, '2024-03-01 19:00:00', NULL),
 (13, 24, 8, 'Dániel - Barber', 'Férfi hajvágás, Borotválás, Szakáll formázás', 'Hagyományos borbély vagyok modern technikákkal. Férfi frizurák specialistája.', 1, '2024-03-05 20:00:00', NULL),
 (14, 25, 9, 'Réka - Bio kozmetikus', 'Bio arckezelés, Természetes termékek, Organikus kezelések', 'Természetes szépségápolás híve vagyok. Csak bio termékekkel dolgozom.', 1, '2024-03-10 21:00:00', NULL),
-(15, 26, 10, 'Tamás - Ázsiai masszázs specialista', 'Thai masszázs, Shiatsu, Meditáció', 'Ázsiai masszázs technikák szakértője vagyok. 15 éve praktizálom a thai masszázst.', 1, '2024-03-15 22:00:00', NULL);
+(15, 26, 10, 'Tamás - Ázsiai masszázs specialista', 'Thai masszázs, Shiatsu, Meditáció', 'Ázsiai masszázs technikák szakértője vagyok. 15 éve praktizálom a thai masszázst.', 1, '2024-03-15 22:00:00', NULL),
+(16, 27, 11, 'Andrea', 'Arckezelés, Testkezelés, Szőrtelenítés', 'Kozmetikus vagyok 8 éve, a bőrápolás a szakmám.', 1, '2024-02-01 10:00:00', NULL),
+(17, 28, 12, 'Csilla', 'Zselés műköröm, Babyboomer, Francia', 'Műköröm építés specialista 6 éves tapasztalattal.', 1, '2024-02-05 11:00:00', NULL),
+(18, 29, 13, 'Emese', 'Női hajvágás, Hajfestés, Melírozás', 'Fodrász vagyok 10 éve, a hajszínezés a szakterületem.', 1, '2024-02-10 12:00:00', NULL),
+(19, 30, 14, 'Gabriella', 'Svéd masszázs, Hot stone, Aromaterápia', 'Masszőr vagyok 12 éve, a relaxáció szakértője.', 1, '2024-02-15 13:00:00', NULL),
+(20, 31, 15, 'Ildikó', 'Arckezelés, Bőrmegújítás, Anti-aging', 'Kozmetikus vagyok, a bőrmegújítás a szakterületem.', 1, '2024-02-20 14:00:00', NULL),
+(21, 32, 16, 'Kata', 'Személyi edzés, CrossFit, TRX', 'Személyi edző vagyok 8 éve.', 1, '2024-02-25 15:00:00', NULL),
+(22, 33, 17, 'Mónika', 'Gyógyfürdő kezelés, Gyógymasszázs', 'Gyógymasszőr 10 éves tapasztalattal.', 1, '2024-03-01 16:00:00', NULL),
+(23, 34, 18, 'Olivér', 'Erőnléti edzés, Súlyzós edzés', 'Erőnléti edző 12 éve.', 1, '2024-03-05 17:00:00', NULL),
+(24, 35, 19, 'Rita', 'Hatha jóga, Yin jóga, Meditáció', 'Jóga oktató 8 éve.', 1, '2024-03-10 18:00:00', NULL),
+(25, 36, 20, 'Tímea', 'Aqua aerobik, Úszásoktatás', 'Aqua fitness oktató 6 éve.', 1, '2024-03-15 19:00:00', NULL),
+(26, 37, 21, 'Vera', 'Női hajvágás, Trendek, Styling', 'Fodrász vagyok 9 éve.', 1, '2024-03-20 10:00:00', NULL),
+(27, 38, 22, 'Zita', 'Hajfestés, Melírozás, Balayage', 'Hajfestés specialista 11 éve.', 1, '2024-03-25 11:00:00', NULL),
+(28, 39, 23, 'Ádám', 'Borotválás, Szakáll formázás, Klasszikus vágás', 'Barber specialista 7 éve.', 1, '2024-03-30 12:00:00', NULL),
+(29, 40, 24, 'Barbara', 'Női hajvágás, Styling, Esküvői frizurák', 'Fodrász 10 éve, esküvői frizurák mestere.', 1, '2024-04-01 13:00:00', NULL),
+(30, 27, 25, 'Dániel', 'Férfi és női hajvágás, Trendek', 'Fodrász 8 éve, minden korosztálynak.', 1, '2024-04-05 14:00:00', NULL),
+(31, 28, 26, 'Dr. Nagy Éva', 'Belgyógyászat, Labor vizsgálatok', 'Belgyógyász szakorvos 15 éve.', 1, '2024-04-10 15:00:00', NULL),
+(32, 29, 27, 'Erika', 'Gyógytorna, Gerincproblémák', 'Gyógytornász 12 éve.', 1, '2024-04-15 16:00:00', NULL),
+(33, 30, 28, 'Dr. Kovács Anna', 'Fogászat, Fogtömés, Fogkő eltávolítás', 'Fogorvos 10 éve.', 1, '2024-04-20 17:00:00', NULL),
+(34, 31, 29, 'Dr. Molnár Judit', 'Állatorvos, Kisállatok, Oltások', 'Állatorvos 8 éve.', 1, '2024-04-25 18:00:00', NULL),
+(35, 32, 30, 'Fanni', 'Gyógytorna, Mozgásterápia', 'Gyógytornász 9 éve.', 1, '2024-04-30 19:00:00', NULL),
+(36, 33, 31, 'Hanna', 'Kreatív körömművészet, Nail art', 'Körömdíszítés művész 6 éve.', 1, '2024-05-05 10:00:00', NULL),
+(37, 34, 32, 'Júlia', 'Géllakk, Manikűr, Francia', 'Körömápolás specialista 7 éve.', 1, '2024-05-10 11:00:00', NULL),
+(38, 35, 33, 'Klára', 'Kézápolás, Manikűr, Körömápolás', 'Körömápoló 5 éve.', 1, '2024-05-15 12:00:00', NULL),
+(39, 36, 34, 'Lajos', 'Autószerelés, Diagnosztika', 'Autószerelő mester 20 éve.', 1, '2024-05-20 13:00:00', NULL),
+(40, 37, 35, 'Erzsébet', 'Angol oktatás, IELTS felkészítés', 'Angol tanár 12 éve.', 1, '2024-05-25 14:00:00', NULL),
+(41, 38, 36, 'Márton', 'Zongoraoktatás, Szolfézs', 'Zenetanár 10 éve.', 1, '2024-05-30 15:00:00', NULL),
+(42, 39, 37, 'Sándor', 'Autómosás, Polírozás', 'Autókozmetikus 6 éve.', 1, '2024-06-01 16:00:00', NULL),
+(43, 40, 38, 'Judit', 'Terápiás masszázs, Sportmasszázs', 'Gyógymasszőr 11 éve.', 1, '2024-06-05 17:00:00', NULL),
+(44, 27, 39, 'Ágnes', 'Esztétikai kezelések, Botox', 'Esztétikai szakember 9 éve.', 1, '2024-06-10 18:00:00', NULL),
+(45, 28, 40, 'Róbert', 'Személyi edzés, Erőnléti edzés', 'Személyi edző 14 éve.', 1, '2024-06-15 19:00:00', NULL),
+(46, 29, 1, 'Zsófia', 'Szempilla és szemöldök, Szőrtelenítés', 'Szépségspecialista 5 éve.', 1, '2024-06-20 10:00:00', NULL),
+(47, 30, 2, 'Ildikó', 'Spa kezelések, Arckezelés', 'Wellness specialista 8 éve.', 1, '2024-06-20 11:00:00', NULL),
+(48, 31, 3, 'Zoltán', 'Hajhosszabbítás, Keratin', 'Fodrász mester 12 éve.', 1, '2024-06-20 12:00:00', NULL),
+(49, 32, 11, 'Beatrix', 'Műköröm, Manikűr, Pedikűr', 'Körömspecialista 7 éve.', 1, '2024-06-20 13:00:00', NULL),
+(50, 33, 12, 'Dóra', 'Géllakk, Nail art', 'Körömdíszítés mestere.', 1, '2024-06-20 14:00:00', NULL);
 
 --
 -- Triggers `staff`
@@ -5309,13 +5424,13 @@ ALTER TABLE `business_categories`
 -- AUTO_INCREMENT for table `companies`
 --
 ALTER TABLE `companies`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=41;
 
 --
 -- AUTO_INCREMENT for table `favorites`
 --
 ALTER TABLE `favorites`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=48;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=51;
 
 --
 -- AUTO_INCREMENT for table `images`
@@ -5351,7 +5466,7 @@ ALTER TABLE `roles`
 -- AUTO_INCREMENT for table `services`
 --
 ALTER TABLE `services`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=55;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=79;
 
 --
 -- AUTO_INCREMENT for table `service_categories`
@@ -5369,7 +5484,7 @@ ALTER TABLE `service_category_map`
 -- AUTO_INCREMENT for table `staff`
 --
 ALTER TABLE `staff`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=100;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=51;
 
 --
 -- AUTO_INCREMENT for table `staff_exceptions`
