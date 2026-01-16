@@ -3,6 +3,7 @@ package com.vizsgaremek.bookr.service;
 import com.vizsgaremek.bookr.model.Appointments;
 import com.vizsgaremek.bookr.model.AuditLogs;
 import com.vizsgaremek.bookr.model.Companies;
+import com.vizsgaremek.bookr.model.Users;
 import com.vizsgaremek.bookr.security.JWT;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
@@ -184,9 +185,9 @@ public class AppointmentsService {
         Timestamp endTime = Timestamp.valueOf(endTimeString);
 
         //code
-        Boolean modelResult = Appointments.createAppointment(companyId, serviceId, staffId, clientId, startTime, endTime, notes, price);
+        Integer appointmentId = Appointments.createAppointment(companyId, serviceId, staffId, clientId, startTime, endTime, notes, price);
 
-        if (modelResult == false) {
+        if (appointmentId == null) {
             status = "serverError";
             statusCode = 500;
         } else {
@@ -222,10 +223,12 @@ public class AppointmentsService {
 
             // ========== EMAIL KÜLDÉS ==========
             try {
-                
-                
-         
-                EmailService.sendAppointmentConfirmationEmail(userEmail, , userEmail, userEmail, status, notes, endTimeString, userId, price, notes, notes, notes);
+
+                Appointments appointmentDataFromDB = Appointments.getInfoForBookingEmail(appointmentId);
+                Users userFromDB = Users.getUserProfile(userId);
+                String userName = userFromDB.getFirstName() + userFromDB.getLastName();
+
+                EmailService.sendAppointmentConfirmationEmail(userEmail, userName, appointmentDataFromDB.getCompanyName(), appointmentDataFromDB.getServiceName(), appointmentDataFromDB.getStaffName(), startTimeString, endTimeString, appointmentDataFromDB.getDurationMinutes(), price, appointmentDataFromDB.getCompanyAddress(), appointmentDataFromDB.getCompanyPhone(), notes);
 
             } catch (Exception ex) {
                 // Log the error but don't fail the registration
@@ -234,10 +237,10 @@ public class AppointmentsService {
             }
             // ===============================
 
-            toReturn.put("result", modelResult);
-
-            toReturn.put("status", status);
-            toReturn.put("statusCode", statusCode);
-            return toReturn;
         }
+
+        toReturn.put("status", status);
+        toReturn.put("statusCode", statusCode);
+        return toReturn;
     }
+}

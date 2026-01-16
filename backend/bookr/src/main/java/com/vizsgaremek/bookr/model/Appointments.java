@@ -37,8 +37,6 @@ import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
-import org.json.JSONObject;
-import sun.security.jca.ServiceId;
 
 /**
  *
@@ -145,6 +143,21 @@ public class Appointments implements Serializable {
     private Integer companyIdInt;
 
     @javax.persistence.Transient
+    private String companyName;
+
+    @javax.persistence.Transient
+    private String staffName;
+
+    @javax.persistence.Transient
+    private String companyAddress;
+
+    @javax.persistence.Transient
+    private String companyPhone;
+
+    @javax.persistence.Transient
+    private String companyEmail;
+
+    @javax.persistence.Transient
     private Integer serviceIdInt;
 
     @javax.persistence.Transient
@@ -203,6 +216,17 @@ public class Appointments implements Serializable {
         this.endTime = endTime;
         this.serviceIdInt = serviceIdInt;
         this.durationMinutes = durationMinutes;
+    }
+    
+    public Appointments(Integer id, String companyName, String serviceName, String staffName, Integer durationMinutes, String companyAddress, String companyPhone, String companyEmail) {
+        this.id = id;
+        this.companyName = companyName;
+        this.serviceName = serviceName;
+        this. staffName = staffName;
+        this.durationMinutes = durationMinutes;
+        this. companyAddress = companyAddress;
+        this.companyPhone = companyPhone;
+        this.companyEmail = companyEmail;
     }
 
     public Integer getId() {
@@ -387,6 +411,48 @@ public class Appointments implements Serializable {
 
     public void setCompanyIdInt(Integer companyIdInt) {
         this.companyIdInt = companyIdInt;
+    }
+
+    public String getCompanyName() {
+        return companyName;
+    }
+
+    public void setCompanyName(String companyName) {
+        this.companyName = companyName;
+    }
+
+    
+
+    public String getStaffName() {
+        return staffName;
+    }
+
+    public void setStaffName(String staffName) {
+        this.staffName = staffName;
+    }
+
+    public String getCompanyAddress() {
+        return companyAddress;
+    }
+
+    public void setCompanyAddress(String companyAddress) {
+        this.companyAddress = companyAddress;
+    }
+
+    public String getCompanyPhone() {
+        return companyPhone;
+    }
+
+    public void setCompanyPhone(String companyPhone) {
+        this.companyPhone = companyPhone;
+    }
+    
+    public String getCompanyEmail() {
+        return companyEmail;
+    }
+
+    public void setCompanyEmail(String companyEmail) {
+        this.companyEmail = companyEmail;
     }
 
     public Integer getServiceIdInt() {
@@ -621,9 +687,9 @@ public class Appointments implements Serializable {
         }
     }
 
-    public static Boolean createAppointment(Integer companyId, Integer serviceId, Integer staffId, Integer clientId, Timestamp startTime, Timestamp endTime, String notes, BigDecimal price) {
+    public static Integer createAppointment(Integer companyId, Integer serviceId, Integer staffId, Integer clientId, Timestamp startTime, Timestamp endTime, String notes, BigDecimal price) {
         EntityManager em = emf.createEntityManager();
-        
+
         try {
             StoredProcedureQuery spq = em.createStoredProcedureQuery("createAppointment");
             spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
@@ -635,7 +701,7 @@ public class Appointments implements Serializable {
             spq.registerStoredProcedureParameter("notesIN", String.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("priceIN", BigDecimal.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("currencyIN", String.class, ParameterMode.IN);
-            
+
             spq.setParameter("companyIdIN", companyId);
             spq.setParameter("serviceIdIN", serviceId);
             spq.setParameter("staffIdIN", staffId);
@@ -645,10 +711,20 @@ public class Appointments implements Serializable {
             spq.setParameter("notesIN", notes);
             spq.setParameter("priceIN", price);
             spq.setParameter("currencyIN", "HUF"); // beégetve, de integrálása az oldalra adott
-            
+
             spq.execute();
 
-            return true;
+            List<Object> resultList = spq.getResultList();
+
+            if (resultList == null || resultList.isEmpty()) {
+                return null;
+            }
+
+            Object result = resultList.get(0);
+
+            Integer appointmentId = Integer.valueOf(result.toString());
+
+            return appointmentId;
 
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -658,4 +734,49 @@ public class Appointments implements Serializable {
             em.close();
         }
     }
+
+    public static Appointments getInfoForBookingEmail(Integer appointmentId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getInfoForBookingEmail");
+
+            spq.registerStoredProcedureParameter("appointmentIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("appointmentIdIN", appointmentId);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            // Csak az első rekord kell (LIMIT 1 a stored procedure-ben)
+            Object[] record = resultList.get(0);
+
+            Appointments workingHours = new Appointments(
+                    Integer.valueOf(record[0].toString()),
+                    record[1].toString(),
+                    record[2].toString(),
+                    record[3].toString(),
+                    Integer.valueOf(record[4].toString()),
+                    record[5].toString(),
+                    record[6].toString(),
+                    record[7].toString()
+            );
+
+            return workingHours;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
 }

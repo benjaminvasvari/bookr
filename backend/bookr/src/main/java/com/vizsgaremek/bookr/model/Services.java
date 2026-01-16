@@ -258,5 +258,5 @@ public class Services implements Serializable {
     public String toString() {
         return "com.vizsgaremek.bookr.model.Services[ id=" + id + " ]";
     }
-    
+
 }

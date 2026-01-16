@@ -176,7 +176,6 @@ public class AppointmentsController {
         //
         Boolean validJwt = JWT.validateAccessToken(jwtToken);
         Integer clientId = JWT.getUserIdFromAccessToken(jwtToken);
-        String userRoles = JWT.getRolesFromAccessToken(jwtToken);
 
         Integer companyId = bodyObject.getInt("companyId");
         Integer serviceId = bodyObject.getInt("serviceId");
