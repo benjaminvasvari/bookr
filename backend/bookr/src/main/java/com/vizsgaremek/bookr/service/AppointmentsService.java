@@ -233,7 +233,6 @@ public class AppointmentsService {
             } catch (Exception ex) {
                 // Log the error but don't fail the registration
                 System.err.println("Failed to send verification email: " + ex.getMessage());
-                ex.printStackTrace();
             }
             // ===============================
 

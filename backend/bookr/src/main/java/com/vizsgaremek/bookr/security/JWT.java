@@ -274,7 +274,7 @@ public class JWT {
     public static String getRolesFromAccessToken(String token) {
         try {
             Claims claims = getClaimsFromAccessToken(token);
-            return claims != null ? claims.get("role_name", String.class) : null;
+            return claims != null ? claims.get("role_names", String.class) : null;
         } catch (Exception ex) {
             return null;
         }

@@ -217,14 +217,14 @@ public class Appointments implements Serializable {
         this.serviceIdInt = serviceIdInt;
         this.durationMinutes = durationMinutes;
     }
-    
+
     public Appointments(Integer id, String companyName, String serviceName, String staffName, Integer durationMinutes, String companyAddress, String companyPhone, String companyEmail) {
         this.id = id;
         this.companyName = companyName;
         this.serviceName = serviceName;
-        this. staffName = staffName;
+        this.staffName = staffName;
         this.durationMinutes = durationMinutes;
-        this. companyAddress = companyAddress;
+        this.companyAddress = companyAddress;
         this.companyPhone = companyPhone;
         this.companyEmail = companyEmail;
     }
@@ -421,8 +421,6 @@ public class Appointments implements Serializable {
         this.companyName = companyName;
     }
 
-    
-
     public String getStaffName() {
         return staffName;
     }
@@ -446,7 +444,7 @@ public class Appointments implements Serializable {
     public void setCompanyPhone(String companyPhone) {
         this.companyPhone = companyPhone;
     }
-    
+
     public String getCompanyEmail() {
         return companyEmail;
     }
@@ -624,10 +622,10 @@ public class Appointments implements Serializable {
             Object[] record = resultList.get(0);
 
             Appointments workingHours = new Appointments(
-                    timeFormatter.parse(record[0].toString()),
-                    timeFormatter.parse(record[1].toString()),
+                    record[0] != null ? timeFormatter.parse(record[0].toString()) : null, // startTime
+                    record[1] != null ? timeFormatter.parse(record[1].toString()) : null, // endTime
                     Boolean.parseBoolean(record[2].toString()),
-                    record[3] != null ? record[3].toString() : null
+                    record[3] != null ? record[3].toString() : null // reason
             );
 
             return workingHours;
@@ -687,11 +685,15 @@ public class Appointments implements Serializable {
         }
     }
 
-    public static Integer createAppointment(Integer companyId, Integer serviceId, Integer staffId, Integer clientId, Timestamp startTime, Timestamp endTime, String notes, BigDecimal price) {
-        EntityManager em = emf.createEntityManager();
 
+    public static Integer createAppointment(Integer companyId, Integer serviceId, Integer staffId,
+            Integer clientId, Timestamp startTime, Timestamp endTime,
+            String notes, BigDecimal price) {
+        EntityManager em = emf.createEntityManager();
         try {
             StoredProcedureQuery spq = em.createStoredProcedureQuery("createAppointment");
+
+            // IN paraméterek
             spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("serviceIdIN", Integer.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
@@ -702,6 +704,9 @@ public class Appointments implements Serializable {
             spq.registerStoredProcedureParameter("priceIN", BigDecimal.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("currencyIN", String.class, ParameterMode.IN);
 
+            // OUT paraméter ← ÚJ
+            spq.registerStoredProcedureParameter("newAppointmentIdOUT", Integer.class, ParameterMode.OUT);
+
             spq.setParameter("companyIdIN", companyId);
             spq.setParameter("serviceIdIN", serviceId);
             spq.setParameter("staffIdIN", staffId);
@@ -710,26 +715,25 @@ public class Appointments implements Serializable {
             spq.setParameter("endTimeIN", endTime);
             spq.setParameter("notesIN", notes);
             spq.setParameter("priceIN", price);
-            spq.setParameter("currencyIN", "HUF"); // beégetve, de integrálása az oldalra adott
+            spq.setParameter("currencyIN", "HUF");
 
             spq.execute();
 
-            List<Object> resultList = spq.getResultList();
+            // OUT paraméterből olvassuk ki az ID-t
+            Integer appointmentId = (Integer) spq.getOutputParameterValue("newAppointmentIdOUT");
 
-            if (resultList == null || resultList.isEmpty()) {
+            if (appointmentId == null) {
+                System.err.println("createAppointment: Failed to create appointment");
                 return null;
             }
 
-            Object result = resultList.get(0);
-
-            Integer appointmentId = Integer.valueOf(result.toString());
-
+            System.out.println("Successfully created appointment with ID: " + appointmentId);
             return appointmentId;
 
         } catch (Exception ex) {
+            System.err.println("Error in createAppointment: " + ex.getMessage());
             ex.printStackTrace();
             return null;
-
         } finally {
             em.close();
         }

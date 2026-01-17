@@ -178,7 +178,7 @@ public class AppointmentsController {
         Integer clientId = JWT.getUserIdFromAccessToken(jwtToken);
 
         Integer companyId = bodyObject.getInt("companyId");
-        Integer serviceId = bodyObject.getInt("serviceId");
+        Integer serviceId = bodyObject.getInt("serviceIds");
         Integer staffId = bodyObject.getInt("staffId");
         String startTime = bodyObject.getString("startTime");
         String endTime = bodyObject.getString("endTime");
