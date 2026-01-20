@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../core/services/auth.service';
 import { User } from '../core/models';
 
@@ -31,7 +31,8 @@ export class ProfileComponent implements OnInit {
 
   constructor(
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private route: ActivatedRoute
   ) {}
 
   ngOnInit(): void {
@@ -42,6 +43,13 @@ export class ProfileComponent implements OnInit {
       // Ha nincs bejelentkezve, redirect login-ra
       if (!user) {
         this.router.navigate(['/login']);
+      }
+    });
+
+    // Check for fragment to set active tab
+    this.route.fragment.subscribe(fragment => {
+      if (fragment && (fragment === 'info' || fragment === 'bookings' || fragment === 'favorites' || fragment === 'settings')) {
+        this.activeTab = fragment as TabType;
       }
     });
 

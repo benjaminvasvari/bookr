@@ -46,17 +46,17 @@ export class HeaderComponent implements OnInit, OnDestroy {
   }
 
   goToBookings(): void {
-    this.router.navigate(['/bookings']);
+    this.router.navigate(['/profile'], { fragment: 'bookings' });
     this.closeDropdown();
   }
 
   goToFavorites(): void {
-    this.router.navigate(['/favorites']);
+    this.router.navigate(['/profile'], { fragment: 'favorites' });
     this.closeDropdown();
   }
 
   goToSettings(): void {
-    this.router.navigate(['/settings']);
+    this.router.navigate(['/profile'], { fragment: 'settings' });
     this.closeDropdown();
   }
 

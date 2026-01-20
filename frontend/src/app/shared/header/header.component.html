@@ -26,9 +26,10 @@
       <div *ngIf="currentUser" class="col-auto d-flex align-items-center gap-3">
         <span class="welcome-text">Üdv, {{ currentUser.firstName }}!</span>
         
-        <div class="user-dropdown-container">
+        <div class="user-dropdown-container" (mouseenter)="showDropdown = true" (mouseleave)="showDropdown = false">
           <!-- Profile Icon Button -->
-          <div class="user-profile-icon" (click)="toggleDropdown()">
+          <div class="user-profile-icon" (click)="goToProfile()">
+
             <img 
               *ngIf="currentUser.avatarUrl" 
               [src]="currentUser.avatarUrl" 
@@ -41,10 +42,10 @@
           </div>
 
           <!-- Dropdown Overlay (backdrop) -->
-          <div *ngIf="showDropdown" class="dropdown-backdrop" (click)="closeDropdown()"></div>
+          <div *ngIf="showDropdown" class="dropdown-backdrop"></div>
 
           <!-- Dropdown Menu -->
-          <div class="user-dropdown-menu" [class.show]="showDropdown">
+          <div class="user-dropdown-menu" [class.show]="showDropdown" (mouseenter)="showDropdown = true" (mouseleave)="showDropdown = false">
             <!-- User Info Header -->
             <div class="dropdown-header">
               <p class="user-name">{{ currentUser.firstName }} {{ currentUser.lastName }}</p>
