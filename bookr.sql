@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3307
--- Generation Time: Jan 14, 2026 at 10:13 AM
+-- Generation Time: Jan 20, 2026 at 11:06 AM
 -- Server version: 5.7.24
 -- PHP Version: 8.3.1
 
@@ -2677,38 +2677,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerStaff` (IN `firstNameIN` VA
     );
     
     -- ...procedure vége előtt...
-INSERT INTO `audit_logs` (
-    `performed_by_user_id`,
-    `performed_by_role`,
-    `affected_user_id`,
-    `company_id`,
-    `email`,
-    `entity_type`,
-    `action`,
-    `old_values`,
-    `new_values`,
-    `created_at`
-)
-VALUES (
-    newUserId,
-    'staff',                -- Staff role
-    newUserId,
-    companyIdIN,           -- Van cég ID (paraméterben jön)
-    emailIN,
-    'user',
-    'register',
-    NULL,
-    JSON_OBJECT(
-        'user_id', newUserId,
-        'staff_id', newStaffId,     -- Staff ID is
-        'company_id', companyIdIN,
-        'email', emailIN,
-        'role', 'staff',
-        'first_name', firstNameIN,
-        'last_name', lastNameIN
-    ),
-    NOW()
-);
     
     SELECT newUserId AS user_id, newStaffId AS staff_id, regToken AS reg_token;
 END$$
@@ -3916,6 +3884,76 @@ CREATE TABLE `images` (
   `deleted_at` timestamp NULL DEFAULT NULL,
   `is_deleted` tinyint(1) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--
+-- Dumping data for table `images`
+--
+
+INSERT INTO `images` (`id`, `company_id`, `user_id`, `url`, `is_main`, `uploaded_at`, `deleted_at`, `is_deleted`) VALUES
+(1, 1, 2, 'https://storage.bookr.hu/companies/bella-beauty/main-facade.jpg', 1, '2024-02-01 08:30:00', NULL, 0),
+(2, 1, 2, 'https://storage.bookr.hu/companies/bella-beauty/interior-1.jpg', 0, '2024-02-01 08:35:00', NULL, 0),
+(3, 1, 2, 'https://storage.bookr.hu/companies/bella-beauty/treatment-room.jpg', 0, '2024-02-01 08:40:00', NULL, 0),
+(4, 2, 3, 'https://storage.bookr.hu/companies/harmonia-wellness/main-entrance.jpg', 1, '2024-02-05 09:30:00', NULL, 0),
+(5, 2, 3, 'https://storage.bookr.hu/companies/harmonia-wellness/spa-pool.jpg', 0, '2024-02-05 09:35:00', NULL, 0),
+(6, 2, 3, 'https://storage.bookr.hu/companies/harmonia-wellness/massage-room.jpg', 0, '2024-02-05 09:40:00', NULL, 0),
+(7, 3, 4, 'https://storage.bookr.hu/companies/stylecut/main-salon.jpg', 1, '2024-02-10 10:30:00', NULL, 0),
+(8, 3, 4, 'https://storage.bookr.hu/companies/stylecut/washing-area.jpg', 0, '2024-02-10 10:35:00', NULL, 0),
+(9, 4, 5, 'https://storage.bookr.hu/companies/perfect-nails/main-studio.jpg', 1, '2024-02-15 11:30:00', NULL, 0),
+(10, 4, 5, 'https://storage.bookr.hu/companies/perfect-nails/work-station.jpg', 0, '2024-02-15 11:35:00', NULL, 0),
+(11, 4, 5, 'https://storage.bookr.hu/companies/perfect-nails/waiting-area.jpg', 0, '2024-02-15 11:40:00', NULL, 0),
+(12, 5, 6, 'https://storage.bookr.hu/companies/fitzone/main-gym.jpg', 1, '2024-02-20 12:30:00', NULL, 0),
+(13, 5, 6, 'https://storage.bookr.hu/companies/fitzone/cardio-area.jpg', 0, '2024-02-20 12:35:00', NULL, 0),
+(14, 5, 6, 'https://storage.bookr.hu/companies/fitzone/weights-area.jpg', 0, '2024-02-20 12:40:00', NULL, 0),
+(15, 6, 7, 'https://storage.bookr.hu/companies/yoga-balance/main-studio.jpg', 1, '2024-02-25 13:30:00', NULL, 0),
+(16, 6, 7, 'https://storage.bookr.hu/companies/yoga-balance/meditation-room.jpg', 0, '2024-02-25 13:35:00', NULL, 0),
+(17, 7, 8, 'https://storage.bookr.hu/companies/relaxa/main-reception.jpg', 1, '2024-03-01 14:30:00', NULL, 0),
+(18, 7, 8, 'https://storage.bookr.hu/companies/relaxa/massage-room-1.jpg', 0, '2024-03-01 14:35:00', NULL, 0),
+(19, 7, 8, 'https://storage.bookr.hu/companies/relaxa/relax-area.jpg', 0, '2024-03-01 14:40:00', NULL, 0),
+(20, 8, 9, 'https://storage.bookr.hu/companies/barbershop/main-shop.jpg', 1, '2024-03-05 15:30:00', NULL, 0),
+(21, 8, 9, 'https://storage.bookr.hu/companies/barbershop/barber-chair.jpg', 0, '2024-03-05 15:35:00', NULL, 0),
+(22, 9, 10, 'https://storage.bookr.hu/companies/natural/main-studio.jpg', 1, '2024-03-10 16:30:00', NULL, 0),
+(23, 9, 10, 'https://storage.bookr.hu/companies/natural/treatment-area.jpg', 0, '2024-03-10 16:35:00', NULL, 0),
+(24, 9, 10, 'https://storage.bookr.hu/companies/natural/products.jpg', 0, '2024-03-10 16:40:00', NULL, 0),
+(25, 10, 11, 'https://storage.bookr.hu/companies/zenspa/main-lobby.jpg', 1, '2024-03-15 17:30:00', NULL, 0),
+(26, 10, 11, 'https://storage.bookr.hu/companies/zenspa/spa-pool.jpg', 0, '2024-03-15 17:35:00', NULL, 0),
+(27, 10, 11, 'https://storage.bookr.hu/companies/zenspa/zen-garden.jpg', 0, '2024-03-15 17:40:00', NULL, 0),
+(28, 1, 2, 'https://storage.bookr.hu/services/basic-facial/result.jpg', 1, '2024-02-01 11:05:00', NULL, 0),
+(29, 1, 2, 'https://storage.bookr.hu/services/premium-facial/luxury.jpg', 1, '2024-02-01 11:10:00', NULL, 0),
+(30, 1, 2, 'https://storage.bookr.hu/services/hyaluronic-treatment/before-after.jpg', 1, '2024-02-01 11:15:00', NULL, 0),
+(31, 1, 2, 'https://storage.bookr.hu/services/manicure/nails-1.jpg', 1, '2024-02-01 11:20:00', NULL, 0),
+(32, 1, 2, 'https://storage.bookr.hu/services/gel-polish/gel-nails.jpg', 1, '2024-02-01 11:25:00', NULL, 0),
+(33, 2, 3, 'https://storage.bookr.hu/services/swedish-massage/massage-room.jpg', 1, '2024-02-05 12:05:00', NULL, 0),
+(34, 2, 3, 'https://storage.bookr.hu/services/aromatherapy/essential-oils.jpg', 1, '2024-02-05 12:10:00', NULL, 0),
+(35, 2, 3, 'https://storage.bookr.hu/services/hot-stone/stones.jpg', 1, '2024-02-05 12:15:00', NULL, 0),
+(36, 2, 3, 'https://storage.bookr.hu/services/spa-package/full-spa.jpg', 1, '2024-02-05 12:20:00', NULL, 0),
+(37, 3, 4, 'https://storage.bookr.hu/services/womens-haircut/style-1.jpg', 1, '2024-02-10 13:05:00', NULL, 0),
+(38, 3, 4, 'https://storage.bookr.hu/services/mens-haircut/modern-cut.jpg', 1, '2024-02-10 13:10:00', NULL, 0),
+(39, 3, 4, 'https://storage.bookr.hu/services/hair-coloring-short/color-result.jpg', 1, '2024-02-10 13:15:00', NULL, 0),
+(40, 3, 4, 'https://storage.bookr.hu/services/highlights/balayage.jpg', 1, '2024-02-10 13:20:00', NULL, 0),
+(41, 4, 5, 'https://storage.bookr.hu/services/gel-nails/gel-extensions.jpg', 1, '2024-02-15 14:05:00', NULL, 0),
+(42, 4, 5, 'https://storage.bookr.hu/services/porcelain-nails/porcelain-set.jpg', 1, '2024-02-15 14:10:00', NULL, 0),
+(43, 4, 5, 'https://storage.bookr.hu/services/nail-art/creative-design.jpg', 1, '2024-02-15 14:15:00', NULL, 0),
+(44, 5, 6, 'https://storage.bookr.hu/services/personal-training/pt-session.jpg', 1, '2024-02-20 15:05:00', NULL, 0),
+(45, 5, 6, 'https://storage.bookr.hu/services/spinning/spin-class.jpg', 1, '2024-02-20 15:10:00', NULL, 0),
+(46, 5, 6, 'https://storage.bookr.hu/services/crossfit/wod.jpg', 1, '2024-02-20 15:15:00', NULL, 0),
+(47, 6, 7, 'https://storage.bookr.hu/services/hatha-yoga/class.jpg', 1, '2024-02-25 16:05:00', NULL, 0),
+(48, 6, 7, 'https://storage.bookr.hu/services/vinyasa-yoga/flow.jpg', 1, '2024-02-25 16:10:00', NULL, 0),
+(49, 6, 7, 'https://storage.bookr.hu/services/meditation/meditate.jpg', 1, '2024-02-25 16:15:00', NULL, 0),
+(50, 1, 12, 'https://storage.bookr.hu/staff/eszter-kozmetikus/profile.jpg', 1, '2024-02-01 12:05:00', NULL, 0),
+(51, 1, 13, 'https://storage.bookr.hu/staff/kati-koromspecialista/profile.jpg', 1, '2024-02-01 12:10:00', NULL, 0),
+(52, 2, 14, 'https://storage.bookr.hu/staff/marta-masszor/profile.jpg', 1, '2024-02-05 13:05:00', NULL, 0),
+(53, 2, 15, 'https://storage.bookr.hu/staff/julia-spa-specialist/profile.jpg', 1, '2024-02-05 13:10:00', NULL, 0),
+(54, 3, 16, 'https://storage.bookr.hu/staff/anna-fodrasz/profile.jpg', 1, '2024-02-10 14:05:00', NULL, 0),
+(55, 3, 17, 'https://storage.bookr.hu/staff/peter-szinezo/profile.jpg', 1, '2024-02-10 14:10:00', NULL, 0),
+(56, 4, 18, 'https://storage.bookr.hu/staff/zsuzsanna-mukorom/profile.jpg', 1, '2024-02-15 15:05:00', NULL, 0),
+(57, 4, 19, 'https://storage.bookr.hu/staff/viktoria-nail-artist/profile.jpg', 1, '2024-02-15 15:10:00', NULL, 0),
+(58, 5, 20, 'https://storage.bookr.hu/staff/gabor-personal-trainer/profile.jpg', 1, '2024-02-20 16:05:00', NULL, 0),
+(59, 5, 21, 'https://storage.bookr.hu/staff/laura-fitness-instructor/profile.jpg', 1, '2024-02-20 16:10:00', NULL, 0),
+(60, 6, 22, 'https://storage.bookr.hu/staff/emese-yoga-oktato/profile.jpg', 1, '2024-02-25 17:05:00', NULL, 0),
+(61, 7, 23, 'https://storage.bookr.hu/staff/istvan-masszor/profile.jpg', 1, '2024-03-01 18:05:00', NULL, 0),
+(62, 8, 24, 'https://storage.bookr.hu/staff/daniel-barber/profile.jpg', 1, '2024-03-05 19:05:00', NULL, 0),
+(63, 9, 25, 'https://storage.bookr.hu/staff/reka-bio-kozmetikus/profile.jpg', 1, '2024-03-10 20:05:00', NULL, 0),
+(64, 10, 26, 'https://storage.bookr.hu/staff/tamas-thai-specialist/profile.jpg', 1, '2024-03-15 21:05:00', NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -5436,7 +5474,7 @@ ALTER TABLE `favorites`
 -- AUTO_INCREMENT for table `images`
 --
 ALTER TABLE `images`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=65;
 
 --
 -- AUTO_INCREMENT for table `notification_settings`
@@ -5678,6 +5716,24 @@ DELIMITER $$
 --
 -- Events
 --
+CREATE DEFINER=`root`@`localhost` EVENT `updateExpiredAppointments` ON SCHEDULE EVERY 1 HOUR STARTS '2025-12-12 10:16:13' ON COMPLETION NOT PRESERVE ENABLE DO BEGIN
+    -- Pending appointmentek amelyek már lejártak -> no_show
+    UPDATE `appointments`
+    SET 
+        `status` = 'no_show',
+        `updated_at` = NOW()
+    WHERE `status` = 'pending'
+      AND `start_time` < DATE_SUB(NOW(), INTERVAL 1 HOUR);
+    
+    -- Confirmed appointmentek amelyek véget értek -> completed
+    UPDATE `appointments`
+    SET 
+        `status` = 'completed',
+        `updated_at` = NOW()
+    WHERE `status` = 'confirmed'
+      AND `end_time` < NOW();
+END$$
+
 CREATE DEFINER=`root`@`localhost` EVENT `deactivateInactiveUsers` ON SCHEDULE EVERY 1 MONTH STARTS '2025-12-12 10:15:05' ON COMPLETION NOT PRESERVE DISABLE DO BEGIN
     -- Userek akik 180 napja nem jelentkeztek be
     UPDATE `users`
@@ -5721,24 +5777,6 @@ CREATE DEFINER=`root`@`localhost` EVENT `cleanupExpiredTokens` ON SCHEDULE EVERY
         JSON_OBJECT('deleted_count', ROW_COUNT()),
         NOW()
     );
-END$$
-
-CREATE DEFINER=`root`@`localhost` EVENT `updateExpiredAppointments` ON SCHEDULE EVERY 1 HOUR STARTS '2025-12-12 10:16:13' ON COMPLETION NOT PRESERVE ENABLE DO BEGIN
-    -- Pending appointmentek amelyek már lejártak -> no_show
-    UPDATE `appointments`
-    SET 
-        `status` = 'no_show',
-        `updated_at` = NOW()
-    WHERE `status` = 'pending'
-      AND `start_time` < DATE_SUB(NOW(), INTERVAL 1 HOUR);
-    
-    -- Confirmed appointmentek amelyek véget értek -> completed
-    UPDATE `appointments`
-    SET 
-        `status` = 'completed',
-        `updated_at` = NOW()
-    WHERE `status` = 'confirmed'
-      AND `end_time` < NOW();
 END$$
 
 DELIMITER ;
