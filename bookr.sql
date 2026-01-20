@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3307
--- Generation Time: Jan 20, 2026 at 11:06 AM
+-- Generation Time: Jan 20, 2026 at 12:04 PM
 -- Server version: 5.7.24
 -- PHP Version: 8.3.1
 
@@ -20,7 +20,7 @@ SET time_zone = "+00:00";
 --
 -- Database: `bookr`
 --
-CREATE DATABASE IF NOT EXISTS `bookr` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+CREATE DATABASE IF NOT EXISTS `bookr` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci;
 USE `bookr`;
 
 DELIMITER $$
@@ -378,26 +378,23 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `confirmAppointment` (IN `appointmen
     END IF;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `createAppointment` (IN `companyIdIN` INT, IN `serviceIdIN` INT, IN `staffIdIN` INT, IN `clientIdIN` INT, IN `startTimeIN` DATETIME, IN `endTimeIN` DATETIME, IN `notesIN` TEXT, IN `priceIN` DECIMAL(10,2), IN `currencyIN` VARCHAR(10))   BEGIN
+CREATE DEFINER=`root`@`localhost` PROCEDURE `createAppointment` (IN `companyIdIN` INT, IN `serviceIdIN` INT, IN `staffIdIN` INT, IN `clientIdIN` INT, IN `startTimeIN` DATETIME, IN `endTimeIN` DATETIME, IN `notesIN` TEXT, IN `priceIN` DECIMAL(10,2), IN `currencyIN` VARCHAR(10), OUT `newAppointmentIdOUT` INT)   BEGIN
     DECLARE newAppointmentId INT;
     
     -- Validáljuk a foglalási időpontot
     CALL validateBookingTime(companyIdIN, startTimeIN);
     
-    -- Ha nem volt hiba (nem dobott SIGNAL-t a validateBookingTime),
-    -- akkor folytatjuk az időpont létrehozásával
-    
-    INSERT INTO appointments (
-        company_id,
-        service_id,
-        staff_id,
-        client_id,
-        start_time,
-        end_time,
-        status,
-        notes,
-        price,
-        currency
+    INSERT INTO `appointments` (
+        `company_id`,
+        `service_id`,
+        `staff_id`,
+        `client_id`,
+        `start_time`,
+        `end_time`,
+        `status`,
+        `notes`,
+        `price`,
+        `currency`
     )
     VALUES (
         companyIdIN,
@@ -406,7 +403,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `createAppointment` (IN `companyIdIN
         clientIdIN,
         startTimeIN,
         endTimeIN,
-        'confirmed',
+        'pending',
         notesIN,
         priceIN,
         currencyIN
@@ -415,8 +412,8 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `createAppointment` (IN `companyIdIN
     -- Új appointment ID lekérése
     SET newAppointmentId = LAST_INSERT_ID();
     
-    -- Visszaadjuk az új appointment ID-t
-    SELECT newAppointmentId AS appointment_id;
+    -- OUT paraméterbe is visszaadjuk
+    SET newAppointmentIdOUT = newAppointmentId;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `createCompany` (IN `nameIN` VARCHAR(255), IN `descriptionIN` TEXT, IN `addressIN` TEXT, IN `cityIN` VARCHAR(100), IN `postalCodeIN` VARCHAR(20), IN `countryIN` VARCHAR(100), IN `phoneIN` VARCHAR(30), IN `emailIN` VARCHAR(100), IN `websiteIN` VARCHAR(255), IN `ownerIdIN` INT, IN `allowSameDayBookingIN` TINYINT(1), IN `minimumBookingHoursAheadIN` INT)   BEGIN
@@ -1158,6 +1155,16 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getCompaniesForListing` (IN `cityIN
       AND (isActiveIN IS NULL OR c.is_active = isActiveIN);
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getCompanyBookingAdvanceDays` (IN `companyIdIN` INT)   BEGIN
+
+	SELECT 
+    	`companies`.`id`,
+    	`companies`.`booking_advance_days`
+    FROM `companies`
+    WHERE `companies`.`id` = companyIdIN AND `companies`.`is_deleted` = false AND `companies`.`is_active` = true;
+
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getCompanyById` (IN `idIN` INT)   BEGIN 
     SELECT 
         id,
@@ -1317,7 +1324,7 @@ END$$
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getInfoForBookingEmail` (IN `appointmentIdIN` INT)   BEGIN
 
     SELECT
-    	appointments.id AS appointment_id,
+        appointments.id AS appointment_id,
         companies.name AS company_name,
         services.name AS service_name,
         CONCAT(users.first_name, ' ', users.last_name) AS staff_name,
@@ -1802,20 +1809,15 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getUnavailableDatesInRange` (IN `co
     DECLARE isStaffWorking BOOLEAN;
     DECLARE hasException BOOLEAN;
     DECLARE exceptionType VARCHAR(20);
-   
-    -- Bemeneti dátumok ellenőrzése (opcionális, de ajánlott)
-    IF dateFromIN IS NULL OR dateToIN IS NULL OR dateFromIN > dateToIN THEN
-        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'Érvénytelen dátumtartomány';
-    END IF;
-   
-    -- Ideiglenes tábla a tiltott napoknak
-    CREATE TEMPORARY TABLE temp_unavailable_dates (
-        date DATE,
-        day_of_week VARCHAR(20),
-        reason VARCHAR(255)
+    
+    CREATE TEMPORARY TABLE IF NOT EXISTS temp_unavailable_dates (
+        unavailable_date DATE,
+        day_name VARCHAR(20),
+        reason VARCHAR(100)
     );
-   
-    -- Bejárjuk a dátumtartomány napjait
+    
+    DELETE FROM temp_unavailable_dates;
+    
     SET currentDate = dateFromIN;
    
     WHILE currentDate <= dateToIN DO
@@ -1825,7 +1827,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getUnavailableDatesInRange` (IN `co
         SET hasException = FALSE;
         SET exceptionType = NULL;
        
-        -- Cég nyitva van-e az adott hétköznapon?
         SELECT (oh.is_closed = FALSE AND oh.open_time IS NOT NULL)
         INTO isCompanyOpen
         FROM opening_hours oh
@@ -1833,7 +1834,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getUnavailableDatesInRange` (IN `co
           AND oh.day_of_week = dayName
         LIMIT 1;
        
-        -- Staff dolgozik-e az adott hétköznapon?
         SELECT (swh.is_available = TRUE AND swh.start_time IS NOT NULL)
         INTO isStaffWorking
         FROM staff_working_hours swh
@@ -1841,7 +1841,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getUnavailableDatesInRange` (IN `co
           AND swh.day_of_week = dayName
         LIMIT 1;
        
-        -- Van-e kivétel (exception) az adott konkrét dátumra?
         SELECT TRUE, se.type
         INTO hasException, exceptionType
         FROM staff_exceptions se
@@ -1850,34 +1849,25 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getUnavailableDatesInRange` (IN `co
           AND se.is_deleted = FALSE
         LIMIT 1;
        
-        -- Csak akkor insertálunk, ha a nap TILTOTT (nem foglalható)
         IF currentDate < CURDATE() THEN
-            -- Múltbeli nap
             INSERT INTO temp_unavailable_dates VALUES (currentDate, dayName, 'Past date');
            
         ELSEIF hasException = TRUE AND exceptionType = 'day_off' THEN
-            -- Staff szabadnapja
             INSERT INTO temp_unavailable_dates VALUES (currentDate, dayName, 'Staff day off');
            
         ELSEIF isCompanyOpen = FALSE THEN
-            -- Cég zárva van azon a hétköznapon
             INSERT INTO temp_unavailable_dates VALUES (currentDate, dayName, 'Company closed');
            
         ELSEIF isStaffWorking = FALSE THEN
-            -- Staff nem dolgozik azon a hétköznapon
             INSERT INTO temp_unavailable_dates VALUES (currentDate, dayName, 'Staff not working');
         END IF;
        
-        -- Következő nap
         SET currentDate = DATE_ADD(currentDate, INTERVAL 1 DAY);
     END WHILE;
    
-    -- Visszaadjuk a tiltott napokat rendezve
-    SELECT * FROM temp_unavailable_dates ORDER BY date;
+    SELECT * FROM temp_unavailable_dates ORDER BY unavailable_date;
    
-    -- Ideiglenes tábla törlése
-    DROP TEMPORARY TABLE temp_unavailable_dates;
-   
+    DROP TEMPORARY TABLE IF EXISTS temp_unavailable_dates;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getUserActiveSessions` (IN `userIdIN` INT)   BEGIN
@@ -2071,16 +2061,13 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getWorkingHoursForDate` (IN `compan
     DECLARE exceptionStart TIME;
     DECLARE exceptionEnd TIME;
     
-    -- Result változók
     DECLARE finalStartTime TIME DEFAULT NULL;
     DECLARE finalEndTime TIME DEFAULT NULL;
     DECLARE finalIsAvailable BOOLEAN DEFAULT TRUE;
     DECLARE finalReason VARCHAR(100) DEFAULT NULL;
     
-    -- Hét napja
     SET dayName = LOWER(DATE_FORMAT(dateIN, '%W'));
     
-    -- Company nyitvatartás
     SELECT 
         oh.open_time,
         oh.close_time,
@@ -2094,7 +2081,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getWorkingHoursForDate` (IN `compan
       AND oh.day_of_week = dayName
     LIMIT 1;
     
-    -- Staff munkaidő
     SELECT 
         swh.start_time,
         swh.end_time,
@@ -2108,7 +2094,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getWorkingHoursForDate` (IN `compan
       AND swh.day_of_week = dayName
     LIMIT 1;
     
-    -- Staff exception
     SELECT 
         TRUE,
         se.type,
@@ -2125,7 +2110,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getWorkingHoursForDate` (IN `compan
       AND se.is_deleted = FALSE
     LIMIT 1;
     
-    -- LOGIKA
     IF hasException = TRUE AND exceptionType = 'day_off' THEN
         SET finalStartTime = NULL;
         SET finalEndTime = NULL;
@@ -2145,20 +2129,17 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getWorkingHoursForDate` (IN `compan
         SET finalReason = 'Staff not working';
         
     ELSE
-        -- Custom hours exception kezelése
         IF hasException = TRUE AND exceptionType = 'custom_hours' THEN
             SET staffStart = exceptionStart;
             SET staffEnd = exceptionEnd;
         END IF;
         
-        -- Metszet számítása
         SET finalStartTime = GREATEST(companyOpen, staffStart);
         SET finalEndTime = LEAST(companyClose, staffEnd);
         SET finalIsAvailable = TRUE;
         SET finalReason = NULL;
     END IF;
     
-    -- Egyetlen result set
     SELECT 
         finalStartTime AS start_time,
         finalEndTime AS end_time,
@@ -2300,6 +2281,18 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `register` (IN `firstNameIN` VARCHAR
         NOW()
     );
     
+    -- Images tábla insert NULL url-lel
+INSERT INTO `images` (
+    `user_id`,
+    `url`,
+    `uploaded_at`
+)
+VALUES (
+    newUserId,
+    NULL,
+    NOW()
+);
+    
     -- Token mentése a tokens táblába
     INSERT INTO `tokens` (
         `user_id`,
@@ -2318,143 +2311,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `register` (IN `firstNameIN` VARCHAR
         NOW()
     );
     
-    
-    
-        INSERT INTO `audit_logs` (
-        `performed_by_user_id`,
-        `performed_by_role`,
-        `affected_user_id`,
-        `company_id`,
-        `email`,
-        `entity_type`,
-        `action`,
-        `old_values`,
-        `new_values`,
-        `created_at`
-    )
-    VALUES (
-        newUserId,
-        roleNameIN,          -- Paraméterből jön a role
-        newUserId,
-        companyIdIN,         -- Lehet NULL
-        emailIN,
-        'user',
-        'register',
-        NULL,
-        JSON_OBJECT(
-            'user_id', newUserId,
-            'email', emailIN,
-            'role', roleNameIN,
-            'company_id', companyIdIN,
-            'first_name', firstNameIN,
-            'last_name', lastNameIN
-        ),
-        NOW()
-    );
-    
     -- Visszaadjuk az új user ID-t és a reg token-t
-    SELECT newUserId AS user_id, regToken AS reg_token;
-END$$
-
-CREATE DEFINER=`root`@`localhost` PROCEDURE `registerClient` (IN `firstNameIN` VARCHAR(100), IN `lastNameIN` VARCHAR(100), IN `emailIN` VARCHAR(100), IN `passwordIN` TEXT, IN `phoneIN` VARCHAR(30))   BEGIN
-    DECLARE newUserId INT;
-    DECLARE clientRoleId INT;
-    DECLARE regToken VARCHAR(64);
-    
-    SET regToken = MD5(CONCAT(emailIN, NOW(), RAND()));
-    
-    SELECT `id` INTO clientRoleId 
-    FROM `roles` 
-    WHERE `name` = 'client' 
-    LIMIT 1;
-    
-    -- User létrehozása (reg_token NÉLKÜL!)
-    INSERT INTO `users` (
-        `guid`,
-        `first_name`,
-        `last_name`,
-        `email`,
-        `password`,
-        `phone`,
-        `company_id`,
-        `is_active`
-    )
-    VALUES (
-        UUID(),
-        firstNameIN,
-        lastNameIN,
-        emailIN,
-        passwordIN,
-        phoneIN,
-        NULL,
-        FALSE
-    );
-    
-    SET newUserId = LAST_INSERT_ID();
-    
-    INSERT INTO `user_x_role` (
-        `user_id`,
-        `role_id`,
-        `assigned_at`
-    )
-    VALUES (
-        newUserId,
-        clientRoleId,
-        NOW()
-    );
-    
-    -- Token a tokens táblába
-    INSERT INTO `tokens` (
-        `user_id`,
-        `token`,
-        `type`,
-        `expires_at`,
-        `is_revoked`,
-        `created_at`
-    )
-    VALUES (
-        newUserId,
-        regToken,
-        'email_verify',
-        DATE_ADD(NOW(), INTERVAL 24 HOUR),
-        FALSE,
-        NOW()
-    );
-    
-    -- ============================================
-    -- ÚJ RÉSZ: Audit log bejegyzés
-    -- ============================================
-    INSERT INTO `audit_logs` (
-        `performed_by_user_id`,
-        `performed_by_role`,
-        `affected_user_id`,
-        `company_id`,
-        `email`,
-        `entity_type`,
-        `action`,
-        `old_values`,
-        `new_values`,
-        `created_at`
-    )
-    VALUES (
-        newUserId,              -- Saját maga regisztrált
-        'client',               -- Client roleban
-        newUserId,              -- Saját magát érintette
-        NULL,                   -- Nincs cég (client)
-        emailIN,                -- Email cím
-        'user',                 -- User entitás
-        'register',             -- Regisztráció
-        NULL,                   -- Nincs régi érték
-        JSON_OBJECT(            -- Új értékek JSON-ben
-            'user_id', newUserId,
-            'email', emailIN,
-            'role', 'client',
-            'first_name', firstNameIN,
-            'last_name', lastNameIN
-        ),
-        NOW()
-    );
-    
     SELECT newUserId AS user_id, regToken AS reg_token;
 END$$
 
@@ -2677,6 +2534,38 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerStaff` (IN `firstNameIN` VA
     );
     
     -- ...procedure vége előtt...
+INSERT INTO `audit_logs` (
+    `performed_by_user_id`,
+    `performed_by_role`,
+    `affected_user_id`,
+    `company_id`,
+    `email`,
+    `entity_type`,
+    `action`,
+    `old_values`,
+    `new_values`,
+    `created_at`
+)
+VALUES (
+    newUserId,
+    'staff',                -- Staff role
+    newUserId,
+    companyIdIN,           -- Van cég ID (paraméterben jön)
+    emailIN,
+    'user',
+    'register',
+    NULL,
+    JSON_OBJECT(
+        'user_id', newUserId,
+        'staff_id', newStaffId,     -- Staff ID is
+        'company_id', companyIdIN,
+        'email', emailIN,
+        'role', 'staff',
+        'first_name', firstNameIN,
+        'last_name', lastNameIN
+    ),
+    NOW()
+);
     
     SELECT newUserId AS user_id, newStaffId AS staff_id, regToken AS reg_token;
 END$$
@@ -3129,7 +3018,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `updateLastLogin` (IN `userIdIN` INT
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `updateOpeningHoursDay` (IN `companyIdIN` INT, IN `dayOfWeekIN` VARCHAR(20), IN `openTimeIN` TIME, IN `closeTimeIN` TIME, IN `isClosedIN` TINYINT(1))   BEGIN
-    -- Nyitvatartás frissítése egy adott napra
     UPDATE `opening_hours`
     SET 
         `open_time` = IF(isClosedIN = TRUE, NULL, openTimeIN),
@@ -3139,7 +3027,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `updateOpeningHoursDay` (IN `company
     WHERE `company_id` = companyIdIN
       AND `day_of_week` = dayOfWeekIN;
       
-    -- Ha még nem létezik a rekord (elég ritka eset), létrehozzuk
     IF ROW_COUNT() = 0 THEN
         INSERT INTO `opening_hours` (
             `company_id`,
@@ -3223,7 +3110,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `updateStaff` (IN `staffIdIN` INT, I
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `updateStaffWorkingHours` (IN `staffIdIN` INT, IN `dayOfWeekIN` VARCHAR(20), IN `startTimeIN` TIME, IN `endTimeIN` TIME, IN `isAvailableIN` TINYINT(1))   BEGIN
-    -- Ellenőrzi, hogy a staff létezik
     IF NOT EXISTS (
         SELECT 1 FROM `staff` WHERE `id` = staffIdIN
     ) THEN
@@ -3231,7 +3117,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `updateStaffWorkingHours` (IN `staff
         SET MESSAGE_TEXT = 'Staff not found';
     END IF;
     
-    -- Ellenőrzi, hogy létezik-e working hours az adott napra
     IF NOT EXISTS (
         SELECT 1 FROM `staff_working_hours`
         WHERE `staff_id` = staffIdIN
@@ -3241,7 +3126,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `updateStaffWorkingHours` (IN `staff
         SET MESSAGE_TEXT = 'Working hours not found for this day. Use createStaffWorkingHours first.';
     END IF;
     
-    -- Munkaidő frissítése
     UPDATE `staff_working_hours`
     SET 
         `start_time` = IF(isAvailableIN = TRUE, startTimeIN, NULL),
@@ -3251,7 +3135,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `updateStaffWorkingHours` (IN `staff
     WHERE `staff_id` = staffIdIN
       AND `day_of_week` = dayOfWeekIN;
     
-    -- Visszajelzés
     SELECT 'SUCCESS' AS result, 
            CONCAT('Working hours updated for ', dayOfWeekIN) AS message,
            staffIdIN AS staff_id,
@@ -3497,21 +3380,21 @@ CREATE TABLE `appointments` (
   `id` int(11) NOT NULL,
   `company_id` int(11) NOT NULL,
   `service_id` int(11) NOT NULL,
-  `staff_id` int(11) DEFAULT NULL COMMENT 'NULL = any staff can handle it',
+  `staff_id` int(11) NOT NULL,
   `client_id` int(11) NOT NULL,
   `start_time` datetime NOT NULL,
   `end_time` datetime NOT NULL,
-  `status` enum('pending','confirmed','cancelled','completed','no_show','in_progress') DEFAULT 'pending',
-  `notes` text,
-  `internal_notes` text COMMENT 'Visible only to staff/admin',
-  `price` decimal(10,2) DEFAULT NULL,
-  `currency` varchar(10) NOT NULL,
+  `status` enum('pending','confirmed','cancelled','completed','no_show','in_progress') COLLATE utf8mb4_hungarian_ci NOT NULL DEFAULT 'pending',
+  `notes` text COLLATE utf8mb4_hungarian_ci,
+  `internal_notes` text COLLATE utf8mb4_hungarian_ci COMMENT 'Visible only to staff/admin',
+  `price` decimal(10,2) NOT NULL,
+  `currency` varchar(10) COLLATE utf8mb4_hungarian_ci NOT NULL,
   `cancelled_by` int(11) DEFAULT NULL,
-  `cancelled_reason` text,
+  `cancelled_reason` text COLLATE utf8mb4_hungarian_ci,
   `cancelled_at` datetime DEFAULT NULL,
-  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
 
 --
 -- Dumping data for table `appointments`
@@ -3533,10 +3416,10 @@ INSERT INTO `appointments` (`id`, `company_id`, `service_id`, `staff_id`, `clien
 (13, 1, 6, 1, 29, '2024-03-18 10:00:00', '2024-03-18 10:30:00', 'completed', NULL, NULL, '3900.00', 'HUF', NULL, NULL, NULL, '2024-03-11 14:00:00', NULL),
 (14, 1, 3, 1, 37, '2024-03-21 15:00:00', '2024-03-21 16:15:00', 'completed', NULL, NULL, '12900.00', 'HUF', NULL, NULL, NULL, '2024-03-14 11:00:00', NULL),
 (15, 1, 1, 1, 30, '2024-03-25 09:00:00', '2024-03-25 10:00:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-03-18 13:00:00', NULL),
-(16, 1, 2, 1, 27, '2024-04-03 14:00:00', '2024-04-03 15:30:00', 'confirmed', NULL, NULL, '15900.00', 'HUF', NULL, NULL, NULL, '2024-03-27 10:00:00', NULL),
-(17, 1, 3, 1, 31, '2024-04-08 11:00:00', '2024-04-08 12:15:00', 'confirmed', NULL, NULL, '12900.00', 'HUF', NULL, NULL, NULL, '2024-04-01 14:00:00', NULL),
-(18, 1, 1, 1, 32, '2024-04-11 10:00:00', '2024-04-11 11:00:00', 'pending', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-04-05 09:00:00', NULL),
-(19, 1, 2, 1, 33, '2024-04-15 13:00:00', '2024-04-15 14:30:00', 'pending', NULL, NULL, '15900.00', 'HUF', NULL, NULL, NULL, '2024-04-08 16:00:00', NULL),
+(16, 1, 2, 1, 27, '2024-04-03 14:00:00', '2024-04-03 15:30:00', 'completed', NULL, NULL, '15900.00', 'HUF', NULL, NULL, NULL, '2024-03-27 10:00:00', '2026-01-14 09:16:13'),
+(17, 1, 3, 1, 31, '2024-04-08 11:00:00', '2024-04-08 12:15:00', 'completed', NULL, NULL, '12900.00', 'HUF', NULL, NULL, NULL, '2024-04-01 14:00:00', '2026-01-14 09:16:13'),
+(18, 1, 1, 1, 32, '2024-04-11 10:00:00', '2024-04-11 11:00:00', 'no_show', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-04-05 09:00:00', '2026-01-14 09:16:13'),
+(19, 1, 2, 1, 33, '2024-04-15 13:00:00', '2024-04-15 14:30:00', 'no_show', NULL, NULL, '15900.00', 'HUF', NULL, NULL, NULL, '2024-04-08 16:00:00', '2026-01-14 09:16:13'),
 (20, 1, 4, 2, 34, '2024-02-07 11:00:00', '2024-02-07 11:45:00', 'completed', NULL, NULL, '4900.00', 'HUF', NULL, NULL, NULL, '2024-02-01 10:00:00', NULL),
 (21, 1, 5, 2, 35, '2024-02-09 15:00:00', '2024-02-09 16:00:00', 'completed', NULL, NULL, '6900.00', 'HUF', NULL, NULL, NULL, '2024-02-02 14:00:00', NULL),
 (22, 1, 4, 2, 36, '2024-02-13 10:30:00', '2024-02-13 11:15:00', 'completed', NULL, NULL, '4900.00', 'HUF', NULL, NULL, NULL, '2024-02-06 09:00:00', NULL),
@@ -3551,10 +3434,10 @@ INSERT INTO `appointments` (`id`, `company_id`, `service_id`, `staff_id`, `clien
 (31, 1, 5, 2, 34, '2024-03-19 16:00:00', '2024-03-19 17:00:00', 'completed', NULL, NULL, '6900.00', 'HUF', NULL, NULL, NULL, '2024-03-12 14:00:00', NULL),
 (32, 1, 4, 2, 35, '2024-03-22 10:30:00', '2024-03-22 11:15:00', 'completed', NULL, NULL, '4900.00', 'HUF', NULL, NULL, NULL, '2024-03-15 09:00:00', NULL),
 (33, 1, 5, 2, 36, '2024-03-26 15:00:00', '2024-03-26 16:00:00', 'cancelled', 'Ügyfél lemondta', NULL, '6900.00', 'HUF', NULL, NULL, NULL, '2024-03-19 11:00:00', NULL),
-(34, 1, 4, 2, 37, '2024-04-05 14:00:00', '2024-04-05 14:45:00', 'confirmed', NULL, NULL, '4900.00', 'HUF', NULL, NULL, NULL, '2024-03-29 10:00:00', NULL),
-(35, 1, 5, 2, 27, '2024-04-09 11:00:00', '2024-04-09 12:00:00', 'confirmed', NULL, NULL, '6900.00', 'HUF', NULL, NULL, NULL, '2024-04-02 15:00:00', NULL),
-(36, 1, 6, 2, 28, '2024-04-12 10:00:00', '2024-04-12 10:30:00', 'pending', NULL, NULL, '3900.00', 'HUF', NULL, NULL, NULL, '2024-04-06 09:00:00', NULL),
-(37, 1, 4, 2, 29, '2024-04-16 16:00:00', '2024-04-16 16:45:00', 'pending', NULL, NULL, '4900.00', 'HUF', NULL, NULL, NULL, '2024-04-09 14:00:00', NULL),
+(34, 1, 4, 2, 37, '2024-04-05 14:00:00', '2024-04-05 14:45:00', 'completed', NULL, NULL, '4900.00', 'HUF', NULL, NULL, NULL, '2024-03-29 10:00:00', '2026-01-14 09:16:13'),
+(35, 1, 5, 2, 27, '2024-04-09 11:00:00', '2024-04-09 12:00:00', 'completed', NULL, NULL, '6900.00', 'HUF', NULL, NULL, NULL, '2024-04-02 15:00:00', '2026-01-14 09:16:13'),
+(36, 1, 6, 2, 28, '2024-04-12 10:00:00', '2024-04-12 10:30:00', 'no_show', NULL, NULL, '3900.00', 'HUF', NULL, NULL, NULL, '2024-04-06 09:00:00', '2026-01-14 09:16:13'),
+(37, 1, 4, 2, 29, '2024-04-16 16:00:00', '2024-04-16 16:45:00', 'no_show', NULL, NULL, '4900.00', 'HUF', NULL, NULL, NULL, '2024-04-09 14:00:00', '2026-01-14 09:16:13'),
 (38, 2, 7, 3, 30, '2024-02-06 10:00:00', '2024-02-06 11:00:00', 'completed', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2024-01-30 14:00:00', NULL),
 (39, 2, 8, 3, 31, '2024-02-10 14:00:00', '2024-02-10 15:15:00', 'completed', NULL, NULL, '13900.00', 'HUF', NULL, NULL, NULL, '2024-02-03 10:00:00', NULL),
 (40, 2, 10, 3, 32, '2024-02-15 11:00:00', '2024-02-15 11:45:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-02-08 15:00:00', NULL),
@@ -3565,8 +3448,8 @@ INSERT INTO `appointments` (`id`, `company_id`, `service_id`, `staff_id`, `clien
 (45, 2, 10, 3, 37, '2024-03-12 11:30:00', '2024-03-12 12:15:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-03-05 16:00:00', NULL),
 (46, 2, 7, 3, 27, '2024-03-18 09:00:00', '2024-03-18 10:00:00', 'completed', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2024-03-11 09:00:00', NULL),
 (47, 2, 8, 3, 28, '2024-03-22 15:00:00', '2024-03-22 16:15:00', 'completed', NULL, NULL, '13900.00', 'HUF', NULL, NULL, NULL, '2024-03-15 14:00:00', NULL),
-(48, 2, 7, 3, 29, '2024-04-02 10:00:00', '2024-04-02 11:00:00', 'confirmed', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2024-03-26 10:00:00', NULL),
-(49, 2, 10, 3, 30, '2024-04-08 14:00:00', '2024-04-08 14:45:00', 'pending', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-04-01 15:00:00', NULL),
+(48, 2, 7, 3, 29, '2024-04-02 10:00:00', '2024-04-02 11:00:00', 'completed', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2024-03-26 10:00:00', '2026-01-14 09:16:13'),
+(49, 2, 10, 3, 30, '2024-04-08 14:00:00', '2024-04-08 14:45:00', 'no_show', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-04-01 15:00:00', '2026-01-14 09:16:13'),
 (50, 2, 9, 4, 31, '2024-02-08 13:00:00', '2024-02-08 14:30:00', 'completed', NULL, NULL, '16900.00', 'HUF', NULL, NULL, NULL, '2024-02-01 11:00:00', NULL),
 (51, 2, 7, 4, 32, '2024-02-14 15:00:00', '2024-02-14 16:00:00', 'completed', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2024-02-07 14:00:00', NULL),
 (52, 2, 11, 4, 33, '2024-02-19 09:00:00', '2024-02-19 12:00:00', 'completed', 'VIP csomag', NULL, '35900.00', 'HUF', NULL, NULL, NULL, '2024-02-12 10:00:00', NULL),
@@ -3577,8 +3460,8 @@ INSERT INTO `appointments` (`id`, `company_id`, `service_id`, `staff_id`, `clien
 (57, 2, 10, 4, 27, '2024-03-16 08:30:00', '2024-03-16 09:15:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-03-09 10:00:00', NULL),
 (58, 2, 11, 4, 28, '2024-03-20 10:00:00', '2024-03-20 13:00:00', 'completed', NULL, NULL, '35900.00', 'HUF', NULL, NULL, NULL, '2024-03-13 15:00:00', NULL),
 (59, 2, 9, 4, 29, '2024-03-27 14:00:00', '2024-03-27 15:30:00', 'completed', NULL, NULL, '16900.00', 'HUF', NULL, NULL, NULL, '2024-03-20 09:00:00', NULL),
-(60, 2, 7, 4, 30, '2024-04-04 16:00:00', '2024-04-04 17:00:00', 'confirmed', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2024-03-28 11:00:00', NULL),
-(61, 2, 10, 4, 31, '2024-04-10 13:00:00', '2024-04-10 13:45:00', 'pending', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-04-03 14:00:00', NULL),
+(60, 2, 7, 4, 30, '2024-04-04 16:00:00', '2024-04-04 17:00:00', 'completed', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2024-03-28 11:00:00', '2026-01-14 09:16:13'),
+(61, 2, 10, 4, 31, '2024-04-10 13:00:00', '2024-04-10 13:45:00', 'no_show', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-04-03 14:00:00', '2026-01-14 09:16:13'),
 (62, 3, 13, 5, 32, '2024-02-09 11:00:00', '2024-02-09 11:45:00', 'completed', NULL, NULL, '6900.00', 'HUF', NULL, NULL, NULL, '2024-02-02 10:00:00', NULL),
 (63, 3, 15, 5, 33, '2024-02-16 14:00:00', '2024-02-16 15:30:00', 'completed', NULL, NULL, '12900.00', 'HUF', NULL, NULL, NULL, '2024-02-09 15:00:00', NULL),
 (64, 3, 17, 5, 34, '2024-02-23 10:00:00', '2024-02-23 12:30:00', 'completed', NULL, NULL, '22900.00', 'HUF', NULL, NULL, NULL, '2024-02-16 11:00:00', NULL),
@@ -3586,8 +3469,8 @@ INSERT INTO `appointments` (`id`, `company_id`, `service_id`, `staff_id`, `clien
 (66, 3, 16, 5, 36, '2024-03-09 11:00:00', '2024-03-09 13:00:00', 'completed', NULL, NULL, '17900.00', 'HUF', NULL, NULL, NULL, '2024-03-02 10:00:00', NULL),
 (67, 3, 13, 5, 37, '2024-03-16 14:00:00', '2024-03-16 14:45:00', 'completed', NULL, NULL, '6900.00', 'HUF', NULL, NULL, NULL, '2024-03-09 15:00:00', NULL),
 (68, 3, 17, 5, 27, '2024-03-23 10:00:00', '2024-03-23 12:30:00', 'completed', NULL, NULL, '22900.00', 'HUF', NULL, NULL, NULL, '2024-03-16 11:00:00', NULL),
-(69, 3, 13, 5, 28, '2024-04-06 11:00:00', '2024-04-06 11:45:00', 'confirmed', NULL, NULL, '6900.00', 'HUF', NULL, NULL, NULL, '2024-03-30 10:00:00', NULL),
-(70, 3, 15, 5, 29, '2024-04-13 14:00:00', '2024-04-13 15:30:00', 'pending', NULL, NULL, '12900.00', 'HUF', NULL, NULL, NULL, '2024-04-06 15:00:00', NULL),
+(69, 3, 13, 5, 28, '2024-04-06 11:00:00', '2024-04-06 11:45:00', 'completed', NULL, NULL, '6900.00', 'HUF', NULL, NULL, NULL, '2024-03-30 10:00:00', '2026-01-14 09:16:13'),
+(70, 3, 15, 5, 29, '2024-04-13 14:00:00', '2024-04-13 15:30:00', 'no_show', NULL, NULL, '12900.00', 'HUF', NULL, NULL, NULL, '2024-04-06 15:00:00', '2026-01-14 09:16:13'),
 (71, 3, 14, 6, 30, '2024-02-11 12:00:00', '2024-02-11 12:30:00', 'completed', NULL, NULL, '4500.00', 'HUF', NULL, NULL, NULL, '2024-02-04 10:00:00', NULL),
 (72, 3, 15, 6, 31, '2024-02-18 16:00:00', '2024-02-18 17:30:00', 'completed', NULL, NULL, '12900.00', 'HUF', NULL, NULL, NULL, '2024-02-11 14:00:00', NULL),
 (73, 3, 14, 6, 32, '2024-02-25 13:00:00', '2024-02-25 13:30:00', 'completed', NULL, NULL, '4500.00', 'HUF', NULL, NULL, NULL, '2024-02-18 11:00:00', NULL),
@@ -3595,8 +3478,8 @@ INSERT INTO `appointments` (`id`, `company_id`, `service_id`, `staff_id`, `clien
 (75, 3, 14, 6, 34, '2024-03-10 12:00:00', '2024-03-10 12:30:00', 'completed', NULL, NULL, '4500.00', 'HUF', NULL, NULL, NULL, '2024-03-03 15:00:00', NULL),
 (76, 3, 16, 6, 35, '2024-03-17 16:00:00', '2024-03-17 18:00:00', 'completed', NULL, NULL, '17900.00', 'HUF', NULL, NULL, NULL, '2024-03-10 11:00:00', NULL),
 (77, 3, 14, 6, 36, '2024-03-24 13:00:00', '2024-03-24 13:30:00', 'completed', NULL, NULL, '4500.00', 'HUF', NULL, NULL, NULL, '2024-03-17 14:00:00', NULL),
-(78, 3, 15, 6, 37, '2024-04-07 15:00:00', '2024-04-07 16:30:00', 'confirmed', NULL, NULL, '12900.00', 'HUF', NULL, NULL, NULL, '2024-03-31 10:00:00', NULL),
-(79, 3, 14, 6, 27, '2024-04-14 12:00:00', '2024-04-14 12:30:00', 'pending', NULL, NULL, '4500.00', 'HUF', NULL, NULL, NULL, '2024-04-07 15:00:00', NULL),
+(78, 3, 15, 6, 37, '2024-04-07 15:00:00', '2024-04-07 16:30:00', 'completed', NULL, NULL, '12900.00', 'HUF', NULL, NULL, NULL, '2024-03-31 10:00:00', '2026-01-14 09:16:13'),
+(79, 3, 14, 6, 27, '2024-04-14 12:00:00', '2024-04-14 12:30:00', 'no_show', NULL, NULL, '4500.00', 'HUF', NULL, NULL, NULL, '2024-04-07 15:00:00', '2026-01-14 09:16:13'),
 (80, 4, 18, 7, 28, '2024-02-12 10:00:00', '2024-02-12 12:00:00', 'completed', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2024-02-05 14:00:00', NULL),
 (81, 4, 20, 7, 29, '2024-02-19 14:00:00', '2024-02-19 15:30:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-02-12 11:00:00', NULL),
 (82, 4, 21, 7, 30, '2024-02-26 11:00:00', '2024-02-26 12:00:00', 'completed', NULL, NULL, '6900.00', 'HUF', NULL, NULL, NULL, '2024-02-19 15:00:00', NULL),
@@ -3604,44 +3487,44 @@ INSERT INTO `appointments` (`id`, `company_id`, `service_id`, `staff_id`, `clien
 (84, 4, 20, 7, 32, '2024-03-11 15:00:00', '2024-03-11 16:30:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-03-04 14:00:00', NULL),
 (85, 4, 18, 7, 33, '2024-03-18 10:00:00', '2024-03-18 12:00:00', 'completed', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2024-03-11 11:00:00', NULL),
 (86, 4, 21, 7, 34, '2024-03-25 14:00:00', '2024-03-25 15:00:00', 'completed', NULL, NULL, '6900.00', 'HUF', NULL, NULL, NULL, '2024-03-18 15:00:00', NULL),
-(87, 4, 20, 7, 35, '2024-04-08 11:00:00', '2024-04-08 12:30:00', 'confirmed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-04-01 10:00:00', NULL),
+(87, 4, 20, 7, 35, '2024-04-08 11:00:00', '2024-04-08 12:30:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-04-01 10:00:00', '2026-01-14 09:16:13'),
 (88, 4, 18, 8, 36, '2024-02-15 11:00:00', '2024-02-15 13:00:00', 'completed', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2024-02-08 14:00:00', NULL),
 (89, 4, 22, 8, 37, '2024-02-22 15:00:00', '2024-02-22 16:15:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-02-15 11:00:00', NULL),
 (90, 4, 21, 8, 27, '2024-02-29 13:00:00', '2024-02-29 14:00:00', 'completed', NULL, NULL, '6900.00', 'HUF', NULL, NULL, NULL, '2024-02-22 10:00:00', NULL),
 (91, 4, 20, 8, 28, '2024-03-07 16:00:00', '2024-03-07 17:30:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-02-29 15:00:00', NULL),
 (92, 4, 18, 8, 29, '2024-03-14 11:00:00', '2024-03-14 13:00:00', 'completed', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2024-03-07 11:00:00', NULL),
 (93, 4, 22, 8, 30, '2024-03-21 14:00:00', '2024-03-21 15:15:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-03-14 14:00:00', NULL),
-(94, 4, 21, 8, 31, '2024-04-11 15:00:00', '2024-04-11 16:00:00', 'pending', NULL, NULL, '6900.00', 'HUF', NULL, NULL, NULL, '2024-04-04 10:00:00', NULL),
+(94, 4, 21, 8, 31, '2024-04-11 15:00:00', '2024-04-11 16:00:00', 'no_show', NULL, NULL, '6900.00', 'HUF', NULL, NULL, NULL, '2024-04-04 10:00:00', '2026-01-14 09:16:13'),
 (95, 5, 23, 9, 32, '2024-02-13 07:00:00', '2024-02-13 08:00:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-02-06 10:00:00', NULL),
 (96, 5, 26, 9, 33, '2024-02-20 08:00:00', '2024-02-20 09:00:00', 'completed', NULL, NULL, '3900.00', 'HUF', NULL, NULL, NULL, '2024-02-13 14:00:00', NULL),
 (97, 5, 23, 9, 34, '2024-02-27 07:30:00', '2024-02-27 08:30:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-02-20 11:00:00', NULL),
 (98, 5, 27, 9, 35, '2024-03-05 09:00:00', '2024-03-05 09:45:00', 'completed', NULL, NULL, '3500.00', 'HUF', NULL, NULL, NULL, '2024-02-27 15:00:00', NULL),
 (99, 5, 23, 9, 36, '2024-03-12 07:00:00', '2024-03-12 08:00:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-03-05 10:00:00', NULL),
 (100, 5, 26, 9, 37, '2024-03-19 08:30:00', '2024-03-19 09:30:00', 'completed', NULL, NULL, '3900.00', 'HUF', NULL, NULL, NULL, '2024-03-12 14:00:00', NULL),
-(101, 5, 23, 9, 27, '2024-04-09 07:00:00', '2024-04-09 08:00:00', 'confirmed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-04-02 10:00:00', NULL),
+(101, 5, 23, 9, 27, '2024-04-09 07:00:00', '2024-04-09 08:00:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-04-02 10:00:00', '2026-01-14 09:16:13'),
 (102, 5, 25, 10, 28, '2024-02-14 18:00:00', '2024-02-14 18:45:00', 'completed', NULL, NULL, '2900.00', 'HUF', NULL, NULL, NULL, '2024-02-07 11:00:00', NULL),
 (103, 5, 23, 10, 29, '2024-02-21 19:00:00', '2024-02-21 20:00:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-02-14 15:00:00', NULL),
 (104, 5, 27, 10, 30, '2024-02-28 17:00:00', '2024-02-28 17:45:00', 'completed', NULL, NULL, '3500.00', 'HUF', NULL, NULL, NULL, '2024-02-21 10:00:00', NULL),
 (105, 5, 25, 10, 31, '2024-03-06 18:30:00', '2024-03-06 19:15:00', 'completed', NULL, NULL, '2900.00', 'HUF', NULL, NULL, NULL, '2024-02-28 14:00:00', NULL),
 (106, 5, 26, 10, 32, '2024-03-13 19:00:00', '2024-03-13 20:00:00', 'completed', NULL, NULL, '3900.00', 'HUF', NULL, NULL, NULL, '2024-03-06 11:00:00', NULL),
 (107, 5, 23, 10, 33, '2024-03-20 17:00:00', '2024-03-20 18:00:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-03-13 15:00:00', NULL),
-(108, 5, 25, 10, 34, '2024-04-10 18:00:00', '2024-04-10 18:45:00', 'pending', NULL, NULL, '2900.00', 'HUF', NULL, NULL, NULL, '2024-04-03 10:00:00', NULL),
+(108, 5, 25, 10, 34, '2024-04-10 18:00:00', '2024-04-10 18:45:00', 'no_show', NULL, NULL, '2900.00', 'HUF', NULL, NULL, NULL, '2024-04-03 10:00:00', '2026-01-14 09:16:13'),
 (109, 6, 28, 11, 35, '2024-02-28 11:00:00', '2024-02-28 12:15:00', 'completed', NULL, NULL, '3900.00', 'HUF', NULL, NULL, NULL, '2024-02-21 10:00:00', NULL),
 (110, 6, 29, 11, 36, '2024-03-06 15:00:00', '2024-03-06 16:00:00', 'completed', NULL, NULL, '3900.00', 'HUF', NULL, NULL, NULL, '2024-02-28 14:00:00', NULL),
 (111, 6, 30, 11, 37, '2024-03-13 12:00:00', '2024-03-13 13:30:00', 'completed', NULL, NULL, '4500.00', 'HUF', NULL, NULL, NULL, '2024-03-06 11:00:00', NULL),
 (112, 6, 31, 11, 27, '2024-03-20 16:00:00', '2024-03-20 16:45:00', 'completed', NULL, NULL, '2900.00', 'HUF', NULL, NULL, NULL, '2024-03-13 15:00:00', NULL),
 (113, 6, 32, 11, 28, '2024-03-27 14:00:00', '2024-03-27 15:00:00', 'completed', NULL, NULL, '3900.00', 'HUF', NULL, NULL, NULL, '2024-03-20 10:00:00', NULL),
 (114, 6, 28, 11, 29, '2024-04-03 11:00:00', '2024-04-03 12:15:00', 'completed', NULL, NULL, '3900.00', 'HUF', NULL, NULL, NULL, '2024-03-27 14:00:00', NULL),
-(115, 6, 29, 11, 30, '2024-04-10 15:00:00', '2024-04-10 16:00:00', 'confirmed', NULL, NULL, '3900.00', 'HUF', NULL, NULL, NULL, '2024-04-03 11:00:00', NULL),
-(116, 6, 30, 11, 31, '2024-04-17 12:00:00', '2024-04-17 13:30:00', 'pending', NULL, NULL, '4500.00', 'HUF', NULL, NULL, NULL, '2024-04-10 10:00:00', NULL),
+(115, 6, 29, 11, 30, '2024-04-10 15:00:00', '2024-04-10 16:00:00', 'completed', NULL, NULL, '3900.00', 'HUF', NULL, NULL, NULL, '2024-04-03 11:00:00', '2026-01-14 09:16:13'),
+(116, 6, 30, 11, 31, '2024-04-17 12:00:00', '2024-04-17 13:30:00', 'no_show', NULL, NULL, '4500.00', 'HUF', NULL, NULL, NULL, '2024-04-10 10:00:00', '2026-01-14 09:16:13'),
 (117, 7, 33, 12, 32, '2024-02-17 10:00:00', '2024-02-17 11:00:00', 'completed', NULL, NULL, '9900.00', 'HUF', NULL, NULL, NULL, '2024-02-10 14:00:00', NULL),
 (118, 7, 35, 12, 33, '2024-02-24 14:00:00', '2024-02-24 15:00:00', 'completed', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2024-02-17 11:00:00', NULL),
 (119, 7, 36, 12, 34, '2024-03-02 11:30:00', '2024-03-02 12:15:00', 'completed', NULL, NULL, '7900.00', 'HUF', NULL, NULL, NULL, '2024-02-24 15:00:00', NULL),
 (120, 7, 34, 12, 35, '2024-03-09 15:00:00', '2024-03-09 16:30:00', 'completed', NULL, NULL, '13900.00', 'HUF', NULL, NULL, NULL, '2024-03-02 10:00:00', NULL),
 (121, 7, 37, 12, 36, '2024-03-16 10:00:00', '2024-03-16 11:15:00', 'completed', NULL, NULL, '12900.00', 'HUF', NULL, NULL, NULL, '2024-03-09 14:00:00', NULL),
 (122, 7, 33, 12, 37, '2024-03-23 14:00:00', '2024-03-23 15:00:00', 'completed', NULL, NULL, '9900.00', 'HUF', NULL, NULL, NULL, '2024-03-16 11:00:00', NULL),
-(123, 7, 35, 12, 27, '2024-04-06 11:00:00', '2024-04-06 12:00:00', 'confirmed', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2024-03-30 10:00:00', NULL),
-(124, 7, 36, 12, 28, '2024-04-13 15:00:00', '2024-04-13 15:45:00', 'pending', NULL, NULL, '7900.00', 'HUF', NULL, NULL, NULL, '2024-04-06 14:00:00', NULL),
+(123, 7, 35, 12, 27, '2024-04-06 11:00:00', '2024-04-06 12:00:00', 'completed', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2024-03-30 10:00:00', '2026-01-14 09:16:13'),
+(124, 7, 36, 12, 28, '2024-04-13 15:00:00', '2024-04-13 15:45:00', 'no_show', NULL, NULL, '7900.00', 'HUF', NULL, NULL, NULL, '2024-04-06 14:00:00', '2026-01-14 09:16:13'),
 (125, 8, 38, 13, 29, '2024-02-13 11:00:00', '2024-02-13 11:30:00', 'completed', NULL, NULL, '4500.00', 'HUF', NULL, NULL, NULL, '2024-02-06 10:00:00', NULL),
 (126, 8, 39, 13, 30, '2024-02-20 15:00:00', '2024-02-20 15:45:00', 'completed', NULL, NULL, '5900.00', 'HUF', NULL, NULL, NULL, '2024-02-13 14:00:00', NULL),
 (127, 8, 41, 13, 31, '2024-02-27 12:00:00', '2024-02-27 12:30:00', 'completed', NULL, NULL, '3900.00', 'HUF', NULL, NULL, NULL, '2024-02-20 11:00:00', NULL),
@@ -3649,24 +3532,25 @@ INSERT INTO `appointments` (`id`, `company_id`, `service_id`, `staff_id`, `clien
 (129, 8, 38, 13, 33, '2024-03-12 11:30:00', '2024-03-12 12:00:00', 'completed', NULL, NULL, '4500.00', 'HUF', NULL, NULL, NULL, '2024-03-05 10:00:00', NULL),
 (130, 8, 40, 13, 34, '2024-03-19 16:00:00', '2024-03-19 16:30:00', 'completed', NULL, NULL, '4900.00', 'HUF', NULL, NULL, NULL, '2024-03-12 14:00:00', NULL),
 (131, 8, 39, 13, 35, '2024-03-26 13:00:00', '2024-03-26 13:45:00', 'completed', NULL, NULL, '5900.00', 'HUF', NULL, NULL, NULL, '2024-03-19 11:00:00', NULL),
-(132, 8, 41, 13, 36, '2024-04-09 12:00:00', '2024-04-09 12:30:00', 'confirmed', NULL, NULL, '3900.00', 'HUF', NULL, NULL, NULL, '2024-04-02 10:00:00', NULL),
-(133, 8, 38, 13, 37, '2024-04-16 11:00:00', '2024-04-16 11:30:00', 'pending', NULL, NULL, '4500.00', 'HUF', NULL, NULL, NULL, '2024-04-09 15:00:00', NULL),
+(132, 8, 41, 13, 36, '2024-04-09 12:00:00', '2024-04-09 12:30:00', 'completed', NULL, NULL, '3900.00', 'HUF', NULL, NULL, NULL, '2024-04-02 10:00:00', '2026-01-14 09:16:13'),
+(133, 8, 38, 13, 37, '2024-04-16 11:00:00', '2024-04-16 11:30:00', 'no_show', NULL, NULL, '4500.00', 'HUF', NULL, NULL, NULL, '2024-04-09 15:00:00', '2026-01-14 09:16:13'),
 (134, 9, 43, 14, 27, '2024-02-18 11:00:00', '2024-02-18 12:00:00', 'completed', NULL, NULL, '9900.00', 'HUF', NULL, NULL, NULL, '2024-02-11 10:00:00', NULL),
 (135, 9, 44, 14, 28, '2024-02-25 14:00:00', '2024-02-25 15:15:00', 'completed', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2024-02-18 14:00:00', NULL),
 (136, 9, 45, 14, 29, '2024-03-03 10:30:00', '2024-03-03 11:15:00', 'completed', NULL, NULL, '6900.00', 'HUF', NULL, NULL, NULL, '2024-02-25 11:00:00', NULL),
 (137, 9, 46, 14, 30, '2024-03-10 15:00:00', '2024-03-10 16:00:00', 'completed', NULL, NULL, '10900.00', 'HUF', NULL, NULL, NULL, '2024-03-03 15:00:00', NULL),
 (138, 9, 47, 14, 31, '2024-03-17 11:00:00', '2024-03-17 11:45:00', 'completed', NULL, NULL, '5900.00', 'HUF', NULL, NULL, NULL, '2024-03-10 10:00:00', NULL),
 (139, 9, 43, 14, 32, '2024-03-24 14:00:00', '2024-03-24 15:00:00', 'completed', NULL, NULL, '9900.00', 'HUF', NULL, NULL, NULL, '2024-03-17 14:00:00', NULL),
-(140, 9, 44, 14, 33, '2024-04-07 11:00:00', '2024-04-07 12:15:00', 'confirmed', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2024-03-31 10:00:00', NULL),
-(141, 9, 45, 14, 34, '2024-04-14 10:30:00', '2024-04-14 11:15:00', 'pending', NULL, NULL, '6900.00', 'HUF', NULL, NULL, NULL, '2024-04-07 15:00:00', NULL),
+(140, 9, 44, 14, 33, '2024-04-07 11:00:00', '2024-04-07 12:15:00', 'completed', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2024-03-31 10:00:00', '2026-01-14 09:16:13'),
+(141, 9, 45, 14, 34, '2024-04-14 10:30:00', '2024-04-14 11:15:00', 'no_show', NULL, NULL, '6900.00', 'HUF', NULL, NULL, NULL, '2024-04-07 15:00:00', '2026-01-14 09:16:13'),
 (142, 10, 48, 15, 35, '2024-02-21 12:00:00', '2024-02-21 13:30:00', 'completed', NULL, NULL, '15900.00', 'HUF', NULL, NULL, NULL, '2024-02-14 10:00:00', NULL),
 (143, 10, 49, 15, 36, '2024-02-28 15:00:00', '2024-02-28 16:00:00', 'completed', NULL, NULL, '13900.00', 'HUF', NULL, NULL, NULL, '2024-02-21 14:00:00', NULL),
 (144, 10, 50, 15, 37, '2024-03-06 13:00:00', '2024-03-06 14:00:00', 'completed', NULL, NULL, '4900.00', 'HUF', NULL, NULL, NULL, '2024-02-28 11:00:00', NULL),
 (145, 10, 51, 15, 27, '2024-03-13 11:00:00', '2024-03-13 13:00:00', 'completed', 'Zen spa rituálé', NULL, '29900.00', 'HUF', NULL, NULL, NULL, '2024-03-06 15:00:00', NULL),
 (146, 10, 52, 15, 28, '2024-03-20 14:00:00', '2024-03-20 14:45:00', 'completed', NULL, NULL, '5900.00', 'HUF', NULL, NULL, NULL, '2024-03-13 10:00:00', NULL),
 (147, 10, 54, 15, 29, '2024-03-27 12:00:00', '2024-03-27 15:00:00', 'completed', 'Teljes Zen csomag', NULL, '42900.00', 'HUF', NULL, NULL, NULL, '2024-03-20 14:00:00', NULL),
-(148, 10, 48, 15, 30, '2024-04-10 13:00:00', '2024-04-10 14:30:00', 'confirmed', NULL, NULL, '15900.00', 'HUF', NULL, NULL, NULL, '2024-04-03 10:00:00', NULL),
-(149, 10, 49, 15, 31, '2024-04-17 15:00:00', '2024-04-17 16:00:00', 'pending', NULL, NULL, '13900.00', 'HUF', NULL, NULL, NULL, '2024-04-10 14:00:00', NULL);
+(148, 10, 48, 15, 30, '2024-04-10 13:00:00', '2024-04-10 14:30:00', 'completed', NULL, NULL, '15900.00', 'HUF', NULL, NULL, NULL, '2024-04-03 10:00:00', '2026-01-14 09:16:13'),
+(149, 10, 49, 15, 31, '2024-04-17 15:00:00', '2024-04-17 16:00:00', 'no_show', NULL, NULL, '13900.00', 'HUF', NULL, NULL, NULL, '2024-04-10 14:00:00', '2026-01-14 09:16:13'),
+(153, 2, 7, 4, 41, '2026-01-23 12:00:00', '2026-01-23 13:00:00', 'pending', '', NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2026-01-17 18:56:15', NULL);
 
 -- --------------------------------------------------------
 
@@ -3677,17 +3561,33 @@ INSERT INTO `appointments` (`id`, `company_id`, `service_id`, `staff_id`, `clien
 CREATE TABLE `audit_logs` (
   `id` int(11) NOT NULL,
   `performed_by_user_id` int(11) NOT NULL,
-  `performed_by_role` varchar(50) DEFAULT NULL,
+  `performed_by_role` varchar(50) COLLATE utf8mb4_hungarian_ci DEFAULT NULL,
   `affected_user_id` int(11) DEFAULT NULL,
   `company_id` int(11) DEFAULT NULL,
-  `email` varchar(200) DEFAULT NULL,
-  `entity_type` varchar(50) DEFAULT NULL COMMENT 'appointment, user, company, service, etc.',
-  `action` varchar(100) NOT NULL COMMENT 'create, update, delete, login, etc.',
+  `email` varchar(200) COLLATE utf8mb4_hungarian_ci DEFAULT NULL,
+  `entity_type` varchar(50) COLLATE utf8mb4_hungarian_ci DEFAULT NULL COMMENT 'appointment, user, company, service, etc.',
+  `action` varchar(100) COLLATE utf8mb4_hungarian_ci NOT NULL COMMENT 'create, update, delete, login, etc.',
   `old_values` json DEFAULT NULL,
   `new_values` json DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `user_id` int(11) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
+
+--
+-- Dumping data for table `audit_logs`
+--
+
+INSERT INTO `audit_logs` (`id`, `performed_by_user_id`, `performed_by_role`, `affected_user_id`, `company_id`, `email`, `entity_type`, `action`, `old_values`, `new_values`, `created_at`, `user_id`) VALUES
+(1, 41, 'client', 41, NULL, 'admin@admin.hu', 'user', 'register', NULL, '{\"role\": \"client\", \"email\": \"admin@admin.hu\", \"user_id\": 41, \"last_name\": \"Admin\", \"first_name\": \"Admin\"}', '2026-01-17 17:19:35', 0),
+(2, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'register', NULL, '{\"role\": \"client\", \"email\": \"admin@admin.hu\", \"user_id\": 41, \"last_name\": \"Admin\", \"first_name\": \"Admin\"}', '2026-01-17 17:19:35', 0),
+(3, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'email_verified', NULL, NULL, '2026-01-17 17:36:57', 0),
+(4, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-17 17:37:52', 0),
+(5, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-17 17:56:11', 0),
+(6, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-17 18:09:44', 0),
+(7, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-17 18:46:36', 0),
+(8, 24, NULL, NULL, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-01-18 20:46:23', 0),
+(9, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-18 20:47:27', 0),
+(10, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-18 20:49:01', 0);
 
 -- --------------------------------------------------------
 
@@ -3697,13 +3597,13 @@ CREATE TABLE `audit_logs` (
 
 CREATE TABLE `business_categories` (
   `id` int(11) NOT NULL,
-  `name` varchar(100) NOT NULL,
-  `description` text,
-  `icon` varchar(50) DEFAULT NULL COMMENT 'Icon class vagy emoji',
+  `name` varchar(100) COLLATE utf8mb4_hungarian_ci NOT NULL,
+  `description` text COLLATE utf8mb4_hungarian_ci,
+  `icon` varchar(50) COLLATE utf8mb4_hungarian_ci DEFAULT NULL COMMENT 'Icon class vagy emoji',
   `is_active` tinyint(1) DEFAULT '1',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
 
 --
 -- Dumping data for table `business_categories`
@@ -3729,15 +3629,15 @@ INSERT INTO `business_categories` (`id`, `name`, `description`, `icon`, `is_acti
 
 CREATE TABLE `companies` (
   `id` int(11) NOT NULL,
-  `name` varchar(255) NOT NULL,
-  `description` text,
-  `address` text,
-  `city` varchar(100) DEFAULT NULL,
-  `postal_code` varchar(20) DEFAULT NULL,
-  `country` varchar(100) DEFAULT 'Hungary',
-  `phone` varchar(30) DEFAULT NULL,
-  `email` varchar(100) DEFAULT NULL,
-  `website` varchar(255) DEFAULT NULL,
+  `name` varchar(255) COLLATE utf8mb4_hungarian_ci NOT NULL,
+  `description` text COLLATE utf8mb4_hungarian_ci,
+  `address` text COLLATE utf8mb4_hungarian_ci,
+  `city` varchar(100) COLLATE utf8mb4_hungarian_ci DEFAULT NULL,
+  `postal_code` varchar(20) COLLATE utf8mb4_hungarian_ci DEFAULT NULL,
+  `country` varchar(100) COLLATE utf8mb4_hungarian_ci DEFAULT 'Hungary',
+  `phone` varchar(30) COLLATE utf8mb4_hungarian_ci DEFAULT NULL,
+  `email` varchar(100) COLLATE utf8mb4_hungarian_ci DEFAULT NULL,
+  `website` varchar(255) COLLATE utf8mb4_hungarian_ci DEFAULT NULL,
   `business_category_id` int(11) DEFAULT NULL,
   `owner_id` int(11) NOT NULL,
   `booking_advance_days` int(11) DEFAULT '30' COMMENT 'How many days in advance bookings can be made',
@@ -3749,7 +3649,7 @@ CREATE TABLE `companies` (
   `is_active` tinyint(1) NOT NULL DEFAULT '1',
   `allow_same_day_booking` tinyint(1) DEFAULT '1' COMMENT 'Can clients book appointments on the same day? TRUE = yes, FALSE = only next day onwards',
   `minimum_booking_hours_ahead` int(11) DEFAULT '2' COMMENT 'If same-day booking allowed, minimum hours in advance (e.g. 2 hours). Only used if allow_same_day_booking = TRUE'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
 
 --
 -- Dumping data for table `companies`
@@ -3765,37 +3665,7 @@ INSERT INTO `companies` (`id`, `name`, `description`, `address`, `city`, `postal
 (7, 'Relaxa Masszázsszalon', 'Professzionális masszázs szolgáltatások nyugodt környezetben', 'Kossuth utca 12.', 'Debrecen', '4024', 'Hungary', '+36301111007', 'info@relaxa.hu', 'www.relaxa.hu', 2, 8, 14, 12, '2024-03-01 15:30:00', NULL, NULL, 0, 1, 1, 2),
 (8, 'BarberShop Budapest', 'Férfi fodrászat és borbély szolgáltatások', 'Wesselényi utca 18.', 'Budapest', '1077', 'Hungary', '+36301111008', 'booking@barbershop.hu', 'www.barbershop-bp.hu', 3, 9, 14, 12, '2024-03-05 16:30:00', NULL, NULL, 0, 1, 1, 2),
 (9, 'Naturál Szépségstúdió', 'Természetes alapanyagokkal dolgozó családias szalon', 'Fő utca 23.', 'Győr', '9021', 'Hungary', '+36301111009', 'hello@naturalszepseg.hu', 'www.naturalszepseg.hu', 1, 10, 21, 24, '2024-03-10 17:30:00', NULL, NULL, 0, 1, 1, 2),
-(10, 'ZenSpa Központ', 'Ázsiai ihletésű spa és wellness központ', 'Dózsa György út 34.', 'Szeged', '6720', 'Hungary', '+36301111010', 'reception@zenspa.hu', 'www.zenspa.hu', 2, 11, 60, 48, '2024-03-15 18:30:00', NULL, NULL, 0, 1, 1, 2),
-(11, 'Glamour Beauty Pécs', 'Elegáns szépségszalon a pécsi belvárosban', 'Király utca 45.', 'Pécs', '7621', 'Hungary', '+36301234511', 'info@glamourbeauty.hu', 'www.glamourbeauty.hu', 1, 2, 30, 24, '2024-01-15 10:00:00', NULL, NULL, 0, 1, 1, 2),
-(12, 'Diamond Nails Szeged', 'Exkluzív körömstúdió műköröm specialistákkal', 'Kárász utca 12.', 'Szeged', '6720', 'Hungary', '+36301234512', 'hello@diamondnails.hu', 'www.diamondnails.hu', 4, 3, 21, 12, '2024-01-20 11:00:00', NULL, NULL, 0, 1, 1, 2),
-(13, 'Fresh Look Debrecen', 'Modern fodrászat és szépségápolás', 'Piac utca 28.', 'Debrecen', '4024', 'Hungary', '+36301234513', 'booking@freshlook.hu', 'www.freshlook.hu', 3, 4, 14, 24, '2024-01-25 12:00:00', NULL, NULL, 0, 1, 1, 2),
-(14, 'Royal Spa Győr', 'Luxus wellness központ gyógyfürdővel', 'Baross utca 56.', 'Győr', '9021', 'Hungary', '+36301234514', 'reservation@royalspa.hu', 'www.royalspa.hu', 2, 5, 45, 48, '2024-02-01 13:00:00', NULL, NULL, 0, 1, 1, 2),
-(15, 'Beauty Zone Miskolc', 'Teljes körű kozmetikai szolgáltatások', 'Széchenyi utca 34.', 'Miskolc', '3525', 'Hungary', '+36301234515', 'info@beautyzone.hu', 'www.beautyzone.hu', 1, 6, 30, 24, '2024-02-05 14:00:00', NULL, NULL, 0, 1, 1, 2),
-(16, 'ActiveLife Eger', 'Modern fitness terem és wellness részleg', 'Dobó tér 8.', 'Eger', '3300', 'Hungary', '+36301234516', 'info@activelife.hu', 'www.activelife.hu', 5, 7, 7, 6, '2024-02-10 15:00:00', NULL, NULL, 0, 1, 1, 2),
-(17, 'Thermal Relax Hévíz', 'Gyógyfürdő és masszázs központ', 'Kossuth utca 22.', 'Hévíz', '8380', 'Hungary', '+36301234517', 'foglalas@thermalrelax.hu', 'www.thermalrelax.hu', 2, 8, 30, 24, '2024-02-15 16:00:00', NULL, NULL, 0, 1, 1, 2),
-(18, 'PowerGym Sopron', 'Erőnléti központ személyi edzőkkel', 'Fő tér 15.', 'Sopron', '9400', 'Hungary', '+36301234518', 'info@powergym.hu', 'www.powergym.hu', 5, 9, 7, 6, '2024-02-20 17:00:00', NULL, NULL, 0, 1, 1, 2),
-(19, 'Zen Garden Veszprém', 'Jógastúdió és meditációs központ', 'Óváros tér 5.', 'Veszprém', '8200', 'Hungary', '+36301234519', 'hello@zengarden.hu', 'www.zengarden.hu', 5, 10, 14, 12, '2024-02-25 18:00:00', NULL, NULL, 0, 1, 1, 2),
-(20, 'AquaFit Keszthely', 'Fitness és úszás komplexum', 'Balaton utca 18.', 'Keszthely', '8360', 'Hungary', '+36301234520', 'info@aquafit.hu', 'www.aquafit.hu', 5, 11, 7, 6, '2024-03-01 19:00:00', NULL, NULL, 0, 1, 1, 2),
-(21, 'Style Masters Székesfehérvár', 'Trendi fodrászat minden korosztálynak', 'Fő utca 67.', 'Székesfehérvár', '8000', 'Hungary', '+36301234521', 'booking@stylemasters.hu', 'www.stylemasters.hu', 3, 2, 21, 24, '2024-03-05 10:00:00', NULL, NULL, 0, 1, 1, 2),
-(22, 'Hair Perfection Nyíregyháza', 'Professzionális hajfestés és styling', 'Kossuth tér 12.', 'Nyíregyháza', '4400', 'Hungary', '+36301234522', 'info@hairperfection.hu', 'www.hairperfection.hu', 3, 3, 14, 12, '2024-03-10 11:00:00', NULL, NULL, 0, 1, 1, 2),
-(23, 'Gentleman Barber Kaposvár', 'Férfi fodrászat és borbély', 'Fő utca 89.', 'Kaposvár', '7400', 'Hungary', '+36301234523', 'hello@gentlemanbarber.hu', 'www.gentlemanbarber.hu', 3, 4, 14, 12, '2024-03-15 12:00:00', NULL, NULL, 0, 1, 1, 2),
-(24, 'Chic Hair Szolnok', 'Modern női fodrászat', 'Kossuth utca 45.', 'Szolnok', '5000', 'Hungary', '+36301234524', 'booking@chichair.hu', 'www.chichair.hu', 3, 5, 21, 24, '2024-03-20 13:00:00', NULL, NULL, 0, 1, 1, 2),
-(25, 'Urban Cuts Zalaegerszeg', 'Városi fodrászstúdió', 'Széchenyi tér 8.', 'Zalaegerszeg', '8900', 'Hungary', '+36301234525', 'info@urbancuts.hu', 'www.urbancuts.hu', 3, 6, 14, 12, '2024-03-25 14:00:00', NULL, NULL, 0, 1, 1, 2),
-(26, 'HealthCare Plus Tatabánya', 'Magán egészségügyi központ', 'Fő tér 23.', 'Tatabánya', '2800', 'Hungary', '+36301234526', 'rendeles@healthcareplus.hu', 'www.healthcareplus.hu', 6, 7, 30, 48, '2024-03-30 15:00:00', NULL, NULL, 0, 1, 1, 2),
-(27, 'FysioTherapy Szombathely', 'Gyógytorna és rehabilitáció', 'Király utca 34.', 'Szombathely', '9700', 'Hungary', '+36301234527', 'info@fysiotherapy.hu', 'www.fysiotherapy.hu', 6, 8, 21, 24, '2024-04-01 16:00:00', NULL, NULL, 0, 1, 1, 2),
-(28, 'DentalCare Békéscsaba', 'Modern fogászati rendelő', 'Andrássy út 56.', 'Békéscsaba', '5600', 'Hungary', '+36301234528', 'fogaszat@dentalcare.hu', 'www.dentalcare.hu', 7, 9, 30, 48, '2024-04-05 17:00:00', NULL, NULL, 0, 1, 1, 2),
-(29, 'VetClinic Érd', 'Állatorvosi rendelő és klinika', 'Budai út 78.', 'Érd', '2030', 'Hungary', '+36301234529', 'info@vetclinic.hu', 'www.vetclinic.hu', 8, 10, 14, 24, '2024-04-10 18:00:00', NULL, NULL, 0, 1, 1, 2),
-(30, 'PhysioActive Budaörs', 'Gyógytorna és sportrehabilitáció', 'Szabadság út 12.', 'Budaörs', '2040', 'Hungary', '+36301234530', 'info@physioactive.hu', 'www.physioactive.hu', 6, 11, 21, 24, '2024-04-15 19:00:00', NULL, NULL, 0, 1, 1, 2),
-(31, 'Nail Art Studio Dunaújváros', 'Kreatív körömművészet', 'Vasmű utca 45.', 'Dunaújváros', '2400', 'Hungary', '+36301234531', 'booking@nailart.hu', 'www.nailart.hu', 4, 2, 14, 12, '2024-04-20 10:00:00', NULL, NULL, 0, 1, 1, 2),
-(32, 'Luxury Nails Salgótarján', 'Exkluzív műköröm szolgáltatások', 'Rákóczi út 23.', 'Salgótarján', '3100', 'Hungary', '+36301234532', 'info@luxurynails.hu', 'www.luxurynails.hu', 4, 3, 21, 24, '2024-04-25 11:00:00', NULL, NULL, 0, 1, 1, 2),
-(33, 'Perfect Hands Esztergom', 'Körömápolás és kézápolás', 'Szent István tér 6.', 'Esztergom', '2500', 'Hungary', '+36301234533', 'hello@perfecthands.hu', 'www.perfecthands.hu', 4, 4, 14, 12, '2024-04-30 12:00:00', NULL, NULL, 0, 1, 1, 2),
-(34, 'AutoService Pro Vác', 'Autószerviz és karbantartás', 'Ipari utca 12.', 'Vác', '2600', 'Hungary', '+36301234534', 'info@autoservicepro.hu', 'www.autoservicepro.hu', 9, 5, 7, 24, '2024-05-01 13:00:00', NULL, NULL, 0, 1, 1, 2),
-(35, 'English Academy Gödöllő', 'Nyelviskola és magánoktatás', 'Dózsa György út 34.', 'Gödöllő', '2100', 'Hungary', '+36301234535', 'info@englishacademy.hu', 'www.englishacademy.hu', 10, 6, 14, 48, '2024-05-05 14:00:00', NULL, NULL, 0, 1, 1, 2),
-(36, 'Music School Cegléd', 'Zenei oktatás minden szinten', 'Kossuth tér 8.', 'Cegléd', '2700', 'Hungary', '+36301234536', 'info@musicschool.hu', 'www.musicschool.hu', 10, 7, 14, 48, '2024-05-10 15:00:00', NULL, NULL, 0, 1, 1, 2),
-(37, 'CarWash Express Szentendre', 'Autómosó és tisztítás', 'Duna korzó 5.', 'Szentendre', '2000', 'Hungary', '+36301234537', 'info@carwashexpress.hu', 'www.carwashexpress.hu', 9, 8, 3, 6, '2024-05-15 16:00:00', NULL, NULL, 0, 1, 1, 2),
-(38, 'Massage Therapy Pápa', 'Terápiás masszázsok', 'Fő utca 56.', 'Pápa', '8500', 'Hungary', '+36301234538', 'info@massagetherapy.hu', 'www.massagetherapy.hu', 2, 9, 14, 12, '2024-05-20 17:00:00', NULL, NULL, 0, 1, 1, 2),
-(39, 'Beauty Clinic Mosonmagyaróvár', 'Szépségklinika és esztétikai centrum', 'Szent István utca 23.', 'Mosonmagyaróvár', '9200', 'Hungary', '+36301234539', 'info@beautyclinic.hu', 'www.beautyclinic.hu', 1, 10, 30, 24, '2024-05-25 18:00:00', NULL, NULL, 0, 1, 1, 2),
-(40, 'SportFit Gyula', 'Sport és fitness központ', 'Erzsébet tér 12.', 'Gyula', '5700', 'Hungary', '+36301234540', 'info@sportfit.hu', 'www.sportfit.hu', 5, 11, 7, 6, '2024-05-30 19:00:00', NULL, NULL, 0, 1, 1, 2);
+(10, 'ZenSpa Központ', 'Ázsiai ihletésű spa és wellness központ', 'Dózsa György út 34.', 'Szeged', '6720', 'Hungary', '+36301111010', 'reception@zenspa.hu', 'www.zenspa.hu', 2, 11, 60, 48, '2024-03-15 18:30:00', NULL, NULL, 0, 1, 1, 2);
 
 -- --------------------------------------------------------
 
@@ -3810,7 +3680,7 @@ CREATE TABLE `favorites` (
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Mikor lett kedvenc',
   `deleted_at` timestamp NULL DEFAULT NULL COMMENT 'Mikor lett törölve',
   `is_deleted` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'Soft delete flag'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
 
 --
 -- Dumping data for table `favorites`
@@ -3863,10 +3733,7 @@ INSERT INTO `favorites` (`id`, `user_id`, `company_id`, `created_at`, `deleted_a
 (44, 39, 9, '2024-03-18 14:00:00', NULL, 0),
 (45, 40, 4, '2024-03-20 11:00:00', NULL, 0),
 (46, 40, 7, '2024-03-25 12:00:00', NULL, 0),
-(47, 40, 10, '2024-03-28 13:00:00', NULL, 0),
-(48, 27, 15, '2024-05-01 08:00:00', NULL, 0),
-(49, 28, 16, '2024-05-05 09:00:00', NULL, 0),
-(50, 29, 20, '2024-05-10 10:00:00', NULL, 0);
+(47, 40, 10, '2024-03-28 13:00:00', NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -3878,12 +3745,12 @@ CREATE TABLE `images` (
   `id` int(11) NOT NULL,
   `company_id` int(11) DEFAULT NULL,
   `user_id` int(11) DEFAULT NULL,
-  `url` text,
+  `url` text COLLATE utf8mb4_hungarian_ci,
   `is_main` tinyint(4) NOT NULL DEFAULT '0',
   `uploaded_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `deleted_at` timestamp NULL DEFAULT NULL,
   `is_deleted` tinyint(1) NOT NULL DEFAULT '0'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
 
 --
 -- Dumping data for table `images`
@@ -3970,7 +3837,7 @@ CREATE TABLE `notification_settings` (
   `marketing_emails` tinyint(1) DEFAULT '0',
   `updated_at` timestamp NULL DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
 
 --
 -- Dumping data for table `notification_settings`
@@ -4027,13 +3894,13 @@ INSERT INTO `notification_settings` (`id`, `user_id`, `appointment_confirmation`
 CREATE TABLE `opening_hours` (
   `id` int(11) NOT NULL,
   `company_id` int(11) NOT NULL,
-  `day_of_week` enum('monday','tuesday','wednesday','thursday','friday','saturday','sunday') NOT NULL,
+  `day_of_week` enum('monday','tuesday','wednesday','thursday','friday','saturday','sunday') COLLATE utf8mb4_hungarian_ci NOT NULL,
   `open_time` time DEFAULT NULL,
   `close_time` time DEFAULT NULL,
   `is_closed` tinyint(1) DEFAULT '0',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
 
 --
 -- Dumping data for table `opening_hours`
@@ -4123,12 +3990,12 @@ CREATE TABLE `reviews` (
   `client_id` int(11) NOT NULL,
   `appointment_id` int(11) DEFAULT NULL,
   `rating` int(11) NOT NULL COMMENT '1-5 stars',
-  `comment` text,
+  `comment` text COLLATE utf8mb4_hungarian_ci,
   `updated_at` timestamp NULL DEFAULT NULL,
   `deleted_at` timestamp NULL DEFAULT NULL,
   `is_deleted` tinyint(1) DEFAULT '0',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
 
 --
 -- Dumping data for table `reviews`
@@ -4208,13 +4075,13 @@ INSERT INTO `reviews` (`id`, `company_id`, `client_id`, `appointment_id`, `ratin
 
 CREATE TABLE `roles` (
   `id` int(11) NOT NULL,
-  `name` varchar(50) NOT NULL,
-  `description` text,
+  `name` varchar(50) COLLATE utf8mb4_hungarian_ci NOT NULL,
+  `description` text COLLATE utf8mb4_hungarian_ci,
   `updated_at` datetime DEFAULT NULL,
   `deleted_at` datetime DEFAULT NULL,
   `is_deleted` tinyint(1) DEFAULT '0',
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
 
 --
 -- Dumping data for table `roles`
@@ -4235,17 +4102,17 @@ INSERT INTO `roles` (`id`, `name`, `description`, `updated_at`, `deleted_at`, `i
 CREATE TABLE `services` (
   `id` int(11) NOT NULL,
   `company_id` int(11) NOT NULL,
-  `name` varchar(255) NOT NULL,
-  `description` text,
+  `name` varchar(255) COLLATE utf8mb4_hungarian_ci NOT NULL,
+  `description` text COLLATE utf8mb4_hungarian_ci,
   `duration_minutes` int(11) NOT NULL,
   `price` decimal(10,2) DEFAULT NULL,
-  `currency` varchar(10) DEFAULT NULL,
+  `currency` varchar(10) COLLATE utf8mb4_hungarian_ci DEFAULT NULL,
   `is_active` tinyint(1) DEFAULT '1',
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime DEFAULT NULL,
   `deleted_at` datetime DEFAULT NULL,
   `is_deleted` tinyint(1) DEFAULT '0'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
 
 --
 -- Dumping data for table `services`
@@ -4305,31 +4172,7 @@ INSERT INTO `services` (`id`, `company_id`, `name`, `description`, `duration_min
 (51, 10, 'Zen spa rituálé', 'Komplex ázsiai spa élmény', 120, '29900.00', 'HUF', 1, '2024-03-15 21:00:00', NULL, NULL, 0),
 (52, 10, 'Infra szauna', 'Infra szauna használat', 45, '5900.00', 'HUF', 1, '2024-03-15 21:00:00', NULL, NULL, 0),
 (53, 10, 'Gyógyfürdő belépő', 'Ásványvizes gyógyfürdő', 90, '6900.00', 'HUF', 1, '2024-03-15 21:00:00', NULL, NULL, 0),
-(54, 10, 'Teljes Zen csomag', 'Masszázs + szauna + fürdő', 180, '42900.00', 'HUF', 1, '2024-03-15 21:00:00', NULL, NULL, 0),
-(55, 11, 'Klasszikus arckezelés', 'Arctisztítás és pakolás', 60, '8900.00', 'HUF', 1, '2024-02-01 10:00:00', NULL, NULL, 0),
-(56, 11, 'Műszempilla építés', 'Dús pillák műszempillával', 90, '12900.00', 'HUF', 1, '2024-02-01 10:00:00', NULL, NULL, 0),
-(57, 11, 'Teljes láb szőrtelenítés', 'Professzionális viaszolás', 45, '7900.00', 'HUF', 1, '2024-02-01 10:00:00', NULL, NULL, 0),
-(58, 12, 'Zselés műköröm építés', 'Tartós zselés műköröm', 120, '13900.00', 'HUF', 1, '2024-02-05 11:00:00', NULL, NULL, 0),
-(59, 12, 'Babyboomer műköröm', 'Természetes átmenet', 120, '14900.00', 'HUF', 1, '2024-02-05 11:00:00', NULL, NULL, 0),
-(60, 12, 'Műköröm töltés', 'Karbantartás 2-3 hetente', 90, '9900.00', 'HUF', 1, '2024-02-05 11:00:00', NULL, NULL, 0),
-(61, 13, 'Női hajvágás mosással', 'Professzionális hajvágás', 60, '7900.00', 'HUF', 1, '2024-02-10 12:00:00', NULL, NULL, 0),
-(62, 13, 'Teljes hajfestés', 'Komplett hajfestés tartós festékkel', 120, '16900.00', 'HUF', 1, '2024-02-10 12:00:00', NULL, NULL, 0),
-(63, 13, 'Férfi hajvágás', 'Modern férfi frizura', 30, '4900.00', 'HUF', 1, '2024-02-10 12:00:00', NULL, NULL, 0),
-(64, 14, 'Royal wellness csomag', 'Teljes napos wellness élmény', 240, '45900.00', 'HUF', 1, '2024-02-15 13:00:00', NULL, NULL, 0),
-(65, 14, 'Hot stone masszázs', 'Forró kő masszázs 90 perc', 90, '17900.00', 'HUF', 1, '2024-02-15 13:00:00', NULL, NULL, 0),
-(66, 14, 'Aromaterápiás masszázs', 'Illóolajos masszázs', 75, '14900.00', 'HUF', 1, '2024-02-15 13:00:00', NULL, NULL, 0),
-(67, 15, 'Anti-aging arckezelés', 'Bőrmegújító kezelés', 75, '13900.00', 'HUF', 1, '2024-02-20 14:00:00', NULL, NULL, 0),
-(68, 15, 'Gyógymasszázs', 'Terápiás masszázs', 60, '11900.00', 'HUF', 1, '2024-02-20 14:00:00', NULL, NULL, 0),
-(69, 16, 'Személyi edzés 1 alkalom', 'Egyéni edzés tervvel', 60, '9900.00', 'HUF', 1, '2024-02-25 15:00:00', NULL, NULL, 0),
-(70, 16, 'Spinning óra', 'Csoportos spinning', 45, '2900.00', 'HUF', 1, '2024-02-25 15:00:00', NULL, NULL, 0),
-(71, 17, 'Gyógyfürdő belépő + masszázs', 'Komplett wellness csomag', 120, '19900.00', 'HUF', 1, '2024-03-01 16:00:00', NULL, NULL, 0),
-(72, 17, 'Vízalatti masszázs', 'Egyedi hidroterápia', 60, '14900.00', 'HUF', 1, '2024-03-01 16:00:00', NULL, NULL, 0),
-(73, 18, 'Erőnléti edzés', 'Súlyzós edzés egyénileg', 60, '8900.00', 'HUF', 1, '2024-03-05 17:00:00', NULL, NULL, 0),
-(74, 18, 'CrossFit edzés', 'Funkcionális csoportos edzés', 60, '3900.00', 'HUF', 1, '2024-03-05 17:00:00', NULL, NULL, 0),
-(75, 19, 'Hatha jóga óra', 'Klasszikus jóga', 75, '3900.00', 'HUF', 1, '2024-03-10 18:00:00', NULL, NULL, 0),
-(76, 19, 'Meditációs gyakorlat', 'Vezetett meditáció', 45, '2900.00', 'HUF', 1, '2024-03-10 18:00:00', NULL, NULL, 0),
-(77, 20, 'Aqua aerobik', 'Vízi aerobik óra', 45, '3500.00', 'HUF', 1, '2024-03-15 19:00:00', NULL, NULL, 0),
-(78, 20, 'Úszásoktatás', 'Egyéni úszásoktatás', 45, '6900.00', 'HUF', 1, '2024-03-15 19:00:00', NULL, NULL, 0);
+(54, 10, 'Teljes Zen csomag', 'Masszázs + szauna + fürdő', 180, '42900.00', 'HUF', 1, '2024-03-15 21:00:00', NULL, NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -4340,11 +4183,11 @@ INSERT INTO `services` (`id`, `company_id`, `name`, `description`, `duration_min
 CREATE TABLE `service_categories` (
   `id` int(11) NOT NULL,
   `company_id` int(11) NOT NULL,
-  `name` varchar(255) NOT NULL,
-  `description` text,
+  `name` varchar(255) COLLATE utf8mb4_hungarian_ci NOT NULL,
+  `description` text COLLATE utf8mb4_hungarian_ci,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
 
 --
 -- Dumping data for table `service_categories`
@@ -4405,7 +4248,7 @@ CREATE TABLE `service_category_map` (
   `service_id` int(11) NOT NULL,
   `category_id` int(11) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
 
 --
 -- Dumping data for table `service_category_map`
@@ -4482,13 +4325,13 @@ CREATE TABLE `staff` (
   `id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
   `company_id` int(11) NOT NULL,
-  `display_name` varchar(255) DEFAULT NULL,
-  `specialties` text,
-  `bio` text,
+  `display_name` varchar(255) COLLATE utf8mb4_hungarian_ci DEFAULT NULL,
+  `specialties` text COLLATE utf8mb4_hungarian_ci,
+  `bio` text COLLATE utf8mb4_hungarian_ci,
   `is_active` tinyint(1) DEFAULT '1',
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
 
 --
 -- Dumping data for table `staff`
@@ -4509,42 +4352,7 @@ INSERT INTO `staff` (`id`, `user_id`, `company_id`, `display_name`, `specialties
 (12, 23, 7, 'István - Masszőr', 'Svéd masszázs, Sportmasszázs, Talpmasszázs', 'Professzionális masszőr vagyok, specializációm a sportmasszázs.', 1, '2024-03-01 19:00:00', NULL),
 (13, 24, 8, 'Dániel - Barber', 'Férfi hajvágás, Borotválás, Szakáll formázás', 'Hagyományos borbély vagyok modern technikákkal. Férfi frizurák specialistája.', 1, '2024-03-05 20:00:00', NULL),
 (14, 25, 9, 'Réka - Bio kozmetikus', 'Bio arckezelés, Természetes termékek, Organikus kezelések', 'Természetes szépségápolás híve vagyok. Csak bio termékekkel dolgozom.', 1, '2024-03-10 21:00:00', NULL),
-(15, 26, 10, 'Tamás - Ázsiai masszázs specialista', 'Thai masszázs, Shiatsu, Meditáció', 'Ázsiai masszázs technikák szakértője vagyok. 15 éve praktizálom a thai masszázst.', 1, '2024-03-15 22:00:00', NULL),
-(16, 27, 11, 'Andrea', 'Arckezelés, Testkezelés, Szőrtelenítés', 'Kozmetikus vagyok 8 éve, a bőrápolás a szakmám.', 1, '2024-02-01 10:00:00', NULL),
-(17, 28, 12, 'Csilla', 'Zselés műköröm, Babyboomer, Francia', 'Műköröm építés specialista 6 éves tapasztalattal.', 1, '2024-02-05 11:00:00', NULL),
-(18, 29, 13, 'Emese', 'Női hajvágás, Hajfestés, Melírozás', 'Fodrász vagyok 10 éve, a hajszínezés a szakterületem.', 1, '2024-02-10 12:00:00', NULL),
-(19, 30, 14, 'Gabriella', 'Svéd masszázs, Hot stone, Aromaterápia', 'Masszőr vagyok 12 éve, a relaxáció szakértője.', 1, '2024-02-15 13:00:00', NULL),
-(20, 31, 15, 'Ildikó', 'Arckezelés, Bőrmegújítás, Anti-aging', 'Kozmetikus vagyok, a bőrmegújítás a szakterületem.', 1, '2024-02-20 14:00:00', NULL),
-(21, 32, 16, 'Kata', 'Személyi edzés, CrossFit, TRX', 'Személyi edző vagyok 8 éve.', 1, '2024-02-25 15:00:00', NULL),
-(22, 33, 17, 'Mónika', 'Gyógyfürdő kezelés, Gyógymasszázs', 'Gyógymasszőr 10 éves tapasztalattal.', 1, '2024-03-01 16:00:00', NULL),
-(23, 34, 18, 'Olivér', 'Erőnléti edzés, Súlyzós edzés', 'Erőnléti edző 12 éve.', 1, '2024-03-05 17:00:00', NULL),
-(24, 35, 19, 'Rita', 'Hatha jóga, Yin jóga, Meditáció', 'Jóga oktató 8 éve.', 1, '2024-03-10 18:00:00', NULL),
-(25, 36, 20, 'Tímea', 'Aqua aerobik, Úszásoktatás', 'Aqua fitness oktató 6 éve.', 1, '2024-03-15 19:00:00', NULL),
-(26, 37, 21, 'Vera', 'Női hajvágás, Trendek, Styling', 'Fodrász vagyok 9 éve.', 1, '2024-03-20 10:00:00', NULL),
-(27, 38, 22, 'Zita', 'Hajfestés, Melírozás, Balayage', 'Hajfestés specialista 11 éve.', 1, '2024-03-25 11:00:00', NULL),
-(28, 39, 23, 'Ádám', 'Borotválás, Szakáll formázás, Klasszikus vágás', 'Barber specialista 7 éve.', 1, '2024-03-30 12:00:00', NULL),
-(29, 40, 24, 'Barbara', 'Női hajvágás, Styling, Esküvői frizurák', 'Fodrász 10 éve, esküvői frizurák mestere.', 1, '2024-04-01 13:00:00', NULL),
-(30, 27, 25, 'Dániel', 'Férfi és női hajvágás, Trendek', 'Fodrász 8 éve, minden korosztálynak.', 1, '2024-04-05 14:00:00', NULL),
-(31, 28, 26, 'Dr. Nagy Éva', 'Belgyógyászat, Labor vizsgálatok', 'Belgyógyász szakorvos 15 éve.', 1, '2024-04-10 15:00:00', NULL),
-(32, 29, 27, 'Erika', 'Gyógytorna, Gerincproblémák', 'Gyógytornász 12 éve.', 1, '2024-04-15 16:00:00', NULL),
-(33, 30, 28, 'Dr. Kovács Anna', 'Fogászat, Fogtömés, Fogkő eltávolítás', 'Fogorvos 10 éve.', 1, '2024-04-20 17:00:00', NULL),
-(34, 31, 29, 'Dr. Molnár Judit', 'Állatorvos, Kisállatok, Oltások', 'Állatorvos 8 éve.', 1, '2024-04-25 18:00:00', NULL),
-(35, 32, 30, 'Fanni', 'Gyógytorna, Mozgásterápia', 'Gyógytornász 9 éve.', 1, '2024-04-30 19:00:00', NULL),
-(36, 33, 31, 'Hanna', 'Kreatív körömművészet, Nail art', 'Körömdíszítés művész 6 éve.', 1, '2024-05-05 10:00:00', NULL),
-(37, 34, 32, 'Júlia', 'Géllakk, Manikűr, Francia', 'Körömápolás specialista 7 éve.', 1, '2024-05-10 11:00:00', NULL),
-(38, 35, 33, 'Klára', 'Kézápolás, Manikűr, Körömápolás', 'Körömápoló 5 éve.', 1, '2024-05-15 12:00:00', NULL),
-(39, 36, 34, 'Lajos', 'Autószerelés, Diagnosztika', 'Autószerelő mester 20 éve.', 1, '2024-05-20 13:00:00', NULL),
-(40, 37, 35, 'Erzsébet', 'Angol oktatás, IELTS felkészítés', 'Angol tanár 12 éve.', 1, '2024-05-25 14:00:00', NULL),
-(41, 38, 36, 'Márton', 'Zongoraoktatás, Szolfézs', 'Zenetanár 10 éve.', 1, '2024-05-30 15:00:00', NULL),
-(42, 39, 37, 'Sándor', 'Autómosás, Polírozás', 'Autókozmetikus 6 éve.', 1, '2024-06-01 16:00:00', NULL),
-(43, 40, 38, 'Judit', 'Terápiás masszázs, Sportmasszázs', 'Gyógymasszőr 11 éve.', 1, '2024-06-05 17:00:00', NULL),
-(44, 27, 39, 'Ágnes', 'Esztétikai kezelések, Botox', 'Esztétikai szakember 9 éve.', 1, '2024-06-10 18:00:00', NULL),
-(45, 28, 40, 'Róbert', 'Személyi edzés, Erőnléti edzés', 'Személyi edző 14 éve.', 1, '2024-06-15 19:00:00', NULL),
-(46, 29, 1, 'Zsófia', 'Szempilla és szemöldök, Szőrtelenítés', 'Szépségspecialista 5 éve.', 1, '2024-06-20 10:00:00', NULL),
-(47, 30, 2, 'Ildikó', 'Spa kezelések, Arckezelés', 'Wellness specialista 8 éve.', 1, '2024-06-20 11:00:00', NULL),
-(48, 31, 3, 'Zoltán', 'Hajhosszabbítás, Keratin', 'Fodrász mester 12 éve.', 1, '2024-06-20 12:00:00', NULL),
-(49, 32, 11, 'Beatrix', 'Műköröm, Manikűr, Pedikűr', 'Körömspecialista 7 éve.', 1, '2024-06-20 13:00:00', NULL),
-(50, 33, 12, 'Dóra', 'Géllakk, Nail art', 'Körömdíszítés mestere.', 1, '2024-06-20 14:00:00', NULL);
+(15, 26, 10, 'Tamás - Ázsiai masszázs specialista', 'Thai masszázs, Shiatsu, Meditáció', 'Ázsiai masszázs technikák szakértője vagyok. 15 éve praktizálom a thai masszázst.', 1, '2024-03-15 22:00:00', NULL);
 
 --
 -- Triggers `staff`
@@ -4593,12 +4401,12 @@ CREATE TABLE `staff_exceptions` (
   `date` date NOT NULL,
   `start_time` time DEFAULT NULL,
   `end_time` time DEFAULT NULL,
-  `type` enum('day_off','custom_hours') NOT NULL COMMENT 'teljes szabi vagy egyedi időablak',
-  `note` text,
+  `type` enum('day_off','custom_hours') COLLATE utf8mb4_hungarian_ci NOT NULL COMMENT 'teljes szabi vagy egyedi időablak',
+  `note` text COLLATE utf8mb4_hungarian_ci,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `deleted_at` datetime DEFAULT NULL,
   `is_deleted` tinyint(1) NOT NULL DEFAULT '0'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
 
 --
 -- Dumping data for table `staff_exceptions`
@@ -4662,7 +4470,7 @@ CREATE TABLE `staff_services` (
   `staff_id` int(11) NOT NULL,
   `service_id` int(11) NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
 
 --
 -- Dumping data for table `staff_services`
@@ -4746,13 +4554,13 @@ INSERT INTO `staff_services` (`id`, `staff_id`, `service_id`, `created_at`) VALU
 CREATE TABLE `staff_working_hours` (
   `id` int(11) NOT NULL,
   `staff_id` int(11) NOT NULL,
-  `day_of_week` enum('monday','tuesday','wednesday','thursday','friday','saturday','sunday') NOT NULL,
+  `day_of_week` enum('monday','tuesday','wednesday','thursday','friday','saturday','sunday') COLLATE utf8mb4_hungarian_ci NOT NULL,
   `start_time` time DEFAULT NULL,
   `end_time` time DEFAULT NULL,
   `is_available` tinyint(1) DEFAULT '1',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
 
 --
 -- Dumping data for table `staff_working_hours`
@@ -4880,7 +4688,7 @@ CREATE TABLE `temporary_closed_periods` (
   `close_time` time DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
 
 --
 -- Dumping data for table `temporary_closed_periods`
@@ -4967,13 +4775,20 @@ INSERT INTO `temporary_closed_periods` (`id`, `company_id`, `start_date`, `end_d
 CREATE TABLE `tokens` (
   `id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
-  `token` varchar(500) NOT NULL,
-  `type` varchar(100) NOT NULL,
+  `token` varchar(500) COLLATE utf8mb4_hungarian_ci NOT NULL,
+  `type` varchar(100) COLLATE utf8mb4_hungarian_ci NOT NULL,
   `expires_at` datetime NOT NULL,
   `is_revoked` tinyint(1) DEFAULT '0',
   `revoked_at` datetime DEFAULT NULL,
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
+
+--
+-- Dumping data for table `tokens`
+--
+
+INSERT INTO `tokens` (`id`, `user_id`, `token`, `type`, `expires_at`, `is_revoked`, `revoked_at`, `created_at`) VALUES
+(1, 41, '2167128bbb99cb495237b30503044763', 'email_verify', '2026-01-18 18:19:35', 1, '2026-01-17 18:36:57', '2026-01-17 18:19:35');
 
 -- --------------------------------------------------------
 
@@ -4984,11 +4799,11 @@ CREATE TABLE `tokens` (
 CREATE TABLE `two_factor_recovery_codes` (
   `id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
-  `code` varchar(64) NOT NULL COMMENT 'Hashed recovery code',
+  `code` varchar(64) COLLATE utf8mb4_hungarian_ci NOT NULL COMMENT 'Hashed recovery code',
   `used_at` datetime DEFAULT NULL,
   `is_used` tinyint(1) NOT NULL DEFAULT '0',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
 
 -- --------------------------------------------------------
 
@@ -4998,12 +4813,12 @@ CREATE TABLE `two_factor_recovery_codes` (
 
 CREATE TABLE `users` (
   `id` int(11) NOT NULL,
-  `guid` char(36) NOT NULL,
-  `first_name` varchar(100) DEFAULT NULL,
-  `last_name` varchar(100) DEFAULT NULL,
-  `email` varchar(100) NOT NULL,
-  `password` text NOT NULL,
-  `phone` varchar(30) NOT NULL,
+  `guid` char(36) COLLATE utf8mb4_hungarian_ci NOT NULL,
+  `first_name` varchar(100) COLLATE utf8mb4_hungarian_ci DEFAULT NULL,
+  `last_name` varchar(100) COLLATE utf8mb4_hungarian_ci DEFAULT NULL,
+  `email` varchar(100) COLLATE utf8mb4_hungarian_ci NOT NULL,
+  `password` text COLLATE utf8mb4_hungarian_ci NOT NULL,
+  `phone` varchar(30) COLLATE utf8mb4_hungarian_ci NOT NULL,
   `company_id` int(11) DEFAULT NULL COMMENT 'NULL for superadmins or independent clients',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime DEFAULT NULL,
@@ -5013,10 +4828,10 @@ CREATE TABLE `users` (
   `register_finished_at` datetime DEFAULT NULL,
   `is_active` tinyint(1) NOT NULL DEFAULT '1' COMMENT 'Admins can deactivate users',
   `two_factor_enabled` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'Whether 2FA is enabled',
-  `two_factor_secret` varchar(32) DEFAULT NULL COMMENT 'TOTP secret key (encrypted)',
+  `two_factor_secret` varchar(32) COLLATE utf8mb4_hungarian_ci DEFAULT NULL COMMENT 'TOTP secret key (encrypted)',
   `two_factor_confirmed_at` datetime DEFAULT NULL COMMENT 'When 2FA was confirmed/activated',
-  `two_factor_recovery_codes` longtext
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `two_factor_recovery_codes` longtext COLLATE utf8mb4_hungarian_ci
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
 
 --
 -- Dumping data for table `users`
@@ -5062,7 +4877,8 @@ INSERT INTO `users` (`id`, `guid`, `first_name`, `last_name`, `email`, `password
 (37, '39222a2c-f069-11f0-bb19-94e23c940cf4', 'Lukács', 'Tamás', 'tamas.lukacs@gmail.com', '$2y$10$client11', '+36203456711', NULL, '2024-03-30 10:00:00', NULL, NULL, 0, NULL, '2024-03-30 10:00:00', 1, 0, NULL, NULL, NULL),
 (38, '39222b04-f069-11f0-bb19-94e23c940cf4', 'Papp', 'Bernadett', 'bernadett.papp@citromail.hu', '$2y$10$client12', '+36203456712', NULL, '2024-03-31 11:00:00', NULL, NULL, 0, NULL, '2024-03-31 11:00:00', 1, 0, NULL, NULL, NULL),
 (39, '39222bc4-f069-11f0-bb19-94e23c940cf4', 'Simon', 'Balázs', 'balazs.simon@yahoo.com', '$2y$10$client13', '+36203456713', NULL, '2024-04-01 12:00:00', NULL, NULL, 0, NULL, '2024-04-01 12:00:00', 1, 0, NULL, NULL, NULL),
-(40, '39222c81-f069-11f0-bb19-94e23c940cf4', 'Takács', 'Nikoletta', 'nikoletta.takacs@gmail.com', '$2y$10$client14', '+36203456714', NULL, '2024-04-02 13:00:00', NULL, NULL, 0, NULL, '2024-04-02 13:00:00', 1, 0, NULL, NULL, NULL);
+(40, '39222c81-f069-11f0-bb19-94e23c940cf4', 'Takács', 'Nikoletta', 'nikoletta.takacs@gmail.com', '$2y$10$client14', '+36203456714', NULL, '2024-04-02 13:00:00', NULL, NULL, 0, NULL, '2024-04-02 13:00:00', 1, 0, NULL, NULL, NULL),
+(41, 'b1f05ffe-f3c8-11f0-9e1f-41a67f8a3877', 'Admin', 'Admin', 'admin@admin.hu', '$argon2id$v=19$m=65536,t=3,p=1$LLsNAuCcRNfRp7IRoTHZ3Q$9HKsULfkadqFiGugB7h094MFOuCTBwyO9VULnDtb2ok', '+3670123252', NULL, '2026-01-17 18:19:35', '2026-01-17 18:36:57', NULL, 0, '2026-01-18 21:47:27', '2026-01-17 18:36:57', 1, 0, NULL, NULL, NULL);
 
 --
 -- Triggers `users`
@@ -5179,7 +4995,7 @@ CREATE TABLE `user_x_role` (
   `assigned_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `un_assigned_at` timestamp NULL DEFAULT NULL,
   `is_un_assigned` tinyint(1) DEFAULT '0'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
 
 --
 -- Dumping data for table `user_x_role`
@@ -5251,7 +5067,8 @@ INSERT INTO `user_x_role` (`id`, `user_id`, `role_id`, `assigned_at`, `un_assign
 (63, 37, 4, '2024-03-30 09:00:00', NULL, 0),
 (64, 38, 4, '2024-03-31 09:00:00', NULL, 0),
 (65, 39, 4, '2024-04-01 10:00:00', NULL, 0),
-(66, 40, 4, '2024-04-02 11:00:00', NULL, 0);
+(66, 40, 4, '2024-04-02 11:00:00', NULL, 0),
+(67, 41, 4, '2026-01-17 17:19:35', NULL, 0);
 
 --
 -- Indexes for dumped tables
@@ -5444,13 +5261,13 @@ ALTER TABLE `user_x_role`
 -- AUTO_INCREMENT for table `appointments`
 --
 ALTER TABLE `appointments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=150;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=154;
 
 --
 -- AUTO_INCREMENT for table `audit_logs`
 --
 ALTER TABLE `audit_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `business_categories`
@@ -5462,13 +5279,13 @@ ALTER TABLE `business_categories`
 -- AUTO_INCREMENT for table `companies`
 --
 ALTER TABLE `companies`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=41;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `favorites`
 --
 ALTER TABLE `favorites`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=51;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=48;
 
 --
 -- AUTO_INCREMENT for table `images`
@@ -5504,7 +5321,7 @@ ALTER TABLE `roles`
 -- AUTO_INCREMENT for table `services`
 --
 ALTER TABLE `services`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=79;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=55;
 
 --
 -- AUTO_INCREMENT for table `service_categories`
@@ -5522,7 +5339,7 @@ ALTER TABLE `service_category_map`
 -- AUTO_INCREMENT for table `staff`
 --
 ALTER TABLE `staff`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=51;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=100;
 
 --
 -- AUTO_INCREMENT for table `staff_exceptions`
@@ -5552,7 +5369,7 @@ ALTER TABLE `temporary_closed_periods`
 -- AUTO_INCREMENT for table `tokens`
 --
 ALTER TABLE `tokens`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `two_factor_recovery_codes`
@@ -5564,13 +5381,13 @@ ALTER TABLE `two_factor_recovery_codes`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=41;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=42;
 
 --
 -- AUTO_INCREMENT for table `user_x_role`
 --
 ALTER TABLE `user_x_role`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=67;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=68;
 
 --
 -- Constraints for dumped tables
