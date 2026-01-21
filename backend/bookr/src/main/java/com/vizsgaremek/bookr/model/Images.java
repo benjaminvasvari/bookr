@@ -245,7 +245,7 @@ public class Images implements Serializable {
             for (Object[] record : resultList) {
                 Images img = new Images(
                         Integer.valueOf(record[0].toString()), // id
-                        record[1].toString(), // url
+                        record[1] == null ? null : record[1].toString(), // url
                         Boolean.parseBoolean(record[2].toString()), // is_main
                         record[3] == null ? null : formatter.parse(record[3].toString()) // uploaded_at
                 );
@@ -287,10 +287,10 @@ public class Images implements Serializable {
 
             Images image = new Images(
                     Integer.valueOf(record[0].toString()), // id
-                    record[2].toString(), // url
-                    record[3] == null ? null : formatter.parse(record[3].toString()), // uploaded_at
+                    record[1].toString(), // url
+                    record[2] == null ? null : formatter.parse(record[2].toString()), // uploaded_at
                     null, // companyIdInt - user profile picture has no company
-                    Integer.valueOf(record[1].toString()) // userIdInt
+                    Integer.valueOf(record[3].toString()) // userIdInt
             );
 
             return image;

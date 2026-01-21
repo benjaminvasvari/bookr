@@ -1,4 +1,4 @@
-package com.vizsgaremek.bookr.config;
+package com.vizsgaremek.bookr.security;
 
 import io.github.cdimascio.dotenv.Dotenv;
 import java.nio.charset.StandardCharsets;

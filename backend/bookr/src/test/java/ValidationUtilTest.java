@@ -1,5 +1,5 @@
 
-import com.vizsgaremek.bookr.config.ValidationUtil;
+import com.vizsgaremek.bookr.util.ValidationUtil;
 import org.junit.Test;
 import static org.junit.Assert.*;
 

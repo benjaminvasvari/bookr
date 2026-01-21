@@ -875,7 +875,7 @@ public class Companies implements Serializable {
                     record[5].toString(),
                     Double.parseDouble(record[6].toString()),
                     Integer.valueOf(record[7].toString()),
-                    record[8].toString()
+                    record[8] == null ? null : record[8].toString()
             );
 
             return company;
