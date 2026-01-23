@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3307
--- Generation Time: Jan 23, 2026 at 08:54 AM
+-- Generation Time: Jan 23, 2026 at 09:51 AM
 -- Server version: 5.7.24
 -- PHP Version: 8.3.1
 
@@ -2259,7 +2259,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `regenerateAuthSecret` (IN `userIdIN
       AND `is_deleted` = FALSE;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `register` (IN `firstNameIN` VARCHAR(100), IN `lastNameIN` VARCHAR(100), IN `emailIN` VARCHAR(100), IN `passwordIN` TEXT, IN `phoneIN` VARCHAR(30), IN `roleNameIN` VARCHAR(50), IN `companyIdIN` INT)   BEGIN
+CREATE DEFINER=`root`@`localhost` PROCEDURE `registerClient` (IN `firstNameIN` VARCHAR(100), IN `lastNameIN` VARCHAR(100), IN `emailIN` VARCHAR(100), IN `passwordIN` TEXT, IN `phoneIN` VARCHAR(30))   BEGIN
     DECLARE newUserId INT;
     DECLARE roleId INT;
     DECLARE regToken VARCHAR(64);
@@ -2270,7 +2270,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `register` (IN `firstNameIN` VARCHAR
     -- Role ID lekérése a role name alapján
     SELECT `id` INTO roleId 
     FROM `roles` 
-    WHERE `name` = roleNameIN 
+    WHERE `name` = "client"
     LIMIT 1;
     
     -- Ellenőrzés: létezik-e a role
@@ -2286,7 +2286,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `register` (IN `firstNameIN` VARCHAR
         `email`,
         `password`,
         `phone`,
-        `company_id`,
         `is_active`
     )
     VALUES (
@@ -2295,7 +2294,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `register` (IN `firstNameIN` VARCHAR
         emailIN,
         passwordIN,
         phoneIN,
-        companyIdIN,
         FALSE
     );
     
@@ -3620,7 +3618,10 @@ INSERT INTO `audit_logs` (`id`, `performed_by_user_id`, `performed_by_role`, `af
 (7, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-17 18:46:36', 0),
 (8, 24, NULL, NULL, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-01-18 20:46:23', 0),
 (9, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-18 20:47:27', 0),
-(10, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-18 20:49:01', 0);
+(10, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-18 20:49:01', 0),
+(11, 43, 'client', NULL, NULL, 'admin@admin.com', 'user', 'register', NULL, '{\"role\": \"client\", \"email\": \"admin@admin.com\", \"user_id\": 43, \"last_name\": \"Admin\", \"first_name\": \"Admin\"}', '2026-01-23 09:48:02', 0),
+(12, 43, NULL, NULL, NULL, 'admin@admin.com', 'user', 'email_verified', NULL, NULL, '2026-01-23 09:48:09', 0),
+(13, 43, 'client', NULL, NULL, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-23 09:48:28', 0);
 
 -- --------------------------------------------------------
 
@@ -3844,7 +3845,8 @@ INSERT INTO `images` (`id`, `company_id`, `user_id`, `url`, `is_main`, `uploaded
 (52, NULL, 23, 'https://storage.bookr.hu/staff/istvan-masszor/profile.jpg', 0, '2024-03-01 18:05:00', NULL, 0),
 (53, NULL, 24, 'https://storage.bookr.hu/staff/daniel-barber/profile.jpg', 0, '2024-03-05 19:05:00', NULL, 0),
 (54, NULL, 25, 'https://storage.bookr.hu/staff/reka-bio-kozmetikus/profile.jpg', 0, '2024-03-10 20:05:00', NULL, 0),
-(55, NULL, 26, 'https://storage.bookr.hu/staff/tamas-thai-specialist/profile.jpg', 0, '2024-03-15 21:05:00', NULL, 0);
+(55, NULL, 26, 'https://storage.bookr.hu/staff/tamas-thai-specialist/profile.jpg', 0, '2024-03-15 21:05:00', NULL, 0),
+(56, NULL, 43, NULL, 0, '2026-01-23 09:48:02', NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -4813,7 +4815,8 @@ CREATE TABLE `tokens` (
 --
 
 INSERT INTO `tokens` (`id`, `user_id`, `token`, `type`, `expires_at`, `is_revoked`, `revoked_at`, `created_at`) VALUES
-(1, 41, '2167128bbb99cb495237b30503044763', 'email_verify', '2026-01-18 18:19:35', 1, '2026-01-17 18:36:57', '2026-01-17 18:19:35');
+(1, 41, '2167128bbb99cb495237b30503044763', 'email_verify', '2026-01-18 18:19:35', 1, '2026-01-17 18:36:57', '2026-01-17 18:19:35'),
+(2, 43, 'aede051cfaaf8fcbb1aff63fd8957b1e', 'email_verify', '2026-01-24 10:48:02', 1, '2026-01-23 10:48:09', '2026-01-23 10:48:02');
 
 -- --------------------------------------------------------
 
@@ -4903,7 +4906,8 @@ INSERT INTO `users` (`id`, `guid`, `first_name`, `last_name`, `email`, `password
 (38, '39222b04-f069-11f0-bb19-94e23c940cf4', 'Papp', 'Bernadett', 'bernadett.papp@citromail.hu', '$2y$10$client12', '+36203456712', NULL, '2024-03-31 11:00:00', NULL, NULL, 0, NULL, '2024-03-31 11:00:00', 1, 0, NULL, NULL, NULL),
 (39, '39222bc4-f069-11f0-bb19-94e23c940cf4', 'Simon', 'Balázs', 'balazs.simon@yahoo.com', '$2y$10$client13', '+36203456713', NULL, '2024-04-01 12:00:00', NULL, NULL, 0, NULL, '2024-04-01 12:00:00', 1, 0, NULL, NULL, NULL),
 (40, '39222c81-f069-11f0-bb19-94e23c940cf4', 'Takács', 'Nikoletta', 'nikoletta.takacs@gmail.com', '$2y$10$client14', '+36203456714', NULL, '2024-04-02 13:00:00', NULL, NULL, 0, NULL, '2024-04-02 13:00:00', 1, 0, NULL, NULL, NULL),
-(41, 'b1f05ffe-f3c8-11f0-9e1f-41a67f8a3877', 'Admin', 'Admin', 'admin@admin.hu', '$argon2id$v=19$m=65536,t=3,p=1$LLsNAuCcRNfRp7IRoTHZ3Q$9HKsULfkadqFiGugB7h094MFOuCTBwyO9VULnDtb2ok', '+3670123252', NULL, '2026-01-17 18:19:35', '2026-01-17 18:36:57', NULL, 0, '2026-01-18 21:47:27', '2026-01-17 18:36:57', 1, 0, NULL, NULL, NULL);
+(41, 'b1f05ffe-f3c8-11f0-9e1f-41a67f8a3877', 'Admin', 'Admin', 'admin@admin.hu', '$argon2id$v=19$m=65536,t=3,p=1$LLsNAuCcRNfRp7IRoTHZ3Q$9HKsULfkadqFiGugB7h094MFOuCTBwyO9VULnDtb2ok', '+3670123252', NULL, '2026-01-17 18:19:35', '2026-01-17 18:36:57', NULL, 0, '2026-01-18 21:47:27', '2026-01-17 18:36:57', 1, 0, NULL, NULL, NULL),
+(43, '9be7f6aa-f840-11f0-89b9-b5e6602fcb6e', 'Admin', 'Admin', 'admin@admin.com', '$argon2id$v=19$m=65536,t=3,p=1$neSrpLHeChl9iqqk6FQH0A$/3zpvnj5TlX9YNwOF4j87qT7xszB9UcLDMOT3YLwEDY', '+367012344356', NULL, '2026-01-23 10:48:02', '2026-01-23 10:48:09', NULL, 0, '2026-01-23 10:48:28', '2026-01-23 10:48:09', 1, 0, NULL, NULL, NULL);
 
 --
 -- Triggers `users`
@@ -5093,7 +5097,8 @@ INSERT INTO `user_x_role` (`id`, `user_id`, `role_id`, `assigned_at`, `un_assign
 (64, 38, 4, '2024-03-31 09:00:00', NULL, 0),
 (65, 39, 4, '2024-04-01 10:00:00', NULL, 0),
 (66, 40, 4, '2024-04-02 11:00:00', NULL, 0),
-(67, 41, 4, '2026-01-17 17:19:35', NULL, 0);
+(67, 41, 4, '2026-01-17 17:19:35', NULL, 0),
+(68, 43, 4, '2026-01-23 09:48:02', NULL, 0);
 
 --
 -- Indexes for dumped tables
@@ -5292,7 +5297,7 @@ ALTER TABLE `appointments`
 -- AUTO_INCREMENT for table `audit_logs`
 --
 ALTER TABLE `audit_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT for table `business_categories`
@@ -5316,7 +5321,7 @@ ALTER TABLE `favorites`
 -- AUTO_INCREMENT for table `images`
 --
 ALTER TABLE `images`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=56;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=57;
 
 --
 -- AUTO_INCREMENT for table `notification_settings`
@@ -5394,7 +5399,7 @@ ALTER TABLE `temporary_closed_periods`
 -- AUTO_INCREMENT for table `tokens`
 --
 ALTER TABLE `tokens`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `two_factor_recovery_codes`
@@ -5406,13 +5411,13 @@ ALTER TABLE `two_factor_recovery_codes`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=42;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=44;
 
 --
 -- AUTO_INCREMENT for table `user_x_role`
 --
 ALTER TABLE `user_x_role`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=68;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=69;
 
 --
 -- Constraints for dumped tables
