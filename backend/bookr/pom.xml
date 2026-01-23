@@ -88,6 +88,34 @@
             <artifactId>jackson-jaxrs-json-provider</artifactId>
             <version>2.15.2</version>
         </dependency>
+        
+        <!-- Jersey Multipart - JAVAX (Jersey 2.x) -->
+        <dependency>
+            <groupId>org.glassfish.jersey.media</groupId>
+            <artifactId>jersey-media-multipart</artifactId>
+            <version>2.41</version>
+        </dependency>
+
+        <!-- Jersey Core Common - JAVAX -->
+        <dependency>
+            <groupId>org.glassfish.jersey.core</groupId>
+            <artifactId>jersey-common</artifactId>
+            <version>2.41</version>
+        </dependency>
+
+        <!-- Jersey Server - JAVAX -->
+        <dependency>
+            <groupId>org.glassfish.jersey.core</groupId>
+            <artifactId>jersey-server</artifactId>
+            <version>2.41</version>
+        </dependency>
+
+        <!-- Jersey CDI Integration - JAVAX -->
+        <dependency>
+            <groupId>org.glassfish.jersey.inject</groupId>
+            <artifactId>jersey-hk2</artifactId>
+            <version>2.41</version>
+        </dependency>
 
 
     </dependencies>

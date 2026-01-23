@@ -1,6 +1,10 @@
 package com.vizsgaremek.bookr.service;
 
+import com.sun.tools.javac.file.RelativePath;
 import com.vizsgaremek.bookr.model.Images;
+import com.vizsgaremek.bookr.util.FileStorageUtil;
+import com.vizsgaremek.bookr.util.FileValidator;
+import java.io.InputStream;
 import java.util.List;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -13,6 +17,7 @@ import org.json.JSONObject;
 public class ImagesService {
 
     private Images layer = new Images();
+    private CompaniesService CompaniesService = new CompaniesService();
 
     public JSONObject getCompanyImages(Integer companyId) {
         JSONObject toReturn = new JSONObject();
@@ -31,7 +36,7 @@ public class ImagesService {
             }
 
             // Adatbázis lekérdezés
-            List<Images> modelResult = Images.getCompanyNotMainImages(companyId);
+            List<Images> modelResult = layer.getCompanyNotMainImages(companyId);
 
             // NULL ELLENŐRZÉS
             if (modelResult == null) {
@@ -90,7 +95,7 @@ public class ImagesService {
             }
 
             // Adatbázis lekérdezés
-            Images modelResult = Images.getUserProfilePicture(userId);
+            Images modelResult = layer.getUserProfilePicture(userId);
 
             // NULL ELLENŐRZÉS
             if (modelResult == null) {
@@ -109,6 +114,105 @@ public class ImagesService {
             result.put("url", modelResult.getUrl());
             result.put("uploadedAt", modelResult.getUploadedAt());
             result.put("userId", modelResult.getUserIdInt());
+
+            toReturn.put("result", result);
+
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            status = "InternalServerError";
+            statusCode = 500;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+        }
+
+        return toReturn;
+    }
+
+    public JSONObject uploadCompanyImage(Integer companyId, String filename, long fileSize, String mimeType, InputStream inputStream, boolean isMain) {
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        try {
+
+            // Company exist
+            Boolean isCompanyExist = CompaniesService.validateCompanyExist(companyId);
+
+            if (isCompanyExist == null) {
+                status = "InternalServerError";
+                statusCode = 500;
+                toReturn.put("status", status);
+                toReturn.put("statusCode", statusCode);
+                return toReturn;
+            }
+            if (!isCompanyExist) {
+                status = "NotFound";
+                statusCode = 404;
+                toReturn.put("status", status);
+                toReturn.put("statusCode", statusCode);
+                return toReturn;
+            }
+
+            if (!isMain) {
+                Integer imageCount = layer.getCompanyImageCount(companyId);
+
+                if (imageCount == 4) {
+                    status = "ReachedMaxImageCount";
+                    statusCode = 409;
+                    toReturn.put("status", status);
+                    toReturn.put("statusCode", statusCode);
+                    return toReturn;
+                }
+
+                if (imageCount > 4) {
+                    status = "MoreThan4Image";
+                    statusCode = 409;
+                    toReturn.put("status", status);
+                    toReturn.put("statusCode", statusCode);
+                    System.err.println("Több mint 4 kép!! Valami nagyon nem jó");
+                    return toReturn;
+                }
+            }
+
+            // ezt még néézd át
+            FileValidator.validateUploadedFile(filename, fileSize, mimeType);
+
+            String uniqueFilename = FileStorageUtil.generateUniqueFilename(filename);
+
+            String relativePath = FileStorageUtil.saveFile(
+                    inputStream,
+                    "companies",
+                    companyId,
+                    uniqueFilename
+            );
+
+            if (relativePath == null) {
+                status = "ImageSaveError";
+                statusCode = 500;
+                toReturn.put("status", status);
+                toReturn.put("statusCode", statusCode);
+                System.err.println("Nem sikerült a mentés");
+                return toReturn;
+            }
+
+            Images modelResult = layer.uploadCompanyImage(companyId, relativePath, isMain);
+
+            String fullUrl = FileStorageUtil.buildFullUrl(relativePath);
+
+            JSONObject result = new JSONObject();
+
+            result.put("id", modelResult.getId());
+            result.put("url", fullUrl);
+            result.put("relativePath", relativePath);
+            result.put("isMain", isMain);
+            result.put("filename", uniqueFilename);
+            result.put("originalFilename", filename);
+            result.put("size", fileSize);
+            result.put("sizeMB", fileSize / (1024.0 * 1024.0));
+            result.put("mimeType", mimeType);
 
             toReturn.put("result", result);
 

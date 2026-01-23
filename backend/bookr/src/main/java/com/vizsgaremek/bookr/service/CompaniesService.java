@@ -377,4 +377,28 @@ public class CompaniesService {
             return error;
         }
     }
+
+    public Boolean validateCompanyExist(Integer companyId) {
+
+        try {
+
+            Boolean result = true;
+
+            Companies modelResult = layer.checkCompany(companyId);
+
+            if (modelResult == null) {
+                result = false;
+            } else if (modelResult.getIsActive() == false) {
+                result = false;
+            } else if (modelResult.getIsDeleted() == false) {
+                result = false;
+            }
+
+            return result;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
 }

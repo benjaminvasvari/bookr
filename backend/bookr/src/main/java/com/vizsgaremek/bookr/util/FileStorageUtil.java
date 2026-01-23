@@ -49,6 +49,21 @@ public class FileStorageUtil {
         return Paths.get(baseDir, relativePath);
     }
 
+    public static String buildFullUrl(String relativePath) {
+        String baseUrl = EnvConfig.getUploadBaseUrl();
+
+        // Ensure no double slashes
+        if (baseUrl.endsWith("/")) {
+            baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
+        }
+
+        if (relativePath.startsWith("/")) {
+            relativePath = relativePath.substring(1);
+        }
+
+        return baseUrl + "/" + relativePath;
+    }
+
     // Directory létrehozása ha még nem létezik
     public static void ensureDirectoryExists(String type, Integer entityId) {
         try {

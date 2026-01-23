@@ -106,8 +106,6 @@ public class Images implements Serializable {
         this.companyIdInt = companyIdInt;
         this.userIdInt = userIdInt;
     }
-    
-    
 
     public Integer getId() {
         return id;
@@ -294,6 +292,79 @@ public class Images implements Serializable {
             );
 
             return image;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static Images uploadCompanyImage(Integer companyId, String relativePath, boolean isMain) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("uploadCompanyImage");
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("urlIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("isMainIN", Boolean.class, ParameterMode.IN);
+
+            spq.setParameter("companyIdIN", companyId);
+            spq.setParameter("urlIN", relativePath);
+            spq.setParameter("isMainIN", isMain);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            // Stored procedure returns: id, user_id, url, uploaded_at
+            Object[] record = resultList.get(0);
+
+            Images image = new Images(
+                    Integer.valueOf(record[0].toString())
+            );
+
+            return image;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static Integer getCompanyImageCount(Integer companyId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getCompanyImageCount");
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("companyIdIN", companyId);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            Object[] record = resultList.get(0);
+            
+            Integer imageCount = Integer.valueOf(record[0].toString());
+
+            return imageCount;
 
         } catch (Exception ex) {
             ex.printStackTrace();
