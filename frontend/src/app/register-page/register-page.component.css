@@ -17,7 +17,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   width: 100%;
-  min-height: 100vh;
+  height: 100vh;
 }
 
 .register-form-wrapper {
@@ -30,6 +30,7 @@
   overflow-y: auto;
   margin-top: 4.5rem;
   padding: 2rem 3rem;
+  height: 100vh;
 }
 
 .register-title {
@@ -413,6 +414,7 @@
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+  height: 100vh;
 }
 
 .image-overlay {
