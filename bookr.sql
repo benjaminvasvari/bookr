@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3307
--- Generation Time: Jan 20, 2026 at 12:18 PM
+-- Generation Time: Jan 23, 2026 at 08:27 AM
 -- Server version: 5.7.24
 -- PHP Version: 8.3.1
 
@@ -305,6 +305,15 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `cancelAppointment` (IN `appointment
     WHERE `id` = appointmentIdIN;
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `checkAppointment` (IN `appointmentIdIN` INT)   BEGIN
+	SELECT
+    	appointments.id,
+        appointments.cancelled_at,
+        appointments.status
+    FROM appointments
+    WHERE appointments.id = appointmentIdIN;
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `checkById` (IN `idIN` INT)   BEGIN
 
 SELECT
@@ -330,15 +339,32 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `checkCompany` (IN `idIN` INT)   BEG
 
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `checkUser` (IN `idIN` INT)   BEGIN
+CREATE DEFINER=`root`@`localhost` PROCEDURE `checkService` (IN `servicesIdIN` INT)   BEGIN
+    SELECT 
+			services.id,
+            services.name,
+            services.is_active,
+            services.is_deleted
+    FROM services
+    WHERE services.id = servicesIdIN;
+END$$
 
-	SELECT 
-    	`users`.`is_deleted`,
-        `users`.`is_active`
-    FROM `users`
-    WHERE `users`.`id` = idIN
-    LIMIT 1;
+CREATE DEFINER=`root`@`localhost` PROCEDURE `checkStaff` (IN `staffIdIN` INT)   BEGIN
+    SELECT 
+    	staff.id,
+        staff.is_active,
+        staff.is_deleted
+    FROM staff
+    WHERE staff.id = staffIdIN;
+END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `checkUser` (IN `userIdIN` INT)   BEGIN
+    SELECT 
+			users.id,
+            users.is_deleted,
+            users.is_active
+    FROM users
+    WHERE users.id = userIdIN;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `cleanExpiredTokens` ()   BEGIN
@@ -1231,6 +1257,13 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getCompanyDataById` (IN `companyIdI
     GROUP BY `companies`.`id`, `companies`.`name`, `companies`.`description`, `companies`.`address`, 					 `companies`.`city`, `companies`.`postal_code`, 
              `companies`.`country`, `companies`.`phone`, `companies`.`email`, `companies`.`website`, 					 `companies`.`business_category_id`, `business_categories`.`name`
     LIMIT 1;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getCompanyImageCount` (IN `companyIdIN` INT, OUT `imageCount` INT)   BEGIN
+    SELECT COUNT(*) INTO imageCount
+    FROM images
+    WHERE images.company_id = companyIdIN
+      AND is_deleted = 0;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getCompanyNotMainImages` (IN `companyIdIN` INT)   BEGIN
@@ -4320,6 +4353,7 @@ CREATE TABLE `staff` (
   `specialties` text COLLATE utf8mb4_hungarian_ci,
   `bio` text COLLATE utf8mb4_hungarian_ci,
   `is_active` tinyint(1) DEFAULT '1',
+  `is_deleted` tinyint(1) DEFAULT '0',
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
@@ -4328,22 +4362,22 @@ CREATE TABLE `staff` (
 -- Dumping data for table `staff`
 --
 
-INSERT INTO `staff` (`id`, `user_id`, `company_id`, `display_name`, `specialties`, `bio`, `is_active`, `created_at`, `updated_at`) VALUES
-(1, 12, 1, 'Eszter - Senior Kozmetikus', 'Arckezelés, Bőrápolás, Anti-aging', '10+ éves tapasztalat a szépségiparban. Szakértő vagyok az arckezelések területén.', 1, '2024-02-01 13:00:00', NULL),
-(2, 13, 1, 'Kati - Körömspecialista', 'Manikűr, Pedikűr, Műköröm, Gél lakk', 'Körömápolás specialista vagyok, imádom a kreatív körömművészetet.', 1, '2024-02-01 13:00:00', NULL),
-(3, 14, 2, 'Márta - Masszőr', 'Svéd masszázs, Aromaterápia, Relaxációs masszázs', 'Certificált masszőr vagyok, aki a teljes körű ellazulást helyezi előtérbe.', 1, '2024-02-05 14:00:00', NULL),
-(4, 15, 2, 'Júlia - Spa Specialista', 'Hot stone, Thai masszázs, Sportmasszázs', '8 éve foglalkozom masszázzsal. Sportolóknak és aktív életmódot élőknek ajánlom szolgáltatásaimat.', 1, '2024-02-05 14:00:00', NULL),
-(5, 16, 3, 'Anna - Fodrász', 'Női hajvágás, Hajfestés, Melírozás', 'Kreatív fodrász vagyok, aki imádja a trendi frizurákat és a színezési technikákat.', 1, '2024-02-10 15:00:00', NULL),
-(6, 17, 3, 'Péter - Színező specialista', 'Hajfestés, Balayage, Ombre', 'A hajszínezés a szenvedélyem. Modern technikákkal dolgozom.', 1, '2024-02-10 15:00:00', NULL),
-(7, 18, 4, 'Zsuzsanna - Műköröm építő', 'Zselés műköröm, Porcelán köröm, Babyboomer', 'Műköröm specialista vagyok 7 éves tapasztalattal.', 1, '2024-02-15 16:00:00', NULL),
-(8, 19, 4, 'Viktória - Nail Artist', 'Körömművészet, Gél lakk, Díszítés', 'Kreatív körömművész vagyok, egyedi dizájnokat készítek.', 1, '2024-02-15 16:00:00', NULL),
-(9, 20, 5, 'Gábor - Személyi edző', 'Erőnléti edzés, CrossFit, TRX', 'Személyi edző vagyok 12 éves tapasztalattal. Segítek elérni a céljaidat!', 1, '2024-02-20 17:00:00', NULL),
-(10, 21, 5, 'Laura - Fitness instruktor', 'Spinning, Csoportos órák, Funkcionális tréning', 'Csoportos órák specialistája vagyok, motiválni szeretek!', 1, '2024-02-20 17:00:00', NULL),
-(11, 22, 6, 'Emese - Jóga oktató', 'Hatha jóga, Vinyasa, Yin jóga, Meditáció', 'Certificált jóga oktató vagyok. A test-lélek-szellem harmóniája a célom.', 1, '2024-02-25 18:00:00', NULL),
-(12, 23, 7, 'István - Masszőr', 'Svéd masszázs, Sportmasszázs, Talpmasszázs', 'Professzionális masszőr vagyok, specializációm a sportmasszázs.', 1, '2024-03-01 19:00:00', NULL),
-(13, 24, 8, 'Dániel - Barber', 'Férfi hajvágás, Borotválás, Szakáll formázás', 'Hagyományos borbély vagyok modern technikákkal. Férfi frizurák specialistája.', 1, '2024-03-05 20:00:00', NULL),
-(14, 25, 9, 'Réka - Bio kozmetikus', 'Bio arckezelés, Természetes termékek, Organikus kezelések', 'Természetes szépségápolás híve vagyok. Csak bio termékekkel dolgozom.', 1, '2024-03-10 21:00:00', NULL),
-(15, 26, 10, 'Tamás - Ázsiai masszázs specialista', 'Thai masszázs, Shiatsu, Meditáció', 'Ázsiai masszázs technikák szakértője vagyok. 15 éve praktizálom a thai masszázst.', 1, '2024-03-15 22:00:00', NULL);
+INSERT INTO `staff` (`id`, `user_id`, `company_id`, `display_name`, `specialties`, `bio`, `is_active`, `is_deleted`, `created_at`, `updated_at`) VALUES
+(1, 12, 1, 'Eszter - Senior Kozmetikus', 'Arckezelés, Bőrápolás, Anti-aging', '10+ éves tapasztalat a szépségiparban. Szakértő vagyok az arckezelések területén.', 1, 0, '2024-02-01 13:00:00', NULL),
+(2, 13, 1, 'Kati - Körömspecialista', 'Manikűr, Pedikűr, Műköröm, Gél lakk', 'Körömápolás specialista vagyok, imádom a kreatív körömművészetet.', 1, 0, '2024-02-01 13:00:00', NULL),
+(3, 14, 2, 'Márta - Masszőr', 'Svéd masszázs, Aromaterápia, Relaxációs masszázs', 'Certificált masszőr vagyok, aki a teljes körű ellazulást helyezi előtérbe.', 1, 0, '2024-02-05 14:00:00', NULL),
+(4, 15, 2, 'Júlia - Spa Specialista', 'Hot stone, Thai masszázs, Sportmasszázs', '8 éve foglalkozom masszázzsal. Sportolóknak és aktív életmódot élőknek ajánlom szolgáltatásaimat.', 1, 0, '2024-02-05 14:00:00', NULL),
+(5, 16, 3, 'Anna - Fodrász', 'Női hajvágás, Hajfestés, Melírozás', 'Kreatív fodrász vagyok, aki imádja a trendi frizurákat és a színezési technikákat.', 1, 0, '2024-02-10 15:00:00', NULL),
+(6, 17, 3, 'Péter - Színező specialista', 'Hajfestés, Balayage, Ombre', 'A hajszínezés a szenvedélyem. Modern technikákkal dolgozom.', 1, 0, '2024-02-10 15:00:00', NULL),
+(7, 18, 4, 'Zsuzsanna - Műköröm építő', 'Zselés műköröm, Porcelán köröm, Babyboomer', 'Műköröm specialista vagyok 7 éves tapasztalattal.', 1, 0, '2024-02-15 16:00:00', NULL),
+(8, 19, 4, 'Viktória - Nail Artist', 'Körömművészet, Gél lakk, Díszítés', 'Kreatív körömművész vagyok, egyedi dizájnokat készítek.', 1, 0, '2024-02-15 16:00:00', NULL),
+(9, 20, 5, 'Gábor - Személyi edző', 'Erőnléti edzés, CrossFit, TRX', 'Személyi edző vagyok 12 éves tapasztalattal. Segítek elérni a céljaidat!', 1, 0, '2024-02-20 17:00:00', NULL),
+(10, 21, 5, 'Laura - Fitness instruktor', 'Spinning, Csoportos órák, Funkcionális tréning', 'Csoportos órák specialistája vagyok, motiválni szeretek!', 1, 0, '2024-02-20 17:00:00', NULL),
+(11, 22, 6, 'Emese - Jóga oktató', 'Hatha jóga, Vinyasa, Yin jóga, Meditáció', 'Certificált jóga oktató vagyok. A test-lélek-szellem harmóniája a célom.', 1, 0, '2024-02-25 18:00:00', NULL),
+(12, 23, 7, 'István - Masszőr', 'Svéd masszázs, Sportmasszázs, Talpmasszázs', 'Professzionális masszőr vagyok, specializációm a sportmasszázs.', 1, 0, '2024-03-01 19:00:00', NULL),
+(13, 24, 8, 'Dániel - Barber', 'Férfi hajvágás, Borotválás, Szakáll formázás', 'Hagyományos borbély vagyok modern technikákkal. Férfi frizurák specialistája.', 1, 0, '2024-03-05 20:00:00', NULL),
+(14, 25, 9, 'Réka - Bio kozmetikus', 'Bio arckezelés, Természetes termékek, Organikus kezelések', 'Természetes szépségápolás híve vagyok. Csak bio termékekkel dolgozom.', 1, 0, '2024-03-10 21:00:00', NULL),
+(15, 26, 10, 'Tamás - Ázsiai masszázs specialista', 'Thai masszázs, Shiatsu, Meditáció', 'Ázsiai masszázs technikák szakértője vagyok. 15 éve praktizálom a thai masszázst.', 1, 0, '2024-03-15 22:00:00', NULL);
 
 --
 -- Triggers `staff`
