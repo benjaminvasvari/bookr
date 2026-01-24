@@ -390,7 +390,7 @@ public class CompaniesService {
                 result = false;
             } else if (modelResult.getIsActive() == false) {
                 result = false;
-            } else if (modelResult.getIsDeleted() == false) {
+            } else if (modelResult.getIsDeleted() == true) {
                 result = false;
             }
 

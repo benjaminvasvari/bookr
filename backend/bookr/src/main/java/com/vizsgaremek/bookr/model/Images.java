@@ -305,32 +305,28 @@ public class Images implements Serializable {
 
     public static Images uploadCompanyImage(Integer companyId, String relativePath, boolean isMain) {
         EntityManager em = emf.createEntityManager();
-
         try {
             StoredProcedureQuery spq = em.createStoredProcedureQuery("uploadCompanyImage");
             spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("urlIN", String.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("isMainIN", Boolean.class, ParameterMode.IN);
-
             spq.setParameter("companyIdIN", companyId);
             spq.setParameter("urlIN", relativePath);
             spq.setParameter("isMainIN", isMain);
-
             spq.execute();
 
-            List<Object[]> resultList = spq.getResultList();
+            // A SELECT LAST_INSERT_ID() AS image_id egyetlen értéket ad vissza
+            Object result = spq.getSingleResult();
 
-            if (resultList.isEmpty()) {
+            if (result == null) {
                 return null;
             }
 
-            // Stored procedure returns: id, user_id, url, uploaded_at
-            Object[] record = resultList.get(0);
+            // Az image_id-t visszakapjuk
+            Integer imageId = Integer.valueOf(result.toString());
 
-            Images image = new Images(
-                    Integer.valueOf(record[0].toString())
-            );
-
+            // Images objektum létrehozása az ID-val
+            Images image = new Images(imageId);
             return image;
 
         } catch (Exception ex) {
@@ -354,15 +350,13 @@ public class Images implements Serializable {
 
             spq.execute();
 
-            List<Object[]> resultList = spq.getResultList();
+            Object result = spq.getSingleResult();
 
-            if (resultList.isEmpty()) {
+            if (result == null) {
                 return null;
             }
 
-            Object[] record = resultList.get(0);
-            
-            Integer imageCount = Integer.valueOf(record[0].toString());
+            Integer imageCount = Integer.valueOf(result.toString());
 
             return imageCount;
 
