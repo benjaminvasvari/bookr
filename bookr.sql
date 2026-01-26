@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3307
--- Generation Time: Jan 23, 2026 at 09:51 AM
+-- Generation Time: Jan 26, 2026 at 08:48 AM
 -- Server version: 5.7.24
 -- PHP Version: 8.3.1
 
@@ -200,14 +200,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `assignCompanyToUser` (IN `userIdIN`
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `assignRole` (IN `userIdIN` INT, IN `roleIdIN` INT)   BEGIN
-    -- Régi szerepkör lezárása
-    UPDATE `user_x_role`
-    SET 
-        `un_assigned_at` = NOW(),
-        `is_un_assigned` = TRUE
-    WHERE `user_id` = userIdIN
-      AND `is_un_assigned` = FALSE;
-    
     -- Új szerepkör hozzárendelése
     INSERT INTO `user_x_role` (
         `user_id`,
@@ -1259,8 +1251,8 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getCompanyDataById` (IN `companyIdI
     LIMIT 1;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getCompanyImageCount` (IN `companyIdIN` INT, OUT `imageCount` INT)   BEGIN
-    SELECT COUNT(*) INTO imageCount
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getCompanyImageCount` (IN `companyIdIN` INT)   BEGIN
+    SELECT COUNT(*)
     FROM images
     WHERE images.company_id = companyIdIN
       AND is_deleted = 0;
@@ -3185,6 +3177,10 @@ END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `uploadCompanyImage` (IN `companyIdIN` INT, IN `urlIN` TEXT, IN `isMainIN` TINYINT(1))   BEGIN
     DECLARE currentImageCount INT;
+    DECLARE mainUrl VARCHAR(100);
+    DECLARE isMainNull TINYINT;
+    
+    SET isMainNull = FALSE;
     
     -- Ellenőrzi, hogy hány aktív képe van a cégnek
     SELECT COUNT(*) INTO currentImageCount
@@ -3193,34 +3189,68 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `uploadCompanyImage` (IN `companyIdI
       AND `is_deleted` = FALSE;
     
     -- Maximum 4 kép lehet
-    IF currentImageCount >= 4 THEN
+    IF currentImageCount >= 4 AND isMainIN = FALSE THEN
         SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = 'Maximum 4 images allowed per company';
     END IF;
     
-    -- Ha main képnek jelöljük, akkor a többi képről levesszük a main flag-et
-    IF isMainIN = TRUE THEN
-        UPDATE `images`
-        SET `is_main` = FALSE
-        WHERE `company_id` = companyIdIN
-          AND `is_deleted` = FALSE;
+    SELECT `url` INTO mainUrl
+    FROM `images`
+    WHERE `company_id` = companyIdIN 
+      AND `is_deleted` = FALSE 
+      AND `is_main` = TRUE;
+    
+    IF mainUrl IS NULL THEN
+        SET isMainNull = TRUE;
     END IF;
     
-    -- Új kép feltöltése
-    INSERT INTO `images` (
-        `company_id`,
-        `user_id`,
-        `url`,
-        `is_main`
-    )
-    VALUES (
-        companyIdIN,
-        NULL,
-        urlIN,
-        isMainIN
-    );
+    -- Ha main képnek jelöljük
+    IF isMainIN = TRUE AND isMainNull = TRUE THEN
+        -- Van main image de URL NULL -> csak UPDATE-eljük az URL-t
+        UPDATE `images`
+        SET `url` = urlIN
+        WHERE `company_id` = companyIdIN 
+          AND `is_main` = TRUE
+          AND `is_deleted` = FALSE;
+    ELSEIF isMainIN = TRUE AND isMainNull = FALSE THEN
+        -- Van main image és van URL -> soft delete + új INSERT
+        UPDATE `images`
+        SET `is_deleted` = TRUE,
+            `deleted_at` = NOW()
+        WHERE `company_id` = companyIdIN 
+          AND `is_main` = TRUE
+          AND `is_deleted` = FALSE;
+          
+        -- Új kép feltöltése
+        INSERT INTO `images` (
+            `company_id`,
+            `user_id`,
+            `url`,
+            `is_main`
+        )
+        VALUES (
+            companyIdIN,
+            NULL,
+            urlIN,
+            TRUE
+        );
+    ELSEIF isMainIN = FALSE THEN
+        -- Nem main kép -> sima INSERT
+        INSERT INTO `images` (
+            `company_id`,
+            `user_id`,
+            `url`,
+            `is_main`
+        )
+        VALUES (
+            companyIdIN,
+            NULL,
+            urlIN,
+            FALSE
+        );
+    END IF;
     
-    -- Visszaadjuk az új kép ID-t
+    -- Visszaadjuk az új/frissített kép ID-t
     SELECT LAST_INSERT_ID() AS image_id;
 END$$
 
@@ -3581,7 +3611,7 @@ INSERT INTO `appointments` (`id`, `company_id`, `service_id`, `staff_id`, `clien
 (147, 10, 54, 15, 29, '2024-03-27 12:00:00', '2024-03-27 15:00:00', 'completed', 'Teljes Zen csomag', NULL, '42900.00', 'HUF', NULL, NULL, NULL, '2024-03-20 14:00:00', NULL),
 (148, 10, 48, 15, 30, '2024-04-10 13:00:00', '2024-04-10 14:30:00', 'completed', NULL, NULL, '15900.00', 'HUF', NULL, NULL, NULL, '2024-04-03 10:00:00', '2026-01-14 09:16:13'),
 (149, 10, 49, 15, 31, '2024-04-17 15:00:00', '2024-04-17 16:00:00', 'no_show', NULL, NULL, '13900.00', 'HUF', NULL, NULL, NULL, '2024-04-10 14:00:00', '2026-01-14 09:16:13'),
-(153, 2, 7, 4, 41, '2026-01-23 12:00:00', '2026-01-23 13:00:00', 'pending', '', NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2026-01-17 18:56:15', NULL);
+(153, 2, 7, 4, 41, '2026-01-23 12:00:00', '2026-01-23 13:00:00', 'no_show', '', NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2026-01-17 18:56:15', '2026-01-23 18:16:13');
 
 -- --------------------------------------------------------
 
@@ -3621,7 +3651,14 @@ INSERT INTO `audit_logs` (`id`, `performed_by_user_id`, `performed_by_role`, `af
 (10, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-18 20:49:01', 0),
 (11, 43, 'client', NULL, NULL, 'admin@admin.com', 'user', 'register', NULL, '{\"role\": \"client\", \"email\": \"admin@admin.com\", \"user_id\": 43, \"last_name\": \"Admin\", \"first_name\": \"Admin\"}', '2026-01-23 09:48:02', 0),
 (12, 43, NULL, NULL, NULL, 'admin@admin.com', 'user', 'email_verified', NULL, NULL, '2026-01-23 09:48:09', 0),
-(13, 43, 'client', NULL, NULL, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-23 09:48:28', 0);
+(13, 43, 'client', NULL, NULL, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-23 09:48:28', 0),
+(14, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-23 10:18:22', 0),
+(15, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-23 19:11:44', 0),
+(16, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-23 19:13:53', 0),
+(17, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-23 19:13:59', 0),
+(18, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-23 19:17:16', 0),
+(19, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-23 19:17:28', 0),
+(20, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-23 19:42:25', 0);
 
 -- --------------------------------------------------------
 
@@ -3795,10 +3832,7 @@ INSERT INTO `images` (`id`, `company_id`, `user_id`, `url`, `is_main`, `uploaded
 (2, 1, NULL, 'https://storage.bookr.hu/companies/bella-beauty/interior-1.jpg', 0, '2024-02-01 08:35:00', NULL, 0),
 (3, 1, NULL, 'https://storage.bookr.hu/companies/bella-beauty/treatment-room.jpg', 0, '2024-02-01 08:40:00', NULL, 0),
 (4, 1, NULL, 'https://storage.bookr.hu/companies/bella-beauty/reception-area.jpg', 0, '2024-02-01 08:45:00', NULL, 0),
-(5, 2, NULL, 'https://storage.bookr.hu/companies/harmonia-wellness/main-entrance.jpg', 1, '2024-02-05 09:30:00', NULL, 0),
-(6, 2, NULL, 'https://storage.bookr.hu/companies/harmonia-wellness/spa-pool.jpg', 0, '2024-02-05 09:35:00', NULL, 0),
-(7, 2, NULL, 'https://storage.bookr.hu/companies/harmonia-wellness/massage-room.jpg', 0, '2024-02-05 09:40:00', NULL, 0),
-(8, 2, NULL, 'https://storage.bookr.hu/companies/harmonia-wellness/sauna.jpg', 0, '2024-02-05 09:45:00', NULL, 0),
+(5, 2, NULL, 'companies/2/bd36d2db-55a1-4170-8807-4366cb4d971d.jpg', 1, '2024-02-05 09:30:00', NULL, 0),
 (9, 3, NULL, 'https://storage.bookr.hu/companies/stylecut/main-salon.jpg', 1, '2024-02-10 10:30:00', NULL, 0),
 (10, 3, NULL, 'https://storage.bookr.hu/companies/stylecut/washing-area.jpg', 0, '2024-02-10 10:35:00', NULL, 0),
 (11, 3, NULL, 'https://storage.bookr.hu/companies/stylecut/styling-stations.jpg', 0, '2024-02-10 10:40:00', NULL, 0),
@@ -3846,7 +3880,8 @@ INSERT INTO `images` (`id`, `company_id`, `user_id`, `url`, `is_main`, `uploaded
 (53, NULL, 24, 'https://storage.bookr.hu/staff/daniel-barber/profile.jpg', 0, '2024-03-05 19:05:00', NULL, 0),
 (54, NULL, 25, 'https://storage.bookr.hu/staff/reka-bio-kozmetikus/profile.jpg', 0, '2024-03-10 20:05:00', NULL, 0),
 (55, NULL, 26, 'https://storage.bookr.hu/staff/tamas-thai-specialist/profile.jpg', 0, '2024-03-15 21:05:00', NULL, 0),
-(56, NULL, 43, NULL, 0, '2026-01-23 09:48:02', NULL, 0);
+(56, NULL, 43, NULL, 0, '2026-01-23 09:48:02', NULL, 0),
+(58, 2, NULL, 'companies/2/cc09c873-09de-4693-8400-7d337ae8f585.jpg', 0, '2026-01-24 14:35:03', NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -4906,8 +4941,8 @@ INSERT INTO `users` (`id`, `guid`, `first_name`, `last_name`, `email`, `password
 (38, '39222b04-f069-11f0-bb19-94e23c940cf4', 'Papp', 'Bernadett', 'bernadett.papp@citromail.hu', '$2y$10$client12', '+36203456712', NULL, '2024-03-31 11:00:00', NULL, NULL, 0, NULL, '2024-03-31 11:00:00', 1, 0, NULL, NULL, NULL),
 (39, '39222bc4-f069-11f0-bb19-94e23c940cf4', 'Simon', 'Balázs', 'balazs.simon@yahoo.com', '$2y$10$client13', '+36203456713', NULL, '2024-04-01 12:00:00', NULL, NULL, 0, NULL, '2024-04-01 12:00:00', 1, 0, NULL, NULL, NULL),
 (40, '39222c81-f069-11f0-bb19-94e23c940cf4', 'Takács', 'Nikoletta', 'nikoletta.takacs@gmail.com', '$2y$10$client14', '+36203456714', NULL, '2024-04-02 13:00:00', NULL, NULL, 0, NULL, '2024-04-02 13:00:00', 1, 0, NULL, NULL, NULL),
-(41, 'b1f05ffe-f3c8-11f0-9e1f-41a67f8a3877', 'Admin', 'Admin', 'admin@admin.hu', '$argon2id$v=19$m=65536,t=3,p=1$LLsNAuCcRNfRp7IRoTHZ3Q$9HKsULfkadqFiGugB7h094MFOuCTBwyO9VULnDtb2ok', '+3670123252', NULL, '2026-01-17 18:19:35', '2026-01-17 18:36:57', NULL, 0, '2026-01-18 21:47:27', '2026-01-17 18:36:57', 1, 0, NULL, NULL, NULL),
-(43, '9be7f6aa-f840-11f0-89b9-b5e6602fcb6e', 'Admin', 'Admin', 'admin@admin.com', '$argon2id$v=19$m=65536,t=3,p=1$neSrpLHeChl9iqqk6FQH0A$/3zpvnj5TlX9YNwOF4j87qT7xszB9UcLDMOT3YLwEDY', '+367012344356', NULL, '2026-01-23 10:48:02', '2026-01-23 10:48:09', NULL, 0, '2026-01-23 10:48:28', '2026-01-23 10:48:09', 1, 0, NULL, NULL, NULL);
+(41, 'b1f05ffe-f3c8-11f0-9e1f-41a67f8a3877', 'Admin', 'Admin', 'admin@admin.hu', '$argon2id$v=19$m=65536,t=3,p=1$LLsNAuCcRNfRp7IRoTHZ3Q$9HKsULfkadqFiGugB7h094MFOuCTBwyO9VULnDtb2ok', '+3670123252', NULL, '2026-01-17 18:19:35', '2026-01-17 18:36:57', NULL, 0, '2026-01-23 20:17:16', '2026-01-17 18:36:57', 1, 0, NULL, NULL, NULL),
+(43, '9be7f6aa-f840-11f0-89b9-b5e6602fcb6e', 'Admin', 'Admin', 'admin@admin.com', '$argon2id$v=19$m=65536,t=3,p=1$neSrpLHeChl9iqqk6FQH0A$/3zpvnj5TlX9YNwOF4j87qT7xszB9UcLDMOT3YLwEDY', '+367012344356', 2, '2026-01-23 10:48:02', '2026-01-23 20:10:10', NULL, 0, '2026-01-23 20:42:25', '2026-01-23 10:48:09', 1, 0, NULL, NULL, NULL);
 
 --
 -- Triggers `users`
@@ -5098,7 +5133,8 @@ INSERT INTO `user_x_role` (`id`, `user_id`, `role_id`, `assigned_at`, `un_assign
 (65, 39, 4, '2024-04-01 10:00:00', NULL, 0),
 (66, 40, 4, '2024-04-02 11:00:00', NULL, 0),
 (67, 41, 4, '2026-01-17 17:19:35', NULL, 0),
-(68, 43, 4, '2026-01-23 09:48:02', NULL, 0);
+(68, 43, 4, '2026-01-23 09:48:02', NULL, 0),
+(69, 43, 1, '2026-01-23 19:13:42', NULL, 0);
 
 --
 -- Indexes for dumped tables
@@ -5297,7 +5333,7 @@ ALTER TABLE `appointments`
 -- AUTO_INCREMENT for table `audit_logs`
 --
 ALTER TABLE `audit_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT for table `business_categories`
@@ -5321,7 +5357,7 @@ ALTER TABLE `favorites`
 -- AUTO_INCREMENT for table `images`
 --
 ALTER TABLE `images`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=57;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=59;
 
 --
 -- AUTO_INCREMENT for table `notification_settings`
@@ -5417,7 +5453,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `user_x_role`
 --
 ALTER TABLE `user_x_role`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=69;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=70;
 
 --
 -- Constraints for dumped tables
@@ -5563,6 +5599,40 @@ DELIMITER $$
 --
 -- Events
 --
+CREATE DEFINER=`root`@`localhost` EVENT `cleanupExpiredTokens` ON SCHEDULE EVERY 1 DAY STARTS '2025-12-12 02:00:00' ON COMPLETION NOT PRESERVE ENABLE COMMENT 'Automatikusan törli a lejárt vagy revoked tokeneket' DO BEGIN
+    -- Futtatjuk a meglévő eljárást
+    CALL cleanExpiredTokens();
+    
+    -- Opcionális: audit log
+    INSERT INTO audit_logs (
+        user_id,
+        company_id,
+        email,
+        entity_type,
+        action,
+        old_values,
+        new_values,
+        created_at
+    )
+    VALUES (
+        1,  -- superadmin
+        NULL,
+        'system@bookr.hu',
+        'tokens',
+        'cleanup_expired',
+        NULL,
+        JSON_OBJECT('deleted_count', ROW_COUNT()),
+        NOW()
+    );
+END$$
+
+CREATE DEFINER=`root`@`localhost` EVENT `cleanOldAuditLogs` ON SCHEDULE EVERY 1 WEEK STARTS '2025-12-12 10:13:56' ON COMPLETION NOT PRESERVE ENABLE DO BEGIN
+    -- Régi audit logok törlése (365 napnál régebbiek)
+    DELETE FROM `audit_logs`
+    WHERE `created_at` < DATE_SUB(NOW(), INTERVAL 365 DAY);
+    
+END$$
+
 CREATE DEFINER=`root`@`localhost` EVENT `updateExpiredAppointments` ON SCHEDULE EVERY 1 HOUR STARTS '2025-12-12 10:16:13' ON COMPLETION NOT PRESERVE ENABLE DO BEGIN
     -- Pending appointmentek amelyek már lejártak -> no_show
     UPDATE `appointments`
@@ -5590,40 +5660,6 @@ CREATE DEFINER=`root`@`localhost` EVENT `deactivateInactiveUsers` ON SCHEDULE EV
     WHERE `last_login` < DATE_SUB(NOW(), INTERVAL 180 DAY)
       AND `is_active` = TRUE
       AND `is_deleted` = FALSE;
-END$$
-
-CREATE DEFINER=`root`@`localhost` EVENT `cleanOldAuditLogs` ON SCHEDULE EVERY 1 WEEK STARTS '2025-12-12 10:13:56' ON COMPLETION NOT PRESERVE ENABLE DO BEGIN
-    -- Régi audit logok törlése (365 napnál régebbiek)
-    DELETE FROM `audit_logs`
-    WHERE `created_at` < DATE_SUB(NOW(), INTERVAL 365 DAY);
-    
-END$$
-
-CREATE DEFINER=`root`@`localhost` EVENT `cleanupExpiredTokens` ON SCHEDULE EVERY 1 DAY STARTS '2025-12-12 02:00:00' ON COMPLETION NOT PRESERVE ENABLE COMMENT 'Automatikusan törli a lejárt vagy revoked tokeneket' DO BEGIN
-    -- Futtatjuk a meglévő eljárást
-    CALL cleanExpiredTokens();
-    
-    -- Opcionális: audit log
-    INSERT INTO audit_logs (
-        user_id,
-        company_id,
-        email,
-        entity_type,
-        action,
-        old_values,
-        new_values,
-        created_at
-    )
-    VALUES (
-        1,  -- superadmin
-        NULL,
-        'system@bookr.hu',
-        'tokens',
-        'cleanup_expired',
-        NULL,
-        JSON_OBJECT('deleted_count', ROW_COUNT()),
-        NOW()
-    );
 END$$
 
 DELIMITER ;
