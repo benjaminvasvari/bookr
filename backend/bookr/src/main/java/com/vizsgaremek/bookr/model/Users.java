@@ -282,7 +282,8 @@ public class Users implements Serializable {
     }
 
     // checkUser
-    public Users(boolean isDeleted, boolean isActive) {
+    public Users(Integer id, boolean isDeleted, boolean isActive) {
+        this.id = id;
         this.isDeleted = isDeleted;
         this.isActive = isActive;
     }
@@ -870,9 +871,9 @@ public class Users implements Serializable {
 
         try {
             StoredProcedureQuery spq = em.createStoredProcedureQuery("checkUser");
-            spq.registerStoredProcedureParameter("idIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
 
-            spq.setParameter("idIN", id);
+            spq.setParameter("userIdIN", id);
 
             spq.execute();
 
@@ -886,8 +887,9 @@ public class Users implements Serializable {
             Object[] record = resultList.get(0);
 
             Users user = new Users(
-                    Boolean.parseBoolean(record[0].toString()),
-                    Boolean.parseBoolean(record[1].toString())
+                    Integer.valueOf(record[0].toString()),
+                    Boolean.parseBoolean(record[1].toString()),
+                    Boolean.parseBoolean(record[2].toString())
             );
 
             return user;

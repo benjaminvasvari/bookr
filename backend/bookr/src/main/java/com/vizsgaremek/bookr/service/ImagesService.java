@@ -1,7 +1,8 @@
 package com.vizsgaremek.bookr.service;
 
-import com.sun.tools.javac.file.RelativePath;
+import com.vizsgaremek.bookr.model.AuditLogs;
 import com.vizsgaremek.bookr.model.Images;
+import com.vizsgaremek.bookr.security.JWT;
 import com.vizsgaremek.bookr.util.FileStorageUtil;
 import com.vizsgaremek.bookr.util.FileValidator;
 import java.io.InputStream;
@@ -18,6 +19,8 @@ public class ImagesService {
 
     private Images layer = new Images();
     private CompaniesService CompaniesService = new CompaniesService();
+    private UsersService UsersService = new UsersService();
+    private AuditLogService AuditLogService = new AuditLogService();
 
     public JSONObject getCompanyImages(Integer companyId) {
         JSONObject toReturn = new JSONObject();
@@ -227,6 +230,137 @@ public class ImagesService {
             toReturn.put("statusCode", statusCode);
         }
 
+        return toReturn;
+    }
+
+    public JSONObject softDeleteCompanyImage(String jwtToken, Integer companyId, Integer imageId) {
+
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        // Company exist
+        Boolean isCompanyExist = CompaniesService.validateCompanyExist(companyId);
+
+        if (isCompanyExist == null) {
+            status = "InternalServerError";
+            statusCode = 500;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+            return toReturn;
+        }
+        if (!isCompanyExist) {
+            status = "CompanyNotFound";
+            statusCode = 404;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+            return toReturn;
+        }
+
+        Boolean modelResult = Images.softDeleteCompanyImage(companyId, imageId);
+
+        if (modelResult == false) {
+            status = "serverError";
+            statusCode = 500;
+        } else {
+            // ========== AUDIT LOG ==========
+            try {
+                Integer userId = JWT.getUserIdFromAccessToken(jwtToken);
+
+                String userEmail = JWT.getEmailFromAccessToken(jwtToken);
+                String userRoles = JWT.getRolesFromAccessToken(jwtToken);
+
+                AuditLogService.logSimpleAction(
+                        userId,
+                        userRoles.split(",")[0].trim(),
+                        null,
+                        JWT.getCompanyIdFromAccessToken(jwtToken) != null ? JWT.getCompanyIdFromAccessToken(jwtToken) : null,
+                        userEmail,
+                        "company",
+                        "deleteImage"
+                );
+
+            } catch (Exception ex) {
+                // Log the error but don't fail the registration
+                ex.printStackTrace();
+            }
+            // ===============================
+        }
+        toReturn.put("result", modelResult);
+
+        toReturn.put(
+                "status", status);
+        toReturn.put(
+                "statusCode", statusCode);
+        return toReturn;
+    }
+
+    public JSONObject softDeleteUserImage(String jwtToken, Integer userId, Integer imageId) {
+
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        // Company exist
+        Boolean isUserExist = UsersService.validateUserExist(userId);
+
+        if (isUserExist == null) {
+            status = "InternalServerError";
+            statusCode = 500;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+            return toReturn;
+        }
+        if (!isUserExist) {
+            status = "CompanyNotFound";
+            statusCode = 404;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+            return toReturn;
+        }
+
+        Boolean modelResult = Images.softDeleteCompanyImage(userId, imageId);
+
+        if (modelResult == false) {
+            status = "serverError";
+            statusCode = 500;
+        } else {
+            // ========== AUDIT LOG ==========
+            try {
+                Integer jwtUserId = JWT.getUserIdFromAccessToken(jwtToken);
+                String userEmail = JWT.getEmailFromAccessToken(jwtToken);
+                String userRoles = JWT.getRolesFromAccessToken(jwtToken);
+
+                try {
+                    AuditLogs auditLog = new AuditLogs(
+                            jwtUserId,
+                            userRoles.split(",")[0].trim(),
+                            userId,
+                            userEmail,
+                            "user",
+                            "updateUser"
+                    );
+
+                    auditLog.addNewValue("userId", userId);
+                    auditLog.addNewValue("imageId", imageId);
+
+                    AuditLogService.logAudit(auditLog);
+
+                } catch (Exception ex) {
+                    // Log the error but don't fail the registration
+                    ex.printStackTrace();
+                }
+
+            } catch (Exception ex) {
+                // Log the error but don't fail the registration
+                ex.printStackTrace();
+            }
+            // ===============================
+        }
+        toReturn.put("result", modelResult);
+
+        toReturn.put("status", status);
+        toReturn.put("statusCode", statusCode);
         return toReturn;
     }
 }

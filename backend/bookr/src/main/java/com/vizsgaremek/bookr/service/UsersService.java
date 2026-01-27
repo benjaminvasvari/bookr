@@ -22,7 +22,7 @@ public class UsersService {
 
     @Inject
     private EmailService EmailService;
-    
+
     @Inject
     private PasswordHasher PasswordHasher;
 
@@ -238,5 +238,29 @@ public class UsersService {
         return toReturn;
     }
     
+    
 
+    public Boolean validateUserExist(Integer userId) {
+
+        try {
+
+            Boolean result = true;
+
+            Users modelResult = Users.checkUser(userId);
+
+            if (modelResult == null) {
+                result = false;
+            } else if (modelResult.getIsActive() == false) {
+                result = false;
+            } else if (modelResult.getIsDeleted() == true) {
+                result = false;
+            }
+
+            return result;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
 }

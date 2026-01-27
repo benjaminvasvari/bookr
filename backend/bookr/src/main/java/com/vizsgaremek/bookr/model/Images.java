@@ -369,4 +369,62 @@ public class Images implements Serializable {
             }
         }
     }
+
+    public static Boolean softDeleteCompanyImage(Integer companyId, Integer imageId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("deleteCompanyImage");
+            spq.registerStoredProcedureParameter("imageIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("imageIdIN", imageId);
+            spq.setParameter("companyIdIN", companyId);
+
+            spq.execute();
+
+            return true;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return false;
+        }
+    }
+
+    public static Images uploadUserImage(Integer userId, String relativePath) {
+        EntityManager em = emf.createEntityManager();
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("uploadCompanyImage");
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("urlIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("isMainIN", Boolean.class, ParameterMode.IN);
+            spq.setParameter("companyIdIN", companyId);
+            spq.setParameter("urlIN", relativePath);
+            spq.setParameter("isMainIN", isMain);
+            spq.execute();
+
+            // A SELECT LAST_INSERT_ID() AS image_id egyetlen értéket ad vissza
+            Object result = spq.getSingleResult();
+
+            if (result == null) {
+                return null;
+            }
+
+            // Az image_id-t visszakapjuk
+            Integer imageId = Integer.valueOf(result.toString());
+
+            // Images objektum létrehozása az ID-val
+            Images image = new Images(imageId);
+            return image;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
 }

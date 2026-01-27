@@ -18,7 +18,6 @@ import org.apache.commons.fileupload.FileItemStream;
 import org.apache.commons.fileupload.servlet.ServletFileUpload;
 
 /**
- * REST Web Service - Images
  *
  * @author vben
  */
@@ -26,7 +25,7 @@ import org.apache.commons.fileupload.servlet.ServletFileUpload;
 public class ImagesController {
 
     private ImagesService layer = new ImagesService();
-    private RoleChecker roleChecker = new RoleChecker();
+    private RoleChecker RoleChecker = new RoleChecker();
 
     @Context
     private UriInfo context;
@@ -34,9 +33,6 @@ public class ImagesController {
     public ImagesController() {
     }
 
-    /**
-     * Company képek lekérése
-     */
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     @Path("getCompanyImages")
@@ -48,9 +44,6 @@ public class ImagesController {
                 .build();
     }
 
-    /**
-     * User profilkép lekérése
-     */
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     @Path("getUserProfilePicture")
@@ -62,9 +55,6 @@ public class ImagesController {
                 .build();
     }
 
-    /**
-     * Company kép feltöltése - Servlet API verzió (MŰKÖDIK!)
-     */
     @POST
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     @Produces(MediaType.APPLICATION_JSON)
@@ -75,72 +65,132 @@ public class ImagesController {
             @HeaderParam("Authorization") String authHeader) {
 
         try {
-            System.out.println("=== UPLOAD START (Commons FileUpload) ===");
 
-            // JWT validálás...
             if (authHeader == null || !authHeader.startsWith("Bearer ")) {
                 return Response.status(401).entity("missingToken").build();
             }
 
             String jwtToken = authHeader.substring(7);
             Boolean validJwt = JWT.validateAccessToken(jwtToken);
-            // ... JWT checks ...
 
-            // Apache Commons FileUpload
-            ServletFileUpload upload = new ServletFileUpload();
-            FileItemIterator iterator = upload.getItemIterator(request);
+            if (validJwt == null) {
+                // Lejárt JWT
+                return Response.status(401).entity("tokenExpired").build();
+            } else if (validJwt == false) {
+                // Invalid JWT
+                return Response.status(401).entity("invalidToken").build();
+            } else {
+                // Valid token
 
-            InputStream fileInputStream = null;
-            String filename = null;
-            String contentType = null;
-            long fileSize = 0;
-            boolean isMain = false;
+                String userRoles = JWT.getRolesFromAccessToken(jwtToken);
 
-            while (iterator.hasNext()) {
-                FileItemStream item = iterator.next();
-                String fieldName = item.getFieldName();
+                boolean hasPermission = RoleChecker.hasAnyRole(userRoles, "owner", "superadmin");
 
-                if (!item.isFormField()) {
-                    // File field
-                    filename = item.getName();
-                    contentType = item.getContentType();
-                    fileInputStream = item.openStream();
+                if (!hasPermission) {
+                    return Response.status(403).entity("Forbidden").build();
+                }
 
-                    // Read to byte array to get size
-                    byte[] fileBytes = org.apache.commons.io.IOUtils.toByteArray(fileInputStream);
-                    fileSize = fileBytes.length;
-                    fileInputStream = new java.io.ByteArrayInputStream(fileBytes);
+                // Apache Commons FileUpload
+                ServletFileUpload upload = new ServletFileUpload();
+                FileItemIterator iterator = upload.getItemIterator(request);
 
-                    System.out.println("File: " + filename + ", size: " + fileSize);
+                InputStream fileInputStream = null;
+                String filename = null;
+                String contentType = null;
+                long fileSize = 0;
+                boolean isMain = false;
 
-                } else {
-                    // Form field
-                    if ("isMain".equals(fieldName)) {
-                        String value = org.apache.commons.io.IOUtils.toString(
-                                item.openStream(), "UTF-8"
-                        );
-                        isMain = Boolean.parseBoolean(value);
+                while (iterator.hasNext()) {
+                    FileItemStream item = iterator.next();
+                    String fieldName = item.getFieldName();
+
+                    if (!item.isFormField()) {
+                        // File field
+                        filename = item.getName();
+                        contentType = item.getContentType();
+                        fileInputStream = item.openStream();
+
+                        // Read to byte array to get size
+                        byte[] fileBytes = org.apache.commons.io.IOUtils.toByteArray(fileInputStream);
+                        fileSize = fileBytes.length;
+                        fileInputStream = new java.io.ByteArrayInputStream(fileBytes);
+
+                        System.out.println("File: " + filename + ", size: " + fileSize);
+
+                    } else {
+                        // Form field
+                        if ("isMain".equals(fieldName)) {
+                            String value = org.apache.commons.io.IOUtils.toString(
+                                    item.openStream(), "UTF-8"
+                            );
+                            isMain = Boolean.parseBoolean(value);
+                        }
                     }
                 }
+
+                if (fileInputStream == null) {
+                    return Response.status(400).entity("missingFile").build();
+                }
+
+                // Service hívás
+                JSONObject toReturn = layer.uploadCompanyImage(
+                        companyId, filename, fileSize, contentType, fileInputStream, isMain
+                );
+
+                return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                        .entity(toReturn.toString())
+                        .type(MediaType.APPLICATION_JSON)
+                        .build();
             }
-
-            if (fileInputStream == null) {
-                return Response.status(400).entity("missingFile").build();
-            }
-
-            // Service hívás
-            JSONObject toReturn = layer.uploadCompanyImage(
-                    companyId, filename, fileSize, contentType, fileInputStream, isMain
-            );
-
-            return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
-                    .entity(toReturn.toString())
-                    .type(MediaType.APPLICATION_JSON)
-                    .build();
 
         } catch (Exception e) {
             e.printStackTrace();
             return Response.status(500).entity("internalError: " + e.getMessage()).build();
+        }
+    }
+
+    @DELETE
+    @Path("companies/{companyId}/{imageId}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response deleteCompanyImage(@PathParam("companyId") Integer companyId, @PathParam("imageId") Integer imageId, @HeaderParam("Authorization") String authHeader) {
+
+        // Extract token from "Bearer <token>"
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            System.out.println("Missing or invalid Authorization header");
+            return Response.status(401).entity("missingToken").build();
+        }
+
+        if (companyId <= 0 || imageId <= 0) {
+            return Response.status(417).entity("InvalidParam").build();
+        }
+
+        // Remove "Bearer " prefix
+        String jwtToken = authHeader.substring(7);
+
+        Boolean validJwt = JWT.validateAccessToken(jwtToken);
+
+        if (validJwt == null) {
+            // Lejárt JWT
+            return Response.status(401).entity("tokenExpired").build();
+        } else if (validJwt == false) {
+            // Invalid JWT
+            return Response.status(401).entity("invalidToken").build();
+        } else {
+            // Valid token
+
+            String userRoles = JWT.getRolesFromAccessToken(jwtToken);
+
+            boolean hasPermission = RoleChecker.hasAnyRole(userRoles, "owner", "superadmin");
+
+            if (!hasPermission) {
+                return Response.status(403).entity("Forbidden").build();
+            }
+
+            JSONObject toReturn = layer.softDeleteCompanyImage(jwtToken, companyId, imageId);
+            return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                    .entity(toReturn.toString())
+                    .type(MediaType.APPLICATION_JSON)
+                    .build();
         }
     }
 }
