@@ -1,8 +1,6 @@
 import { Component, EventEmitter, Output, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { CompaniesService } from '../../../../core/services/companies.service';  // ✅ FIX
-import { BusinessCategory } from '../../../../core/models/business-category.model';  // ✅ FIX
 
 @Component({
   selector: 'app-step-company-info',
@@ -17,58 +15,181 @@ export class StepCompanyInfoComponent implements OnInit {
   @Input() initialData: any;
 
   companyForm: FormGroup;
-  businessCategories: BusinessCategory[] = [];
-  isLoadingCategories = true;
+  
+  // ============================================
+  // MOCK BUSINESS CATEGORIES - ideiglenesen!
+  // ============================================
+  businessCategories = [
+    { id: 1, name: 'Szépségszalon', icon: '💅' },
+    { id: 2, name: 'Wellness és Spa', icon: '💆' },
+    { id: 3, name: 'Fodrászat', icon: '💇' },
+    { id: 4, name: 'Körömstúdió', icon: '💅' },
+    { id: 5, name: 'Fitness', icon: '💪' },
+    { id: 6, name: 'Egészségügy', icon: '🏥' },
+    { id: 7, name: 'Fogorvos', icon: '🦷' },
+    { id: 8, name: 'Állatorvos', icon: '🐕' },
+    { id: 9, name: 'Autószerviz', icon: '🚗' },
+    { id: 10, name: 'Oktatás', icon: '📚' }
+  ];
 
-  // Képkezeléshez
-  images: { file: File; preview: string; isMain: boolean }[] = [];
-  maxImages = 4;
+  isCategoriesLoading = false; // Mock loading state
+  
+  imageSlots = [
+    { id: 'main', preview: null as string | null, file: null as File | null, isMain: true },
+    { id: 'image2', preview: null as string | null, file: null as File | null, isMain: false },
+    { id: 'image3', preview: null as string | null, file: null as File | null, isMain: false },
+    { id: 'image4', preview: null as string | null, file: null as File | null, isMain: false }
+  ];
 
-  constructor(
-    private fb: FormBuilder,
-    private companiesService: CompaniesService
-  ) {
+  draggedSlotId: string | null = null;
+  descriptionCharCount = 0;
+  maxDescriptionLength = 500;
+
+  constructor(private fb: FormBuilder) {
     this.companyForm = this.fb.group({
-      name: ['', [Validators.required, Validators.minLength(3)]],
-      description: ['', [Validators.required, Validators.minLength(20)]],
-      address: ['', [Validators.required]],
-      city: ['', [Validators.required]],
-      postalCode: ['', [Validators.required, Validators.pattern(/^[0-9]{4}$/)]],
+      name: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
+      description: ['', [Validators.required, Validators.minLength(20), Validators.maxLength(500)]],
+      businessCategoryId: [null, [Validators.required]], // ← EZ VOLT NULL, most kötelező!
+      address: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(200)]],
+      city: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
+      postalCode: ['', [Validators.required, Validators.pattern(/^\d{4}$/)]],
       country: ['Magyarország', [Validators.required]],
-      phone: ['', [Validators.required, Validators.pattern(/^\+36[0-9]{9}$/)]],
+      phone: ['', [Validators.required, Validators.pattern(/^\+?36\d{9}$/)]],
       email: ['', [Validators.required, Validators.email]],
-      website: [''],
-      businessCategoryId: ['', [Validators.required]]
+      website: ['', [Validators.pattern(/^https?:\/\/.+/)]]
+    });
+
+    this.companyForm.get('description')?.valueChanges.subscribe(value => {
+      this.descriptionCharCount = value?.length || 0;
     });
 
     this.companyForm.valueChanges.subscribe(() => {
-      this.formValid.emit(this.companyForm.valid);
-      if (this.companyForm.valid) {
-        this.formData.emit(this.companyForm.value);
-      }
+      this.emitFormStatus();
     });
   }
 
   ngOnInit() {
-    this.loadBusinessCategories();
-
+    // Ha van initial data, töltsd be
     if (this.initialData) {
       this.companyForm.patchValue(this.initialData);
+      
+      if (this.initialData.images) {
+        this.initialData.images.forEach((img: any, index: number) => {
+          if (this.imageSlots[index]) {
+            this.imageSlots[index].preview = img.preview;
+          }
+        });
+      }
+    }
+
+    // Kezdeti validitás kibocsátása
+    this.emitFormStatus();
+  }
+
+  emitFormStatus() {
+    const hasAtLeastOneImage = this.imageSlots.some(slot => slot.preview !== null);
+    const isValid = this.companyForm.valid && hasAtLeastOneImage;
+    
+    this.formValid.emit(isValid);
+    
+    if (isValid) {
+      this.formData.emit({
+        ...this.companyForm.value,
+        images: this.imageSlots
+          .filter(slot => slot.file !== null)
+          .map(slot => ({
+            file: slot.file,
+            isMain: slot.isMain,
+            preview: slot.preview
+          }))
+      });
     }
   }
 
-  loadBusinessCategories(): void {
-    this.isLoadingCategories = true;
-    this.companiesService.getBusinessCategories().subscribe({
-      next: (categories) => {
-        this.businessCategories = categories;
-        this.isLoadingCategories = false;
-      },
-      error: (error) => {
-        console.error('Error loading business categories:', error);
-        this.isLoadingCategories = false;
+  // ============================================
+  // KÉPFELTÖLTÉS KEZELÉS
+  // ============================================
+
+  onImageSelected(event: Event, slotId: string) {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+      const file = input.files[0];
+      
+      if (!file.type.startsWith('image/')) {
+        alert('Csak képfájlokat lehet feltölteni!');
+        return;
       }
-    });
+
+      if (file.size > 5 * 1024 * 1024) {
+        alert('A kép mérete maximum 5MB lehet!');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const slot = this.imageSlots.find(s => s.id === slotId);
+        if (slot) {
+          slot.preview = e.target?.result as string;
+          slot.file = file;
+          this.emitFormStatus();
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  triggerFileInput(slotId: string) {
+    const inputId = `file-input-${slotId}`;
+    const input = document.getElementById(inputId) as HTMLInputElement;
+    input?.click();
+  }
+
+  deleteImage(slotId: string) {
+    const slot = this.imageSlots.find(s => s.id === slotId);
+    if (slot) {
+      slot.preview = null;
+      slot.file = null;
+      this.emitFormStatus();
+    }
+  }
+
+  onDragStart(event: DragEvent, slotId: string) {
+    this.draggedSlotId = slotId;
+    event.dataTransfer!.effectAllowed = 'move';
+    (event.target as HTMLElement).classList.add('dragstart');
+  }
+
+  onDragEnd(event: DragEvent) {
+    (event.target as HTMLElement).classList.remove('dragstart');
+  }
+
+  onDragOver(event: DragEvent) {
+    event.preventDefault();
+    event.dataTransfer!.dropEffect = 'move';
+  }
+
+  onDrop(event: DragEvent, targetSlotId: string) {
+    event.preventDefault();
+    
+    if (this.draggedSlotId && this.draggedSlotId !== targetSlotId) {
+      const draggedSlot = this.imageSlots.find(s => s.id === this.draggedSlotId);
+      const targetSlot = this.imageSlots.find(s => s.id === targetSlotId);
+      
+      if (draggedSlot && targetSlot) {
+        const tempPreview = draggedSlot.preview;
+        const tempFile = draggedSlot.file;
+        
+        draggedSlot.preview = targetSlot.preview;
+        draggedSlot.file = targetSlot.file;
+        
+        targetSlot.preview = tempPreview;
+        targetSlot.file = tempFile;
+        
+        this.emitFormStatus();
+      }
+    }
+    
+    this.draggedSlotId = null;
   }
 
   isFieldInvalid(fieldName: string): boolean {
@@ -77,108 +198,20 @@ export class StepCompanyInfoComponent implements OnInit {
   }
 
   getFormData() {
-    return this.companyForm.value;
+    return {
+      ...this.companyForm.value,
+      images: this.imageSlots
+        .filter(slot => slot.file !== null)
+        .map(slot => ({
+          file: slot.file,
+          isMain: slot.isMain,
+          preview: slot.preview
+        }))
+    };
   }
 
   isFormValid(): boolean {
-    return this.companyForm.valid;
+    const hasAtLeastOneImage = this.imageSlots.some(slot => slot.preview !== null);
+    return this.companyForm.valid && hasAtLeastOneImage;
   }
-
-  onCategoryChange(event: Event): void {
-    const selectElement = event.target as HTMLSelectElement;
-    const categoryId = selectElement.value;
-    this.companyForm.patchValue({ businessCategoryId: categoryId ? +categoryId : '' });
-  }
-
-  /**
-   * Fájl kiválasztás kezelése a képfeltöltéshez
-   */
-  onFileSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const files = input.files;
-
-    if (!files) return;
-
-    for (let i = 0; i < files.length; i++) {
-      // Max 4 kép korlátozás
-      if (this.images.length >= this.maxImages) {
-        alert(`Maximum ${this.maxImages} kép tölthető fel`);
-        break;
-      }
-
-      const file = files[i];
-
-      // Validálás: csak képformátumok
-      if (!file.type.startsWith('image/')) {
-        alert('Kérem, csak képfájlokat válasszon!');
-        continue;
-      }
-
-      // Fájl méret validálás (max 5MB)
-      const maxSizeInMB = 5;
-      if (file.size > maxSizeInMB * 1024 * 1024) {
-        alert(`A fájl mérete nem haladhatja meg az ${maxSizeInMB}MB-ot`);
-        continue;
-      }
-
-      // FileReader a preview-hoz
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const preview = e.target?.result as string;
-        
-        // Az első kép automatikusan main kép lesz
-        const isMain = this.images.length === 0;
-        
-        this.images.push({
-          file,
-          preview,
-          isMain
-        });
-      };
-      reader.readAsDataURL(file);
-    }
-
-    // Input manuális törlése
-    input.value = '';
-  }
-
-  /**
-   * Kép eltávolítása a listából
-   */
-  removeImage(index: number): void {
-    const wasMainImage = this.images[index].isMain;
-    this.images.splice(index, 1);
-
-    // Ha az eltávolított kép main volt, az első marad main
-    if (wasMainImage && this.images.length > 0) {
-      this.images[0].isMain = true;
-    }
-  }
-
-  /**
-   * Main kép kiválasztása
-   */
-  setMainImage(index: number): void {
-    // Összes kép main státuszát false-ra állítjuk
-    this.images.forEach((img, i) => {
-      img.isMain = i === index;
-    });
-  }
-
-  /**
-   * Képek lekérése az adatok közül
-   */
-  getImages(): { file: File; preview: string; isMain: boolean }[] {
-    return this.images;
-  }
-
-  /**
-   * Teljes form adatok lekérése a képekkel
-   */
-  getFormDataWithImages(): any {
-    return {
-      ...this.companyForm.value,
-      images: this.images
-    };
-  }
-} 
+}

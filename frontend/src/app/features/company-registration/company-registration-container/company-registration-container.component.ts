@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RegistrationStepperComponent, Step } from '../registration-stepper/registration-stepper.component';
 import { StepOwnerInfoComponent } from '../../company-registration/steps/step-owner-info/step-owner-info.component';
 import { StepCompanyInfoComponent } from '../../company-registration/steps/step-company-info/step-company-info.component';
+import { StepBusinessDetailsComponent } from '../steps/step-business-details/step-business-details.component';
 import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
@@ -13,6 +14,7 @@ import { AuthService } from '../../../core/services/auth.service';
     RegistrationStepperComponent,
     StepOwnerInfoComponent,
     StepCompanyInfoComponent,
+    StepBusinessDetailsComponent,  // ← ÚJ! Hozzáadva az imports-hoz
   ],
   templateUrl: './company-registration-container.component.html',
   styleUrls: ['./company-registration-container.component.css']
@@ -20,13 +22,13 @@ import { AuthService } from '../../../core/services/auth.service';
 export class CompanyRegistrationContainerComponent implements OnInit {
   @ViewChild(StepOwnerInfoComponent) stepOwnerInfo!: StepOwnerInfoComponent;
   @ViewChild(StepCompanyInfoComponent) stepCompanyInfo!: StepCompanyInfoComponent;
+  @ViewChild(StepBusinessDetailsComponent) stepBusinessDetails!: StepBusinessDetailsComponent;  // ← ÚJ! ViewChild hozzáadva
 
   currentStep = 1;
   isCurrentStepValid = false;
   isUserLoggedIn = false;
   currentUser: any = null;
 
-  // ✅ JAVÍTÁS: any típusra váltás
   registrationData: any = {
     ownerInfo: null,
     companyInfo: null,
@@ -49,7 +51,6 @@ export class CompanyRegistrationContainerComponent implements OnInit {
       this.isUserLoggedIn = !!user;
 
       if (this.isUserLoggedIn && user) {
-        // ✅ Most már működik!
         this.registrationData.ownerInfo = {
           firstName: user.firstName,
           lastName: user.lastName,
@@ -112,6 +113,10 @@ export class CompanyRegistrationContainerComponent implements OnInit {
         data = this.stepCompanyInfo?.getFormData();
         this.registrationData.companyInfo = data;
         break;
+      case 3:  // ← ÚJ! Step 3 mentés
+        data = this.stepBusinessDetails?.getFormData();
+        this.registrationData.businessDetails = data;
+        break;
     }
   }
 
@@ -142,6 +147,9 @@ export class CompanyRegistrationContainerComponent implements OnInit {
         break;
       case 2:
         isValid = this.stepCompanyInfo?.isFormValid() || false;
+        break;
+      case 3:  // ← ÚJ! Step 3 validáció
+        isValid = this.stepBusinessDetails?.isFormValid() || false;
         break;
     }
     this.isCurrentStepValid = isValid;

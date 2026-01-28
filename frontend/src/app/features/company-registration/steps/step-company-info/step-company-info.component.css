@@ -1,20 +1,51 @@
 .company-info-form {
   width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0;
 }
+
+/* ============================================ */
+/* FORM DESCRIPTION                             */
+/* ============================================ */
 
 .form-description {
   margin-bottom: 32px;
-  padding: 16px;
-  background: #f8f9fa;
-  border-radius: 8px;
+  padding: 18px 24px;
+  background: linear-gradient(135deg, #f0f7f4 0%, #e8f5f0 100%);
+  border-radius: 10px;
   border-left: 4px solid #38a179;
+  box-shadow: 0 2px 6px rgba(56, 161, 121, 0.08);
 }
 
 .form-description p {
   margin: 0;
-  color: #555;
-  font-size: 14px;
+  color: #2d3748;
+  font-size: 14.5px;
   line-height: 1.6;
+  font-weight: 500;
+}
+
+/* ============================================ */
+/* MAIN LAYOUT: FULL WIDTH (stacked)            */
+/* ============================================ */
+
+.form-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+/* ============================================ */
+/* FORM SECTION                                 */
+/* ============================================ */
+
+.form-left {
+  background: white;
+  padding: 36px;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e8e8e8;
 }
 
 .form-grid {
@@ -32,6 +63,10 @@
   grid-column: 1 / -1;
 }
 
+/* ============================================ */
+/* LABELS                                       */
+/* ============================================ */
+
 label {
   font-weight: 600;
   font-size: 14px;
@@ -40,37 +75,54 @@ label {
   display: flex;
   align-items: center;
   gap: 4px;
+  letter-spacing: 0.2px;
 }
 
 .required {
   color: #dc3545;
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .optional {
-  color: #6c757d;
+  color: #999;
   font-weight: 400;
-  font-size: 13px;
+  font-size: 12px;
+  font-style: italic;
+  margin-left: 4px;
 }
 
+/* ============================================ */
+/* INPUT FIELDS                                 */
+/* ============================================ */
+
 .form-control {
-  padding: 12px 16px;
+  width: 100%;
+  padding: 13px 16px;
   border: 2px solid #e0e0e0;
   border-radius: 8px;
-  font-size: 15px;
-  transition: all 0.3s ease;
-  background: white;
+  font-size: 14.5px;
+  transition: all 0.25s ease;
+  background: #fafafa;
   color: #2d3748;
+  font-family: inherit;
+  min-height: 48px;
+}
+
+.form-control:hover {
+  background: white;
+  border-color: #c8c8c8;
 }
 
 .form-control:focus {
   outline: none;
   border-color: #38a179;
+  background: white;
   box-shadow: 0 0 0 3px rgba(56, 161, 121, 0.1);
 }
 
 .form-control.error {
   border-color: #dc3545;
+  background: #fff5f5;
 }
 
 .form-control.error:focus {
@@ -78,41 +130,62 @@ label {
 }
 
 .form-control::placeholder {
-  color: #adb5bd;
+  color: #aaa;
+  font-weight: 400;
 }
+
+/* ============================================ */
+/* TEXTAREA                                     */
+/* ============================================ */
 
 .textarea {
   resize: vertical;
-  min-height: 100px;
+  min-height: 110px;
   font-family: inherit;
   line-height: 1.6;
+  padding: 14px 16px;
 }
 
 .char-counter {
   font-size: 12px;
-  color: #6c757d;
+  color: #999;
   text-align: right;
-  margin-top: 4px;
+  margin-top: 6px;
+  font-weight: 500;
 }
+
+/* ============================================ */
+/* SELECT DROPDOWN                              */
+/* ============================================ */
 
 select.form-control {
   cursor: pointer;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23555' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 16px center;
-  padding-right: 40px;
+  padding-right: 44px;
+  background-color: #fafafa;
 }
+
+select.form-control:hover {
+  background-color: white;
+}
+
+/* ============================================ */
+/* LOADING SPINNER                              */
+/* ============================================ */
 
 .loading-spinner {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 16px;
+  padding: 13px 16px;
   background: #f8f9fa;
   border-radius: 8px;
   color: #6c757d;
-  font-size: 14px;
+  font-size: 13.5px;
+  border: 2px dashed #ddd;
 }
 
 .loading-spinner i {
@@ -120,220 +193,353 @@ select.form-control {
   font-size: 16px;
 }
 
+/* ============================================ */
+/* ERROR MESSAGES                               */
+/* ============================================ */
+
 .error-message {
   color: #dc3545;
-  font-size: 13px;
+  font-size: 12.5px;
   margin-top: 6px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
+  font-weight: 500;
 }
 
 .error-message::before {
   content: '⚠';
-  font-size: 14px;
+  font-size: 13px;
 }
 
-@media (max-width: 768px) {
-  .form-grid {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
+/* ============================================ */
+/* KÉPFELTÖLTÉS SECTION                         */
+/* ============================================ */
 
-  .form-group.full-width {
-    grid-column: 1;
-  }
+.form-right {
+  background: white;
+  padding: 36px;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e8e8e8;
 }
-
-/* ============ KÉPFELTÖLTÉS STÍLUSOK ============ */
 
 .images-section {
-  gap: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 
-.images-section label {
-  margin-bottom: 12px;
+.images-section > label {
+  font-size: 15px;
+  font-weight: 600;
+  color: #2d3748;
+  margin-bottom: 4px;
+  letter-spacing: 0.2px;
 }
 
 .hidden-input {
   display: none;
 }
 
-/* Feltöltés gomb */
-.upload-area {
-  width: 100%;
+/* ============================================ */
+/* KÉPFELTÖLTŐ GRID: 1 NAGY + 3 KICSI          */
+/* ============================================ */
+
+.slots-container {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: auto auto;
+  gap: 14px;
+  margin-bottom: 16px;
 }
 
-.upload-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 24px 16px;
-  border: 2px dashed #38a179;
-  border-radius: 8px;
-  background: #f8fff7;
-  color: #38a179;
-  font-size: 14px;
-  font-weight: 600;
+/* NAGY FŐKÉP - teljes szélesség, első sor */
+.slot-main {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  min-height: 300px;
+}
+
+/* KICSI KÉPEK - második sor, 3 egyforma */
+.slot-small {
+  grid-row: 2;
+  min-height: 140px;
+}
+
+.slot-small:nth-child(2) {
+  grid-column: 1;
+}
+
+.slot-small:nth-child(3) {
+  grid-column: 2;
+}
+
+.slot-small:nth-child(4) {
+  grid-column: 3;
+}
+
+/* ============================================ */
+/* SLOT ALAPSTÍLUSOK                            */
+/* ============================================ */
+
+.slot {
+  position: relative;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fafafa;
+  border: 2px dashed #d0d0d0;
   cursor: pointer;
   transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.upload-btn:hover:not(:disabled) {
-  background: #f0ffe9;
-  border-color: #2a7d5f;
-  color: #2a7d5f;
-}
-
-.upload-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  border-color: #ccc;
-  color: #999;
-  background: #f5f5f5;
-}
-
-.upload-btn i {
-  font-size: 28px;
-}
-
-.upload-btn small {
-  font-size: 12px;
-  color: inherit;
-  opacity: 0.8;
-}
-
-/* Galéria */
-.images-gallery {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 12px;
-  margin-top: 12px;
-}
-
-.image-card {
-  position: relative;
-  border-radius: 8px;
-  overflow: hidden;
-  background: #f5f5f5;
-  aspect-ratio: 1;
-  border: 2px solid #e0e0e0;
-  transition: all 0.3s ease;
-}
-
-.image-card:hover {
+.slot:hover {
   border-color: #38a179;
-  box-shadow: 0 4px 12px rgba(56, 161, 121, 0.15);
+  border-style: solid;
+  box-shadow: 0 6px 20px rgba(56, 161, 121, 0.15);
+  transform: translateY(-3px);
 }
 
-.image-card.main-image {
-  border-color: #ffc107;
-  box-shadow: 0 0 0 2px #fff, 0 0 0 4px #ffc107;
+.slot.dragstart {
+  opacity: 0.4;
+  transform: scale(0.98);
 }
 
-.image-card img {
+/* ============================================ */
+/* KÉP A SLOTBAN                                */
+/* ============================================ */
+
+.slot-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
 
-/* Main badge */
-.main-badge {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  background: #ffc107;
-  color: #333;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 700;
-  z-index: 2;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+/* ============================================ */
+/* ÜRES SLOT                                    */
+/* ============================================ */
+
+.slot-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #aaa;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+  transition: all 0.25s ease;
 }
 
-/* Akciógombok */
-.image-actions {
+.slot:hover .slot-empty {
+  color: #38a179;
+}
+
+.slot-empty i {
+  font-size: 36px;
+  transition: transform 0.25s ease;
+}
+
+.slot:hover .slot-empty i {
+  transform: scale(1.15);
+}
+
+.slot-main .slot-empty i {
+  font-size: 56px;
+}
+
+.slot-empty span {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: inherit;
+}
+
+/* ============================================ */
+/* OVERLAY (gombok)                             */
+/* ============================================ */
+
+.slot-overlay {
   position: absolute;
-  bottom: 0;
+  top: 0;
   left: 0;
   right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
   display: flex;
-  gap: 6px;
-  padding: 8px;
-  background: rgba(0, 0, 0, 0.6);
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
   opacity: 0;
   transition: opacity 0.3s ease;
-  justify-content: center;
 }
 
-.image-card:hover .image-actions {
+.slot:hover .slot-overlay {
   opacity: 1;
 }
 
-.action-btn {
-  padding: 6px 12px;
+/* ============================================ */
+/* GOMBOK                                       */
+/* ============================================ */
+
+.slot-delete,
+.slot-edit {
+  padding: 11px 18px;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   color: white;
-  font-size: 14px;
   cursor: pointer;
+  font-size: 13.5px;
+  font-weight: 600;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  gap: 8px;
+  letter-spacing: 0.3px;
 }
 
-.action-btn i {
-  font-size: 12px;
-}
-
-.set-main-btn {
-  background: #38a179;
-}
-
-.set-main-btn:hover {
-  background: #2a7d5f;
-}
-
-.delete-btn {
+.slot-delete {
   background: #dc3545;
 }
 
-.delete-btn:hover {
+.slot-delete:hover {
   background: #c82333;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(220, 53, 69, 0.4);
 }
 
-/* Üres galéria üzenet */
-.empty-gallery {
-  padding: 32px 16px;
-  text-align: center;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border: 2px dashed #e0e0e0;
+.slot-edit {
+  background: #38a179;
 }
 
-.empty-gallery p {
-  color: #6c757d;
+.slot-edit:hover {
+  background: #2a7d5f;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(56, 161, 121, 0.4);
+}
+
+.slot-delete i,
+.slot-edit i {
   font-size: 14px;
-  margin: 0;
+}
+
+/* ============================================ */
+/* INFO BANNER                                  */
+/* ============================================ */
+
+.images-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 15px 18px;
+  background: linear-gradient(135deg, #f0f7f4 0%, #e8f5f0 100%);
+  border-left: 4px solid #38a179;
+  border-radius: 8px;
+  font-size: 13.5px;
+  color: #2d5f3d;
+  line-height: 1.6;
+  box-shadow: 0 2px 6px rgba(56, 161, 121, 0.08);
+}
+
+.images-info i {
+  color: #38a179;
+  font-size: 17px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ============================================ */
+/* RESPONSIVE                                   */
+/* ============================================ */
+
+@media (max-width: 1024px) {
+  .company-info-form {
+    max-width: 100%;
+    padding: 0 20px;
+  }
+
+  .form-left,
+  .form-right {
+    padding: 28px;
+  }
+
+  .form-grid {
+    gap: 20px;
+  }
 }
 
 @media (max-width: 768px) {
-  .images-gallery {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 10px;
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
   }
 
-  .upload-btn {
-    padding: 16px 12px;
-    font-size: 13px;
+  .form-group.full-width {
+    grid-column: 1;
   }
 
-  .upload-btn i {
-    font-size: 24px;
+  .form-left,
+  .form-right {
+    padding: 24px 20px;
+  }
+
+  .form-control {
+    font-size: 16px; /* iOS zoom fix */
+  }
+
+  /* KÉPEK MOBILON */
+  .slots-container {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto auto;
+    gap: 12px;
+  }
+
+  .slot-main {
+    grid-column: 1;
+    grid-row: 1;
+    min-height: 240px;
+  }
+
+  .slot-small {
+    grid-column: 1;
+    grid-row: auto;
+    min-height: 160px;
+  }
+
+  .slot-small:nth-child(2),
+  .slot-small:nth-child(3),
+  .slot-small:nth-child(4) {
+    grid-column: 1;
+  }
+
+  .slot-main .slot-empty i {
+    font-size: 44px;
+  }
+
+  .slot-empty i {
+    font-size: 32px;
+  }
+}
+
+@media (max-width: 480px) {
+  .form-description {
+    padding: 16px 20px;
+    margin-bottom: 24px;
+  }
+
+  .form-left,
+  .form-right {
+    padding: 20px 16px;
+  }
+
+  .form-layout {
+    gap: 28px;
   }
 }
