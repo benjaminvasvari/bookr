@@ -180,4 +180,5 @@ export class SelIndustryComponent implements OnInit {
   isToday(day: string): boolean {
     return this.getCurrentDay() === day.toLowerCase();
   }
+
 }

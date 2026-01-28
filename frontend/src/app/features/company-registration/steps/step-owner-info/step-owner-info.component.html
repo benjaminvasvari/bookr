@@ -1,0 +1,194 @@
+<div class="owner-info-form">
+  @if (isUserLoggedIn) {
+    <div class="logged-in-notice">
+      <i class="fas fa-info-circle"></i>
+      <p>Bejelentkezett felhasználóként az adatai automatikusan kitöltésre kerültek.</p>
+    </div>
+  } @else {
+    <div class="form-description">
+      <p>Adja meg személyes adatait, amelyekkel be tud majd jelentkezni a rendszerbe.</p>
+    </div>
+  }
+
+  <form [formGroup]="ownerForm" class="form-grid">
+    <!-- Vezetéknév -->
+    <div class="form-group">
+      <label for="lastName">Vezetéknév <span class="required">*</span></label>
+      <input
+        type="text"
+        id="lastName"
+        formControlName="lastName"
+        class="form-control"
+        [class.error]="isFieldInvalid('lastName')"
+        [class.readonly]="isUserLoggedIn"
+        placeholder="pl. Nagy"
+        [readonly]="isUserLoggedIn"
+      />
+      @if (isFieldInvalid('lastName')) {
+        <span class="error-message">
+          @if (ownerForm.get('lastName')?.errors?.['required']) {
+            A vezetéknév megadása kötelező
+          }
+          @if (ownerForm.get('lastName')?.errors?.['minlength']) {
+            Legalább 2 karakter szükséges
+          }
+        </span>
+      }
+    </div>
+
+    <!-- Keresztnév -->
+    <div class="form-group">
+      <label for="firstName">Keresztnév <span class="required">*</span></label>
+      <input
+        type="text"
+        id="firstName"
+        formControlName="firstName"
+        class="form-control"
+        [class.error]="isFieldInvalid('firstName')"
+        [class.readonly]="isUserLoggedIn"
+        placeholder="pl. Péter"
+        [readonly]="isUserLoggedIn"
+      />
+      @if (isFieldInvalid('firstName')) {
+        <span class="error-message">
+          @if (ownerForm.get('firstName')?.errors?.['required']) {
+            A keresztnév megadása kötelező
+          }
+          @if (ownerForm.get('firstName')?.errors?.['minlength']) {
+            Legalább 2 karakter szükséges
+          }
+        </span>
+      }
+    </div>
+
+    <!-- Email -->
+    <div class="form-group full-width">
+      <label for="email">Email cím <span class="required">*</span></label>
+      <input
+        type="email"
+        id="email"
+        formControlName="email"
+        class="form-control"
+        [class.error]="isFieldInvalid('email')"
+        [class.readonly]="isUserLoggedIn"
+        placeholder="pelda@email.hu"
+        [readonly]="isUserLoggedIn"
+      />
+      @if (isFieldInvalid('email')) {
+        <span class="error-message">
+          @if (ownerForm.get('email')?.errors?.['required']) {
+            Az email cím megadása kötelező
+          }
+          @if (ownerForm.get('email')?.errors?.['email']) {
+            Érvényes email címet adjon meg
+          }
+        </span>
+      }
+    </div>
+
+    <!-- Telefonszám -->
+    <div class="form-group full-width">
+      <label for="phone">Telefonszám <span class="required">*</span></label>
+      <input
+        type="tel"
+        id="phone"
+        formControlName="phone"
+        class="form-control"
+        [class.error]="isFieldInvalid('phone')"
+        [class.readonly]="isUserLoggedIn"
+        placeholder="+36301234567"
+        [readonly]="isUserLoggedIn"
+      />
+      @if (isFieldInvalid('phone')) {
+        <span class="error-message">
+          @if (ownerForm.get('phone')?.errors?.['required']) {
+            A telefonszám megadása kötelező
+          }
+          @if (ownerForm.get('phone')?.errors?.['pattern']) {
+            Érvényes magyar telefonszámot adjon meg (+36...)
+          }
+        </span>
+      }
+    </div>
+
+    <!-- ✅ JELSZÓ MEZŐK CSAK HA NINCS BEJELENTKEZVE -->
+    @if (!isUserLoggedIn) {
+      <!-- Jelszó -->
+      <div class="form-group full-width">
+        <label for="password">Jelszó <span class="required">*</span></label>
+        <div class="password-wrapper">
+          <input
+            [type]="showPassword ? 'text' : 'password'"
+            id="password"
+            formControlName="password"
+            class="form-control"
+            [class.error]="isFieldInvalid('password')"
+            placeholder="Legalább 8 karakter"
+          />
+          <button
+            type="button"
+            class="password-toggle"
+            (click)="togglePasswordVisibility()"
+            tabindex="-1"
+          >
+            <i [class]="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+          </button>
+        </div>
+        @if (isFieldInvalid('password')) {
+          <span class="error-message">
+            @if (ownerForm.get('password')?.errors?.['required']) {
+              A jelszó megadása kötelező
+            }
+            @if (ownerForm.get('password')?.errors?.['minlength']) {
+              A jelszónak legalább 8 karakter hosszúnak kell lennie
+            }
+            @if (ownerForm.get('password')?.errors?.['passwordStrength']) {
+              A jelszónak tartalmaznia kell: nagybetűt, kisbetűt és számot
+            }
+          </span>
+        }
+        @if (ownerForm.get('password')?.value && !isFieldInvalid('password')) {
+          <div class="password-strength">
+            <div class="strength-bar" [class]="getPasswordStrengthClass()">
+              <div class="strength-fill"></div>
+            </div>
+            <span class="strength-text">{{ getPasswordStrengthText() }}</span>
+          </div>
+        }
+      </div>
+
+      <!-- Jelszó megerősítés -->
+      <div class="form-group full-width">
+        <label for="confirmPassword">Jelszó megerősítés <span class="required">*</span></label>
+        <div class="password-wrapper">
+          <input
+            [type]="showConfirmPassword ? 'text' : 'password'"
+            id="confirmPassword"
+            formControlName="confirmPassword"
+            class="form-control"
+            [class.error]="isFieldInvalid('confirmPassword')"
+            placeholder="Írja be újra a jelszót"
+          />
+          <button
+            type="button"
+            class="password-toggle"
+            (click)="toggleConfirmPasswordVisibility()"
+            tabindex="-1"
+          >
+            <i [class]="showConfirmPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+          </button>
+        </div>
+        @if (isFieldInvalid('confirmPassword')) {
+          <span class="error-message">
+            @if (ownerForm.get('confirmPassword')?.errors?.['required']) {
+              A jelszó megerősítése kötelező
+            }
+            @if (ownerForm.get('confirmPassword')?.errors?.['passwordMismatch']) {
+              A jelszavak nem egyeznek
+            }
+          </span>
+        }
+      </div>
+    }
+  </form>
+</div>

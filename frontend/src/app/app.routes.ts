@@ -65,4 +65,13 @@ export const appRoutes: Routes = [
     data: { showFooter: false },
     canActivate: [authGuard],
   },
+
+  {
+    path: 'register-business',
+    loadComponent: () =>
+      import('./features/company-registration/company-registration-container/company-registration-container.component').then(
+        (m) => m.CompanyRegistrationContainerComponent,
+      ),
+    data: { showFooter: false },
+  },
 ];

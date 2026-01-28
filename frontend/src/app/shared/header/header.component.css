@@ -231,6 +231,57 @@
     fill: #dc3545;
 }
 
+
+/* Cég regisztrálása gomb - Login stílussal */
+.btn-register-business {
+  background: transparent;
+  color:  #38a169;
+  border: 2px solid #38a169;
+  padding: 10px 24px;
+  border-radius: 25px;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.btn-register-business:hover {
+  background: #38a169;
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(52, 168, 155, 0.4);
+  border-color:  #38a169;
+}
+
+.btn-register-business i {
+  font-size: 14px;
+  transition: transform 0.3s ease;
+}
+
+.btn-register-business:hover i {
+  transform: scale(1.1);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .btn-register-business {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+  
+  .btn-register-business span {
+    display: none;
+  }
+  
+  .btn-register-business i {
+    margin: 0;
+  }
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .welcome-text {

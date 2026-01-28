@@ -18,6 +18,8 @@ export const API_ENDPOINTS = {
     FEATURED: '/companies/featured',
     NEW: '/companies/new',
     SEARCH: '/companies/search',
+    BUSINESS_CATEGORIES: '/business-categories',
+    REGISTER: '/companies/register',
   },
 
   SERVICES: {
