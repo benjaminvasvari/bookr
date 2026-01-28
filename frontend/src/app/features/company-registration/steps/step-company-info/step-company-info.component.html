@@ -3,220 +3,224 @@
     <p>Adja meg vállalkozása alapvető adatait, amelyek megjelennek a profilján.</p>
   </div>
 
-  <form [formGroup]="companyForm" class="form-grid">
-    <!-- Cég neve -->
-    <div class="form-group full-width">
-      <label for="name">Cég neve <span class="required">*</span></label>
-      <input
-        type="text"
-        id="name"
-        formControlName="name"
-        class="form-control"
-        [class.error]="isFieldInvalid('name')"
-        placeholder="pl. Bella Szépségszalon"
-      />
-      @if (isFieldInvalid('name')) {
-        <span class="error-message">
-          @if (companyForm.get('name')?.errors?.['required']) {
-            A cég nevének megadása kötelező
+  <div class="form-layout">
+    <!-- BALOLDAL: Form fields -->
+    <div class="form-left">
+      <form [formGroup]="companyForm" class="form-grid">
+        <!-- Cég neve -->
+        <div class="form-group full-width">
+          <label for="name">Cég neve <span class="required">*</span></label>
+          <input
+            type="text"
+            id="name"
+            formControlName="name"
+            class="form-control"
+            [class.error]="isFieldInvalid('name')"
+            placeholder="pl. Bella Szépségszalon"
+          />
+          @if (isFieldInvalid('name')) {
+            <span class="error-message">
+              @if (companyForm.get('name')?.errors?.['required']) {
+                A cég nevének megadása kötelező
+              }
+              @if (companyForm.get('name')?.errors?.['minlength']) {
+                Legalább 3 karakter szükséges
+              }
+            </span>
           }
-          @if (companyForm.get('name')?.errors?.['minlength']) {
-            Legalább 3 karakter szükséges
-          }
-        </span>
-      }
-    </div>
-
-    <!-- Leírás -->
-    <div class="form-group full-width">
-      <label for="description">Rövid leírás <span class="required">*</span></label>
-      <textarea
-        id="description"
-        formControlName="description"
-        class="form-control textarea"
-        [class.error]="isFieldInvalid('description')"
-        placeholder="Mutassa be vállalkozását röviden (min. 20 karakter)"
-        rows="4"
-      ></textarea>
-      <div class="char-counter">
-        {{ companyForm.get('description')?.value?.length || 0 }} / 500 karakter
-      </div>
-      @if (isFieldInvalid('description')) {
-        <span class="error-message">
-          @if (companyForm.get('description')?.errors?.['required']) {
-            A leírás megadása kötelező
-          }
-          @if (companyForm.get('description')?.errors?.['minlength']) {
-            Legalább 20 karakter szükséges
-          }
-        </span>
-      }
-    </div>
-
-    <!-- Üzleti kategória -->
-    <div class="form-group full-width">
-      <label for="businessCategoryId">Üzleti kategória <span class="required">*</span></label>
-      @if (isLoadingCategories) {
-        <div class="loading-spinner">
-          <i class="fas fa-spinner fa-spin"></i> Kategóriák betöltése...
         </div>
-      } @else {
-        <select
-          id="businessCategoryId"
-          formControlName="businessCategoryId"
-          class="form-control"
-          [class.error]="isFieldInvalid('businessCategoryId')"
-          (change)="onCategoryChange($event)"
-        >
-          <option value="">Válasszon kategóriát...</option>
-          @for (category of businessCategories; track category.id) {
-            <option [value]="category.id">
-              {{ category.icon }} {{ category.name }}
-            </option>
-          }
-        </select>
-      }
-      @if (isFieldInvalid('businessCategoryId')) {
-        <span class="error-message">
-          Az üzleti kategória kiválasztása kötelező
-        </span>
-      }
-    </div>
 
-    <!-- Cím -->
-    <div class="form-group full-width">
-      <label for="address">Utca és házszám <span class="required">*</span></label>
-      <input
-        type="text"
-        id="address"
-        formControlName="address"
-        class="form-control"
-        [class.error]="isFieldInvalid('address')"
-        placeholder="pl. Váci utca 15."
-      />
-      @if (isFieldInvalid('address')) {
-        <span class="error-message">
-          A cím megadása kötelező
-        </span>
-      }
-    </div>
-
-    <!-- Város -->
-    <div class="form-group">
-      <label for="city">Város <span class="required">*</span></label>
-      <input
-        type="text"
-        id="city"
-        formControlName="city"
-        class="form-control"
-        [class.error]="isFieldInvalid('city')"
-        placeholder="pl. Budapest"
-      />
-      @if (isFieldInvalid('city')) {
-        <span class="error-message">
-          A város megadása kötelező
-        </span>
-      }
-    </div>
-
-    <!-- Irányítószám -->
-    <div class="form-group">
-      <label for="postalCode">Irányítószám <span class="required">*</span></label>
-      <input
-        type="text"
-        id="postalCode"
-        formControlName="postalCode"
-        class="form-control"
-        [class.error]="isFieldInvalid('postalCode')"
-        placeholder="pl. 1052"
-        maxlength="4"
-      />
-      @if (isFieldInvalid('postalCode')) {
-        <span class="error-message">
-          @if (companyForm.get('postalCode')?.errors?.['required']) {
-            Az irányítószám megadása kötelező
+        <!-- Leírás -->
+        <div class="form-group full-width">
+          <label for="description">Rövid leírás <span class="required">*</span></label>
+          <textarea
+            id="description"
+            formControlName="description"
+            class="form-control textarea"
+            [class.error]="isFieldInvalid('description')"
+            placeholder="Mutassa be vállalkozását röviden (min. 20 karakter)"
+            rows="4"
+          ></textarea>
+          <div class="char-counter">
+            {{ descriptionCharCount }} / {{ maxDescriptionLength }} karakter
+          </div>
+          @if (isFieldInvalid('description')) {
+            <span class="error-message">
+              @if (companyForm.get('description')?.errors?.['required']) {
+                A leírás megadása kötelező
+              }
+              @if (companyForm.get('description')?.errors?.['minlength']) {
+                Legalább 20 karakter szükséges
+              }
+            </span>
           }
-          @if (companyForm.get('postalCode')?.errors?.['pattern']) {
-            4 számjegyű irányítószámot adjon meg
-          }
-        </span>
-      }
-    </div>
+        </div>
 
-    <!-- Ország -->
-    <div class="form-group full-width">
-      <label for="country">Ország <span class="required">*</span></label>
-      <input
-        type="text"
-        id="country"
-        formControlName="country"
-        class="form-control"
-        [class.error]="isFieldInvalid('country')"
-        placeholder="Magyarország"
-      />
-      @if (isFieldInvalid('country')) {
-        <span class="error-message">
-          Az ország megadása kötelező
-        </span>
-      }
-    </div>
+        <!-- Üzleti kategória -->
+        <div class="form-group full-width">
+          <label for="businessCategoryId">Üzleti kategória <span class="required">*</span></label>
+          @if (isCategoriesLoading) {
+            <div class="loading-spinner">
+              <i class="fas fa-spinner fa-spin"></i> Kategóriák betöltése...
+            </div>
+          } @else {
+            <select
+              id="businessCategoryId"
+              formControlName="businessCategoryId"
+              class="form-control"
+              [class.error]="isFieldInvalid('businessCategoryId')"
+            >
+              <option [value]="null" disabled selected>Válasszon kategóriát...</option>
+              @for (category of businessCategories; track category.id) {
+                <option [value]="category.id">
+                  {{ category.icon }} {{ category.name }}
+                </option>
+              }
+            </select>
+          }
+          @if (isFieldInvalid('businessCategoryId')) {
+            <span class="error-message">
+              Az üzleti kategória kiválasztása kötelező
+            </span>
+          }
+        </div>
 
-    <!-- Telefonszám -->
-    <div class="form-group">
-      <label for="phone">Telefonszám <span class="required">*</span></label>
-      <input
-        type="tel"
-        id="phone"
-        formControlName="phone"
-        class="form-control"
-        [class.error]="isFieldInvalid('phone')"
-        placeholder="+36301234567"
-      />
-      @if (isFieldInvalid('phone')) {
-        <span class="error-message">
-          @if (companyForm.get('phone')?.errors?.['required']) {
-            A telefonszám megadása kötelező
+        <!-- Cím -->
+        <div class="form-group full-width">
+          <label for="address">Utca és házszám <span class="required">*</span></label>
+          <input
+            type="text"
+            id="address"
+            formControlName="address"
+            class="form-control"
+            [class.error]="isFieldInvalid('address')"
+            placeholder="pl. Váci utca 15."
+          />
+          @if (isFieldInvalid('address')) {
+            <span class="error-message">
+              A cím megadása kötelező
+            </span>
           }
-          @if (companyForm.get('phone')?.errors?.['pattern']) {
-            Érvényes magyar telefonszámot adjon meg (+36...)
-          }
-        </span>
-      }
-    </div>
+        </div>
 
-    <!-- Email -->
-    <div class="form-group">
-      <label for="email">Email cím <span class="required">*</span></label>
-      <input
-        type="email"
-        id="email"
-        formControlName="email"
-        class="form-control"
-        [class.error]="isFieldInvalid('email')"
-        placeholder="info@cegnev.hu"
-      />
-      @if (isFieldInvalid('email')) {
-        <span class="error-message">
-          @if (companyForm.get('email')?.errors?.['required']) {
-            Az email cím megadása kötelező
+        <!-- Város -->
+        <div class="form-group">
+          <label for="city">Város <span class="required">*</span></label>
+          <input
+            type="text"
+            id="city"
+            formControlName="city"
+            class="form-control"
+            [class.error]="isFieldInvalid('city')"
+            placeholder="pl. Budapest"
+          />
+          @if (isFieldInvalid('city')) {
+            <span class="error-message">
+              A város megadása kötelező
+            </span>
           }
-          @if (companyForm.get('email')?.errors?.['email']) {
-            Érvényes email címet adjon meg
-          }
-        </span>
-      }
-    </div>
+        </div>
 
-    <!-- Weboldal -->
-    <div class="form-group full-width">
-      <label for="website">Weboldal <span class="optional">(opcionális)</span></label>
-      <input
-        type="url"
-        id="website"
-        formControlName="website"
-        class="form-control"
-        placeholder="https://www.cegnev.hu"
-      />
+        <!-- Irányítószám -->
+        <div class="form-group">
+          <label for="postalCode">Irányítószám <span class="required">*</span></label>
+          <input
+            type="text"
+            id="postalCode"
+            formControlName="postalCode"
+            class="form-control"
+            [class.error]="isFieldInvalid('postalCode')"
+            placeholder="pl. 1052"
+            maxlength="4"
+          />
+          @if (isFieldInvalid('postalCode')) {
+            <span class="error-message">
+              @if (companyForm.get('postalCode')?.errors?.['required']) {
+                Az irányítószám megadása kötelező
+              }
+              @if (companyForm.get('postalCode')?.errors?.['pattern']) {
+                4 számjegyű irányítószámot adjon meg
+              }
+            </span>
+          }
+        </div>
+
+        <!-- Ország -->
+        <div class="form-group full-width">
+          <label for="country">Ország <span class="required">*</span></label>
+          <input
+            type="text"
+            id="country"
+            formControlName="country"
+            class="form-control"
+            [class.error]="isFieldInvalid('country')"
+            placeholder="Magyarország"
+          />
+          @if (isFieldInvalid('country')) {
+            <span class="error-message">
+              Az ország megadása kötelező
+            </span>
+          }
+        </div>
+
+        <!-- Telefonszám -->
+        <div class="form-group">
+          <label for="phone">Telefonszám <span class="required">*</span></label>
+          <input
+            type="tel"
+            id="phone"
+            formControlName="phone"
+            class="form-control"
+            [class.error]="isFieldInvalid('phone')"
+            placeholder="+36301234567"
+          />
+          @if (isFieldInvalid('phone')) {
+            <span class="error-message">
+              @if (companyForm.get('phone')?.errors?.['required']) {
+                A telefonszám megadása kötelező
+              }
+              @if (companyForm.get('phone')?.errors?.['pattern']) {
+                Érvényes magyar telefonszámot adjon meg (+36...)
+              }
+            </span>
+          }
+        </div>
+
+        <!-- Email -->
+        <div class="form-group">
+          <label for="email">Email cím <span class="required">*</span></label>
+          <input
+            type="email"
+            id="email"
+            formControlName="email"
+            class="form-control"
+            [class.error]="isFieldInvalid('email')"
+            placeholder="info@cegnev.hu"
+          />
+          @if (isFieldInvalid('email')) {
+            <span class="error-message">
+              @if (companyForm.get('email')?.errors?.['required']) {
+                Az email cím megadása kötelező
+              }
+              @if (companyForm.get('email')?.errors?.['email']) {
+                Érvényes email címet adjon meg
+              }
+            </span>
+          }
+        </div>
+
+        <!-- Weboldal -->
+        <div class="form-group full-width">
+          <label for="website">Weboldal <span class="optional">(opcionális)</span></label>
+          <input
+            type="url"
+            id="website"
+            formControlName="website"
+            class="form-control"
+            placeholder="https://www.cegnev.hu"
+          />
+        </div>
+      </form>
     </div>
-  </form>
+  </div>
 </div>

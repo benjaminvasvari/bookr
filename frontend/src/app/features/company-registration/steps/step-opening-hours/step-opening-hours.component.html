@@ -1,0 +1,80 @@
+<div class="opening-hours-form">
+  <div class="form-description">
+    <p>Adja meg vállalkozása nyitvatartási idejét. Ezt később az admin panelen is módosíthatja.</p>
+  </div>
+
+  <div class="quick-actions">
+    <button type="button" class="btn-quick" (click)="setAllDaysOpen()" title="Összes nap nyitva">
+      <i class="fas fa-unlock"></i>
+      <span>Összes nap nyitva</span>
+    </button>
+    <button type="button" class="btn-quick" (click)="setAllDaysClosed()" title="Összes nap zárva">
+      <i class="fas fa-lock"></i>
+      <span>Összes nap zárva</span>
+    </button>
+  </div>
+
+  <div class="individual-note">
+    <i class="fas fa-lightbulb"></i>
+    <span>Egy adott napot a checkbox-ra kattintva vagy közvetlenül a napnévre kattintva tudja váltani</span>
+  </div>
+
+  <div class="hours-container">
+    @for (day of days; track day.dayNumber) {
+      <div class="day-row" [class.closed]="!day.isOpen">
+        <!-- Nap neve és toggle -->
+        <div class="day-header">
+          <label class="day-name-label">
+            <input 
+              type="checkbox" 
+              [checked]="day.isOpen"
+              (change)="toggleDay(day.dayNumber)"
+              class="day-toggle"
+            />
+            <span class="day-name">{{ day.dayName }}</span>
+          </label>
+        </div>
+
+        <!-- Idők -->
+        @if (day.isOpen) {
+          <div class="time-inputs">
+            <div class="time-group">
+              <label for="open-{{ day.dayNumber }}" class="time-label">Nyitás</label>
+              <input
+                type="time"
+                id="open-{{ day.dayNumber }}"
+                [value]="day.openTime"
+                (change)="onOpenTimeChange(day.dayNumber, $any($event.target).value)"
+                class="time-input"
+              />
+            </div>
+
+            <div class="time-separator">-</div>
+
+            <div class="time-group">
+              <label for="close-{{ day.dayNumber }}" class="time-label">Zárás</label>
+              <input
+                type="time"
+                id="close-{{ day.dayNumber }}"
+                [value]="day.closeTime"
+                (change)="onCloseTimeChange(day.dayNumber, $any($event.target).value)"
+                class="time-input"
+              />
+            </div>
+          </div>
+        } @else {
+          <div class="time-inputs closed-text">
+            <span>Zárva</span>
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- Info szöveg -->
+  <div class="hours-info">
+    <i class="fas fa-info-circle"></i>
+    <span>A nyitvatartási időket később az admin panelen is módosíthatja</span>
+  </div>
+</div>
+

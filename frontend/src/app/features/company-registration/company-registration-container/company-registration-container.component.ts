@@ -1,8 +1,12 @@
 import { Component, ViewChild, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { RegistrationStepperComponent, Step } from '../registration-stepper/registration-stepper.component';
 import { StepOwnerInfoComponent } from '../../company-registration/steps/step-owner-info/step-owner-info.component';
 import { StepCompanyInfoComponent } from '../../company-registration/steps/step-company-info/step-company-info.component';
+import { StepImageUploadComponent } from '../steps/step-image-upload/step-image-upload.component';
+import { StepBusinessDetailsComponent } from '../steps/step-business-details/step-business-details.component';
+import { StepOpeningHoursComponent } from '../steps/step-opening-hours/step-opening-hours.component';
 import { AuthService } from '../../../core/services/auth.service';
 
 @Component({
@@ -13,6 +17,9 @@ import { AuthService } from '../../../core/services/auth.service';
     RegistrationStepperComponent,
     StepOwnerInfoComponent,
     StepCompanyInfoComponent,
+    StepImageUploadComponent,
+    StepBusinessDetailsComponent,
+    StepOpeningHoursComponent,
   ],
   templateUrl: './company-registration-container.component.html',
   styleUrls: ['./company-registration-container.component.css']
@@ -20,16 +27,21 @@ import { AuthService } from '../../../core/services/auth.service';
 export class CompanyRegistrationContainerComponent implements OnInit {
   @ViewChild(StepOwnerInfoComponent) stepOwnerInfo!: StepOwnerInfoComponent;
   @ViewChild(StepCompanyInfoComponent) stepCompanyInfo!: StepCompanyInfoComponent;
+  @ViewChild(StepImageUploadComponent) stepImageUpload!: StepImageUploadComponent;
+  @ViewChild(StepBusinessDetailsComponent) stepBusinessDetails!: StepBusinessDetailsComponent;
+  @ViewChild(StepOpeningHoursComponent) stepOpeningHours!: StepOpeningHoursComponent;
 
   currentStep = 1;
   isCurrentStepValid = false;
   isUserLoggedIn = false;
   currentUser: any = null;
+  showSuccessModal = false;
+  isSubmitting = false;
 
-  // ✅ JAVÍTÁS: any típusra váltás
   registrationData: any = {
     ownerInfo: null,
     companyInfo: null,
+    imageUpload: null,
     businessDetails: null,
     openingHours: null
   };
@@ -37,11 +49,12 @@ export class CompanyRegistrationContainerComponent implements OnInit {
   steps: Step[] = [
     { number: 1, title: 'Tulajdonos adatok', completed: false, active: true },
     { number: 2, title: 'Cég információk', completed: false, active: false },
-    { number: 3, title: 'Üzleti részletek', completed: false, active: false },
-    { number: 4, title: 'Nyitvatartás', completed: false, active: false }
+    { number: 3, title: 'Képek feltöltése', completed: false, active: false },
+    { number: 4, title: 'Üzleti részletek', completed: false, active: false },
+    { number: 5, title: 'Nyitvatartás', completed: false, active: false }
   ];
 
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService, private router: Router) {}
 
   ngOnInit() {
     this.authService.currentUser$.subscribe(user => {
@@ -49,7 +62,6 @@ export class CompanyRegistrationContainerComponent implements OnInit {
       this.isUserLoggedIn = !!user;
 
       if (this.isUserLoggedIn && user) {
-        // ✅ Most már működik!
         this.registrationData.ownerInfo = {
           firstName: user.firstName,
           lastName: user.lastName,
@@ -79,6 +91,9 @@ export class CompanyRegistrationContainerComponent implements OnInit {
     } else {
       this.submitRegistration();
     }
+
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   previousStep(): void {
@@ -89,6 +104,9 @@ export class CompanyRegistrationContainerComponent implements OnInit {
       this.steps[this.currentStep - 1].completed = false;
       this.checkCurrentStepValidity();
     }
+
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   onStepValidityChange(isValid: boolean): void {
@@ -112,6 +130,18 @@ export class CompanyRegistrationContainerComponent implements OnInit {
         data = this.stepCompanyInfo?.getFormData();
         this.registrationData.companyInfo = data;
         break;
+      case 3:
+        data = this.stepImageUpload?.getFormData();
+        this.registrationData.imageUpload = data;
+        break;
+      case 4:
+        data = this.stepBusinessDetails?.getFormData();
+        this.registrationData.businessDetails = data;
+        break;
+      case 5:
+        data = this.stepOpeningHours?.getFormData();
+        this.registrationData.openingHours = data;
+        break;
     }
   }
 
@@ -126,9 +156,15 @@ export class CompanyRegistrationContainerComponent implements OnInit {
         this.registrationData.companyInfo = data;
         break;
       case 3:
-        this.registrationData.businessDetails = data;
+        this.registrationData.imageUpload = data;
         break;
       case 4:
+        this.registrationData.businessDetails = data;
+        break;
+      case 5:
+        this.registrationData.openingHours = data;
+        break;
+      case 5:
         this.registrationData.openingHours = data;
         break;
     }
@@ -143,6 +179,15 @@ export class CompanyRegistrationContainerComponent implements OnInit {
       case 2:
         isValid = this.stepCompanyInfo?.isFormValid() || false;
         break;
+      case 3:
+        isValid = this.stepImageUpload?.isFormValid() || false;
+        break;
+      case 4:
+        isValid = this.stepBusinessDetails?.isFormValid() || false;
+        break;
+      case 5:
+        isValid = this.stepOpeningHours?.isFormValid() || false;
+        break;
     }
     this.isCurrentStepValid = isValid;
   }
@@ -150,7 +195,21 @@ export class CompanyRegistrationContainerComponent implements OnInit {
   private submitRegistration(): void {
     console.log('Registration data:', this.registrationData);
     console.log('Is logged in:', this.isUserLoggedIn);
-    // TODO: API call
+    
+    this.isSubmitting = true;
+    
+    // Szimulálunk egy API hívást
+    setTimeout(() => {
+      this.isSubmitting = false;
+      this.showSuccessModal = true;
+      
+      // 3 másodperc után redirect a main page-re
+      setTimeout(() => {
+        this.router.navigate(['/']);
+      }, 3000);
+    }, 1500);
+    
+    // TODO: API call helyett a valódi submission
   }
 
   getButtonText(): string {

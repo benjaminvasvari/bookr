@@ -1,0 +1,320 @@
+.opening-hours-form {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0;
+}
+
+/* ============================================ */
+/* FORM DESCRIPTION                             */
+/* ============================================ */
+
+.form-description {
+  margin-bottom: 32px;
+  padding: 18px 24px;
+  background: linear-gradient(135deg, #f0f7f4 0%, #e8f5f0 100%);
+  border-radius: 10px;
+  border-left: 4px solid #38a179;
+  box-shadow: 0 2px 6px rgba(56, 161, 121, 0.08);
+}
+
+.form-description p {
+  margin: 0;
+  color: #2d3748;
+  font-size: 14.5px;
+  line-height: 1.6;
+  font-weight: 500;
+}
+
+/* ============================================ */
+/* QUICK ACTIONS                                */
+/* ============================================ */
+
+.quick-actions {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+}
+
+.btn-quick {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 18px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  background: white;
+  color: #2d3748;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  letter-spacing: 0.3px;
+}
+
+.btn-quick:hover {
+  border-color: #38a179;
+  background: #f0f7f4;
+  color: #38a179;
+  box-shadow: 0 2px 8px rgba(56, 161, 121, 0.12);
+}
+
+.btn-quick i {
+  font-size: 15px;
+}
+
+/* ============================================ */
+/* INDIVIDUAL NOTE                              */
+/* ============================================ */
+
+.individual-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #fef9e7;
+  border-left: 3px solid #f0ad4e;
+  border-radius: 6px;
+  color: #856404;
+  font-size: 12.5px;
+  line-height: 1.5;
+  margin-bottom: 24px;
+}
+
+.individual-note i {
+  color: #f0ad4e;
+  font-size: 15px;
+  min-width: 20px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.individual-note span {
+  flex: 1;
+}
+
+/* ============================================ */
+/* HOURS CONTAINER                              */
+/* ============================================ */
+
+.hours-container {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e8e8e8;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+
+.day-row {
+  display: flex;
+  align-items: center;
+  padding: 18px 24px;
+  border-bottom: 1px solid #f0f0f0;
+  gap: 24px;
+  transition: all 0.3s ease;
+}
+
+.day-row:last-child {
+  border-bottom: none;
+}
+
+.day-row:hover {
+  background: #fafbfc;
+}
+
+.day-row.closed {
+  background: #f9fafb;
+  opacity: 0.75;
+}
+
+/* ============================================ */
+/* DAY HEADER                                   */
+/* ============================================ */
+
+.day-header {
+  min-width: 140px;
+  flex-shrink: 0;
+}
+
+.day-name-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.day-toggle {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  accent-color: #38a179;
+}
+
+.day-name {
+  font-weight: 600;
+  color: #2d3748;
+  font-size: 14.5px;
+  letter-spacing: 0.3px;
+}
+
+.day-row.closed .day-name {
+  color: #999;
+}
+
+/* ============================================ */
+/* TIME INPUTS                                  */
+/* ============================================ */
+
+.time-inputs {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex: 1;
+}
+
+.time-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.time-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #718096;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.time-input {
+  padding: 10px 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  color: #2d3748;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 110px;
+  font-weight: 500;
+}
+
+.time-input:hover {
+  border-color: #c8c8c8;
+  background: #fafafa;
+}
+
+.time-input:focus {
+  outline: none;
+  border-color: #38a179;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(56, 161, 121, 0.1);
+}
+
+.time-separator {
+  color: #cbd5e0;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+
+.closed-text {
+  flex: 1;
+  color: #999;
+  font-size: 13.5px;
+  font-weight: 500;
+  font-style: italic;
+}
+
+/* ============================================ */
+/* INFO TEXT                                    */
+/* ============================================ */
+
+.hours-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #f0f7f4;
+  border-left: 3px solid #38a179;
+  border-radius: 6px;
+  color: #2d5f52;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.hours-info i {
+  color: #38a179;
+  font-size: 16px;
+  min-width: 20px;
+  margin-top: 1px;
+}
+
+.hours-info span {
+  flex: 1;
+}
+
+/* ============================================ */
+/* RESPONSIVE                                   */
+/* ============================================ */
+
+@media (max-width: 768px) {
+  .day-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .day-header {
+    width: 100%;
+    min-width: unset;
+  }
+
+  .time-inputs {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .time-group {
+    flex: 1;
+    min-width: 100px;
+  }
+
+  .quick-actions {
+    flex-direction: column;
+  }
+
+  .btn-quick {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .hours-container {
+    border-radius: 8px;
+  }
+
+  .day-row {
+    padding: 14px 12px;
+    gap: 12px;
+  }
+
+  .time-input {
+    min-width: 90px;
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+
+  .time-label {
+    font-size: 11px;
+  }
+
+  .day-name {
+    font-size: 13px;
+  }
+}

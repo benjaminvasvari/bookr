@@ -2,14 +2,12 @@
   <div class="registration-header">
     <h1>Hozza létre vállalkozását a Bookr-en</h1>
     <p class="subtitle">
-      Indítsa el online jelenlétét néhány perc alatt. Regisztráljon most, és kezdje el fogadni az időpontfoglalásokat!
+      Indítsa el online jelenlétét néhány perc alatt. Regisztráljon most, és kezdje el fogadni az
+      időpontfoglalásokat!
     </p>
   </div>
 
-  <app-registration-stepper
-    [steps]="steps"
-    [currentStep]="currentStep"
-  ></app-registration-stepper>
+  <app-registration-stepper [steps]="steps" [currentStep]="currentStep"></app-registration-stepper>
 
   <div class="step-content">
     <div class="content-card">
@@ -31,31 +29,62 @@
         ></app-step-company-info>
       }
       @if (currentStep === 3) {
-        <p>Step 3 - Hamarosan...</p>
+        <app-step-image-upload
+          [initialData]="registrationData.imageUpload"
+          (formValid)="onStepValidityChange($event)"
+          (formData)="onStepDataChange($event)"
+        ></app-step-image-upload>
       }
       @if (currentStep === 4) {
-        <p>Step 4 - Hamarosan...</p>
+        <app-step-business-details
+          [initialData]="registrationData.businessDetails"
+          (formValid)="onStepValidityChange($event)"
+          (formData)="onStepDataChange($event)"
+        ></app-step-business-details>
+      }
+      @if (currentStep === 5) {
+        <app-step-opening-hours
+          [initialData]="registrationData.openingHours"
+          (formValid)="onStepValidityChange($event)"
+          (formData)="onStepDataChange($event)"
+        ></app-step-opening-hours>
       }
 
       <div class="step-navigation">
-        <button
-          class="btn btn-secondary"
-          (click)="previousStep()"
-          [disabled]="!canGoBack()"
-        >
+        <button class="btn btn-secondary" (click)="previousStep()" [disabled]="!canGoBack()">
           <i class="fas fa-arrow-left"></i>
           <span>Vissza</span>
         </button>
 
-        <button
-          class="btn btn-primary"
-          (click)="nextStep()"
-          [disabled]="!canGoNext()"
-        >
-          <span>{{ getButtonText() }}</span>
-          <i class="fas fa-arrow-right"></i>
+        <button class="btn btn-primary" (click)="nextStep()" [disabled]="!canGoNext() || isSubmitting">
+          @if (isSubmitting) {
+            <i class="fas fa-spinner fa-spin"></i>
+            <span>Feldolgozás...</span>
+          } @else {
+            <span>{{ getButtonText() }}</span>
+            <i class="fas fa-arrow-right"></i>
+          }
         </button>
       </div>
     </div>
   </div>
+
+  <!-- Success Modal -->
+  @if (showSuccessModal) {
+    <div class="success-modal-overlay">
+      <div class="success-modal">
+        <div class="success-icon">
+          <i class="fas fa-check-circle"></i>
+        </div>
+        <h2>Gratulálunk!</h2>
+        <p>Vállalkozása sikeresen regisztrálva lett.</p>
+        <p class="redirect-text">Átirányítás a főoldalra...</p>
+        <div class="loading-dots">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+    </div>
+  }
 </div>

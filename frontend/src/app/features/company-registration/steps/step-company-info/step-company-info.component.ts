@@ -1,8 +1,6 @@
 import { Component, EventEmitter, Output, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { CompaniesService } from '../../../../core/services/companies.service';  // ✅ FIX
-import { BusinessCategory } from '../../../../core/models/business-category.model';  // ✅ FIX
 
 @Component({
   selector: 'app-step-company-info',
@@ -17,54 +15,69 @@ export class StepCompanyInfoComponent implements OnInit {
   @Input() initialData: any;
 
   companyForm: FormGroup;
-  businessCategories: BusinessCategory[] = [];
-  isLoadingCategories = true;
+  
+  // ============================================
+  // MOCK BUSINESS CATEGORIES - ideiglenesen!
+  // ============================================
+  businessCategories = [
+    { id: 1, name: 'Szépségszalon', icon: '💅' },
+    { id: 2, name: 'Wellness és Spa', icon: '💆' },
+    { id: 3, name: 'Fodrászat', icon: '💇' },
+    { id: 4, name: 'Körömstúdió', icon: '💅' },
+    { id: 5, name: 'Fitness', icon: '💪' },
+    { id: 6, name: 'Egészségügy', icon: '🏥' },
+    { id: 7, name: 'Fogorvos', icon: '🦷' },
+    { id: 8, name: 'Állatorvos', icon: '🐕' },
+    { id: 9, name: 'Autószerviz', icon: '🚗' },
+    { id: 10, name: 'Oktatás', icon: '📚' }
+  ];
 
-  constructor(
-    private fb: FormBuilder,
-    private companiesService: CompaniesService
-  ) {
+  isCategoriesLoading = false; // Mock loading state
+
+  descriptionCharCount = 0;
+  maxDescriptionLength = 500;
+
+  constructor(private fb: FormBuilder) {
     this.companyForm = this.fb.group({
-      name: ['', [Validators.required, Validators.minLength(3)]],
-      description: ['', [Validators.required, Validators.minLength(20)]],
-      address: ['', [Validators.required]],
-      city: ['', [Validators.required]],
-      postalCode: ['', [Validators.required, Validators.pattern(/^[0-9]{4}$/)]],
+      name: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
+      description: ['', [Validators.required, Validators.minLength(20), Validators.maxLength(500)]],
+      businessCategoryId: [null, [Validators.required]], // ← EZ VOLT NULL, most kötelező!
+      address: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(200)]],
+      city: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(100)]],
+      postalCode: ['', [Validators.required, Validators.pattern(/^\d{4}$/)]],
       country: ['Magyarország', [Validators.required]],
-      phone: ['', [Validators.required, Validators.pattern(/^\+36[0-9]{9}$/)]],
+      phone: ['', [Validators.required, Validators.pattern(/^\+?36\d{9}$/)]],
       email: ['', [Validators.required, Validators.email]],
-      website: [''],
-      businessCategoryId: ['', [Validators.required]]
+      website: ['', [Validators.pattern(/^https?:\/\/.+/)]]
+    });
+
+    this.companyForm.get('description')?.valueChanges.subscribe(value => {
+      this.descriptionCharCount = value?.length || 0;
     });
 
     this.companyForm.valueChanges.subscribe(() => {
-      this.formValid.emit(this.companyForm.valid);
-      if (this.companyForm.valid) {
-        this.formData.emit(this.companyForm.value);
-      }
+      this.emitFormStatus();
     });
   }
 
   ngOnInit() {
-    this.loadBusinessCategories();
-
+    // Ha van initial data, töltsd be
     if (this.initialData) {
       this.companyForm.patchValue(this.initialData);
     }
+
+    // Kezdeti validitás kibocsátása
+    this.emitFormStatus();
   }
 
-  loadBusinessCategories(): void {
-    this.isLoadingCategories = true;
-    this.companiesService.getBusinessCategories().subscribe({
-      next: (categories) => {
-        this.businessCategories = categories;
-        this.isLoadingCategories = false;
-      },
-      error: (error) => {
-        console.error('Error loading business categories:', error);
-        this.isLoadingCategories = false;
-      }
-    });
+  emitFormStatus() {
+    const isValid = this.companyForm.valid;
+    
+    this.formValid.emit(isValid);
+    
+    if (isValid) {
+      this.formData.emit(this.companyForm.value);
+    }
   }
 
   isFieldInvalid(fieldName: string): boolean {
@@ -78,11 +91,5 @@ export class StepCompanyInfoComponent implements OnInit {
 
   isFormValid(): boolean {
     return this.companyForm.valid;
-  }
-
-  onCategoryChange(event: Event): void {
-    const selectElement = event.target as HTMLSelectElement;
-    const categoryId = selectElement.value;
-    this.companyForm.patchValue({ businessCategoryId: categoryId ? +categoryId : '' });
   }
 }
