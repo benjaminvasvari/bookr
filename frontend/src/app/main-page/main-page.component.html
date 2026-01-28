@@ -1,0 +1,225 @@
+<!-- Hero Section -->
+<section class="hero">
+  <div class="container">
+    <div class="search-container">
+      <input
+        type="text"
+        class="search-input"
+        placeholder="Keresés"
+        [(ngModel)]="searchQuery"
+        (keyup.enter)="onSearch()"
+      />
+      <button class="search-icon" (click)="onSearch()">
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="3" />
+          <path
+            d="M21 21l-4.35-4.35"
+            stroke="currentColor"
+            stroke-width="3"
+            stroke-linecap="round"
+          />
+        </svg>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- Top Recommendations Section -->
+<section class="section">
+  <div class="container">
+    <h2 class="section-title">Legjobb ajánlatok!</h2>
+
+    @if (isLoadingTop) {
+      <div class="loading-container">
+        <div class="spinner"></div>
+        <p class="loading-text">Betöltés...</p>
+      </div>
+    } @else if (errorTop) {
+      <div class="error-card">
+        <h3 class="error-title">Hiba történt</h3>
+        <p class="error-message">{{ errorTop }}</p>
+        <button class="btn-retry" (click)="retryLoadTop()">Újrapróbálás</button>
+      </div>
+    } @else if (topRecommendations.length === 0) {
+      <div class="empty-state">
+        <p>Jelenleg nincsenek elérhető ajánlatok.</p>
+      </div>
+    } @else {
+      <div class="service-grid">
+        @for (company of topRecommendations; track company.id) {
+          <div class="service-card" (click)="goToService(company.id)">
+            <div class="service-image">
+              <img [src]="company.imageUrl" [alt]="company.name" />
+            </div>
+            <div class="service-info">
+              <h3 class="service-name">{{ company.name }}</h3>
+              <div class="service-rating">
+                <span class="rating-value">{{ company.rating }}</span>
+                <span class="rating-stars">
+                  @for (star of getRatingStars(company.rating); track $index) {
+                    <span class="star">★</span>
+                  }
+                </span>
+                <span class="review-count">({{ company.reviewCount }})</span>
+              </div>
+              <p class="service-address">{{ company.address }}</p>
+              <button class="btn-book" (click)="$event.stopPropagation(); goToService(company.id)">
+                Foglalás
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</section>
+
+<!-- New Services Section -->
+<section class="section">
+  <div class="container">
+    <h2 class="section-title">Új a választékban!</h2>
+
+    @if (isLoadingNew) {
+      <div class="loading-container">
+        <div class="spinner"></div>
+        <p class="loading-text">Betöltés...</p>
+      </div>
+    } @else if (errorNew) {
+      <div class="error-card">
+        <h3 class="error-title">Hiba történt</h3>
+        <p class="error-message">{{ errorNew }}</p>
+        <button class="btn-retry" (click)="retryLoadNew()">Újrapróbálás</button>
+      </div>
+    } @else if (newServices.length === 0) {
+      <div class="empty-state">
+        <p>Jelenleg nincsenek új szolgáltatások.</p>
+      </div>
+    } @else {
+      <div class="service-grid">
+        @for (service of newServices; track service.id) {
+          <div class="service-card" (click)="goToService(service.id)">
+            <div class="service-image">
+              <img [src]="service.imageUrl" [alt]="service.name" />
+            </div>
+            <div class="service-info">
+              <h3 class="service-name">{{ service.name }}</h3>
+              <div class="service-rating">
+                <span class="rating-value">{{ service.rating }}</span>
+                <span class="rating-stars">
+                  @for (star of getRatingStars(service.rating); track $index) {
+                    <span class="star">★</span>
+                  }
+                </span>
+                <span class="review-count">({{ service.reviewCount }})</span>
+              </div>
+              <p class="service-address">{{ service.address }}</p>
+              <button class="btn-book" (click)="$event.stopPropagation(); goToService(service.id)">
+                Foglalás
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</section>
+
+<!-- Featured Services Section -->
+<section class="section">
+  <div class="container">
+    <h2 class="section-title">Felkapott</h2>
+
+    @if (isLoadingFeatured) {
+      <div class="loading-container">
+        <div class="spinner"></div>
+        <p class="loading-text">Betöltés...</p>
+      </div>
+    } @else if (errorFeatured) {
+      <div class="error-card">
+        <h3 class="error-title">Hiba történt</h3>
+        <p class="error-message">{{ errorFeatured }}</p>
+        <button class="btn-retry" (click)="retryLoadFeatured()">Újrapróbálás</button>
+      </div>
+    } @else if (featuredServices.length === 0) {
+      <div class="empty-state">
+        <p>Jelenleg nincsenek felkapott szolgáltatások.</p>
+      </div>
+    } @else {
+      <div class="service-grid">
+        @for (service of featuredServices; track service.id) {
+          <div class="service-card" (click)="goToService(service.id)">
+            <div class="service-image">
+              <img [src]="service.imageUrl" [alt]="service.name" />
+            </div>
+            <div class="service-info">
+              <h3 class="service-name">{{ service.name }}</h3>
+              <div class="service-rating">
+                <span class="rating-value">{{ service.rating }}</span>
+                <span class="rating-stars">
+                  @for (star of getRatingStars(service.rating); track $index) {
+                    <span class="star">★</span>
+                  }
+                </span>
+                <span class="review-count">({{ service.reviewCount }})</span>
+              </div>
+              <p class="service-address">{{ service.address }}</p>
+              <button class="btn-book" (click)="$event.stopPropagation(); goToService(service.id)">
+                Foglalás
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</section>
+
+<!-- Business CTA Section -->
+<section class="cta-section">
+  <div class="container">
+    <div class="cta-card">
+      <div class="cta-content">
+        <h2 class="cta-title">
+          <span class="brand-name">Bookr</span>
+          <span class="cta-subtitle">Cégeknek</span>
+        </h2>
+        <button class="btn-secondary" (click)="learnMore()">Tudj meg többet</button>
+      </div>
+      <div class="cta-image">
+        <img src="assets/images/business-hands.png" alt="Business teamwork" />
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Reviews Section -->
+<section class="section reviews-section">
+  <div class="container">
+    <h2 class="section-title">Értékelések</h2>
+    <div class="reviews-grid">
+      @for (review of reviews; track review.author) {
+        <div class="review-card">
+          <div class="review-header">
+            <img [src]="review.authorImage" [alt]="review.author" class="review-avatar" />
+            <div class="review-author-info">
+              <h4 class="review-author">{{ review.author }}</h4>
+              <h5 class="review-title">{{ review.title }}</h5>
+            </div>
+          </div>
+          <p class="review-content">{{ review.content }}</p>
+          <div class="review-rating">
+            @for (star of getRatingStars(review.rating); track $index) {
+              <span class="star">★</span>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</section>

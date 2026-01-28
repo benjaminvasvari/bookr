@@ -1,0 +1,61 @@
+<div class="registration-container">
+  <div class="registration-header">
+    <h1>Hozza létre vállalkozását a Bookr-en</h1>
+    <p class="subtitle">
+      Indítsa el online jelenlétét néhány perc alatt. Regisztráljon most, és kezdje el fogadni az időpontfoglalásokat!
+    </p>
+  </div>
+
+  <app-registration-stepper
+    [steps]="steps"
+    [currentStep]="currentStep"
+  ></app-registration-stepper>
+
+  <div class="step-content">
+    <div class="content-card">
+      <h2>{{ getCurrentStepTitle() }}</h2>
+
+      @if (currentStep === 1) {
+        <app-step-owner-info
+          [initialData]="registrationData.ownerInfo"
+          [isUserLoggedIn]="isUserLoggedIn"
+          (formValid)="onStepValidityChange($event)"
+          (formData)="onStepDataChange($event)"
+        ></app-step-owner-info>
+      }
+      @if (currentStep === 2) {
+        <app-step-company-info
+          [initialData]="registrationData.companyInfo"
+          (formValid)="onStepValidityChange($event)"
+          (formData)="onStepDataChange($event)"
+        ></app-step-company-info>
+      }
+      @if (currentStep === 3) {
+        <p>Step 3 - Hamarosan...</p>
+      }
+      @if (currentStep === 4) {
+        <p>Step 4 - Hamarosan...</p>
+      }
+
+      <div class="step-navigation">
+        <button
+          class="btn btn-secondary"
+          (click)="previousStep()"
+          [disabled]="!canGoBack()"
+        >
+          <i class="fas fa-arrow-left"></i>
+          <span>Vissza</span>
+        </button>
+
+        <button
+          class="btn btn-primary"
+          (click)="nextStep()"
+          [disabled]="!canGoNext()"
+        >
+          <span>{{ getButtonText() }}</span>
+          <i class="fas fa-arrow-right"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

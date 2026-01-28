@@ -1,0 +1,301 @@
+.main-header {
+    background-color: var(--charcoal-color);
+    width: 100%;
+    z-index: 1000;
+}
+
+.header-container {
+    padding-left: 100px;
+    padding-right: 100px;
+    max-width: 100%;
+}
+
+@media (max-width: 768px) {
+    .header-container {
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+}
+
+/* Brand Logo */
+.brand-logo {
+    font-size: 0px;
+    font-weight: 800;
+    padding: 0;
+    color: white;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.bookr-text {
+    font-size: 2.5rem;
+    color: white;
+}
+
+.logo-highlight {
+    color: var(--dark-green-color);
+}
+
+.brand-logo-container {
+    padding: 5px 0;
+}
+
+.bookr-img {
+    display: none;
+    height: 70px;
+    vertical-align: middle;
+}
+
+@media (max-width: 768px) {
+    .bookr-img {
+        display: inline;
+    }
+    .bookr-text {
+        display: none;
+    }
+}
+
+/* Login Button */
+.login-button {
+    background-color: var(--ice-white-color);
+    color: var(--charcoal-color);
+    border: none;
+    padding: 8px 25px;
+    border-radius: 25px;
+    font-weight: bold;
+    font-size: 16px;
+    transition: all 0.3s ease;
+}
+
+.login-button:hover {
+    background-color: var(--sky-whisper-color);
+    transform: scale(1.02);
+}
+
+/* Welcome Text */
+.welcome-text {
+    color: white;
+    font-size: 1.1rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* User Dropdown Container */
+.user-dropdown-container {
+    position: relative;
+}
+
+/* Profile Icon */
+.user-profile-icon {
+    width: 40px;
+    height: 40px;
+    background-color: var(--ice-white-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    overflow: hidden;
+    border: 2px solid transparent;
+    position: relative;
+    z-index: 1002;
+}
+
+.user-profile-icon:hover {
+    background-color: var(--sky-whisper-color);
+    transform: scale(1.05);
+    border-color: var(--dark-green-color);
+    box-shadow: 0 0 10px rgba(93, 189, 138, 0.3);
+}
+
+.user-profile-icon svg {
+    width: 24px;
+    height: 24px;
+    fill: var(--charcoal-color);
+}
+
+.user-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Dropdown Backdrop */
+.dropdown-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: transparent;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+/* Dropdown Menu */
+.user-dropdown-menu {
+    position: absolute;
+    top: 50px;
+    right: 0;
+    width: 280px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.2s ease;
+    z-index: 1001;
+}
+
+.user-dropdown-menu.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+/* Dropdown Header */
+.dropdown-header {
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 12px 12px 0 0;
+}
+
+.user-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: #2c3e50;
+    margin: 0 0 4px 0;
+}
+
+.user-email {
+    font-size: 13px;
+    color: #6c757d;
+    margin: 0;
+    word-break: break-word;
+}
+
+/* Dropdown Divider */
+.dropdown-divider {
+    height: 1px;
+    background: #e9ecef;
+    margin: 0px 0;
+}
+
+/* Dropdown Items */
+.dropdown-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 15px;
+    font-weight: 500;
+    color: #2c3e50;
+    text-align: left;
+    font-family: inherit;
+}
+
+.dropdown-item:hover {
+    background-color: rgba(93, 189, 138, 0.1);
+}
+
+.item-icon {
+    width: 20px;
+    height: 20px;
+    fill: #6c757d;
+    flex-shrink: 0;
+}
+
+.dropdown-item:hover .item-icon {
+    fill: var(--dark-green-color);
+}
+
+/* Logout Item */
+.dropdown-item.logout {
+    color: #dc3545;
+    border-radius: 0 0 12px 12px;
+    padding: 20px 20px;
+}
+
+.dropdown-item.logout:hover {
+    background-color: rgba(220, 53, 69, 0.1);
+}
+
+.dropdown-item.logout .item-icon {
+    fill: #dc3545;
+}
+
+
+/* Cég regisztrálása gomb - Login stílussal */
+.btn-register-business {
+  background: transparent;
+  color:  #38a169;
+  border: 2px solid #38a169;
+  padding: 10px 24px;
+  border-radius: 25px;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.btn-register-business:hover {
+  background: #38a169;
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(52, 168, 155, 0.4);
+  border-color:  #38a169;
+}
+
+.btn-register-business i {
+  font-size: 14px;
+  transition: transform 0.3s ease;
+}
+
+.btn-register-business:hover i {
+  transform: scale(1.1);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .btn-register-business {
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+  
+  .btn-register-business span {
+    display: none;
+  }
+  
+  .btn-register-business i {
+    margin: 0;
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .welcome-text {
+        font-size: 0.95rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .welcome-text {
+        display: none;
+    }
+    
+    .user-dropdown-menu {
+        width: 260px;
+        right: -10px;
+    }
+}

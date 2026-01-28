@@ -1,0 +1,516 @@
+.payment-container {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: 2rem;
+  max-width: 1400px;
+  margin-top: 100px;
+  padding: 2rem;
+  min-height: calc(100vh - 80px);
+}
+
+/* BAL OLDAL - Összegzés és Fizetési mód */
+.summary-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.summary-section h2 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #2c3e50;
+  margin: 0;
+}
+
+.summary-section h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0 0 1.5rem 0;
+}
+
+/* Összefoglaló kártya */
+.summary-card {
+  background: white;
+  border: 2px solid #dee2e6;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.summary-block {
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.summary-block:last-child {
+  border-bottom: none;
+}
+
+/* Block fejléc ikonnal */
+.block-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.block-header i {
+  color: #38a179;
+  font-size: 1.2rem;
+}
+
+/* Céginformációk */
+.company-info {
+  display: flex;
+  gap: 1rem;
+}
+
+.company-image {
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #f8f9fa;
+}
+
+.company-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.company-details h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0 0 0.25rem 0;
+}
+
+.rating {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.25rem 0;
+}
+
+.rating span:first-child {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.stars {
+  color: #ffc107;
+  font-size: 0.9rem;
+}
+
+.address {
+  font-size: 0.9rem;
+  color: #6c757d;
+  margin: 0.25rem 0 0 0;
+}
+
+/* Szakember info */
+.specialist-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.specialist-image-small {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid #dee2e6;
+  flex-shrink: 0;
+}
+
+.specialist-image-small img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.specialist-details h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0 0 0.25rem 0;
+}
+
+.specialization {
+  font-size: 0.85rem;
+  color: #6c757d;
+  margin: 0;
+}
+
+/* Összegzés sorok */
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+}
+
+.summary-row .label {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #6c757d;
+}
+
+.summary-row .value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+/* Szolgáltatások lista */
+.services-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.service-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.service-info h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0 0 0.25rem 0;
+}
+
+.service-info p {
+  font-size: 0.85rem;
+  color: #6c757d;
+  margin: 0;
+}
+
+.service-price {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+/* Végösszeg blokk */
+.total-block {
+  background: #f8f9fa;
+}
+
+.total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.total-label {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.total-price {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+/* Fizetési mód szekció */
+.payment-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.payment-options {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.payment-card {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  background: white;
+  border: 3px solid #dee2e6;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.payment-card:hover {
+  border-color: #38a179;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(56, 161, 121, 0.2);
+}
+
+.payment-card.selected {
+  border-color: #38a179;
+  background: #f0fdf7;
+  box-shadow: 0 6px 20px rgba(56, 161, 121, 0.3);
+}
+
+.payment-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #f8f9fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.3s;
+}
+
+.payment-card.selected .payment-icon {
+  background: #38a179;
+  color: white;
+}
+
+.payment-icon i {
+  font-size: 1.75rem;
+  color: #6c757d;
+}
+
+.payment-card.selected .payment-icon i {
+  color: white;
+}
+
+.payment-details h4 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0 0 0.5rem 0;
+}
+
+.payment-details p {
+  font-size: 0.9rem;
+  color: #6c757d;
+  margin: 0;
+}
+
+/* JOBB OLDAL - Kosár */
+.cart-section {
+  position: sticky;
+  top: 2rem;
+  right: 50px;
+  margin-top: 70px;
+  height: fit-content;
+  max-height: calc(100vh - 4rem);
+  overflow-y: auto;
+}
+
+.cart-card {
+  background: white;
+  border: 2px solid #dee2e6;
+  border-radius: 16px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Kiválasztott szakember/időpont info */
+.selected-specialist-info,
+.selected-appointment-info {
+  padding: 0.75rem;
+  background: #f0fdf7;
+  border-radius: 8px;
+  border: 1px solid #38a179;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.info-row .label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #6c757d;
+}
+
+.info-row .value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+/* Összesen sor */
+.cart-summary {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+  font-size: 1rem;
+  color: #2c3e50;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #dee2e6;
+}
+
+/* Kosár tartalom */
+.cart-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 100px;
+}
+
+.cart-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.cart-item-info h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0 0 0.25rem 0;
+}
+
+.cart-item-info p {
+  font-size: 0.85rem;
+  color: #6c757d;
+  margin: 0.25rem 0;
+}
+
+.cart-item-price {
+  font-weight: 600;
+  color: #2c3e50 !important;
+}
+
+/* Figyelmeztetés */
+.warning-message {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  background: #fee;
+  border: 2px solid #dc3545;
+  border-radius: 12px;
+  color: #dc3545;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.warning-message i {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+/* Véglegesítés gomb */
+.continue-btn {
+  width: 100%;
+  padding: 1rem;
+  border: none;
+  background: #38a179;
+  color: white;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.continue-btn:hover:not(:disabled) {
+  background: #2d8763;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(56, 161, 121, 0.3);
+}
+
+.continue-btn:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+  .payment-container {
+    grid-template-columns: 1fr;
+  }
+
+  .cart-section {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    background: white;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
+    padding: 1rem;
+    z-index: 1000;
+    max-height: none;
+  }
+
+  .cart-card {
+    border: none;
+    padding: 0;
+  }
+
+  .company-info,
+  .cart-items,
+  .selected-specialist-info,
+  .selected-appointment-info {
+    display: none;
+  }
+
+  .summary-section {
+    padding-bottom: 150px;
+  }
+}
+
+@media (max-width: 768px) {
+  .payment-container {
+    padding: 1rem;
+  }
+
+  .summary-block {
+    padding: 1rem 1.5rem;
+  }
+
+  .payment-card {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .payment-icon {
+    width: 50px;
+    height: 50px;
+  }
+
+  .payment-icon i {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .summary-block {
+    padding: 1rem;
+  }
+
+  .total-label {
+    font-size: 1.1rem;
+  }
+
+  .total-price {
+    font-size: 1.25rem;
+  }
+}
