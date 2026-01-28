@@ -134,7 +134,7 @@ public class ImagesService {
         return toReturn;
     }
 
-    public JSONObject uploadCompanyImage(Integer companyId, String filename, long fileSize, String mimeType, InputStream inputStream, boolean isMain) {
+    public JSONObject uploadCompanyImage(Integer companyId, String jwtToken, String filename, long fileSize, String mimeType, InputStream inputStream, boolean isMain) {
         JSONObject toReturn = new JSONObject();
         String status = "success";
         Integer statusCode = 200;
@@ -203,6 +203,33 @@ public class ImagesService {
 
             Images modelResult = layer.uploadCompanyImage(companyId, relativePath, isMain);
 
+            if (modelResult == null) {
+                status = "serverError";
+                statusCode = 500;
+            } else {
+                // ========== AUDIT LOG ==========
+                try {
+                    Integer userId = JWT.getUserIdFromAccessToken(jwtToken);
+                    String userEmail = JWT.getEmailFromAccessToken(jwtToken);
+                    String userRoles = JWT.getRolesFromAccessToken(jwtToken);
+
+                    AuditLogService.logSimpleAction(
+                            userId,
+                            userRoles.split(",")[0].trim(),
+                            null,
+                            companyId,
+                            userEmail,
+                            "company",
+                            isMain == true ? "uploadedMainImage" : "uploadedImage"
+                    );
+
+                } catch (Exception ex) {
+                    // Log the error but don't fail the registration
+                    ex.printStackTrace();
+                }
+                // ===============================
+            }
+
             String fullUrl = FileStorageUtil.buildFullUrl(relativePath);
 
             JSONObject result = new JSONObject();
@@ -210,12 +237,6 @@ public class ImagesService {
             result.put("id", modelResult.getId());
             result.put("url", fullUrl);
             result.put("relativePath", relativePath);
-            result.put("isMain", isMain);
-            result.put("filename", uniqueFilename);
-            result.put("originalFilename", filename);
-            result.put("size", fileSize);
-            result.put("sizeMB", fileSize / (1024.0 * 1024.0));
-            result.put("mimeType", mimeType);
 
             toReturn.put("result", result);
 
@@ -361,6 +382,103 @@ public class ImagesService {
 
         toReturn.put("status", status);
         toReturn.put("statusCode", statusCode);
+        return toReturn;
+    }
+
+    public JSONObject uploadUserImage(Integer userId, String jwtToken, String filename, long fileSize, String mimeType, InputStream inputStream) {
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        try {
+
+            // Company exist
+            Boolean isUserExist = UsersService.validateUserExist(userId);
+
+            if (isUserExist == null) {
+                status = "InternalServerError";
+                statusCode = 500;
+                toReturn.put("status", status);
+                toReturn.put("statusCode", statusCode);
+                return toReturn;
+            }
+            if (!isUserExist) {
+                status = "NotFound";
+                statusCode = 404;
+                toReturn.put("status", status);
+                toReturn.put("statusCode", statusCode);
+                return toReturn;
+            }
+
+            FileValidator.validateUploadedFile(filename, fileSize, mimeType);
+
+            String uniqueFilename = FileStorageUtil.generateUniqueFilename(filename);
+
+            String relativePath = FileStorageUtil.saveFile(
+                    inputStream,
+                    "users",
+                    userId,
+                    uniqueFilename
+            );
+
+            if (relativePath == null) {
+                status = "ImageSaveError";
+                statusCode = 500;
+                toReturn.put("status", status);
+                toReturn.put("statusCode", statusCode);
+                System.err.println("Nem sikerült a mentés");
+                return toReturn;
+            }
+
+            Images modelResult = layer.uploadUserImage(userId, relativePath);
+
+            if (modelResult == null) {
+                status = "serverError";
+                statusCode = 500;
+            } else {
+                // ========== AUDIT LOG ==========
+                try {
+                    String userEmail = JWT.getEmailFromAccessToken(jwtToken);
+                    String userRoles = JWT.getRolesFromAccessToken(jwtToken);
+
+                    AuditLogService.logSimpleAction(
+                            userId,
+                            userRoles.split(",")[0].trim(),
+                            null,
+                            null,
+                            userEmail,
+                            "user",
+                            "uploadProfileImage"
+                    );
+
+                } catch (Exception ex) {
+                    // Log the error but don't fail the registration
+                    ex.printStackTrace();
+                }
+                // ===============================
+            }
+
+            String fullUrl = FileStorageUtil.buildFullUrl(relativePath);
+
+            JSONObject result = new JSONObject();
+
+            result.put("id", modelResult.getId());
+            result.put("url", fullUrl);
+            result.put("originalFilename", filename);
+
+            toReturn.put("result", result);
+
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            status = "InternalServerError";
+            statusCode = 500;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+        }
+
         return toReturn;
     }
 }

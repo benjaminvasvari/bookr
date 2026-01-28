@@ -37,6 +37,8 @@ import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 /**
  *
@@ -685,7 +687,6 @@ public class Appointments implements Serializable {
         }
     }
 
-
     public static Integer createAppointment(Integer companyId, Integer serviceId, Integer staffId,
             Integer clientId, Timestamp startTime, Timestamp endTime,
             String notes, BigDecimal price) {
@@ -783,4 +784,50 @@ public class Appointments implements Serializable {
         }
     }
 
+    public static JSONObject getAppointmentsByClient(int page, int amount) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getAppointmentsByClient");
+            spq.registerStoredProcedureParameter("clientIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("statusFilterIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("limitIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("offsetIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("clientIdIN", clientId);
+            spq.setParameter("statusFilterIN", statusFilter);
+            spq.setParameter("limitIN", limit);
+            spq.setParameter("offsetIN", offset);
+
+            spq.execute();
+
+            int count = Integer.parseInt(spq.getOutputParameterValue("countOUT").toString());
+
+            List<Object[]> resultList = spq.getResultList();
+            JSONObject toReturn = new JSONObject();
+
+            JSONArray users = new JSONArray();
+            for (Object[] record : resultList) { // thats a foreach
+
+                JSONObject user = new JSONObject();
+
+                user.put("id", Integer.valueOf(record[0].toString()));
+                user.put("firstName", record[0].toString());
+                user.put("lastName", record[0].toString());
+                user.put("img", record[0].toString());
+
+                users.put(user);
+            }
+
+            toReturn.put("result", users);
+            toReturn.put("userCount", count);
+
+            return toReturn;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        }
+    }
 }

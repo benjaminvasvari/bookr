@@ -395,13 +395,13 @@ public class Images implements Serializable {
     public static Images uploadUserImage(Integer userId, String relativePath) {
         EntityManager em = emf.createEntityManager();
         try {
-            StoredProcedureQuery spq = em.createStoredProcedureQuery("uploadCompanyImage");
-            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("uploadUserImage");
+            spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("urlIN", String.class, ParameterMode.IN);
-            spq.registerStoredProcedureParameter("isMainIN", Boolean.class, ParameterMode.IN);
-            spq.setParameter("companyIdIN", companyId);
+            
+            spq.setParameter("userIdIN", userId);
             spq.setParameter("urlIN", relativePath);
-            spq.setParameter("isMainIN", isMain);
+
             spq.execute();
 
             // A SELECT LAST_INSERT_ID() AS image_id egyetlen értéket ad vissza
