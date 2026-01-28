@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3307
--- Generation Time: Jan 26, 2026 at 08:48 AM
+-- Generation Time: Jan 28, 2026 at 09:06 AM
 -- Server version: 5.7.24
 -- PHP Version: 8.3.1
 
@@ -3658,7 +3658,11 @@ INSERT INTO `audit_logs` (`id`, `performed_by_user_id`, `performed_by_role`, `af
 (17, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-23 19:13:59', 0),
 (18, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-23 19:17:16', 0),
 (19, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-23 19:17:28', 0),
-(20, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-23 19:42:25', 0);
+(20, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-23 19:42:25', 0),
+(21, 44, 'client', NULL, NULL, 'uhunor41@gmail.com', 'user', 'register', NULL, '{\"role\": \"client\", \"email\": \"uhunor41@gmail.com\", \"user_id\": 44, \"last_name\": \"Ujhelyi\", \"first_name\": \"Hunor\"}', '2026-01-27 12:17:43', 0),
+(22, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-27 12:45:31', 0),
+(23, 43, NULL, NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-27 22:32:41', 0),
+(24, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-28 08:55:30', 0);
 
 -- --------------------------------------------------------
 
@@ -3881,7 +3885,8 @@ INSERT INTO `images` (`id`, `company_id`, `user_id`, `url`, `is_main`, `uploaded
 (54, NULL, 25, 'https://storage.bookr.hu/staff/reka-bio-kozmetikus/profile.jpg', 0, '2024-03-10 20:05:00', NULL, 0),
 (55, NULL, 26, 'https://storage.bookr.hu/staff/tamas-thai-specialist/profile.jpg', 0, '2024-03-15 21:05:00', NULL, 0),
 (56, NULL, 43, NULL, 0, '2026-01-23 09:48:02', NULL, 0),
-(58, 2, NULL, 'companies/2/cc09c873-09de-4693-8400-7d337ae8f585.jpg', 0, '2026-01-24 14:35:03', NULL, 0);
+(58, 2, NULL, 'companies/2/cc09c873-09de-4693-8400-7d337ae8f585.jpg', 0, '2026-01-24 14:35:03', NULL, 0),
+(59, NULL, 44, NULL, 0, '2026-01-27 12:17:43', NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -4851,7 +4856,8 @@ CREATE TABLE `tokens` (
 
 INSERT INTO `tokens` (`id`, `user_id`, `token`, `type`, `expires_at`, `is_revoked`, `revoked_at`, `created_at`) VALUES
 (1, 41, '2167128bbb99cb495237b30503044763', 'email_verify', '2026-01-18 18:19:35', 1, '2026-01-17 18:36:57', '2026-01-17 18:19:35'),
-(2, 43, 'aede051cfaaf8fcbb1aff63fd8957b1e', 'email_verify', '2026-01-24 10:48:02', 1, '2026-01-23 10:48:09', '2026-01-23 10:48:02');
+(2, 43, 'aede051cfaaf8fcbb1aff63fd8957b1e', 'email_verify', '2026-01-24 10:48:02', 1, '2026-01-23 10:48:09', '2026-01-23 10:48:02'),
+(3, 44, '82b475a457bc8d68d7ce9b8ffeafb774', 'email_verify', '2026-01-28 13:17:43', 0, NULL, '2026-01-27 13:17:43');
 
 -- --------------------------------------------------------
 
@@ -4942,7 +4948,8 @@ INSERT INTO `users` (`id`, `guid`, `first_name`, `last_name`, `email`, `password
 (39, '39222bc4-f069-11f0-bb19-94e23c940cf4', 'Simon', 'Balázs', 'balazs.simon@yahoo.com', '$2y$10$client13', '+36203456713', NULL, '2024-04-01 12:00:00', NULL, NULL, 0, NULL, '2024-04-01 12:00:00', 1, 0, NULL, NULL, NULL),
 (40, '39222c81-f069-11f0-bb19-94e23c940cf4', 'Takács', 'Nikoletta', 'nikoletta.takacs@gmail.com', '$2y$10$client14', '+36203456714', NULL, '2024-04-02 13:00:00', NULL, NULL, 0, NULL, '2024-04-02 13:00:00', 1, 0, NULL, NULL, NULL),
 (41, 'b1f05ffe-f3c8-11f0-9e1f-41a67f8a3877', 'Admin', 'Admin', 'admin@admin.hu', '$argon2id$v=19$m=65536,t=3,p=1$LLsNAuCcRNfRp7IRoTHZ3Q$9HKsULfkadqFiGugB7h094MFOuCTBwyO9VULnDtb2ok', '+3670123252', NULL, '2026-01-17 18:19:35', '2026-01-17 18:36:57', NULL, 0, '2026-01-23 20:17:16', '2026-01-17 18:36:57', 1, 0, NULL, NULL, NULL),
-(43, '9be7f6aa-f840-11f0-89b9-b5e6602fcb6e', 'Admin', 'Admin', 'admin@admin.com', '$argon2id$v=19$m=65536,t=3,p=1$neSrpLHeChl9iqqk6FQH0A$/3zpvnj5TlX9YNwOF4j87qT7xszB9UcLDMOT3YLwEDY', '+367012344356', 2, '2026-01-23 10:48:02', '2026-01-23 20:10:10', NULL, 0, '2026-01-23 20:42:25', '2026-01-23 10:48:09', 1, 0, NULL, NULL, NULL);
+(43, '9be7f6aa-f840-11f0-89b9-b5e6602fcb6e', 'Admin', 'Admin', 'admin@admin.com', '$argon2id$v=19$m=65536,t=3,p=1$neSrpLHeChl9iqqk6FQH0A$/3zpvnj5TlX9YNwOF4j87qT7xszB9UcLDMOT3YLwEDY', '+367012344356', 2, '2026-01-23 10:48:02', '2026-01-23 20:10:10', NULL, 0, '2026-01-28 09:55:30', '2026-01-23 10:48:09', 1, 0, NULL, NULL, NULL),
+(44, '2ee2d66e-fb7a-11f0-9859-94e23c940cf4', 'Hunor', 'Ujhelyi', 'uhunor41@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$ZoZPae9NaItzuX2pogJw9g$sWC82W3HW0heTPFI2Ugg/tZ+OiPL+jvOOxHosXgj2r0', '06703477754', NULL, '2026-01-27 13:17:43', NULL, NULL, 0, NULL, NULL, 0, 0, NULL, NULL, NULL);
 
 --
 -- Triggers `users`
@@ -5134,7 +5141,8 @@ INSERT INTO `user_x_role` (`id`, `user_id`, `role_id`, `assigned_at`, `un_assign
 (66, 40, 4, '2024-04-02 11:00:00', NULL, 0),
 (67, 41, 4, '2026-01-17 17:19:35', NULL, 0),
 (68, 43, 4, '2026-01-23 09:48:02', NULL, 0),
-(69, 43, 1, '2026-01-23 19:13:42', NULL, 0);
+(69, 43, 1, '2026-01-23 19:13:42', NULL, 0),
+(70, 44, 4, '2026-01-27 12:17:43', NULL, 0);
 
 --
 -- Indexes for dumped tables
@@ -5333,7 +5341,7 @@ ALTER TABLE `appointments`
 -- AUTO_INCREMENT for table `audit_logs`
 --
 ALTER TABLE `audit_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
 
 --
 -- AUTO_INCREMENT for table `business_categories`
@@ -5357,7 +5365,7 @@ ALTER TABLE `favorites`
 -- AUTO_INCREMENT for table `images`
 --
 ALTER TABLE `images`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=59;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=60;
 
 --
 -- AUTO_INCREMENT for table `notification_settings`
@@ -5405,7 +5413,7 @@ ALTER TABLE `service_category_map`
 -- AUTO_INCREMENT for table `staff`
 --
 ALTER TABLE `staff`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=100;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `staff_exceptions`
@@ -5435,7 +5443,7 @@ ALTER TABLE `temporary_closed_periods`
 -- AUTO_INCREMENT for table `tokens`
 --
 ALTER TABLE `tokens`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `two_factor_recovery_codes`
@@ -5447,13 +5455,13 @@ ALTER TABLE `two_factor_recovery_codes`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=44;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=45;
 
 --
 -- AUTO_INCREMENT for table `user_x_role`
 --
 ALTER TABLE `user_x_role`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=70;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=71;
 
 --
 -- Constraints for dumped tables
