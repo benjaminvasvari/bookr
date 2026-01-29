@@ -8,6 +8,7 @@ import com.vizsgaremek.bookr.model.Companies;
 import com.vizsgaremek.bookr.model.Images;
 import com.vizsgaremek.bookr.model.OpeningHours;
 import com.vizsgaremek.bookr.model.Reviews;
+import com.vizsgaremek.bookr.util.FileStorageUtil;
 import java.text.SimpleDateFormat;
 import java.util.List;
 import org.json.JSONArray;
@@ -19,7 +20,6 @@ import org.json.JSONObject;
  */
 public class CompaniesService {
 
-    private static final String IMAGE_BASE_URL = "http://localhost:8080/bookr-1.0-SNAPSHOT/";
 
     private Companies layer = new Companies();
     private ServiceCategoryService serviceCategoryService = new ServiceCategoryService();
@@ -68,7 +68,7 @@ public class CompaniesService {
             List<Images> galleryImagesList = Images.getCompanyNotMainImages(id);
             JSONArray galleryImages = new JSONArray();
             for (Images img : galleryImagesList) {
-                galleryImages.put(IMAGE_BASE_URL + img.getUrl());
+                galleryImages.put(FileStorageUtil.buildFullUrl(img.getUrl()));
             }
 
             // 6. OPENING HOURS
@@ -115,7 +115,7 @@ public class CompaniesService {
             result.put("website", company.getWebsite());
             result.put("businessCategoryId", company.getBusinessCategoryIdInt());
             result.put("category", company.getCategoryName());
-            result.put("imageUrl", IMAGE_BASE_URL + company.getImageUrl());
+            result.put("imageUrl", FileStorageUtil.buildFullUrl(company.getImageUrl()));
             result.put("rating", company.getRating());
             result.put("reviewCount", company.getReviewCount());
 
@@ -176,7 +176,7 @@ public class CompaniesService {
                 actualCompanyObject.put("rating", actualCompany.getRating());
                 actualCompanyObject.put("reviewCount", actualCompany.getReviewCount());
                 actualCompanyObject.put("address", actualCompany.getAddress());
-                actualCompanyObject.put("imageUrl", IMAGE_BASE_URL + actualCompany.getImageUrl());
+                actualCompanyObject.put("imageUrl", FileStorageUtil.buildFullUrl(actualCompany.getImageUrl()));
 
                 result.put(actualCompanyObject);
             }
@@ -237,7 +237,7 @@ public class CompaniesService {
                 actualCompanyObject.put("rating", actualCompany.getRating());
                 actualCompanyObject.put("reviewCount", actualCompany.getReviewCount());
                 actualCompanyObject.put("address", actualCompany.getAddress());
-                actualCompanyObject.put("imageUrl", IMAGE_BASE_URL + actualCompany.getImageUrl());
+                actualCompanyObject.put("imageUrl", FileStorageUtil.buildFullUrl(actualCompany.getImageUrl()));
 
                 result.put(actualCompanyObject);
             }
@@ -298,7 +298,7 @@ public class CompaniesService {
                 actualCompanyObject.put("rating", actualCompany.getRating());
                 actualCompanyObject.put("reviewCount", actualCompany.getReviewCount());
                 actualCompanyObject.put("address", actualCompany.getAddress());
-                actualCompanyObject.put("imageUrl", IMAGE_BASE_URL + actualCompany.getImageUrl());
+                actualCompanyObject.put("imageUrl", FileStorageUtil.buildFullUrl(actualCompany.getImageUrl()));
 
                 result.put(actualCompanyObject);
             }
@@ -365,7 +365,7 @@ public class CompaniesService {
 
             result.put("rating", company.getRating());
             result.put("reviewCount", company.getReviewCount());
-            result.put("imageUrl", IMAGE_BASE_URL + company.getImageUrl());
+            result.put("imageUrl", company.getImageUrl());
 
             return result;
 

@@ -392,7 +392,6 @@ public class ImagesService {
 
         try {
 
-            // Company exist
             Boolean isUserExist = UsersService.validateUserExist(userId);
 
             if (isUserExist == null) {

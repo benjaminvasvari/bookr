@@ -784,21 +784,19 @@ public class Appointments implements Serializable {
         }
     }
 
-    public static JSONObject getAppointmentsByClient(int page, int amount) {
+    public static JSONObject getAppointmentsByClient(Integer clientId, Integer page, Integer amount) {
         EntityManager em = emf.createEntityManager();
 
         try {
 
             StoredProcedureQuery spq = em.createStoredProcedureQuery("getAppointmentsByClient");
             spq.registerStoredProcedureParameter("clientIdIN", Integer.class, ParameterMode.IN);
-            spq.registerStoredProcedureParameter("statusFilterIN", String.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("limitIN", Integer.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("offsetIN", Integer.class, ParameterMode.IN);
 
             spq.setParameter("clientIdIN", clientId);
-            spq.setParameter("statusFilterIN", statusFilter);
-            spq.setParameter("limitIN", limit);
-            spq.setParameter("offsetIN", offset);
+            spq.setParameter("limitIN", page);
+            spq.setParameter("offsetIN", amount);
 
             spq.execute();
 

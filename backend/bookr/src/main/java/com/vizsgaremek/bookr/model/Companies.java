@@ -233,13 +233,14 @@ public class Companies implements Serializable {
     }
 
     // getCompnayShort response
-    public Companies(Integer id, String name, String address, String postalCode, String city, String country, Double rating, Integer reviewCount, String imageUrl) {
+    public Companies(Integer id, String name, String address, String postalCode, String city, String country, String categoryName, Double rating, Integer reviewCount, String imageUrl) {
         this.id = id;
         this.name = name;
         this.address = address;
         this.postalCode = postalCode;
         this.city = city;
         this.country = country;
+        this.categoryName = categoryName;
         this.rating = rating;
         this.reviewCount = reviewCount;
         this.imageUrl = imageUrl;
@@ -873,9 +874,10 @@ public class Companies implements Serializable {
                     record[3].toString(),
                     record[4].toString(),
                     record[5].toString(),
-                    Double.parseDouble(record[6].toString()),
-                    Integer.valueOf(record[7].toString()),
-                    record[8] == null ? null : record[8].toString()
+                    record[6].toString(),
+                    Double.parseDouble(record[7].toString()),
+                    Integer.valueOf(record[8].toString()),
+                    record[9] == null ? null : record[9].toString()
             );
 
             return company;

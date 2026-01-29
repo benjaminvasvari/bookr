@@ -4,11 +4,16 @@
  */
 package com.vizsgaremek.bookr.model;
 
+import static com.vizsgaremek.bookr.model.Users.emf;
+import static com.vizsgaremek.bookr.model.Users.formatter;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import javax.persistence.Basic;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EntityManager;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -16,6 +21,8 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
+import javax.persistence.ParameterMode;
+import javax.persistence.StoredProcedureQuery;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
@@ -61,6 +68,12 @@ public class Favorites implements Serializable {
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     @ManyToOne(optional = false)
     private Users userId;
+    
+    @javax.persistence.Transient
+    private Integer userIdInt;
+    
+    @javax.persistence.Transient
+    private Integer companyIdInt;
 
     public Favorites() {
     }
@@ -74,6 +87,15 @@ public class Favorites implements Serializable {
         this.createdAt = createdAt;
         this.isDeleted = isDeleted;
     }
+
+    public Favorites(Integer id, Integer userIdInt, Integer companyIdInt, Date createdAt) {
+        this.id = id;
+        this.userIdInt = userIdInt;
+        this.companyIdInt = companyIdInt;
+        this.createdAt = createdAt;
+
+    }
+    
 
     public Integer getId() {
         return id;
@@ -122,6 +144,22 @@ public class Favorites implements Serializable {
     public void setUserId(Users userId) {
         this.userId = userId;
     }
+    
+    public Integer getUserIdInt() {
+        return userIdInt;
+    }
+
+    public void setUserIdInt(Integer userIdInt) {
+        this.userIdInt = userIdInt;
+    }
+    
+    public Integer getCompanyIdInt() {
+        return companyIdInt;
+    }
+
+    public void setCompanyIdInt(Integer companyIdInt) {
+        this.companyIdInt = companyIdInt;
+    }
 
     @Override
     public int hashCode() {
@@ -147,5 +185,50 @@ public class Favorites implements Serializable {
     public String toString() {
         return "com.vizsgaremek.bookr.model.Favorites[ id=" + id + " ]";
     }
-    
+
+    public static List<Favorites> getUserFavorites(Integer userId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            // Ha van stored procedure a company képekhez:
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getUserFavorites");
+            spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
+            
+            spq.setParameter("userIdIN", userId);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            // Empty list if no results
+            if (resultList.isEmpty()) {
+                return new ArrayList<>();  // Üres lista, nem null!
+            }
+
+            // Convert to Images list
+            List<Favorites> favoritesList = new ArrayList<>();
+
+            for (Object[] record : resultList) {
+                Favorites fav = new Favorites(
+                        Integer.valueOf(record[0].toString()),
+                        Integer.valueOf(record[1].toString()),
+                        Integer.valueOf(record[2].toString()),
+                        formatter.parse(record[3].toString())
+                );
+
+                favoritesList.add(fav); 
+            }
+
+            return favoritesList;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return new ArrayList<>();  // Error esetén üres lista (nem null!)
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
 }
