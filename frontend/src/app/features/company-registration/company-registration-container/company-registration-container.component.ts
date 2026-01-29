@@ -8,6 +8,7 @@ import { StepImageUploadComponent } from '../steps/step-image-upload/step-image-
 import { StepBusinessDetailsComponent } from '../steps/step-business-details/step-business-details.component';
 import { StepOpeningHoursComponent } from '../steps/step-opening-hours/step-opening-hours.component';
 import { AuthService } from '../../../core/services/auth.service';
+import { CookieService } from '../../../core/services/cookie.service';
 
 @Component({
   selector: 'app-company-registration-container',
@@ -54,9 +55,12 @@ export class CompanyRegistrationContainerComponent implements OnInit {
     { number: 5, title: 'Nyitvatartás', completed: false, active: false }
   ];
 
-  constructor(private authService: AuthService, private router: Router) {}
+  constructor(private authService: AuthService, private router: Router, private cookieService: CookieService) {}
 
   ngOnInit() {
+    // Cookie-ből betöltjük az elmentett adatokat
+    this.loadDataFromCookies();
+
     this.authService.currentUser$.subscribe(user => {
       this.currentUser = user;
       this.isUserLoggedIn = !!user;
@@ -129,18 +133,22 @@ export class CompanyRegistrationContainerComponent implements OnInit {
       case 2:
         data = this.stepCompanyInfo?.getFormData();
         this.registrationData.companyInfo = data;
+        this.cookieService.setCookie('bookr_company_info', data);
         break;
       case 3:
         data = this.stepImageUpload?.getFormData();
         this.registrationData.imageUpload = data;
+        this.cookieService.setCookie('bookr_image_upload', data);
         break;
       case 4:
         data = this.stepBusinessDetails?.getFormData();
         this.registrationData.businessDetails = data;
+        this.cookieService.setCookie('bookr_business_details', data);
         break;
       case 5:
         data = this.stepOpeningHours?.getFormData();
         this.registrationData.openingHours = data;
+        this.cookieService.setCookie('bookr_opening_hours', data);
         break;
     }
   }
@@ -154,20 +162,33 @@ export class CompanyRegistrationContainerComponent implements OnInit {
         break;
       case 2:
         this.registrationData.companyInfo = data;
+        this.cookieService.setCookie('bookr_company_info', data);
         break;
       case 3:
         this.registrationData.imageUpload = data;
+        this.cookieService.setCookie('bookr_image_upload', data);
         break;
       case 4:
         this.registrationData.businessDetails = data;
+        this.cookieService.setCookie('bookr_business_details', data);
         break;
       case 5:
         this.registrationData.openingHours = data;
-        break;
-      case 5:
-        this.registrationData.openingHours = data;
+        this.cookieService.setCookie('bookr_opening_hours', data);
         break;
     }
+  }
+
+  private loadDataFromCookies(): void {
+    const companyInfo = this.cookieService.getCookie('bookr_company_info');
+    const imageUpload = this.cookieService.getCookie('bookr_image_upload');
+    const businessDetails = this.cookieService.getCookie('bookr_business_details');
+    const openingHours = this.cookieService.getCookie('bookr_opening_hours');
+
+    if (companyInfo) this.registrationData.companyInfo = companyInfo;
+    if (imageUpload) this.registrationData.imageUpload = imageUpload;
+    if (businessDetails) this.registrationData.businessDetails = businessDetails;
+    if (openingHours) this.registrationData.openingHours = openingHours;
   }
 
   private checkCurrentStepValidity(): void {
@@ -203,6 +224,9 @@ export class CompanyRegistrationContainerComponent implements OnInit {
       this.isSubmitting = false;
       this.showSuccessModal = true;
       
+      // Cookie-k törlése sikeres regisztráció után
+      this.cookieService.clearRegistrationCookies();
+      
       // 3 másodperc után redirect a main page-re
       setTimeout(() => {
         this.router.navigate(['/']);
@@ -222,5 +246,19 @@ export class CompanyRegistrationContainerComponent implements OnInit {
 
   canGoBack(): boolean {
     return this.currentStep > 1;
+  }
+
+  onStepChanged(stepNumber: number): void {
+    if (stepNumber < this.currentStep) {
+      // Vissza lépés
+      this.currentStep = stepNumber;
+      this.steps[stepNumber - 1].active = true;
+      this.steps[this.currentStep].active = false;
+      this.checkCurrentStepValidity();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (stepNumber === this.currentStep + 1 && this.isCurrentStepValid) {
+      // Előre lépés
+      this.nextStep();
+    }
   }
 }

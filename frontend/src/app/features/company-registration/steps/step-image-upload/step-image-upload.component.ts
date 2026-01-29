@@ -33,14 +33,16 @@ export class StepImageUploadComponent implements OnInit {
   }
 
   ngOnInit() {
-    // Ha van initial data (visszatérés az előző oldalról)
-    if (this.initialData && this.initialData.images) {
-      this.initialData.images.forEach((img: any, index: number) => {
-        if (this.imageSlots[index]) {
-          this.imageSlots[index].preview = img.preview;
-          this.imageSlots[index].file = img.file;
-        }
-      });
+    // Ha van initial data (visszatérés az előző oldalról vagy cookie-ból)
+    if (this.initialData) {
+      if (this.initialData.images && Array.isArray(this.initialData.images)) {
+        this.initialData.images.forEach((img: any, index: number) => {
+          if (this.imageSlots[index] && img.preview) {
+            this.imageSlots[index].preview = img.preview;
+            // File objektum nem lehet cookie-ba, így csak a preview kerül ott el
+          }
+        });
+      }
     }
 
     // Kezdeti validitás kibocsátása (mindig valid, mert opcionális)

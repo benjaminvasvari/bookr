@@ -3,20 +3,9 @@
     <p>Adja meg vállalkozása nyitvatartási idejét. Ezt később az admin panelen is módosíthatja.</p>
   </div>
 
-  <div class="quick-actions">
-    <button type="button" class="btn-quick" (click)="setAllDaysOpen()" title="Összes nap nyitva">
-      <i class="fas fa-unlock"></i>
-      <span>Összes nap nyitva</span>
-    </button>
-    <button type="button" class="btn-quick" (click)="setAllDaysClosed()" title="Összes nap zárva">
-      <i class="fas fa-lock"></i>
-      <span>Összes nap zárva</span>
-    </button>
-  </div>
-
   <div class="individual-note">
     <i class="fas fa-lightbulb"></i>
-    <span>Egy adott napot a checkbox-ra kattintva vagy közvetlenül a napnévre kattintva tudja váltani</span>
+    <span>Az adott napot a jobb oldali kapcsolóval tudja nyitott/zárt állapotba tenni</span>
   </div>
 
   <div class="hours-container">
@@ -24,15 +13,7 @@
       <div class="day-row" [class.closed]="!day.isOpen">
         <!-- Nap neve és toggle -->
         <div class="day-header">
-          <label class="day-name-label">
-            <input 
-              type="checkbox" 
-              [checked]="day.isOpen"
-              (change)="toggleDay(day.dayNumber)"
-              class="day-toggle"
-            />
-            <span class="day-name">{{ day.dayName }}</span>
-          </label>
+          <span class="day-name">{{ day.dayName }}</span>
         </div>
 
         <!-- Idők -->
@@ -67,6 +48,19 @@
             <span>Zárva</span>
           </div>
         }
+
+        <label class="day-switch">
+          <input
+            type="checkbox"
+            [checked]="day.isOpen"
+            (change)="toggleDay(day.dayNumber)"
+            aria-label="{{ day.dayName }} nyitva/zárva"
+          />
+          <span class="switch-slider"></span>
+          <span class="switch-text" [class.closed]="!day.isOpen">
+            {{ day.isOpen ? 'Nyitva' : 'Zárva' }}
+          </span>
+        </label>
       </div>
     }
   </div>

@@ -252,7 +252,6 @@
 .btn-register-business:hover {
   background: #38a169;
   color: #ffffff;
-  transform: translateY(-2px);
   box-shadow: 0 4px 15px rgba(52, 168, 155, 0.4);
   border-color:  #38a169;
 }

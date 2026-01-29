@@ -2,7 +2,15 @@
   <div class="stepper-wrapper">
     @for (step of steps; track step.number) {
       <div class="step-item-wrapper">
-        <div class="step-item" [class.active]="step.active" [class.completed]="step.completed">
+        <button
+          type="button"
+          class="step-item"
+          [class.active]="step.active"
+          [class.completed]="step.completed"
+          [class.clickable]="step.completed || step.number <= currentStep"
+          (click)="onStepClick(step.number)"
+          [disabled]="!step.completed && step.number > currentStep"
+        >
           <div class="step-circle">
             <div class="step-number">
               @if (step.completed) {
@@ -13,7 +21,7 @@
             </div>
           </div>
           <div class="step-title">{{ step.title }}</div>
-        </div>
+        </button>
         @if (step.number < steps.length) {
           <div class="step-connector" [class.completed]="step.completed"></div>
         }
