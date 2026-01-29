@@ -47,7 +47,10 @@ export class StepCompanyInfoComponent implements OnInit {
       postalCode: ['', [Validators.required, Validators.pattern(/^\d{4}$/)]],
       country: ['Magyarország', [Validators.required]],
       phone: ['', [Validators.required, Validators.pattern(/^\+?36\d{9}$/)]],
-      email: ['', [Validators.required, Validators.email]],
+      email: ['', [
+        Validators.required,
+        Validators.pattern(/^[^\s@]+@[^\s@]+\.[A-Za-zÁÉÍÓÖŐÚÜŰáéíóöőúüű]+$/)
+      ]],
       website: ['', [Validators.pattern(/^https?:\/\/.+/)]]
     });
 
