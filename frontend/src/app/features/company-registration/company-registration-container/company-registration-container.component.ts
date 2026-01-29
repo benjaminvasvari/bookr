@@ -1,10 +1,14 @@
 import { Component, ViewChild, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { RegistrationStepperComponent, Step } from '../registration-stepper/registration-stepper.component';
 import { StepOwnerInfoComponent } from '../../company-registration/steps/step-owner-info/step-owner-info.component';
 import { StepCompanyInfoComponent } from '../../company-registration/steps/step-company-info/step-company-info.component';
+import { StepImageUploadComponent } from '../steps/step-image-upload/step-image-upload.component';
 import { StepBusinessDetailsComponent } from '../steps/step-business-details/step-business-details.component';
+import { StepOpeningHoursComponent } from '../steps/step-opening-hours/step-opening-hours.component';
 import { AuthService } from '../../../core/services/auth.service';
+import { CookieService } from '../../../core/services/cookie.service';
 
 @Component({
   selector: 'app-company-registration-container',
@@ -14,7 +18,9 @@ import { AuthService } from '../../../core/services/auth.service';
     RegistrationStepperComponent,
     StepOwnerInfoComponent,
     StepCompanyInfoComponent,
-    StepBusinessDetailsComponent,  // ← ÚJ! Hozzáadva az imports-hoz
+    StepImageUploadComponent,
+    StepBusinessDetailsComponent,
+    StepOpeningHoursComponent,
   ],
   templateUrl: './company-registration-container.component.html',
   styleUrls: ['./company-registration-container.component.css']
@@ -22,16 +28,21 @@ import { AuthService } from '../../../core/services/auth.service';
 export class CompanyRegistrationContainerComponent implements OnInit {
   @ViewChild(StepOwnerInfoComponent) stepOwnerInfo!: StepOwnerInfoComponent;
   @ViewChild(StepCompanyInfoComponent) stepCompanyInfo!: StepCompanyInfoComponent;
-  @ViewChild(StepBusinessDetailsComponent) stepBusinessDetails!: StepBusinessDetailsComponent;  // ← ÚJ! ViewChild hozzáadva
+  @ViewChild(StepImageUploadComponent) stepImageUpload!: StepImageUploadComponent;
+  @ViewChild(StepBusinessDetailsComponent) stepBusinessDetails!: StepBusinessDetailsComponent;
+  @ViewChild(StepOpeningHoursComponent) stepOpeningHours!: StepOpeningHoursComponent;
 
   currentStep = 1;
   isCurrentStepValid = false;
   isUserLoggedIn = false;
   currentUser: any = null;
+  showSuccessModal = false;
+  isSubmitting = false;
 
   registrationData: any = {
     ownerInfo: null,
     companyInfo: null,
+    imageUpload: null,
     businessDetails: null,
     openingHours: null
   };
@@ -39,13 +50,17 @@ export class CompanyRegistrationContainerComponent implements OnInit {
   steps: Step[] = [
     { number: 1, title: 'Tulajdonos adatok', completed: false, active: true },
     { number: 2, title: 'Cég információk', completed: false, active: false },
-    { number: 3, title: 'Üzleti részletek', completed: false, active: false },
-    { number: 4, title: 'Nyitvatartás', completed: false, active: false }
+    { number: 3, title: 'Képek feltöltése', completed: false, active: false },
+    { number: 4, title: 'Üzleti részletek', completed: false, active: false },
+    { number: 5, title: 'Nyitvatartás', completed: false, active: false }
   ];
 
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService, private router: Router, private cookieService: CookieService) {}
 
   ngOnInit() {
+    // Cookie-ből betöltjük az elmentett adatokat
+    this.loadDataFromCookies();
+
     this.authService.currentUser$.subscribe(user => {
       this.currentUser = user;
       this.isUserLoggedIn = !!user;
@@ -80,6 +95,9 @@ export class CompanyRegistrationContainerComponent implements OnInit {
     } else {
       this.submitRegistration();
     }
+
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   previousStep(): void {
@@ -90,6 +108,9 @@ export class CompanyRegistrationContainerComponent implements OnInit {
       this.steps[this.currentStep - 1].completed = false;
       this.checkCurrentStepValidity();
     }
+
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   onStepValidityChange(isValid: boolean): void {
@@ -112,10 +133,22 @@ export class CompanyRegistrationContainerComponent implements OnInit {
       case 2:
         data = this.stepCompanyInfo?.getFormData();
         this.registrationData.companyInfo = data;
+        this.cookieService.setCookie('bookr_company_info', data);
         break;
-      case 3:  // ← ÚJ! Step 3 mentés
+      case 3:
+        data = this.stepImageUpload?.getFormData();
+        this.registrationData.imageUpload = data;
+        this.cookieService.setCookie('bookr_image_upload', data);
+        break;
+      case 4:
         data = this.stepBusinessDetails?.getFormData();
         this.registrationData.businessDetails = data;
+        this.cookieService.setCookie('bookr_business_details', data);
+        break;
+      case 5:
+        data = this.stepOpeningHours?.getFormData();
+        this.registrationData.openingHours = data;
+        this.cookieService.setCookie('bookr_opening_hours', data);
         break;
     }
   }
@@ -129,14 +162,33 @@ export class CompanyRegistrationContainerComponent implements OnInit {
         break;
       case 2:
         this.registrationData.companyInfo = data;
+        this.cookieService.setCookie('bookr_company_info', data);
         break;
       case 3:
-        this.registrationData.businessDetails = data;
+        this.registrationData.imageUpload = data;
+        this.cookieService.setCookie('bookr_image_upload', data);
         break;
       case 4:
+        this.registrationData.businessDetails = data;
+        this.cookieService.setCookie('bookr_business_details', data);
+        break;
+      case 5:
         this.registrationData.openingHours = data;
+        this.cookieService.setCookie('bookr_opening_hours', data);
         break;
     }
+  }
+
+  private loadDataFromCookies(): void {
+    const companyInfo = this.cookieService.getCookie('bookr_company_info');
+    const imageUpload = this.cookieService.getCookie('bookr_image_upload');
+    const businessDetails = this.cookieService.getCookie('bookr_business_details');
+    const openingHours = this.cookieService.getCookie('bookr_opening_hours');
+
+    if (companyInfo) this.registrationData.companyInfo = companyInfo;
+    if (imageUpload) this.registrationData.imageUpload = imageUpload;
+    if (businessDetails) this.registrationData.businessDetails = businessDetails;
+    if (openingHours) this.registrationData.openingHours = openingHours;
   }
 
   private checkCurrentStepValidity(): void {
@@ -148,8 +200,14 @@ export class CompanyRegistrationContainerComponent implements OnInit {
       case 2:
         isValid = this.stepCompanyInfo?.isFormValid() || false;
         break;
-      case 3:  // ← ÚJ! Step 3 validáció
+      case 3:
+        isValid = this.stepImageUpload?.isFormValid() || false;
+        break;
+      case 4:
         isValid = this.stepBusinessDetails?.isFormValid() || false;
+        break;
+      case 5:
+        isValid = this.stepOpeningHours?.isFormValid() || false;
         break;
     }
     this.isCurrentStepValid = isValid;
@@ -158,7 +216,24 @@ export class CompanyRegistrationContainerComponent implements OnInit {
   private submitRegistration(): void {
     console.log('Registration data:', this.registrationData);
     console.log('Is logged in:', this.isUserLoggedIn);
-    // TODO: API call
+    
+    this.isSubmitting = true;
+    
+    // Szimulálunk egy API hívást
+    setTimeout(() => {
+      this.isSubmitting = false;
+      this.showSuccessModal = true;
+      
+      // Cookie-k törlése sikeres regisztráció után
+      this.cookieService.clearRegistrationCookies();
+      
+      // 3 másodperc után redirect a main page-re
+      setTimeout(() => {
+        this.router.navigate(['/']);
+      }, 3000);
+    }, 1500);
+    
+    // TODO: API call helyett a valódi submission
   }
 
   getButtonText(): string {
@@ -171,5 +246,19 @@ export class CompanyRegistrationContainerComponent implements OnInit {
 
   canGoBack(): boolean {
     return this.currentStep > 1;
+  }
+
+  onStepChanged(stepNumber: number): void {
+    if (stepNumber < this.currentStep) {
+      // Vissza lépés
+      this.currentStep = stepNumber;
+      this.steps[stepNumber - 1].active = true;
+      this.steps[this.currentStep].active = false;
+      this.checkCurrentStepValidity();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (stepNumber === this.currentStep + 1 && this.isCurrentStepValid) {
+      // Előre lépés
+      this.nextStep();
+    }
   }
 }

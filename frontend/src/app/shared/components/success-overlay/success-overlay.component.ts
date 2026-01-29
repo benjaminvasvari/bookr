@@ -7,7 +7,7 @@ import { CommonModule } from '@angular/common';
   standalone: true,
   imports: [CommonModule],
   templateUrl: './success-overlay.component.html',
-  styleUrls: ['./success-overlay.component.css']
+  styleUrls: ['./success-overlay.component.css'],
 })
 export class SuccessOverlayComponent implements OnInit {
   @Input() message: string = 'Foglalás sikeresen leadva!';
@@ -17,6 +17,8 @@ export class SuccessOverlayComponent implements OnInit {
   show = false;
 
   ngOnInit(): void {
+    console.log('SuccessOverlayComponent initialized with message:', this.message);
+
     // Kis késleltetés majd fade-in
     setTimeout(() => {
       this.show = true;

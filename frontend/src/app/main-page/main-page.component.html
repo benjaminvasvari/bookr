@@ -206,7 +206,7 @@
   <div class="container">
     <h2 class="section-title">Értékelések</h2>
     <div class="reviews-grid">
-      @for (review of reviews; track review.author) {
+      @for (review of reviews; track $index) {
         <div class="review-card">
           <div class="review-header">
             <img [src]="review.authorImage" [alt]="review.author" class="review-avatar" />

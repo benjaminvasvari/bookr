@@ -3,7 +3,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { CartService, CartItem, SelectedSpecialist, SelectedAppointment } from '../core/services/cart.service';
-import { SuccessOverlayComponent } from '../shared/components/succes-overlay/succes-overlay.component';
+import { SuccessOverlayComponent } from '../shared/components/success-overlay/success-overlay.component';
 
 @Component({
   selector: 'app-appointment-payment',
@@ -84,12 +84,15 @@ export class AppointmentPaymentComponent implements OnInit {
     };
 
     console.log('Véglegesített foglalás:', booking);
+     console.log('showSuccessOverlay beállítva TRUE-ra'); // Debug
 
     // TODO: API hívás a foglalás mentéséhez
     // this.bookingService.createBooking(booking).subscribe(...)
 
     // Success overlay megjelenítése
     this.showSuccessOverlay = true;
+
+     console.log('showSuccessOverlay értéke:', this.showSuccessOverlay); // Debug
   }
 
   onSuccessCompleted(): void {

@@ -47,42 +47,80 @@ export class StepBusinessDetailsComponent implements OnInit {
 
   constructor(private fb: FormBuilder) {
     this.businessForm = this.fb.group({
-      bookingAdvanceDays: [30, [Validators.required, Validators.min(1)]],
+      minBookingHoursSameDay: ['02:00', [Validators.required]],
       cancellationHours: [24, [Validators.required, Validators.min(1)]],
-      bufferTimeBetweenBookings: [0, [Validators.required, Validators.min(0)]],
-      maxAdvanceBookingDays: [90, [Validators.required, Validators.min(7)]]
+      maxAdvanceBookingDays: [90, [Validators.required, Validators.min(7)]],
+      minBookingSameDayNone: [false]
     });
 
     // Form változások figyelése
+    const timeControl = this.businessForm.get('minBookingHoursSameDay');
+    if (timeControl) {
+      timeControl.setValidators([Validators.required, this.maxSameDayHoursValidator(12)]);
+    }
+
     this.businessForm.valueChanges.subscribe(() => {
-      this.formValid.emit(this.businessForm.valid);
-      if (this.businessForm.valid) {
-        // Hozzáadjuk a fix HUF pénznemet az adatokhoz
-        const formDataWithCurrency = {
-          ...this.businessForm.value,
-          currency: this.currency
-        };
-        this.formData.emit(formDataWithCurrency);
+      this.emitFormStatus();
+    });
+
+    this.businessForm.get('minBookingSameDayNone')?.valueChanges.subscribe((isNone) => {
+      const control = this.businessForm.get('minBookingHoursSameDay');
+      if (isNone) {
+        control?.disable({ emitEvent: false });
+        control?.setValue('', { emitEvent: false });
+      } else {
+        control?.enable({ emitEvent: false });
+        if (!control?.value) {
+          control?.setValue('02:00', { emitEvent: false });
+        }
       }
+      this.emitFormStatus();
     });
   }
 
   ngOnInit() {
     if (this.initialData) {
       this.businessForm.patchValue(this.initialData);
+      if (this.initialData.minBookingHoursSameDay === false) {
+        this.businessForm.get('minBookingSameDayNone')?.setValue(true, { emitEvent: false });
+        this.businessForm.get('minBookingHoursSameDay')?.disable({ emitEvent: false });
+      }
     }
 
     // Kezdeti validitás kibocsátása
-    this.formValid.emit(this.businessForm.valid);
-    
-    // Kezdeti adatok kibocsátása (currency-vel)
-    if (this.businessForm.valid) {
+    this.emitFormStatus();
+  }
+
+  private emitFormStatus(): void {
+    const isNone = this.businessForm.get('minBookingSameDayNone')?.value === true;
+    const isValid = this.businessForm.valid || isNone;
+
+    this.formValid.emit(isValid);
+
+    if (isValid) {
+      const rawValue = this.businessForm.getRawValue();
       const formDataWithCurrency = {
-        ...this.businessForm.value,
+        ...rawValue,
+        minBookingHoursSameDay: isNone ? false : rawValue.minBookingHoursSameDay,
         currency: this.currency
       };
       this.formData.emit(formDataWithCurrency);
     }
+  }
+
+  private maxSameDayHoursValidator(maxHours: number) {
+    return (control: { value: string | null }) => {
+      const value = control?.value;
+      if (!value) return null;
+      const parts = value.split(':');
+      if (parts.length !== 2) return null;
+      const hours = Number(parts[0]);
+      const minutes = Number(parts[1]);
+      if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+      const totalMinutes = hours * 60 + minutes;
+      const maxMinutes = maxHours * 60;
+      return totalMinutes > maxMinutes ? { maxSameDayHours: true } : null;
+    };
   }
 
   isFieldInvalid(fieldName: string): boolean {
@@ -91,8 +129,11 @@ export class StepBusinessDetailsComponent implements OnInit {
   }
 
   getFormData() {
+    const rawValue = this.businessForm.getRawValue();
+    const isNone = rawValue.minBookingSameDayNone === true;
     return {
-      ...this.businessForm.value,
+      ...rawValue,
+      minBookingHoursSameDay: isNone ? false : rawValue.minBookingHoursSameDay,
       currency: this.currency
     };
   }

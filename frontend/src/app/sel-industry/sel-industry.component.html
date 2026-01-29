@@ -8,7 +8,7 @@
     </div>
     <div class="thumbnail-gallery">
       @if (company.galleryImages && company.galleryImages.length > 0) { @for (image of
-      company.galleryImages; track image) {
+      company.galleryImages; track $index) {
       <div class="thumbnail">
         <img [src]="image" [alt]="company.name" loading="lazy" />
       </div>

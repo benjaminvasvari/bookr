@@ -205,7 +205,7 @@
             <div class="rating">
               <span>{{ company.rating }}</span>
               <span class="stars" [attr.aria-label]="company.rating + ' csillag'">
-                @for (star of [1,2,3,4,5]; track star) {
+                @for (star of [1,2,3,4,5]; track $index) {
                   <i class="fas fa-star" [class.half]="company.rating >= star - 0.5 && company.rating < star"></i>
                 }
               </span>

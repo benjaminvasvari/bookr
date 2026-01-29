@@ -33,15 +33,7 @@ export class StepCompanyInfoComponent implements OnInit {
   ];
 
   isCategoriesLoading = false; // Mock loading state
-  
-  imageSlots = [
-    { id: 'main', preview: null as string | null, file: null as File | null, isMain: true },
-    { id: 'image2', preview: null as string | null, file: null as File | null, isMain: false },
-    { id: 'image3', preview: null as string | null, file: null as File | null, isMain: false },
-    { id: 'image4', preview: null as string | null, file: null as File | null, isMain: false }
-  ];
 
-  draggedSlotId: string | null = null;
   descriptionCharCount = 0;
   maxDescriptionLength = 500;
 
@@ -72,14 +64,6 @@ export class StepCompanyInfoComponent implements OnInit {
     // Ha van initial data, töltsd be
     if (this.initialData) {
       this.companyForm.patchValue(this.initialData);
-      
-      if (this.initialData.images) {
-        this.initialData.images.forEach((img: any, index: number) => {
-          if (this.imageSlots[index]) {
-            this.imageSlots[index].preview = img.preview;
-          }
-        });
-      }
     }
 
     // Kezdeti validitás kibocsátása
@@ -87,109 +71,13 @@ export class StepCompanyInfoComponent implements OnInit {
   }
 
   emitFormStatus() {
-    const hasAtLeastOneImage = this.imageSlots.some(slot => slot.preview !== null);
-    const isValid = this.companyForm.valid && hasAtLeastOneImage;
+    const isValid = this.companyForm.valid;
     
     this.formValid.emit(isValid);
     
     if (isValid) {
-      this.formData.emit({
-        ...this.companyForm.value,
-        images: this.imageSlots
-          .filter(slot => slot.file !== null)
-          .map(slot => ({
-            file: slot.file,
-            isMain: slot.isMain,
-            preview: slot.preview
-          }))
-      });
+      this.formData.emit(this.companyForm.value);
     }
-  }
-
-  // ============================================
-  // KÉPFELTÖLTÉS KEZELÉS
-  // ============================================
-
-  onImageSelected(event: Event, slotId: string) {
-    const input = event.target as HTMLInputElement;
-    if (input.files && input.files[0]) {
-      const file = input.files[0];
-      
-      if (!file.type.startsWith('image/')) {
-        alert('Csak képfájlokat lehet feltölteni!');
-        return;
-      }
-
-      if (file.size > 5 * 1024 * 1024) {
-        alert('A kép mérete maximum 5MB lehet!');
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const slot = this.imageSlots.find(s => s.id === slotId);
-        if (slot) {
-          slot.preview = e.target?.result as string;
-          slot.file = file;
-          this.emitFormStatus();
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  }
-
-  triggerFileInput(slotId: string) {
-    const inputId = `file-input-${slotId}`;
-    const input = document.getElementById(inputId) as HTMLInputElement;
-    input?.click();
-  }
-
-  deleteImage(slotId: string) {
-    const slot = this.imageSlots.find(s => s.id === slotId);
-    if (slot) {
-      slot.preview = null;
-      slot.file = null;
-      this.emitFormStatus();
-    }
-  }
-
-  onDragStart(event: DragEvent, slotId: string) {
-    this.draggedSlotId = slotId;
-    event.dataTransfer!.effectAllowed = 'move';
-    (event.target as HTMLElement).classList.add('dragstart');
-  }
-
-  onDragEnd(event: DragEvent) {
-    (event.target as HTMLElement).classList.remove('dragstart');
-  }
-
-  onDragOver(event: DragEvent) {
-    event.preventDefault();
-    event.dataTransfer!.dropEffect = 'move';
-  }
-
-  onDrop(event: DragEvent, targetSlotId: string) {
-    event.preventDefault();
-    
-    if (this.draggedSlotId && this.draggedSlotId !== targetSlotId) {
-      const draggedSlot = this.imageSlots.find(s => s.id === this.draggedSlotId);
-      const targetSlot = this.imageSlots.find(s => s.id === targetSlotId);
-      
-      if (draggedSlot && targetSlot) {
-        const tempPreview = draggedSlot.preview;
-        const tempFile = draggedSlot.file;
-        
-        draggedSlot.preview = targetSlot.preview;
-        draggedSlot.file = targetSlot.file;
-        
-        targetSlot.preview = tempPreview;
-        targetSlot.file = tempFile;
-        
-        this.emitFormStatus();
-      }
-    }
-    
-    this.draggedSlotId = null;
   }
 
   isFieldInvalid(fieldName: string): boolean {
@@ -198,20 +86,10 @@ export class StepCompanyInfoComponent implements OnInit {
   }
 
   getFormData() {
-    return {
-      ...this.companyForm.value,
-      images: this.imageSlots
-        .filter(slot => slot.file !== null)
-        .map(slot => ({
-          file: slot.file,
-          isMain: slot.isMain,
-          preview: slot.preview
-        }))
-    };
+    return this.companyForm.value;
   }
 
   isFormValid(): boolean {
-    const hasAtLeastOneImage = this.imageSlots.some(slot => slot.preview !== null);
-    return this.companyForm.valid && hasAtLeastOneImage;
+    return this.companyForm.valid;
   }
 }
