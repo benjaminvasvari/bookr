@@ -107,4 +107,42 @@ public class FavoritesService {
         return toReturn;
     }
 
+    public JSONObject addFavorite(String jwtToken, Integer companyId) {
+
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        Integer userId = JWT.getUserIdFromAccessToken(jwtToken);
+        
+        // Company exist
+        Boolean isUserExist = UsersService.validateUserExist(userId);
+
+        if (isUserExist == null) {
+            status = "InternalServerError";
+            statusCode = 500;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+            return toReturn;
+        }
+        if (!isUserExist) {
+            status = "CompanyNotFound";
+            statusCode = 404;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+            return toReturn;
+        }
+
+        Boolean modelResult = layer.addFavorite(userId, companyId);
+
+        if (modelResult == false) {
+            status = "serverError";
+            statusCode = 500;
+        }
+
+        toReturn.put("status", status);
+        toReturn.put("statusCode", statusCode);
+        return toReturn;
+    }
+
 }

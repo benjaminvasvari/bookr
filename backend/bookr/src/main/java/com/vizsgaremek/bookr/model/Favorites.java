@@ -68,10 +68,10 @@ public class Favorites implements Serializable {
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     @ManyToOne(optional = false)
     private Users userId;
-    
+
     @javax.persistence.Transient
     private Integer userIdInt;
-    
+
     @javax.persistence.Transient
     private Integer companyIdInt;
 
@@ -95,7 +95,6 @@ public class Favorites implements Serializable {
         this.createdAt = createdAt;
 
     }
-    
 
     public Integer getId() {
         return id;
@@ -144,7 +143,7 @@ public class Favorites implements Serializable {
     public void setUserId(Users userId) {
         this.userId = userId;
     }
-    
+
     public Integer getUserIdInt() {
         return userIdInt;
     }
@@ -152,7 +151,7 @@ public class Favorites implements Serializable {
     public void setUserIdInt(Integer userIdInt) {
         this.userIdInt = userIdInt;
     }
-    
+
     public Integer getCompanyIdInt() {
         return companyIdInt;
     }
@@ -193,7 +192,7 @@ public class Favorites implements Serializable {
             // Ha van stored procedure a company képekhez:
             StoredProcedureQuery spq = em.createStoredProcedureQuery("getUserFavorites");
             spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
-            
+
             spq.setParameter("userIdIN", userId);
 
             spq.execute();
@@ -216,7 +215,7 @@ public class Favorites implements Serializable {
                         formatter.parse(record[3].toString())
                 );
 
-                favoritesList.add(fav); 
+                favoritesList.add(fav);
             }
 
             return favoritesList;
@@ -231,4 +230,25 @@ public class Favorites implements Serializable {
         }
     }
 
+    public static Boolean addFavorite(Integer userId, Integer companyId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("addFavorite");
+            spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("userIdIN", userId);
+            spq.setParameter("companyIdIN", companyId);
+
+            spq.execute();
+
+            return true;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return false;
+        }
+    }
 }

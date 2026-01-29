@@ -14,6 +14,7 @@ import javax.ws.rs.DELETE;
 import javax.ws.rs.Produces;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
+import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PUT;
 import javax.ws.rs.PathParam;
@@ -116,6 +117,52 @@ public class FavoritesController {
             }
 
             JSONObject toReturn = layer.getUserFavorites(jwtToken);
+            return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                    .entity(toReturn.toString())
+                    .type(MediaType.APPLICATION_JSON)
+                    .build();
+        }
+    }
+
+    @POST
+    @Path("addFavorite/{companyId}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response addFavorite(@PathParam("companyId") Integer companyId, @HeaderParam("Authorization") String authHeader) {
+
+        // Extract token from "Bearer <token>"
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            System.out.println("Missing or invalid Authorization header");
+            return buildErrorResponse(401, "missingToken");
+        }
+
+        if (companyId <= 0) {
+            return buildErrorResponse(417, "invalidParam");
+        }
+
+        // Remove "Bearer " prefix
+        String jwtToken = authHeader.substring(7);
+
+        Boolean validJwt = JWT.validateAccessToken(jwtToken);
+
+        if (validJwt == null) {
+            // Lejárt JWT
+            return buildErrorResponse(401, "tokenExpired");
+        } else if (validJwt == false) {
+            // Invalid JWT
+            return buildErrorResponse(401, "invalidToken");
+        } else {
+            // Valid token
+
+            String userRoles = JWT.getRolesFromAccessToken(jwtToken);
+            Integer userId = JWT.getUserIdFromAccessToken(jwtToken);
+
+            boolean hasPermission = RoleChecker.hasAnyRole(userRoles, "client");
+
+            if (!hasPermission) {
+                return buildErrorResponse(403, "forbidden");
+            }
+
+            JSONObject toReturn = layer.addFavorite(jwtToken, companyId);
             return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
                     .entity(toReturn.toString())
                     .type(MediaType.APPLICATION_JSON)
