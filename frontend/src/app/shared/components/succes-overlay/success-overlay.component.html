@@ -1,0 +1,14 @@
+<!-- src/app/shared/components/success-overlay/success-overlay.component.html -->
+<div class="success-overlay" [class.show]="show">
+  <div class="success-content">
+    <!-- Fehér pipa körben -->
+    <div class="checkmark-container">
+      <svg class="checkmark" viewBox="0 0 52 52">
+        <path class="checkmark-check" d="M12 26 L22 36 L42 16"/>
+      </svg>
+    </div>
+    
+    <!-- Szöveg -->
+    <h2>{{ message }}</h2>
+  </div>
+</div>

@@ -179,3 +179,14 @@
     </div>
   </div>
 </div>
+
+<!-- A meglévő HTML kód után, a </div> záró tag UTÁN -->
+
+<!-- Success Overlay -->
+@if (showSuccessOverlay) {
+  <app-success-overlay
+    message="Foglalás sikeresen leadva!"
+    [duration]="2000"
+    (completed)="onSuccessCompleted()"
+  />
+}
