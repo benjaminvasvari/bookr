@@ -114,7 +114,7 @@ public class FavoritesService {
         Integer statusCode = 200;
 
         Integer userId = JWT.getUserIdFromAccessToken(jwtToken);
-        
+
         // Company exist
         Boolean isUserExist = UsersService.validateUserExist(userId);
 
@@ -126,7 +126,7 @@ public class FavoritesService {
             return toReturn;
         }
         if (!isUserExist) {
-            status = "CompanyNotFound";
+            status = "UserNotFound";
             statusCode = 404;
             toReturn.put("status", status);
             toReturn.put("statusCode", statusCode);
@@ -134,6 +134,44 @@ public class FavoritesService {
         }
 
         Boolean modelResult = layer.addFavorite(userId, companyId);
+
+        if (modelResult == false) {
+            status = "serverError";
+            statusCode = 500;
+        }
+
+        toReturn.put("status", status);
+        toReturn.put("statusCode", statusCode);
+        return toReturn;
+    }
+
+    public JSONObject removeFavorite(String jwtToken, Integer companyId) {
+
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        Integer userId = JWT.getUserIdFromAccessToken(jwtToken);
+
+        // Company exist
+        Boolean isUserExist = UsersService.validateUserExist(userId);
+
+        if (isUserExist == null) {
+            status = "InternalServerError";
+            statusCode = 500;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+            return toReturn;
+        }
+        if (!isUserExist) {
+            status = "UserNotFound";
+            statusCode = 404;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+            return toReturn;
+        }
+
+        Boolean modelResult = layer.removeFavorite(userId, companyId);
 
         if (modelResult == false) {
             status = "serverError";
