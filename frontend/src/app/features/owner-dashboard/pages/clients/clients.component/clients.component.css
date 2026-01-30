@@ -40,8 +40,8 @@
 }
 
 .clients-list {
-	display: flex;
-	flex-direction: column;
+	display: grid;
+	grid-template-columns: repeat(2, minmax(220px, 1fr));
 	gap: 14px;
 }
 
@@ -92,6 +92,10 @@
 }
 
 @media (max-width: 720px) {
+	.clients-list {
+		grid-template-columns: 1fr;
+	}
+
 	.client-card {
 		grid-template-columns: 1fr;
 		align-items: flex-start;

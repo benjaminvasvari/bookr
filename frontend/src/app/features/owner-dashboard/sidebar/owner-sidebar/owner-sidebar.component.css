@@ -11,9 +11,15 @@
 	transition: width 0.2s ease;
 	overflow: hidden;
 	box-sizing: border-box;
+	position: relative;
 }
 
 .owner-sidebar:hover {
+	width: 220px;
+	flex-basis: 220px;
+}
+
+.owner-sidebar.is-pinned {
 	width: 220px;
 	flex-basis: 220px;
 }
@@ -29,8 +35,10 @@
 .brand-icon {
 	width: 40px;
 	height: 40px;
-	border-radius: 10px;
-	background: transparent;
+	border-radius: 12px;
+	/* background: #f7fafc; */
+	border: none;
+	padding: 1px;
 	display: block;
 	object-fit: contain;
 	flex-shrink: 0;
@@ -38,30 +46,44 @@
 	line-height: 1;
 }
 
-.brand-text {
+.pin-btn {
+	position: absolute;
+	top: 14px;
+	right: 12px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0;
+	padding: 8px;
+	border-radius: 10px;
+	border: 1px solid rgba(124, 156, 191, 0.35);
+	background: rgba(124, 156, 191, 0.18);
+	color: #ebf4ff;
+	cursor: pointer;
+	font-size: 12px;
+	transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.owner-sidebar:not(:hover):not(.is-pinned) .pin-btn {
 	opacity: 0;
-	max-width: 140px;
-	overflow: hidden;
-	transition: opacity 0.2s ease, max-width 0.2s ease;
-	white-space: nowrap;
-	visibility: hidden;
+	pointer-events: none;
 }
 
-.owner-sidebar:hover .brand-text {
-	opacity: 1;
-	max-width: 140px;
-	visibility: visible;
+.pin-btn:hover {
+	background: rgba(124, 156, 191, 0.28);
+	border-color: rgba(124, 156, 191, 0.55);
 }
 
-.sidebar-header h2 {
-	margin: 0;
-	font-size: 20px;
-	font-weight: 700;
+.owner-sidebar.is-pinned .pin-btn {
+	background: rgba(124, 156, 191, 0.4);
+	border-color: rgba(124, 156, 191, 0.7);
 }
 
-.sidebar-header span {
-	color: #7c9cbf;
-	font-size: 13px;
+.pin-icon {
+	font-size: 14px;
+	line-height: 1;
+	color: #ebf4ff;
+	transform: rotate(25deg) translateY(1px);
 }
 
 .sidebar-nav {
@@ -116,6 +138,10 @@
 }
 
 .owner-sidebar:hover .nav-label {
+	opacity: 1;
+}
+
+.owner-sidebar.is-pinned .nav-label {
 	opacity: 1;
 }
 

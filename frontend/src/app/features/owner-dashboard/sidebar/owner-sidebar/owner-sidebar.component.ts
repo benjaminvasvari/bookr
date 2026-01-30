@@ -10,5 +10,9 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
   styleUrls: ['./owner-sidebar.component.css'],
 })
 export class OwnerSidebar {
+  isPinned = false;
 
+  togglePin(): void {
+    this.isPinned = !this.isPinned;
+  }
 }
