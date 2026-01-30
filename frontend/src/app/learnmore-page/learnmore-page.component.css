@@ -1,0 +1,152 @@
+.learnmore-hero {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: #fff;
+}
+
+.image-group {
+  position: relative;
+  width: 100%;
+  height: 420px;
+}
+
+.hero-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  margin-top: 70px;
+}
+
+.hero-img.wave {
+  position: absolute;
+  top: -100px;
+  bottom: -10px;
+  width: 60%;
+  height: auto;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.hero-text {
+  position: absolute;
+  left: 48px;
+  top: 48px;
+  color: #ffffff;
+  z-index: 10;
+  max-width: 48%;
+}
+
+.hero-text h1 {
+    position: relative;
+    right: 7px;
+  margin: 45px;
+  font-size: 56px;
+  line-height: 1.02;
+  font-weight: 800;
+  text-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+}
+
+@media (max-width: 900px) {
+  .image-group {
+    height: 320px;
+  }
+  .hero-text {
+    left: 24px;
+    top: 24px;
+    max-width: 70%;
+  }
+  .hero-text h1 {
+    font-size: 36px;
+  }
+  .hero-img.wave {
+    width: 80%;
+    bottom: -20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .image-group {
+    height: 240px;
+  }
+  .hero-text h1 {
+    font-size: 26px;
+  }
+  .hero-text {
+    max-width: 86%;
+  }
+}
+
+/* Cards section (match site content width via .container) */
+.learnmore-cards {
+  /* make section span full width despite .container helper class */
+  width: 100%;
+  max-width: 100%;
+  padding: 40px 16px;
+  margin: 0;
+}
+
+.cards-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.card {
+  border-radius: 10px;
+  color: white;
+  min-height: 180px;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 8px 30px rgba(3, 10, 18, 0.12);
+  overflow: hidden;
+  width: 100%;
+}
+
+.card-content {
+  padding: 28px;
+}
+
+.card h3 {
+  margin: 0 0 8px 0;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.card p {
+  margin: 0 0 12px 0;
+  font-size: 15px;
+  opacity: 0.95;
+}
+
+.card ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.card li {
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.card-boost { background: #38a179; }
+.card-professional { background: linear-gradient(135deg,#2dd4bf,#059669); }
+.card-control { background: linear-gradient(135deg,#2dd4bf,#059669); }
+.card-support { background: linear-gradient(135deg,#2dd4bf,#059669); }
+
+
+@media (min-width: 1200px) {
+  /* keep cards comfortably wide on large screens */
+  .learnmore-cards { padding-left: 48px; padding-right: 48px; }
+  .card { min-height: 200px; }
+}
+
+@media (max-width: 560px) {
+  .learnmore-cards { padding-left: 12px; padding-right: 12px; }
+  .card { min-height: 140px; }
+}
+

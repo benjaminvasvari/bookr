@@ -1,1 +1,47 @@
-<p>clients.component works!</p>
+<section class="clients-panel">
+	<header class="clients-topbar">
+		<h1>Ügyféllista</h1>
+	</header>
+
+	<div class="clients-toolbar">
+		<label class="search-input">
+			<span class="icon">🔍</span>
+			<input type="text" placeholder="Név, Email-cím" />
+		</label>
+	</div>
+
+	<div class="clients-list">
+		<a class="client-card" [routerLink]="['/owner/clients', 1]">
+			<div class="avatar"></div>
+			<div class="client-info">
+				<h3>Kovács Anna</h3>
+				<p>anna.kovacs@email.com</p>
+			</div>
+			<span class="meta">15 foglalás</span>
+		</a>
+		<a class="client-card" [routerLink]="['/owner/clients', 2]">
+			<div class="avatar"></div>
+			<div class="client-info">
+				<h3>Nagy Péter</h3>
+				<p>peter.nagy@email.com</p>
+			</div>
+			<span class="meta">9 foglalás</span>
+		</a>
+		<a class="client-card" [routerLink]="['/owner/clients', 3]">
+			<div class="avatar"></div>
+			<div class="client-info">
+				<h3>Tóth László</h3>
+				<p>toth.laszlo@email.com</p>
+			</div>
+			<span class="meta">12 foglalás</span>
+		</a>
+		<a class="client-card" [routerLink]="['/owner/clients', 4]">
+			<div class="avatar"></div>
+			<div class="client-info">
+				<h3>Szabó Petra</h3>
+				<p>szabo.petra@email.com</p>
+			</div>
+			<span class="meta">7 foglalás</span>
+		</a>
+	</div>
+</section>

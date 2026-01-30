@@ -1,18 +1,21 @@
 .owner-sidebar {
 	width: 68px;
+	flex: 0 0 68px;
 	min-height: 100vh;
 	background: #2d3748;
-	color: #f7fafc;
+	color: #ebf4ff;
 	padding: 18px 10px;
 	display: flex;
 	flex-direction: column;
 	gap: 24px;
 	transition: width 0.2s ease;
 	overflow: hidden;
+	box-sizing: border-box;
 }
 
 .owner-sidebar:hover {
 	width: 220px;
+	flex-basis: 220px;
 }
 
 .sidebar-header {
@@ -20,19 +23,16 @@
 	align-items: center;
 	gap: 12px;
 	padding: 4px 6px;
+	height: 48px;
 }
 
 .brand-icon {
 	width: 40px;
 	height: 40px;
 	border-radius: 10px;
-	background: #ebf4ff;
-	color: #2d3748;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	font-weight: 700;
-	font-size: 18px;
+	background: transparent;
+	display: block;
+	object-fit: contain;
 	flex-shrink: 0;
 	z-index: 1;
 	line-height: 1;
@@ -40,20 +40,17 @@
 
 .brand-text {
 	opacity: 0;
-	max-width: 0;
+	max-width: 140px;
 	overflow: hidden;
 	transition: opacity 0.2s ease, max-width 0.2s ease;
 	white-space: nowrap;
-}
-
-.owner-sidebar:not(:hover) .brand-text {
-	display: none;
+	visibility: hidden;
 }
 
 .owner-sidebar:hover .brand-text {
 	opacity: 1;
 	max-width: 140px;
-	display: block;
+	visibility: visible;
 }
 
 .sidebar-header h2 {
@@ -70,35 +67,36 @@
 .sidebar-nav {
 	display: flex;
 	flex-direction: column;
-	gap: 8px;
+	gap: 10px;
 }
 
 .sidebar-nav a {
 	color: #ebf4ff;
 	text-decoration: none;
-	padding: 6px 8px;
+	padding: 6px 12px;
 	border-radius: 8px;
 	font-weight: 600;
 	transition: background 0.2s ease, color 0.2s ease;
-	display: flex;
+	display: grid;
+	grid-template-columns: 20px 1fr;
 	align-items: center;
-	gap: 12px;
+	column-gap: 12px;
 }
 
 .sidebar-nav .home-link {
 	margin-bottom: 6px;
-	background: rgba(124, 156, 191, 0.2);
+	background: rgba(235, 244, 255, 0.2);
 	color: #ebf4ff;
 }
 
 .sidebar-nav .home-link.active {
 	background: #7c9cbf;
-	color: #f7fafc;
+	color: #ebf4ff;
 }
 
 .nav-divider {
 	height: 1px;
-	background: rgba(124, 156, 191, 0.3);
+	background: rgba(124, 156, 191, 0.35);
 	margin: 6px 4px 10px;
 }
 
@@ -106,6 +104,9 @@
 	width: 20px;
 	text-align: center;
 	font-size: 15px;
+	justify-self: center;
+	flex-shrink: 0;
+	margin-left: 3px;
 }
 
 .nav-label {
@@ -119,11 +120,11 @@
 }
 
 .sidebar-nav a:hover {
-	background: rgba(124, 156, 191, 0.18);
-	color: #f7fafc;
+	background: rgba(124, 156, 191, 0.22);
+	color: #ebf4ff;
 }
 
 .sidebar-nav a.active {
 	background: #7c9cbf;
-	color: #f7fafc;
+	color: #ebf4ff;
 }

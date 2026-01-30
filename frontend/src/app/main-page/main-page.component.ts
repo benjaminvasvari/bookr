@@ -170,7 +170,6 @@ export class MainPageComponent implements OnInit {
   }
 
   learnMore(): void {
-    console.log('Learn more clicked');
-    // TODO: Navigate to business info page
+    this.router.navigate(['/learnmore']);
   }
 }

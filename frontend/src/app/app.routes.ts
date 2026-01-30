@@ -3,6 +3,7 @@ import { Routes } from '@angular/router';
 
 
 import { MainPageComponent } from './main-page/main-page.component';
+import { LearnmorePageComponent } from './learnmore-page/learnmore-page.component';
 import { LoginPageComponent } from './login-page/login-page.component';
 import { RegisterComponent } from './register-page/register-page.component';
 import { SelIndustryComponent } from './sel-industry/sel-industry.component';
@@ -18,6 +19,11 @@ export const appRoutes: Routes = [
   {
     path: '',
     component: MainPageComponent,
+    data: { showFooter: true },
+  },
+  {
+    path: 'learnmore',
+    component: LearnmorePageComponent,
     data: { showFooter: true },
   },
   {
@@ -111,6 +117,13 @@ export const appRoutes: Routes = [
         loadComponent: () =>
           import('./features/owner-dashboard/pages/staff/staff.component/staff.component').then(
             (m) => m.StaffComponent
+          )
+      },
+      {
+        path: 'clients/:id',
+        loadComponent: () =>
+          import('./features/owner-dashboard/pages/clients/client-detail/client-detail.component').then(
+            (m) => m.ClientDetailComponent
           )
       },
       {
