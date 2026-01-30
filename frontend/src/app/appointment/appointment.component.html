@@ -86,7 +86,7 @@
           <div class="rating">
             <span class="rating-value">{{ company.rating }}</span>
             <span class="stars">
-              @for (star of [1,2,3,4,5]; track star) {
+              @for (star of [1,2,3,4,5]; track $index) {
               <i class="fas fa-star" [class.filled]="star <= company.rating"></i>
               }
             </span>

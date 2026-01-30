@@ -15,6 +15,7 @@ import { Subscription } from 'rxjs';
 export class HeaderComponent implements OnInit, OnDestroy {
   currentUser: User | null = null;
   showDropdown: boolean = false;
+  hasCompany: boolean = false;
   private userSubscription?: Subscription;
 
   constructor(
@@ -25,6 +26,10 @@ export class HeaderComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.userSubscription = this.authService.currentUser$.subscribe(user => {
       this.currentUser = user;
+      this.hasCompany = !!(user && user.companyId); 
+
+      console.log('Header - Current user:', user);
+      console.log('Header - Has company:', this.hasCompany);
     });
   }
 
@@ -63,5 +68,45 @@ export class HeaderComponent implements OnInit, OnDestroy {
   logout(): void {
     this.authService.logout();
     this.closeDropdown();
+  }
+
+  /**
+   * Dinamikus gomb kattintás kezelése
+   */
+  handleBusinessButtonClick(): void {
+    if (!this.currentUser) {
+      // Nincs bejelentkezve → Login
+      this.router.navigate(['/login']);
+    } else if (this.hasCompany) {
+      // Van cége → Owner Dashboard
+      this.router.navigate(['/owner']);
+    } else {
+      // Nincs cége → Cég regisztráció
+      this.router.navigate(['/register-business']);
+    }
+  }
+
+  /**
+   * Gomb szövege (dinamikus)
+   */
+  getBusinessButtonText(): string {
+    if (!this.currentUser) {
+      return 'Cég regisztrálása';
+    } else if (this.hasCompany) {
+      return 'Cég vezérlése';
+    } else {
+      return 'Cég regisztrálása';
+    }
+  }
+
+  /**
+   * Gomb ikonja (dinamikus)
+   */
+  getBusinessButtonIcon(): string {
+    if (this.hasCompany) {
+      return 'fas fa-chart-line';  // Dashboard ikon
+    } else {
+      return '';  // Nincs ikon, ha nincs cég
+    }
   }
 }

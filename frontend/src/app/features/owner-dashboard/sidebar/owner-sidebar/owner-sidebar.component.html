@@ -1,0 +1,49 @@
+<aside class="owner-sidebar">
+	<div class="sidebar-header">
+		<span class="brand-icon">B</span>
+		<div class="brand-text">
+			<h2>Bookr</h2>
+			<span>Vezérlőpult</span>
+		</div>
+	</div>
+
+	<nav class="sidebar-nav">
+		<a class="home-link" routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+			<i class="fas fa-home"></i>
+			<span class="nav-label">Home</span>
+		</a>
+		<div class="nav-divider"></div>
+		<a routerLink="/owner/overview" routerLinkActive="active">
+			<i class="fas fa-chart-pie"></i>
+			<span class="nav-label">Áttekintés</span>
+		</a>
+		<a routerLink="/owner/calendar" routerLinkActive="active">
+			<i class="fas fa-calendar-alt"></i>
+			<span class="nav-label">Naptár</span>
+		</a>
+		<a routerLink="/owner/staff" routerLinkActive="active">
+			<i class="fas fa-user-friends"></i>
+			<span class="nav-label">Dolgozók</span>
+		</a>
+		<a routerLink="/owner/clients" routerLinkActive="active">
+			<i class="fas fa-users"></i>
+			<span class="nav-label">Ügyfelek</span>
+		</a>
+		<a routerLink="/owner/services" routerLinkActive="active">
+			<i class="fas fa-concierge-bell"></i>
+			<span class="nav-label">Szolgáltatások</span>
+		</a>
+		<a routerLink="/owner/sales" routerLinkActive="active">
+			<i class="fas fa-coins"></i>
+			<span class="nav-label">Értékesítés</span>
+		</a>
+		<a routerLink="/owner/reviews" routerLinkActive="active">
+			<i class="fas fa-star"></i>
+			<span class="nav-label">Értékelések</span>
+		</a>
+		<a routerLink="/owner/settings" routerLinkActive="active">
+			<i class="fas fa-cog"></i>
+			<span class="nav-label">Beállítások</span>
+		</a>
+	</nav>
+</aside>

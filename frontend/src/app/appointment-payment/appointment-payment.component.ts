@@ -84,12 +84,15 @@ export class AppointmentPaymentComponent implements OnInit {
     };
 
     console.log('Véglegesített foglalás:', booking);
+     console.log('showSuccessOverlay beállítva TRUE-ra'); // Debug
 
     // TODO: API hívás a foglalás mentéséhez
     // this.bookingService.createBooking(booking).subscribe(...)
 
     // Success overlay megjelenítése
     this.showSuccessOverlay = true;
+
+     console.log('showSuccessOverlay értéke:', this.showSuccessOverlay); // Debug
   }
 
   onSuccessCompleted(): void {

@@ -1,5 +1,7 @@
 <div class="d-flex flex-column min-vh-100">
-  <app-header></app-header>
+  @if (showHeader) {
+    <app-header></app-header>
+  }
 
   <main class="flex-grow-1">
     <router-outlet></router-outlet>

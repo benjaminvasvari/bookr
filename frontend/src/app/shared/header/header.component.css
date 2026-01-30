@@ -265,6 +265,19 @@
   transform: scale(1.1);
 }
 
+
+/* Dashboard gomb stílus (van cég esetén) */
+.btn-register-business.has-company {
+  background: linear-gradient(135deg, #38a169 0%, #2d8659 100%);
+  color: white;
+  border-color: #38a169;
+}
+
+.btn-register-business.has-company:hover {
+  background: linear-gradient(135deg, #2d8659 0%, #237a48 100%);
+  box-shadow: 0 6px 20px rgba(56, 161, 105, 0.4);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .btn-register-business {

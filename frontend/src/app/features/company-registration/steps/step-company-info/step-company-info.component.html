@@ -202,8 +202,8 @@
               @if (companyForm.get('email')?.errors?.['required']) {
                 Az email cím megadása kötelező
               }
-              @if (companyForm.get('email')?.errors?.['pattern']) {
-                Az @ és a pont után is legyen legalább 1 betű (pl. .hu)
+              @if (companyForm.get('email')?.errors?.['email']) {
+                Érvényes email címet adjon meg
               }
             </span>
           }

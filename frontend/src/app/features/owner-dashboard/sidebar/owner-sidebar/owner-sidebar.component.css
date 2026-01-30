@@ -1,0 +1,129 @@
+.owner-sidebar {
+	width: 68px;
+	min-height: 100vh;
+	background: #2d3748;
+	color: #f7fafc;
+	padding: 18px 10px;
+	display: flex;
+	flex-direction: column;
+	gap: 24px;
+	transition: width 0.2s ease;
+	overflow: hidden;
+}
+
+.owner-sidebar:hover {
+	width: 220px;
+}
+
+.sidebar-header {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 4px 6px;
+}
+
+.brand-icon {
+	width: 40px;
+	height: 40px;
+	border-radius: 10px;
+	background: #ebf4ff;
+	color: #2d3748;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	font-weight: 700;
+	font-size: 18px;
+	flex-shrink: 0;
+	z-index: 1;
+	line-height: 1;
+}
+
+.brand-text {
+	opacity: 0;
+	max-width: 0;
+	overflow: hidden;
+	transition: opacity 0.2s ease, max-width 0.2s ease;
+	white-space: nowrap;
+}
+
+.owner-sidebar:not(:hover) .brand-text {
+	display: none;
+}
+
+.owner-sidebar:hover .brand-text {
+	opacity: 1;
+	max-width: 140px;
+	display: block;
+}
+
+.sidebar-header h2 {
+	margin: 0;
+	font-size: 20px;
+	font-weight: 700;
+}
+
+.sidebar-header span {
+	color: #7c9cbf;
+	font-size: 13px;
+}
+
+.sidebar-nav {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.sidebar-nav a {
+	color: #ebf4ff;
+	text-decoration: none;
+	padding: 6px 8px;
+	border-radius: 8px;
+	font-weight: 600;
+	transition: background 0.2s ease, color 0.2s ease;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.sidebar-nav .home-link {
+	margin-bottom: 6px;
+	background: rgba(124, 156, 191, 0.2);
+	color: #ebf4ff;
+}
+
+.sidebar-nav .home-link.active {
+	background: #7c9cbf;
+	color: #f7fafc;
+}
+
+.nav-divider {
+	height: 1px;
+	background: rgba(124, 156, 191, 0.3);
+	margin: 6px 4px 10px;
+}
+
+.sidebar-nav a i {
+	width: 20px;
+	text-align: center;
+	font-size: 15px;
+}
+
+.nav-label {
+	opacity: 0;
+	transition: opacity 0.2s ease;
+	white-space: nowrap;
+}
+
+.owner-sidebar:hover .nav-label {
+	opacity: 1;
+}
+
+.sidebar-nav a:hover {
+	background: rgba(124, 156, 191, 0.18);
+	color: #f7fafc;
+}
+
+.sidebar-nav a.active {
+	background: #7c9cbf;
+	color: #f7fafc;
+}

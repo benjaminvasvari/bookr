@@ -15,6 +15,7 @@ import { filter, map } from 'rxjs/operators';
 export class AppComponent {
   title = 'bookr-frontend';
   showFooter = true;
+  showHeader = true;
 
   constructor(
     private router: Router,
@@ -25,16 +26,26 @@ export class AppComponent {
         filter(event => event instanceof NavigationEnd),
         map(() => this.activatedRoute),
         map(route => {
+          const routes: ActivatedRoute[] = [];
           while (route.firstChild) {
+            routes.push(route);
             route = route.firstChild;
           }
-          return route;
+          routes.push(route);
+          return routes;
         })
       )
-      .subscribe(route => {
+      .subscribe(routes => {
+        // Összegyűjtjük a route data-kat (parent + child)
+        const data = routes.reduce((acc, r) => ({ ...acc, ...r.snapshot.data }), {} as any);
+
         // Olvassuk ki a route data-ból a showFooter értéket
-        const showFooter = route.snapshot.data['showFooter'];
+        const showFooter = data['showFooter'];
         this.showFooter = showFooter !== false; // Ha nincs megadva, alapértelmezetten true
+
+        // Olvassuk ki a route data-ból a showHeader értéket
+        const showHeader = data['showHeader'];
+        this.showHeader = showHeader !== false; // Ha nincs megadva, alapértelmezetten true
       });
   }
 }
