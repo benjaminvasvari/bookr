@@ -61,6 +61,11 @@ import javax.xml.bind.annotation.XmlTransient;
     @NamedQuery(name = "Companies.findByIsActive", query = "SELECT c FROM Companies c WHERE c.isActive = :isActive")})
 public class Companies implements Serializable {
 
+    @Column(name = "allow_same_day_booking")
+    private Boolean allowSameDayBooking;
+    @Column(name = "minimum_booking_hours_ahead")
+    private Integer minimumBookingHoursAhead;
+
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "companyId")
     private Collection<Favorites> favoritesCollection;
 
@@ -928,5 +933,21 @@ public class Companies implements Serializable {
                 em.close();
             }
         }
+    }
+
+    public Boolean getAllowSameDayBooking() {
+        return allowSameDayBooking;
+    }
+
+    public void setAllowSameDayBooking(Boolean allowSameDayBooking) {
+        this.allowSameDayBooking = allowSameDayBooking;
+    }
+
+    public Integer getMinimumBookingHoursAhead() {
+        return minimumBookingHoursAhead;
+    }
+
+    public void setMinimumBookingHoursAhead(Integer minimumBookingHoursAhead) {
+        this.minimumBookingHoursAhead = minimumBookingHoursAhead;
     }
 }

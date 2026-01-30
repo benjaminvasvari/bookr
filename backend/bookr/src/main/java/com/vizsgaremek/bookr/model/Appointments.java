@@ -553,8 +553,6 @@ public class Appointments implements Serializable {
         return "com.vizsgaremek.bookr.model.Appointments[ id=" + id + " ]";
     }
 
-    static SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-
     public static ArrayList<Appointments> getUnavailableDatesInRange(Integer companyId, Integer staffId, LocalDate dateFrom, LocalDate dateTo) {
 
         EntityManager em = emf.createEntityManager();
@@ -784,19 +782,24 @@ public class Appointments implements Serializable {
         }
     }
 
-    public static JSONObject getAppointmentsByClient(Integer clientId, Integer page, Integer amount) {
+    public static JSONObject getAppointmentsByClient(Integer clientId, Integer page, Integer amount, Boolean isUpcoming) {
         EntityManager em = emf.createEntityManager();
+        SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
         try {
 
             StoredProcedureQuery spq = em.createStoredProcedureQuery("getAppointmentsByClient");
             spq.registerStoredProcedureParameter("clientIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("isUpcomingIN", Boolean.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("limitIN", Integer.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("offsetIN", Integer.class, ParameterMode.IN);
 
+            spq.registerStoredProcedureParameter("countOUT", Integer.class, ParameterMode.OUT);
+
             spq.setParameter("clientIdIN", clientId);
+            spq.setParameter("isUpcomingIN", isUpcoming);
             spq.setParameter("limitIN", page);
-            spq.setParameter("offsetIN", amount);
+            spq.setParameter("offsetIN", (page - 1) * amount);
 
             spq.execute();
 
@@ -804,22 +807,29 @@ public class Appointments implements Serializable {
 
             List<Object[]> resultList = spq.getResultList();
             JSONObject toReturn = new JSONObject();
+            JSONArray appointments = new JSONArray();
 
-            JSONArray users = new JSONArray();
-            for (Object[] record : resultList) { // thats a foreach
+            for (Object[] record : resultList) {
 
-                JSONObject user = new JSONObject();
+                JSONObject a = new JSONObject();
 
-                user.put("id", Integer.valueOf(record[0].toString()));
-                user.put("firstName", record[0].toString());
-                user.put("lastName", record[0].toString());
-                user.put("img", record[0].toString());
+                a.put("appointmentId", Integer.valueOf(record[0].toString()));
+                a.put("companyId", Integer.valueOf(record[1].toString()));
+                a.put("staffId", Integer.valueOf(record[2].toString()));
+                a.put("clientId", Integer.valueOf(record[3].toString()));
+                a.put("serviceId", Integer.valueOf(record[4].toString()));
+                a.put("startTime", dateFormatter.format((java.sql.Timestamp) record[5]));
+                a.put("endTime", dateFormatter.format((java.sql.Timestamp) record[6]));
+                a.put("status", record[7].toString());
+                a.put("createdAt", dateFormatter.format((java.sql.Timestamp) record[8]));
+                a.put("updatedAt", dateFormatter.format((java.sql.Timestamp) record[9]));
 
-                users.put(user);
+
+                appointments.put(a);
             }
 
-            toReturn.put("result", users);
-            toReturn.put("userCount", count);
+            toReturn.put("result", appointments);
+            toReturn.put("appointmentsCount", count);
 
             return toReturn;
 

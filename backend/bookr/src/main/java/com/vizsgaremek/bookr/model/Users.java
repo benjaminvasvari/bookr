@@ -185,6 +185,9 @@ public class Users implements Serializable {
     @Transient
     private String imageUrl;
 
+    @Transient
+    private String regToken;
+
     static EntityManagerFactory emf = Persistence.createEntityManagerFactory("com.vizsgaremek_bookr_war_1.0-SNAPSHOTPU");
     static SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
@@ -213,6 +216,13 @@ public class Users implements Serializable {
         this.email = email;
         this.password = password;
         this.phone = phone;
+    }
+
+    public static Users forRegistration(Integer id, String registerToken) {
+        Users user = new Users();
+        user.id = id;
+        user.regToken = registerToken;
+        return user;
     }
 
     // login request constructor (email + password from frontend)
@@ -465,6 +475,14 @@ public class Users implements Serializable {
         this.roleName = roleName;
     }
 
+    public String getRegToken() {
+        return regToken;
+    }
+
+    public void setRegToken(String regToken) {
+        this.regToken = regToken;
+    }
+
     @XmlTransient
     public Collection<Appointments> getAppointmentsCollection() {
         return appointmentsCollection;
@@ -599,7 +617,7 @@ public class Users implements Serializable {
     }
 
     // ----------- TÁROLT ELJÁRÁS MEGHÍVÁSOK------------
-    public static RegistrationResult clientRegister(Users clientRegistered) {
+    public static Users clientRegister(Users clientRegistered) {
         EntityManager em = emf.createEntityManager();
 
         try {
@@ -630,7 +648,7 @@ public class Users implements Serializable {
             int userId = Integer.parseInt(result[0].toString());
             String regToken = result[1].toString();
 
-            return new RegistrationResult(userId, regToken);
+            return Users.forRegistration(userId, regToken);
 
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -642,7 +660,7 @@ public class Users implements Serializable {
         }
     }
 
-    public static RegistrationResult staffRegister(Users staffRegistered) {
+    public static Users staffRegister(Users staffRegistered) {
         EntityManager em = emf.createEntityManager();
 
         try {
@@ -676,7 +694,7 @@ public class Users implements Serializable {
             // result[1] is staff_id, we don't need it for RegistrationResult
             String regToken = result[2].toString();
 
-            return new RegistrationResult(userId, regToken);
+            return Users.forRegistration(userId, regToken);
 
         } catch (Exception ex) {
             ex.printStackTrace();

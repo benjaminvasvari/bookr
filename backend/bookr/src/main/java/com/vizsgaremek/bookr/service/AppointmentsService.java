@@ -3,27 +3,28 @@ package com.vizsgaremek.bookr.service;
 import com.vizsgaremek.bookr.model.Appointments;
 import com.vizsgaremek.bookr.model.AuditLogs;
 import com.vizsgaremek.bookr.model.Companies;
+import com.vizsgaremek.bookr.model.Services;
+import com.vizsgaremek.bookr.model.Staff;
 import com.vizsgaremek.bookr.model.Users;
 import com.vizsgaremek.bookr.security.JWT;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
-import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Date;
-import javax.inject.Inject;
+import java.util.LinkedHashMap;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class AppointmentsService {
 
-    @Inject
-    private AuditLogService auditLogService;
-
-    @Inject
-    private EmailService EmailService;
+    private AuditLogService auditLogService = new AuditLogService();
+    private EmailService EmailService = new EmailService();
+    private UsersService UsersService = new UsersService();
+    private Companies Companies = new Companies();
+    private Staff Staff = new Staff();
+    private Services Services = new Services();
 
     static SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
@@ -236,6 +237,137 @@ public class AppointmentsService {
             }
             // ===============================
 
+        }
+
+        toReturn.put("status", status);
+        toReturn.put("statusCode", statusCode);
+        return toReturn;
+    }
+
+    public JSONObject getAppointmentsByClient(Integer userId, Integer page, Integer amount, boolean isUpcoming) {
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+        SimpleDateFormat timeFormatter = new SimpleDateFormat("HH:mm");
+
+        // User validáció
+        Boolean isUserExist = UsersService.validateUserExist(userId);
+        if (isUserExist == null) {
+            status = "InternalServerError";
+            statusCode = 500;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+            return toReturn;
+        }
+        if (!isUserExist) {
+            status = "NotFound";
+            statusCode = 404;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+            return toReturn;
+        }
+
+        // Model hívás - nyers adatok
+        JSONObject appointmentsModelResult = Appointments.getAppointmentsByClient(userId, page, amount, isUpcoming);
+
+        if (appointmentsModelResult == null) {
+            statusCode = 500;
+            status = "ModelException";
+            toReturn.put("message", "Internal server error");
+        } else {
+            int totalCount = appointmentsModelResult.getInt("appointmentsCount");
+            JSONArray rawAppointments = appointmentsModelResult.getJSONArray("result");
+
+            // Csoportosítás: startTime + staffId + companyId alapján
+            LinkedHashMap<String, JSONObject> groupedMap = new LinkedHashMap<>();
+
+            for (int i = 0; i < rawAppointments.length(); i++) {
+                JSONObject rawAppt = rawAppointments.getJSONObject(i);
+
+                String startTime = rawAppt.getString("startTime");
+                Integer staffId = rawAppt.getInt("staffId");
+                Integer companyId = rawAppt.getInt("companyId");
+
+                // Csoportosítási kulcs: startTime + staffId + companyId
+                String groupKey = startTime + "_" + staffId + "_" + companyId;
+
+                JSONObject group = groupedMap.get(groupKey);
+
+                if (group == null) {
+                    // Új csoport létrehozása
+                    group = new JSONObject();
+
+                    // Company, Staff adatok lekérése (csak egyszer per csoport)
+                    Companies company = Companies.getCompanyShort(companyId);
+                    Staff staff = Staff.getStaffShort(staffId);
+
+                    group.put("startTime", startTime);
+                    group.put("endTime", rawAppt.getString("endTime"));
+                    group.put("status", rawAppt.getString("status"));
+                    group.put("companyId", companyId);
+                    group.put("companyName", company.getName());
+                    group.put("companyLogo", company.getImageUrl());
+                    group.put("staffId", staffId);
+                    group.put("staffName", staff.getLastName() + " " + staff.getFirstName());
+                    group.put("services", new JSONArray());
+                    group.put("totalPrice", BigDecimal.ZERO);
+
+                    groupedMap.put(groupKey, group);
+                }
+
+                // Service adatok lekérése
+                Integer serviceId = rawAppt.getInt("serviceId");
+                Services service = Services.getServiceShort(serviceId);
+
+                // Szolgáltatás hozzáadása a csoporthoz
+                JSONObject serviceObj = new JSONObject();
+                serviceObj.put("serviceId", serviceId);
+                serviceObj.put("serviceName", service.getName());
+                serviceObj.put("price", service.getPrice());
+                serviceObj.put("duration", service.getDurationMinutes());
+
+                group.getJSONArray("services").put(serviceObj);
+
+                // Ár hozzáadása
+                BigDecimal currentTotal = group.getBigDecimal("totalPrice");
+                group.put("totalPrice", currentTotal.add(service.getPrice()));
+
+                // End time frissítése (mindig a legkésőbbi)
+                String currentEndTime = group.getString("endTime");
+                String newEndTime = rawAppt.getString("endTime");
+                if (newEndTime.compareTo(currentEndTime) > 0) {
+                    group.put("endTime", newEndTime);
+                }
+            }
+
+            // Csoportosított adatok átalakítása tömbbe + szolgáltatásnevek összefűzése
+            JSONArray finalData = new JSONArray();
+            for (JSONObject group : groupedMap.values()) {
+                JSONArray services = group.getJSONArray("services");
+
+                // Szolgáltatásnevek összefűzése " + " jellel
+                StringBuilder serviceNames = new StringBuilder();
+                for (int i = 0; i < services.length(); i++) {
+                    if (i > 0) {
+                        serviceNames.append(" + ");
+                    }
+                    serviceNames.append(services.getJSONObject(i).getString("serviceName"));
+                }
+                group.put("serviceNames", serviceNames.toString());
+
+                finalData.put(group);
+            }
+
+            // Válasz összeállítása
+            JSONObject responseData = new JSONObject();
+            responseData.put("appointments", finalData);
+            responseData.put("totalCount", totalCount);
+            responseData.put("currentPage", page);
+            
+            // Oldalak számának kiszámítása: Math.ceil felfelé kerekít, így a maradék elemek is kapnak egy külön oldalt (pl. 25 elem / 10 = 2.5 → 3 oldal)
+            responseData.put("totalPages", (int) Math.ceil((double) totalCount / amount));
+
+            toReturn.put("data", responseData);
         }
 
         toReturn.put("status", status);

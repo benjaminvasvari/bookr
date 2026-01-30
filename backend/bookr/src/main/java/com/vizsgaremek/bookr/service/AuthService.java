@@ -3,10 +3,8 @@ package com.vizsgaremek.bookr.service;
 import com.vizsgaremek.bookr.security.PasswordHasher;
 import com.vizsgaremek.bookr.util.ValidationUtil;
 import com.vizsgaremek.bookr.model.AuditLogs;
-import com.vizsgaremek.bookr.model.RegistrationResult;
 import com.vizsgaremek.bookr.model.Tokens;
 import com.vizsgaremek.bookr.model.Users;
-import com.vizsgaremek.bookr.service.UsersService;
 import com.vizsgaremek.bookr.security.JWT;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
@@ -31,8 +29,6 @@ public class AuthService {
     @Inject
     private AuditLogService auditLogService;
 
-    @Inject
-    private UsersService usersService;
 
     private final PasswordHasher passwordHasher = new PasswordHasher();
 
@@ -60,7 +56,7 @@ public class AuthService {
             // =====================================
 
             // Mentés adatbázisba a hashelt jelszóval
-            RegistrationResult registrationResult = Users.clientRegister(clientRegistered);
+            Users registrationResult = Users.clientRegister(clientRegistered);
 
             if (registrationResult == null) {
                 status = "serverError";
@@ -69,13 +65,13 @@ public class AuthService {
                 // ========== AUDIT LOG ==========
                 try {
                     AuditLogs auditLog = new AuditLogs(
-                            registrationResult.getUserId(),
+                            registrationResult.getId(),
                             "client",
                             clientRegistered.getEmail(),
                             "user",
                             "register"
                     );
-                    auditLog.addNewValue("user_id", registrationResult.getUserId());
+                    auditLog.addNewValue("user_id", registrationResult.getId());
                     auditLog.addNewValue("email", clientRegistered.getEmail());
                     auditLog.addNewValue("first_name", clientRegistered.getFirstName());
                     auditLog.addNewValue("last_name", clientRegistered.getLastName());
@@ -102,7 +98,7 @@ public class AuthService {
                 }
                 // ==================================
 
-                toReturn.put("userId", registrationResult.getUserId());
+                toReturn.put("userId", registrationResult.getId());
                 toReturn.put("regToken", registrationResult.getRegToken());
             }
         }
@@ -136,7 +132,7 @@ public class AuthService {
             // =====================================
 
             // Mentés adatbázisba a hashelt jelszóval
-            RegistrationResult registrationResult = Users.staffRegister(staffRegistered);
+            Users registrationResult = Users.staffRegister(staffRegistered);
 
             if (registrationResult == null) {
                 status = "serverError";
@@ -145,14 +141,14 @@ public class AuthService {
                 // ========== AUDIT LOG ==========
                 try {
                     AuditLogs auditLog = new AuditLogs(
-                            registrationResult.getUserId(),
+                            registrationResult.getId(),
                             "client",
                             staffRegistered.getEmail(),
                             "user",
                             "register"
                     );
                     auditLog.setCompanyId(staffRegistered.getCompanyId() != null ? staffRegistered.getCompanyId() : null);
-                    auditLog.addNewValue("user_id", registrationResult.getUserId());
+                    auditLog.addNewValue("user_id", registrationResult.getId());
                     auditLog.addNewValue("email", staffRegistered.getEmail());
                     auditLog.addNewValue("first_name", staffRegistered.getFirstName());
                     auditLog.addNewValue("last_name", staffRegistered.getLastName());
@@ -180,7 +176,7 @@ public class AuthService {
                 }
                 // ==================================
 
-                toReturn.put("userId", registrationResult.getUserId());
+                toReturn.put("userId", registrationResult.getId());
                 toReturn.put("regToken", registrationResult.getRegToken());
             }
         }

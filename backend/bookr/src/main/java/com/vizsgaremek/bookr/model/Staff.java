@@ -26,6 +26,7 @@ import javax.persistence.StoredProcedureQuery;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
+import javax.persistence.Transient;
 import javax.validation.constraints.Size;
 import javax.xml.bind.annotation.XmlRootElement;
 
@@ -41,6 +42,7 @@ import javax.xml.bind.annotation.XmlRootElement;
     @NamedQuery(name = "Staff.findById", query = "SELECT s FROM Staff s WHERE s.id = :id"),
     @NamedQuery(name = "Staff.findByDisplayName", query = "SELECT s FROM Staff s WHERE s.displayName = :displayName"),
     @NamedQuery(name = "Staff.findByIsActive", query = "SELECT s FROM Staff s WHERE s.isActive = :isActive"),
+    @NamedQuery(name = "Staff.findByIsDeleted", query = "SELECT s FROM Staff s WHERE s.isDeleted = :isDeleted"),
     @NamedQuery(name = "Staff.findByCreatedAt", query = "SELECT s FROM Staff s WHERE s.createdAt = :createdAt"),
     @NamedQuery(name = "Staff.findByUpdatedAt", query = "SELECT s FROM Staff s WHERE s.updatedAt = :updatedAt")})
 public class Staff implements Serializable {
@@ -64,6 +66,8 @@ public class Staff implements Serializable {
     private String bio;
     @Column(name = "is_active")
     private Boolean isActive;
+    @Column(name = "is_deleted")
+    private Boolean isDeleted;
     @Column(name = "created_at")
     @Temporal(TemporalType.TIMESTAMP)
     private Date createdAt;
@@ -77,22 +81,22 @@ public class Staff implements Serializable {
     @ManyToOne(optional = false)
     private Users userId;
 
-    @javax.persistence.Transient
-    private String imageUrl;
-
-    @javax.persistence.Transient
-    private Integer servicesCount;
-
-    @javax.persistence.Transient
-    private Integer companyIdInt;
-
-    @javax.persistence.Transient
+    @Transient
     private Integer userIdInt;
 
-    @javax.persistence.Transient
+    @Transient
+    private Integer companyIdInt;
+
+    @Transient
+    private Integer servicesCount;
+
+    @Transient
+    private String imageUrl;
+
+    @Transient
     private String firstName;
 
-    @javax.persistence.Transient
+    @Transient
     private String lastName;
 
     public Staff() {
@@ -102,7 +106,8 @@ public class Staff implements Serializable {
         this.id = id;
     }
 
-    public Staff(Integer id, Integer userIdInt, String displayName, String specialties, String bio, Boolean isActive, Integer companyIdInt, String firstName, String lastName, String imageUrl, Integer servicesCount) {
+    // getFilteredStaffByServices
+    public Staff(Integer id, Integer userIdInt, String displayName, String specialties, String bio, Boolean isActive, Integer companyIdInt, String imageUrl, String firstName, String lastName, Integer servicesCount) {
         this.id = id;
         this.userIdInt = userIdInt;
         this.displayName = displayName;
@@ -114,6 +119,17 @@ public class Staff implements Serializable {
         this.lastName = lastName;
         this.imageUrl = imageUrl;
         this.servicesCount = servicesCount;
+    }
+    
+    // getStaffShort
+    public Staff(Integer id, Integer userIdInt, Integer companyIdInt, String displayName, Boolean isActive, Boolean isDeleted, String imageUrl) {
+        this.id = id;
+        this.userIdInt = userIdInt;
+        this.companyIdInt = companyIdInt;
+        this.displayName = displayName;
+        this.isActive = isActive;
+        this.isDeleted = isDeleted;
+        this.imageUrl = imageUrl;
     }
 
     public Integer getId() {
@@ -156,6 +172,14 @@ public class Staff implements Serializable {
         this.isActive = isActive;
     }
 
+    public Boolean getIsDeleted() {
+        return isDeleted;
+    }
+
+    public void setIsDeleted(Boolean isDeleted) {
+        this.isDeleted = isDeleted;
+    }
+
     public Date getCreatedAt() {
         return createdAt;
     }
@@ -188,20 +212,12 @@ public class Staff implements Serializable {
         this.userId = userId;
     }
 
-    public String getImageUrl() {
-        return imageUrl;
+    public Integer getUserIdInt() {
+        return userIdInt;
     }
 
-    public void setImageUrl(String imageUrl) {
-        this.imageUrl = imageUrl;
-    }
-
-    public Integer getServicesCount() {
-        return servicesCount;
-    }
-
-    public void setServicesCount(Integer servicesCount) {
-        this.servicesCount = servicesCount;
+    public void setUserIdInt(Integer userIdInt) {
+        this.userIdInt = userIdInt;
     }
 
     public Integer getCompanyIdInt() {
@@ -212,12 +228,20 @@ public class Staff implements Serializable {
         this.companyIdInt = companyIdInt;
     }
 
-    public Integer getUserIdInt() {
-        return userIdInt;
+    public Integer getServicesCount() {
+        return servicesCount;
     }
 
-    public void setUserIdInt(Integer userIdInt) {
-        this.userIdInt = userIdInt;
+    public void setServicesCount(Integer servicesCount) {
+        this.servicesCount = servicesCount;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 
     public String getFirstName() {
@@ -310,4 +334,46 @@ public class Staff implements Serializable {
         }
     }
 
+    public static Staff getStaffShort(Integer staffId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getStaffShort");
+
+            spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("staffIdIN", staffId);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            // Csak az első rekord kell (LIMIT 1 a stored procedure-ben)
+            Object[] record = resultList.get(0);
+
+            Staff s = new Staff(
+                    Integer.valueOf(record[0].toString()),
+                    Integer.valueOf(record[1].toString()),
+                    Integer.valueOf(record[2].toString()),
+                    record[3].toString(),
+                    Boolean.parseBoolean(record[4].toString()),
+                    Boolean.parseBoolean(record[5].toString()),
+                    record[6] == null ? null : record[6].toString() // imageUrl
+            );
+
+            return s;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
 }

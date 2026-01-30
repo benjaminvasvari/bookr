@@ -7,10 +7,12 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
@@ -24,10 +26,8 @@ import org.json.JSONObject;
 @Path("appointments")
 public class AppointmentsController {
 
-    private final AppointmentsService appointmentsService = new AppointmentsService();
-
-    @Inject
-    private RoleChecker roleChecker;
+    private final AppointmentsService layer = new AppointmentsService();
+    private final RoleChecker RoleChecker = new RoleChecker();
 
     /**
      * Default XML endpoint - not used, kept for template compatibility
@@ -38,14 +38,17 @@ public class AppointmentsController {
         throw new UnsupportedOperationException("XML not supported");
     }
 
-    /**
-     * Retrieves unavailable dates for a company and staff member. Returns dates
-     * from today up to the company's configured advance booking period.
-     *
-     * @param companyId the company identifier (required, > 0)
-     * @param staffId the staff identifier (required, > 0)
-     * @return JSON response with unavailable dates
-     */
+    private Response buildErrorResponse(int statusCode, String status) {
+        JSONObject errorResponse = new JSONObject();
+        errorResponse.put("statusCode", statusCode);
+        errorResponse.put("status", status);
+
+        return Response.status(statusCode)
+                .entity(errorResponse.toString())
+                .type(MediaType.APPLICATION_JSON)
+                .build();
+    }
+
     @GET
     @Path("unavailable-dates")
     @Produces(MediaType.APPLICATION_JSON)
@@ -78,7 +81,7 @@ public class AppointmentsController {
 
         try {
             // Call service layer - returns full JSON response (status, data, etc.)
-            JSONObject result = appointmentsService.getUnavailableDates(companyId, staffId);
+            JSONObject result = layer.getUnavailableDates(companyId, staffId);
 
             // Service already sets status and statusCode
             int statusCode = result.optInt("statusCode", 200);
@@ -142,7 +145,7 @@ public class AppointmentsController {
 
         // Service call
         try {
-            JSONObject result = appointmentsService.getOccupiedSlotsDataForBooking(companyId, staffId, date);
+            JSONObject result = layer.getOccupiedSlotsDataForBooking(companyId, staffId, date);
             int statusCode = result.optInt("statusCode", 200);
             return Response.status(statusCode)
                     .entity(result.toString())
@@ -184,7 +187,6 @@ public class AppointmentsController {
         String endTime = bodyObject.getString("endTime");
         String notes = bodyObject.getString("notes");
         BigDecimal price = bodyObject.getBigDecimal("price");
-        
 
         if (validJwt == null) {
             // Lejárt JWT
@@ -194,8 +196,61 @@ public class AppointmentsController {
             return Response.status(401).entity("invalidToken").build();
         } else {
             // Valid token
-            JSONObject toReturn = appointmentsService.createAppointment(jwtToken, companyId, serviceId, staffId, clientId, startTime, endTime, notes, price);
-            
+            JSONObject toReturn = layer.createAppointment(jwtToken, companyId, serviceId, staffId, clientId, startTime, endTime, notes, price);
+
+            return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                    .entity(toReturn.toString())
+                    .type(MediaType.APPLICATION_JSON)
+                    .build();
+        }
+    }
+
+    @GET
+    @Path("getAppointmentsByClient")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response getAppointmentsByClient(
+            @HeaderParam("Authorization") String authHeader,
+            @QueryParam("page") Integer page,
+            @QueryParam("amount") Integer amount,
+            @QueryParam("isupcoming") Integer isUpComingInt) {
+
+        // Extract token from "Bearer <token>"
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            System.out.println("Missing or invalid Authorization header");
+            return buildErrorResponse(401, "missingToken");
+        }
+
+        // Validate parameters
+        if (page == null || page <= 0
+                || amount == null || amount <= 0
+                || isUpComingInt == null || (isUpComingInt != 0 && isUpComingInt != 1)) {
+            return buildErrorResponse(417, "invalidParam");
+        }
+
+        // Convert Integer to Boolean
+        Boolean isUpComing = (isUpComingInt == 1);
+
+        // Remove "Bearer " prefix
+        String jwtToken = authHeader.substring(7);
+        Boolean validJwt = JWT.validateAccessToken(jwtToken);
+
+        if (validJwt == null) {
+            // Lejárt JWT
+            return buildErrorResponse(401, "tokenExpired");
+        } else if (validJwt == false) {
+            // Invalid JWT
+            return buildErrorResponse(401, "invalidToken");
+        } else {
+            // Valid token
+            String userRoles = JWT.getRolesFromAccessToken(jwtToken);
+            Integer userId = JWT.getUserIdFromAccessToken(jwtToken);
+            boolean hasPermission = RoleChecker.hasAnyRole(userRoles, "client");
+
+            if (!hasPermission) {
+                return buildErrorResponse(403, "forbidden");
+            }
+
+            JSONObject toReturn = layer.getAppointmentsByClient(userId, page, amount, isUpComing);
             return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
                     .entity(toReturn.toString())
                     .type(MediaType.APPLICATION_JSON)
