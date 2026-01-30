@@ -12,13 +12,14 @@
       <!-- Spacer -->
       <div class="col"></div>
 
-
       <div class="col-auto">
-        <button routerLink="/register-business" class="btn btn-register-business">
-          <i class="fas fa-building"></i> Cég regisztrálása
+        <button (click)="handleBusinessButtonClick()" class="btn btn-register-business">
+          @if (hasCompany) {
+            <i [class]="getBusinessButtonIcon()"></i>
+          }
+          <span>{{ getBusinessButtonText() }}</span>
         </button>
       </div>
-
 
       <!-- Right side - NEM bejelentkezett -->
       <div *ngIf="!currentUser" class="col-auto d-flex align-items-center gap-3">
@@ -31,7 +32,6 @@
           </svg>
         </div>
       </div>
-
 
       <!-- Right side - BEJELENTKEZETT -->
       <div *ngIf="currentUser" class="col-auto d-flex align-items-center gap-3">

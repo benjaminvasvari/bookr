@@ -241,4 +241,45 @@ export class AuthService {
 
     return this.http.post<void>(`${this.apiUrl}${API_ENDPOINTS.AUTH.RESET_PASSWORD}`, body);
   }
+
+  /**
+   * Ellenőrzi, hogy a usernek van-e cége
+   */
+  hasCompany(): boolean {
+    const user = this.getCurrentUser();
+    return !!(user && user.companyId);
+  }
+
+  /**
+   * User companyId frissítése (cég regisztráció után)
+   */
+  updateUserCompany(companyId: number): void {
+    const currentUser = this.getCurrentUser();
+    
+    if (currentUser) {
+      const updatedUser: User = {
+        ...currentUser,
+        companyId: companyId
+      };
+      
+      // LocalStorage frissítése
+      localStorage.setItem(this.USER_KEY, JSON.stringify(updatedUser));
+      
+      // BehaviorSubject frissítése
+      this.currentUserSubject.next(updatedUser);
+      
+      console.log('✅ User company updated:', companyId);
+    }
+  }
+
+  /**
+   * Mock session beállítása regisztráció után (frontend teszteléshez)
+   */
+  setMockSession(user: User): void {
+    localStorage.setItem(this.ACCESS_TOKEN_KEY, 'mock_access_token');
+    localStorage.setItem(this.REFRESH_TOKEN_KEY, 'mock_refresh_token');
+    localStorage.setItem(this.USER_KEY, JSON.stringify(user));
+
+    this.currentUserSubject.next(user);
+  }
 }

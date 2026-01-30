@@ -84,19 +84,24 @@ export class CompanyRegistrationContainerComponent implements OnInit {
   }
 
   nextStep(): void {
+    console.log('➡️ nextStep() called');
+    console.log('📊 Current step:', this.currentStep);
+    console.log('📊 Total steps:', this.steps.length);
+    
     this.saveCurrentStepData();
 
     if (this.currentStep < this.steps.length) {
+      console.log('⏭️ Moving to next step');
       this.steps[this.currentStep - 1].completed = true;
       this.steps[this.currentStep - 1].active = false;
       this.currentStep++;
       this.steps[this.currentStep - 1].active = true;
       this.isCurrentStepValid = false;
     } else {
+      console.log('🎯 Last step reached - calling submitRegistration()');
       this.submitRegistration();
     }
 
-    // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -213,27 +218,89 @@ export class CompanyRegistrationContainerComponent implements OnInit {
     this.isCurrentStepValid = isValid;
   }
 
-  private submitRegistration(): void {
-    console.log('Registration data:', this.registrationData);
-    console.log('Is logged in:', this.isUserLoggedIn);
+private submitRegistration(): void {
+    console.log('📦 Registration data:', this.registrationData);
+    console.log('🔐 Is logged in:', this.isUserLoggedIn);
     
     this.isSubmitting = true;
     
-    // Szimulálunk egy API hívást
+    // TODO: API hívás helyett most MOCK-oljuk
+    // Szimuláljuk, hogy a backend visszaadja a company ID-t
     setTimeout(() => {
       this.isSubmitting = false;
+      
+      // ✅ MOCK - Backend response szimuláció
+      const mockCompanyId = Math.floor(Math.random() * 1000) + 1;
+      console.log('🏢 Mock Company ID created:', mockCompanyId);
+
+      // ✅ Ha nincs bejelentkezve, hozzunk létre mock session-t
+      if (!this.isUserLoggedIn && this.registrationData?.ownerInfo) {
+        this.authService.setMockSession({
+          id: Date.now(),
+          email: this.registrationData.ownerInfo.email,
+          phone: this.registrationData.ownerInfo.phone,
+          firstName: this.registrationData.ownerInfo.firstName,
+          lastName: this.registrationData.ownerInfo.lastName,
+          roles: 'owner',
+          companyId: mockCompanyId,
+          avatarUrl: null,
+          roleId: null,
+        });
+        this.isUserLoggedIn = true;
+      }
+      
+      // ✅ User companyId frissítése az AuthService-ben
+      this.authService.updateUserCompany(mockCompanyId);
+      console.log('✅ User companyId updated in AuthService');
+      
+      // ✅ Success modal megjelenítése
       this.showSuccessModal = true;
       
-      // Cookie-k törlése sikeres regisztráció után
+      // ✅ Cookie-k törlése sikeres regisztráció után
       this.cookieService.clearRegistrationCookies();
+      console.log('🗑️ Registration cookies cleared');
       
-      // 3 másodperc után redirect a main page-re
+      // ✅ 3 másodperc után átirányítás a FŐOLDAL-ra
       setTimeout(() => {
         this.router.navigate(['/']);
+        console.log('🚀 Redirected to / (main page)');
       }, 3000);
+      
     }, 1500);
     
-    // TODO: API call helyett a valódi submission
+    /* 
+    ═══════════════════════════════════════════════════════════
+    TODO: ÉLES API HÍVÁS (amikor backend kész)
+    ═══════════════════════════════════════════════════════════
+    
+    this.companyService.registerCompany(this.registrationData).subscribe({
+      next: (response) => {
+        this.isSubmitting = false;
+        
+        // Backend response-ból kinyerjük a company ID-t
+        const companyId = response.companyId;
+        
+        // User companyId frissítése
+        this.authService.updateUserCompany(companyId);
+        
+        // Success modal
+        this.showSuccessModal = true;
+        
+        // Cookie-k törlése
+        this.cookieService.clearRegistrationCookies();
+        
+        // Redirect főoldalra
+        setTimeout(() => {
+          this.router.navigate(['/']);
+        }, 3000);
+      },
+      error: (error) => {
+        this.isSubmitting = false;
+        console.error('❌ Hiba a regisztráció során:', error);
+        alert('Hiba történt a regisztráció során. Kérjük próbálja újra!');
+      }
+    });
+    */
   }
 
   getButtonText(): string {

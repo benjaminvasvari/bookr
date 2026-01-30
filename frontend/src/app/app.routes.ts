@@ -1,6 +1,9 @@
+import { ownerGuard } from './core/guards/owner-guard';
 import { Routes } from '@angular/router';
 
+
 import { MainPageComponent } from './main-page/main-page.component';
+import { LearnmorePageComponent } from './learnmore-page/learnmore-page.component';
 import { LoginPageComponent } from './login-page/login-page.component';
 import { RegisterComponent } from './register-page/register-page.component';
 import { SelIndustryComponent } from './sel-industry/sel-industry.component';
@@ -16,6 +19,11 @@ export const appRoutes: Routes = [
   {
     path: '',
     component: MainPageComponent,
+    data: { showFooter: true },
+  },
+  {
+    path: 'learnmore',
+    component: LearnmorePageComponent,
     data: { showFooter: true },
   },
   {
@@ -73,5 +81,79 @@ export const appRoutes: Routes = [
         (m) => m.CompanyRegistrationContainerComponent,
       ),
     data: { showFooter: false },
+  },
+
+
+  {
+    path: 'owner',
+    loadComponent: () =>
+      import('./features/owner-dashboard/owner-dashboard/owner-dashboard.component').then(
+        (m) => m.OwnerDashboardComponent
+      ),
+    canActivate: [authGuard, ownerGuard],
+    data: { showFooter: false, showHeader: false },
+    children: [
+      {
+        path: '',
+        redirectTo: 'overview',
+        pathMatch: 'full'
+      },
+      {
+        path: 'overview',
+        loadComponent: () =>
+          import('./features/owner-dashboard/pages/overview/overview/overview.component').then(
+            (m) => m.OverviewComponent
+          )
+      },
+      {
+        path: 'calendar',
+        loadComponent: () =>
+          import('./features/owner-dashboard/pages/calendar/calendar.component/calendar.component').then(
+            (m) => m.CalendarComponent
+          )
+      },
+      {
+        path: 'staff',
+        loadComponent: () =>
+          import('./features/owner-dashboard/pages/staff/staff.component/staff.component').then(
+            (m) => m.StaffComponent
+          )
+      },
+      {
+        path: 'clients',
+        loadComponent: () =>
+          import('./features/owner-dashboard/pages/clients/clients.component/clients.component').then(
+            (m) => m.ClientsComponent
+          )
+      },
+      {
+        path: 'services',
+        loadComponent: () =>
+          import('./features/owner-dashboard/pages/services/services.component/services.component').then(
+            (m) => m.ServicesComponent
+          )
+      },
+      {
+        path: 'sales',
+        loadComponent: () =>
+          import('./features/owner-dashboard/pages/sales/sales.component/sales.component').then(
+            (m) => m.SalesComponent
+          )
+      },
+      {
+        path: 'reviews',
+        loadComponent: () =>
+          import('./features/owner-dashboard/pages/reviews/reviews.component/reviews.component').then(
+            (m) => m.ReviewsComponent
+          )
+      },
+      {
+        path: 'settings',
+        loadComponent: () =>
+          import('./features/owner-dashboard/pages/settings/settings.component/settings.component').then(
+            (m) => m.SettingsComponent
+          )
+      }
+    ]
   },
 ];
