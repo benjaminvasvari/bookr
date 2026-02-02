@@ -6,7 +6,7 @@ import { OwnerSidebar } from '../sidebar/owner-sidebar/owner-sidebar.component';
 @Component({
   selector: 'app-owner-dashboard',
   standalone: true,
-  imports: [CommonModule, OwnerSidebar],
+  imports: [CommonModule, RouterOutlet, OwnerSidebar],
   templateUrl: './owner-dashboard.component.html',
   styleUrl: './owner-dashboard.component.css',
 })

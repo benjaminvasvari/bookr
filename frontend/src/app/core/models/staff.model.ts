@@ -31,3 +31,34 @@ export interface StaffMember {
   isActive: boolean;
   servicesCount: number;
 }
+
+export interface StaffDashboardAppointment {
+  id: number;
+  date: string;
+  time: string;
+  serviceName: string;
+  clientName: string;
+  durationMinutes: number;
+}
+
+export interface StaffDashboardService {
+  id: number;
+  name: string;
+  durationMinutes: number;
+  price: number;
+}
+
+export interface StaffDashboardData {
+  staffId: number;
+  staffName: string;
+  companyName: string;
+  todayAppointments: StaffDashboardAppointment[];
+  upcomingAppointments: StaffDashboardAppointment[];
+  services: StaffDashboardService[];
+}
+
+export interface StaffDashboardResponse {
+  result: StaffDashboardData;
+  status: string;
+  statusCode: number;
+}

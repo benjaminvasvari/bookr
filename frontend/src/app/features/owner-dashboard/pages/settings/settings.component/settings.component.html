@@ -1,1 +1,166 @@
-<p>settings.component works!</p>
+<section class="settings-panel">
+	<header class="settings-topbar">
+		<div>
+			<h1>Beállítások</h1>
+			<p class="subtitle">Vállalkozás, munkatársak és működési szabályok kezelése.</p>
+		</div>
+		<div class="actions">
+			<button class="btn ghost">Visszaállítás</button>
+			<button class="btn primary">Mentés</button>
+		</div>
+	</header>
+
+	<section class="settings-stack">
+		<article class="settings-section">
+			<header class="section-header">
+				<div>
+					<h2>Cégadatok</h2>
+					<p class="section-subtitle">Alap információk a vállalkozásról.</p>
+				</div>
+				<button class="link-btn">Szerkesztés</button>
+			</header>
+			<div class="section-grid">
+				<div class="info-block">
+					<p class="label">Cégnév</p>
+					<p class="value">Bookr Studio</p>
+				</div>
+				<div class="info-block">
+					<p class="label">Adószám</p>
+					<p class="value">12345678-1-42</p>
+				</div>
+				<div class="info-block">
+					<p class="label">Kapcsolattartó</p>
+					<p class="value">Kiss Anna · +36 30 123 4567</p>
+				</div>
+				<div class="info-block">
+					<p class="label">Weboldal</p>
+					<p class="value">bookr.hu</p>
+				</div>
+			</div>
+		</article>
+
+		<article class="settings-section">
+			<header class="section-header">
+				<div>
+					<h2>Telephelyek</h2>
+					<p class="section-subtitle">Nyitvatartások és címek kezelése.</p>
+				</div>
+				<button class="link-btn">Új telephely</button>
+			</header>
+			<div class="section-list">
+				<div class="row">
+					<div>
+						<p class="value">Budapest, Andrássy út 12.</p>
+						<p class="label">H-P: 09:00-20:00 · Szo: 09:00-16:00</p>
+					</div>
+					<span class="pill">Fő</span>
+				</div>
+				<div class="row">
+					<div>
+						<p class="value">Budapest, Bartók Béla út 44.</p>
+						<p class="label">H-P: 10:00-19:00 · Szo: 10:00-14:00</p>
+					</div>
+					<button class="btn ghost small">Szerkesztés</button>
+				</div>
+			</div>
+		</article>
+
+		<article class="settings-section">
+			<header class="section-header">
+				<div>
+					<h2>Foglalási szabályok</h2>
+					<p class="section-subtitle">Automatikus szabályok a foglalásokhoz.</p>
+				</div>
+				<button class="link-btn">Módosítás</button>
+			</header>
+			<div class="section-list">
+				<div class="row">
+					<span>Előleg kötelező</span>
+					<span class="toggle on"></span>
+				</div>
+				<div class="row">
+					<span>Lemondási határidő</span>
+					<span class="value">24 óra</span>
+				</div>
+				<div class="row">
+					<span>Maximum előre foglalás</span>
+					<span class="value">30 nap</span>
+				</div>
+			</div>
+		</article>
+
+		<article class="settings-section">
+			<header class="section-header">
+				<div>
+					<h2>Munkatárs hozzáférések</h2>
+					<p class="section-subtitle">Jogosultságok és szerepkörök.</p>
+				</div>
+				<button class="link-btn">Kezelés</button>
+			</header>
+			<div class="section-list">
+				<div class="row">
+					<div>
+						<p class="value">Barni Kiss</p>
+						<p class="label">Tulajdonos · Teljes hozzáférés</p>
+					</div>
+					<span class="pill success">Aktív</span>
+				</div>
+				<div class="row">
+					<div>
+						<p class="value">Anna Kovács</p>
+						<p class="label">Menedzser · Szolgáltatás és naptár</p>
+					</div>
+					<button class="btn ghost small">Jogosultság</button>
+				</div>
+			</div>
+		</article>
+
+		<article class="settings-section">
+			<header class="section-header">
+				<div>
+					<h2>Értesítések</h2>
+					<p class="section-subtitle">Email és SMS értesítések beállítása.</p>
+				</div>
+				<button class="link-btn">Szerkesztés</button>
+			</header>
+			<div class="section-list">
+				<div class="row">
+					<span>Új foglalás email</span>
+					<span class="toggle on"></span>
+				</div>
+				<div class="row">
+					<span>SMS emlékeztető ügyfeleknek</span>
+					<span class="toggle"></span>
+				</div>
+				<div class="row">
+					<span>Napi összefoglaló</span>
+					<span class="toggle on"></span>
+				</div>
+			</div>
+		</article>
+
+		<article class="settings-section">
+			<header class="section-header">
+				<div>
+					<h2>Számlázás</h2>
+					<p class="section-subtitle">Csomagok és fizetési módok.</p>
+				</div>
+				<button class="link-btn">Kezelés</button>
+			</header>
+			<div class="section-grid">
+				<div class="info-block">
+					<p class="label">Csomag</p>
+					<p class="value">Pro · havi 19 900 Ft</p>
+				</div>
+				<div class="info-block">
+					<p class="label">Fizetési mód</p>
+					<p class="value">Végződés: 4242</p>
+				</div>
+				<div class="info-block">
+					<p class="label">Következő számlázás</p>
+					<p class="value">2026.02.15</p>
+				</div>
+			</div>
+		</article>
+	</section>
+</section>

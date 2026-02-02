@@ -13,6 +13,7 @@ import { VerifyEmailComponent } from './verify-email/verify-email.component';
 import { ProfileComponent } from './profile/profile.component';
 import { AppointmentPaymentComponent } from './appointment-payment/appointment-payment.component';
 import { authGuard } from './core/guards/auth.guard';
+import { roleGuard } from './core/guards/role.guard';
 import { ResetPasswordComponent } from './reset-password/reset-password.component';
 
 export const appRoutes: Routes = [
@@ -73,6 +74,24 @@ export const appRoutes: Routes = [
     data: { showFooter: false },
     canActivate: [authGuard],
   },
+  {
+    path: 'staff/panel',
+    loadComponent: () =>
+      import('./features/staff-dashboard/staff-dashboard.component').then(
+        (m) => m.StaffDashboardComponent
+      ),
+    canActivate: [authGuard, roleGuard],
+    data: { showFooter: false, showHeader: false, roles: ['staff'] },
+  },
+  {
+    path: 'staff/calendar',
+    loadComponent: () =>
+      import('./features/staff-dashboard/staff-calendar/staff-calendar.component').then(
+        (m) => m.StaffCalendarComponent
+      ),
+    canActivate: [authGuard, roleGuard],
+    data: { showFooter: false, showHeader: false, roles: ['staff'] },
+  },
 
   {
     path: 'register-business',
@@ -117,6 +136,13 @@ export const appRoutes: Routes = [
         loadComponent: () =>
           import('./features/owner-dashboard/pages/staff/staff.component/staff.component').then(
             (m) => m.StaffComponent
+          )
+      },
+      {
+        path: 'clients/:id',
+        loadComponent: () =>
+          import('./features/owner-dashboard/pages/clients/client-detail/client-detail.component').then(
+            (m) => m.ClientDetailComponent
           )
       },
       {

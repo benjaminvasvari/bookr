@@ -1,0 +1,53 @@
+<div class="staff-layout">
+	<app-staff-sidebar></app-staff-sidebar>
+
+	<main class="staff-content">
+		<header class="staff-topbar">
+			<div>
+				<h1>Vezérlőpult</h1>
+				<p class="subtitle">Heti időpontok áttekintése.</p>
+			</div>
+		</header>
+
+		@if (isLoading) {
+			<div class="state-card">Betöltés...</div>
+		} @else if (errorMessage) {
+			<div class="state-card error">{{ errorMessage }}</div>
+		} @else if (dashboard) {
+			<section class="panel">
+				<header class="panel-header">
+					<h3>Időpontjaim</h3>
+					<span class="panel-pill">{{ dashboard.upcomingAppointments.length }}</span>
+				</header>
+				<table class="appointments-table">
+					<thead>
+						<tr>
+							<th>Dátum</th>
+							<th>Idő</th>
+							<th>Szolgáltatás</th>
+							<th>Ügyfél</th>
+							<th>Időtartam</th>
+						</tr>
+					</thead>
+					<tbody>
+						@if (dashboard.upcomingAppointments.length === 0) {
+							<tr>
+								<td colspan="5" class="empty">Nincs közelgő időpont.</td>
+							</tr>
+						} @else {
+							@for (appt of dashboard.upcomingAppointments; track appt.id) {
+								<tr>
+									<td>{{ appt.date }}</td>
+									<td>{{ appt.time }}</td>
+									<td>{{ appt.serviceName }}</td>
+									<td>{{ appt.clientName }}</td>
+									<td>{{ appt.durationMinutes }} perc</td>
+								</tr>
+							}
+						}
+					</tbody>
+				</table>
+			</section>
+		}
+	</main>
+</div>

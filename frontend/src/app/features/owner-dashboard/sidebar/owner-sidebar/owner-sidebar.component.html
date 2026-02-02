@@ -1,10 +1,9 @@
-<aside class="owner-sidebar">
+<aside class="owner-sidebar" [class.is-pinned]="isPinned">
 	<div class="sidebar-header">
-		<span class="brand-icon">B</span>
-		<div class="brand-text">
-			<h2>Bookr</h2>
-			<span>Vezérlőpult</span>
-		</div>
+		<img class="brand-icon" src="../../../../../assets/images/logo.png" alt="Bookr logo" />
+		<button class="pin-btn" type="button" (click)="togglePin()" [attr.aria-pressed]="isPinned" aria-label="Rögzítés">
+			<i class="fas fa-thumbtack pin-icon" aria-hidden="true"></i>
+		</button>
 	</div>
 
 	<nav class="sidebar-nav">

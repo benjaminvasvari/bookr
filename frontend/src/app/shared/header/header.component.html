@@ -12,14 +12,25 @@
       <!-- Spacer -->
       <div class="col"></div>
 
-      <div class="col-auto">
-        <button (click)="handleBusinessButtonClick()" class="btn btn-register-business">
-          @if (hasCompany) {
-            <i [class]="getBusinessButtonIcon()"></i>
-          }
-          <span>{{ getBusinessButtonText() }}</span>
-        </button>
-      </div>
+      @if (!isStaff) {
+        <div class="col-auto">
+          <button (click)="handleBusinessButtonClick()" class="btn btn-register-business">
+            @if (hasCompany) {
+              <i [class]="getBusinessButtonIcon()"></i>
+            }
+            <span>{{ getBusinessButtonText() }}</span>
+          </button>
+        </div>
+      }
+
+      @if (currentUser && isStaff) {
+        <div class="col-auto">
+          <button routerLink="/staff/calendar" class="btn btn-staff-panel">
+            <i class="fas fa-calendar-alt"></i>
+            <span>Vezérlőpult</span>
+          </button>
+        </div>
+      }
 
       <!-- Right side - NEM bejelentkezett -->
       <div *ngIf="!currentUser" class="col-auto d-flex align-items-center gap-3">

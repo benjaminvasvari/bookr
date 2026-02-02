@@ -3,13 +3,13 @@ import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 
 @Component({
-  selector: 'app-owner-sidebar',
+  selector: 'app-staff-sidebar',
   standalone: true,
   imports: [CommonModule, RouterLink, RouterLinkActive],
-  templateUrl: './owner-sidebar.component.html',
-  styleUrls: ['./owner-sidebar.component.css'],
+  templateUrl: './staff-sidebar.component.html',
+  styleUrl: './staff-sidebar.component.css',
 })
-export class OwnerSidebar {
+export class StaffSidebarComponent {
   isPinned = false;
 
   togglePin(): void {

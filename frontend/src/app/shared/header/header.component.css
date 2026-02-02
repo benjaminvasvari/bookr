@@ -72,6 +72,29 @@
     transform: scale(1.02);
 }
 
+.btn-staff-panel {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background-color: transparent;
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 8px 16px;
+    border-radius: 999px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.btn-staff-panel i {
+    font-size: 14px;
+}
+
+.btn-staff-panel:hover {
+    border-color: var(--dark-green-color);
+    color: var(--ice-white-color);
+    box-shadow: 0 0 12px rgba(93, 189, 138, 0.35);
+}
+
 /* Welcome Text */
 .welcome-text {
     color: white;

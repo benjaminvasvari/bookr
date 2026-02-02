@@ -68,5 +68,6 @@ export const API_ENDPOINTS = {
 
   STAFF: {
     BY_COMPANY_AND_SERVICES: '/staff/by-company-and-services',
+    DASHBOARD: (userId: number) => `/staff/dashboard/${userId}`,
   },
 };

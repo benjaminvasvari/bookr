@@ -1,4 +1,4 @@
-.owner-sidebar {
+.staff-sidebar {
 	width: 68px;
 	flex: 0 0 68px;
 	min-height: 100%;
@@ -15,12 +15,12 @@
 	position: relative;
 }
 
-.owner-sidebar:hover {
+.staff-sidebar:hover {
 	width: 220px;
 	flex-basis: 220px;
 }
 
-.owner-sidebar.is-pinned {
+.staff-sidebar.is-pinned {
 	width: 220px;
 	flex-basis: 220px;
 }
@@ -31,20 +31,6 @@
 	gap: 12px;
 	padding: 4px 6px;
 	height: 48px;
-}
-
-.brand-icon {
-	width: 40px;
-	height: 40px;
-	border-radius: 12px;
-	/* background: #f7fafc; */
-	border: none;
-	padding: 1px;
-	display: block;
-	object-fit: contain;
-	flex-shrink: 0;
-	z-index: 1;
-	line-height: 1;
 }
 
 .pin-btn {
@@ -65,7 +51,7 @@
 	transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
-.owner-sidebar:not(:hover):not(.is-pinned) .pin-btn {
+.staff-sidebar:not(:hover):not(.is-pinned) .pin-btn {
 	opacity: 0;
 	pointer-events: none;
 }
@@ -75,7 +61,7 @@
 	border-color: rgba(124, 156, 191, 0.55);
 }
 
-.owner-sidebar.is-pinned .pin-btn {
+.staff-sidebar.is-pinned .pin-btn {
 	background: rgba(124, 156, 191, 0.4);
 	border-color: rgba(124, 156, 191, 0.7);
 }
@@ -87,10 +73,34 @@
 	transform: rotate(25deg) translateY(1px);
 }
 
+.brand-icon {
+	width: 40px;
+	height: 40px;
+	border-radius: 12px;
+	border: none;
+	padding: 1px;
+	display: block;
+	object-fit: contain;
+	flex-shrink: 0;
+	z-index: 1;
+	line-height: 1;
+}
+
 .sidebar-nav {
 	display: flex;
 	flex-direction: column;
-	gap: 10px;
+	gap: 16px;
+	margin-top: 2px;
+}
+.sidebar-nav .home-link {
+	margin-bottom: 6px;
+	background: rgba(235, 244, 255, 0.2);
+	color: #ebf4ff;
+}
+
+.sidebar-nav .home-link.active {
+	background: #7c9cbf;
+	color: #ebf4ff;
 }
 
 .sidebar-nav a {
@@ -106,23 +116,6 @@
 	column-gap: 12px;
 }
 
-.sidebar-nav .home-link {
-	margin-bottom: 6px;
-	background: rgba(235, 244, 255, 0.2);
-	color: #ebf4ff;
-}
-
-.sidebar-nav .home-link.active {
-	background: #7c9cbf;
-	color: #ebf4ff;
-}
-
-.nav-divider {
-	height: 1px;
-	background: rgba(124, 156, 191, 0.35);
-	margin: 6px 4px 10px;
-}
-
 .sidebar-nav a i {
 	width: 20px;
 	text-align: center;
@@ -132,17 +125,15 @@
 	margin-left: 3px;
 }
 
+
 .nav-label {
 	opacity: 0;
 	transition: opacity 0.2s ease;
 	white-space: nowrap;
 }
 
-.owner-sidebar:hover .nav-label {
-	opacity: 1;
-}
-
-.owner-sidebar.is-pinned .nav-label {
+.staff-sidebar:hover .nav-label,
+.staff-sidebar.is-pinned .nav-label {
 	opacity: 1;
 }
 

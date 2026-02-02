@@ -1,9 +1,10 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
+import { Subscription } from 'rxjs';
+
 import { AuthService } from '../../core/services/auth.service';
 import { User } from '../../core/models';
-import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-header',
@@ -14,19 +15,16 @@ import { Subscription } from 'rxjs';
 })
 export class HeaderComponent implements OnInit, OnDestroy {
   currentUser: User | null = null;
-  showDropdown: boolean = false;
-  hasCompany: boolean = false;
+  showDropdown = false;
+  hasCompany = false;
   private userSubscription?: Subscription;
 
-  constructor(
-    private authService: AuthService,
-    private router: Router
-  ) {}
+  constructor(private authService: AuthService, private router: Router) {}
 
   ngOnInit(): void {
-    this.userSubscription = this.authService.currentUser$.subscribe(user => {
+    this.userSubscription = this.authService.currentUser$.subscribe((user) => {
       this.currentUser = user;
-      this.hasCompany = !!(user && user.companyId); 
+      this.hasCompany = !!(user && user.companyId);
 
       console.log('Header - Current user:', user);
       console.log('Header - Has company:', this.hasCompany);
@@ -70,18 +68,33 @@ export class HeaderComponent implements OnInit, OnDestroy {
     this.closeDropdown();
   }
 
+  get isStaff(): boolean {
+    const user = this.currentUser;
+    if (!user) {
+      return false;
+    }
+
+    if (typeof user.roles !== 'string') {
+      return false;
+    }
+
+    const hasStaffRole = user.roles
+      .split(',')
+      .map((role) => role.trim().toLowerCase())
+      .includes('staff');
+
+    return hasStaffRole && user.companyId !== null;
+  }
+
   /**
    * Dinamikus gomb kattintás kezelése
    */
   handleBusinessButtonClick(): void {
     if (!this.currentUser) {
-      // Nincs bejelentkezve → Login
       this.router.navigate(['/login']);
     } else if (this.hasCompany) {
-      // Van cége → Owner Dashboard
       this.router.navigate(['/owner']);
     } else {
-      // Nincs cége → Cég regisztráció
       this.router.navigate(['/register-business']);
     }
   }
@@ -92,11 +105,13 @@ export class HeaderComponent implements OnInit, OnDestroy {
   getBusinessButtonText(): string {
     if (!this.currentUser) {
       return 'Cég regisztrálása';
-    } else if (this.hasCompany) {
-      return 'Cég vezérlése';
-    } else {
-      return 'Cég regisztrálása';
     }
+
+    if (this.hasCompany) {
+      return 'Cég vezérlése';
+    }
+
+    return 'Cég regisztrálása';
   }
 
   /**
@@ -104,9 +119,9 @@ export class HeaderComponent implements OnInit, OnDestroy {
    */
   getBusinessButtonIcon(): string {
     if (this.hasCompany) {
-      return 'fas fa-chart-line';  // Dashboard ikon
-    } else {
-      return '';  // Nincs ikon, ha nincs cég
+      return 'fas fa-chart-line';
     }
+
+    return '';
   }
 }
