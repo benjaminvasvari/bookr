@@ -30,7 +30,7 @@ public class FavoritesService {
 
             Integer userId = JWT.getUserIdFromAccessToken(jwtToken);
 
-            Boolean isUserExist = UsersService.validateUserExist(userId);
+            Boolean isUserExist = UsersService.validateUserExistById(userId);
 
             if (isUserExist == null) {
                 status = "InternalServerError";
@@ -116,7 +116,7 @@ public class FavoritesService {
         Integer userId = JWT.getUserIdFromAccessToken(jwtToken);
 
         // Company exist
-        Boolean isUserExist = UsersService.validateUserExist(userId);
+        Boolean isUserExist = UsersService.validateUserExistById(userId);
 
         if (isUserExist == null) {
             status = "InternalServerError";
@@ -154,7 +154,7 @@ public class FavoritesService {
         Integer userId = JWT.getUserIdFromAccessToken(jwtToken);
 
         // Company exist
-        Boolean isUserExist = UsersService.validateUserExist(userId);
+        Boolean isUserExist = UsersService.validateUserExistById(userId);
 
         if (isUserExist == null) {
             status = "InternalServerError";

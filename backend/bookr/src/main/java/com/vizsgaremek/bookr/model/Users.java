@@ -927,6 +927,43 @@ public class Users implements Serializable {
         }
     }
 
+    public static Users checkUserByEmail(String email) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("checkUserByEmail");
+            spq.registerStoredProcedureParameter("userEmailIN", String.class, ParameterMode.IN);
+
+            spq.setParameter("userEmailIN", email);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            Object[] record = resultList.get(0);
+
+            Users user = new Users(
+                    Integer.valueOf(record[0].toString()),
+                    Boolean.parseBoolean(record[1].toString()),
+                    Boolean.parseBoolean(record[2].toString())
+            );
+
+            return user;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
     public static Users getUserProfile(Integer id) {
         EntityManager em = emf.createEntityManager();
 

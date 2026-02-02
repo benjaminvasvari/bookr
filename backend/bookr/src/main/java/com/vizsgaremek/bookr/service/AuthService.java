@@ -6,8 +6,8 @@ import com.vizsgaremek.bookr.model.AuditLogs;
 import com.vizsgaremek.bookr.model.Tokens;
 import com.vizsgaremek.bookr.model.Users;
 import com.vizsgaremek.bookr.security.JWT;
+import com.vizsgaremek.bookr.util.FileStorageUtil;
 import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
 import org.json.JSONObject;
 
 /*
@@ -21,14 +21,10 @@ import org.json.JSONObject;
 @ApplicationScoped
 public class AuthService {
 
-    private static final String IMAGE_BASE_URL = "http://localhost:8080/bookr-1.0-SNAPSHOT/";
-
-    @Inject
-    private EmailService emailService;
-
-    @Inject
-    private AuditLogService auditLogService;
-
+    private EmailService emailService = new EmailService();
+    private AuditLogService auditLogService = new AuditLogService();
+    private UsersService UsersService = new UsersService();
+    private TokensService TokensService = new TokensService();
 
     private final PasswordHasher passwordHasher = new PasswordHasher();
 
@@ -212,7 +208,42 @@ public class AuthService {
             return toReturn;
         }
 
-        // ========== 3. USER LEKÉRÉSE EMAIL ALAPJÁN ==========
+        // ========== 3. USER CHECK ==========
+        Boolean isUserExist = UsersService.validateUserExistByEmail(loginUser.getEmail());
+
+        // Ha nem található user ezzel az email címmel
+        if (isUserExist == null) {
+            status = "InternalServerError";
+            statusCode = 500;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+            return toReturn;
+        }
+        if (!isUserExist) {
+            status = "NotFound";
+            statusCode = 404;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+            return toReturn;
+        }
+
+        Boolean isTokensOK = TokensService.validateUserLoginPermissionToken(loginUser.getEmail());
+        if (isTokensOK == null) {
+            status = "InternalServerError";
+            statusCode = 500;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+            return toReturn;
+        }
+        if (!isTokensOK) {
+            status = "emailVerifyNeed";
+            statusCode = 418;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+            return toReturn;
+        }
+
+        // ========== 4. USER LEKÉRÉSE EMAIL ALAPJÁN ==========
         Users userFromDB = Users.login(loginUser);
 
         // Ha nem található user ezzel az email címmel
@@ -224,7 +255,7 @@ public class AuthService {
             return toReturn;
         }
 
-        // ========== 4. JELSZÓ ELLENŐRZÉS ==========
+        // ========== 5. JELSZÓ ELLENŐRZÉS ==========
         String hashedPasswordFromDB = userFromDB.getPassword();
 
         boolean passwordMatches = passwordHasher.verifyPassword(plainPassword, hashedPasswordFromDB);
@@ -258,7 +289,7 @@ public class AuthService {
 
         // User Avatar kezelése (lehet null)
         if (userFromDB.getImageUrl() != null) {
-            userData.put("avatarUrl", IMAGE_BASE_URL + userFromDB.getImageUrl());
+            userData.put("avatarUrl", FileStorageUtil.buildFullUrl(userFromDB.getImageUrl()));
         } else {
             userData.put("avatarUrl", JSONObject.NULL);
         }
@@ -472,14 +503,6 @@ public class AuthService {
         JSONObject toReturn = new JSONObject();
 
         try {
-
-//            // Input validáció
-//            if (!request.has("refreshToken") || request.getString("refreshToken").isEmpty()) {
-//                toReturn.put("status", "InvalidInput");
-//                toReturn.put("statusCode", 400);
-//                toReturn.put("message", "Refresh token is required");
-//                return toReturn;
-//            }
             auditLogService.logSimpleAction(
                     loggedoutUser.getId(),
                     loggedoutUser.getRoleName(),

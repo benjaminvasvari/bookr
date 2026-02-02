@@ -251,7 +251,7 @@ public class AppointmentsService {
         SimpleDateFormat timeFormatter = new SimpleDateFormat("HH:mm");
 
         // User validáció
-        Boolean isUserExist = UsersService.validateUserExist(userId);
+        Boolean isUserExist = UsersService.validateUserExistById(userId);
         if (isUserExist == null) {
             status = "InternalServerError";
             statusCode = 500;

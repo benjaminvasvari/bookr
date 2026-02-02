@@ -4,11 +4,15 @@
  */
 package com.vizsgaremek.bookr.model;
 
+import static com.vizsgaremek.bookr.model.Users.emf;
+import static com.vizsgaremek.bookr.model.Users.formatter;
 import java.io.Serializable;
 import java.util.Date;
+import java.util.List;
 import javax.persistence.Basic;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EntityManager;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -16,9 +20,12 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
+import javax.persistence.ParameterMode;
+import javax.persistence.StoredProcedureQuery;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
+import javax.persistence.Transient;
 import javax.validation.constraints.NotNull;
 import javax.xml.bind.annotation.XmlRootElement;
 
@@ -64,6 +71,11 @@ public class NotificationSettings implements Serializable {
     private Date createdAt;
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     @ManyToOne(optional = false)
+    
+    @Transient
+    private Integer userIdInt;
+    
+    
     private Users userId;
 
     public NotificationSettings() {
@@ -77,6 +89,26 @@ public class NotificationSettings implements Serializable {
         this.id = id;
         this.createdAt = createdAt;
     }
+
+    public NotificationSettings(Integer id, Integer userIdInt, Boolean appointmentConfirmation, Boolean appointmentReminder, Boolean appointmentCancellation, Boolean marketingEmails, Date updatedAt, Date createdAt) {
+        this.id = id;
+        this.userIdInt = userIdInt;
+        this.appointmentConfirmation = appointmentConfirmation;
+        this.appointmentReminder = appointmentReminder;
+        this.appointmentCancellation = appointmentCancellation;
+        this.marketingEmails = marketingEmails;
+        this.updatedAt = updatedAt;
+        this.createdAt = createdAt;
+    }
+
+    public NotificationSettings(Integer id, Boolean appointmentConfirmation, Boolean appointmentReminder, Boolean appointmentCancellation, Boolean marketingEmails) {
+        this.id = id;
+        this.appointmentConfirmation = appointmentConfirmation;
+        this.appointmentReminder = appointmentReminder;
+        this.appointmentCancellation = appointmentCancellation;
+        this.marketingEmails = marketingEmails;
+    }
+    
 
     public Integer getId() {
         return id;
@@ -141,6 +173,14 @@ public class NotificationSettings implements Serializable {
     public void setUserId(Users userId) {
         this.userId = userId;
     }
+    
+    public Integer getUserIdInt() {
+        return userIdInt;
+    }
+
+    public void setUserIdInt(Integer userIdInt) {
+        this.userIdInt = userIdInt;
+    }
 
     @Override
     public int hashCode() {
@@ -166,5 +206,75 @@ public class NotificationSettings implements Serializable {
     public String toString() {
         return "com.vizsgaremek.bookr.model.NotificationSettings[ id=" + id + " ]";
     }
-    
+
+    public static Boolean updateNotificationSetting(NotificationSettings updatedSetting) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("updateNotificationSetting");
+            spq.registerStoredProcedureParameter("idIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("confIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("remindIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("cancellIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("marketingIN", String.class, ParameterMode.IN);
+
+            spq.setParameter("idIN", updatedSetting.getId());
+            spq.setParameter("confIN", updatedSetting.getAppointmentConfirmation());
+            spq.setParameter("remindIN", updatedSetting.getAppointmentReminder());
+            spq.setParameter("cancellIN", updatedSetting.getAppointmentCancellation());
+            spq.setParameter("marketingIN", updatedSetting.getMarketingEmails());
+
+            spq.execute();
+
+            return true;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return false;
+        }
+    }
+
+    public static NotificationSettings getAllNotificationSettings(Integer userId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getAllNotificationSettings");
+            spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("userIdIN", userId);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            // If no user found, return null
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            Object[] record = resultList.get(0);
+
+            NotificationSettings s = new NotificationSettings(
+                    Integer.valueOf(record[0].toString()),
+                    Integer.valueOf(record[1].toString()),
+                    Boolean.parseBoolean(record[2].toString()),
+                    Boolean.parseBoolean(record[3].toString()),
+                    Boolean.parseBoolean(record[4].toString()),
+                    Boolean.parseBoolean(record[5].toString()),
+                    record[7] == null ? null : formatter.parse(record[6].toString()),
+                    formatter.parse(record[7].toString())
+                    );
+
+            return s;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
 }

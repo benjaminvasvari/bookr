@@ -323,7 +323,7 @@ public class ImagesService {
         Integer statusCode = 200;
 
         // Company exist
-        Boolean isUserExist = UsersService.validateUserExist(userId);
+        Boolean isUserExist = UsersService.validateUserExistById(userId);
 
         if (isUserExist == null) {
             status = "InternalServerError";
@@ -392,7 +392,7 @@ public class ImagesService {
 
         try {
 
-            Boolean isUserExist = UsersService.validateUserExist(userId);
+            Boolean isUserExist = UsersService.validateUserExistById(userId);
 
             if (isUserExist == null) {
                 status = "InternalServerError";

@@ -237,16 +237,38 @@ public class UsersService {
         toReturn.put("statusCode", statusCode);
         return toReturn;
     }
-    
-    
 
-    public Boolean validateUserExist(Integer userId) {
+    public Boolean validateUserExistById(Integer userId) {
 
         try {
 
             Boolean result = true;
 
             Users modelResult = Users.checkUser(userId);
+
+            if (modelResult == null) {
+                result = false;
+            } else if (modelResult.getIsActive() == false) {
+                result = false;
+            } else if (modelResult.getIsDeleted() == true) {
+                result = false;
+            }
+
+            return result;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public Boolean validateUserExistByEmail(String userEmail) {
+
+        try {
+
+            Boolean result = true;
+
+            Users modelResult = Users.checkUserByEmail(userEmail);
 
             if (modelResult == null) {
                 result = false;
