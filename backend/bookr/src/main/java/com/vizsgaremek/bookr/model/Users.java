@@ -66,6 +66,11 @@ import javax.xml.bind.annotation.XmlTransient;
 
 public class Users implements Serializable {
 
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "performedByUserId")
+    private Collection<AuditLogs> auditLogsCollection;
+    @OneToMany(mappedBy = "affectedEntityId")
+    private Collection<AuditLogs> auditLogsCollection1;
+
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "userId")
     private Collection<Favorites> favoritesCollection;
 
@@ -1081,5 +1086,23 @@ public class Users implements Serializable {
 
     public void setFavoritesCollection(Collection<Favorites> favoritesCollection) {
         this.favoritesCollection = favoritesCollection;
+    }
+
+    @XmlTransient
+    public Collection<AuditLogs> getAuditLogsCollection() {
+        return auditLogsCollection;
+    }
+
+    public void setAuditLogsCollection(Collection<AuditLogs> auditLogsCollection) {
+        this.auditLogsCollection = auditLogsCollection;
+    }
+
+    @XmlTransient
+    public Collection<AuditLogs> getAuditLogsCollection1() {
+        return auditLogsCollection1;
+    }
+
+    public void setAuditLogsCollection1(Collection<AuditLogs> auditLogsCollection1) {
+        this.auditLogsCollection1 = auditLogsCollection1;
     }
 }

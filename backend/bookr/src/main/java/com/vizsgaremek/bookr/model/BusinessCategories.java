@@ -48,6 +48,11 @@ import javax.xml.bind.annotation.XmlTransient;
     @NamedQuery(name = "BusinessCategories.findByUpdatedAt", query = "SELECT b FROM BusinessCategories b WHERE b.updatedAt = :updatedAt")})
 public class BusinessCategories implements Serializable {
 
+    @Basic(optional = false)
+    @NotNull
+    @Column(name = "is_active")
+    private boolean isActive;
+
     private static final long serialVersionUID = 1L;
 
     @Id
@@ -71,8 +76,6 @@ public class BusinessCategories implements Serializable {
     @Column(name = "icon")
     private String icon;
 
-    @Column(name = "is_active")
-    private Boolean isActive;
 
     @Basic(optional = false)
     @NotNull
@@ -114,7 +117,7 @@ public class BusinessCategories implements Serializable {
         this.name = name;
         this.description = description;
     }
-    
+
     // update request
     public BusinessCategories(Integer id, String name, String description) {
         this.id = id;
@@ -356,4 +359,44 @@ public class BusinessCategories implements Serializable {
             return false;
         }
     }
+
+    public static BusinessCategories getBusinessCategoryById(Integer userId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getBusinessCategoryById");
+            spq.registerStoredProcedureParameter("idIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("idIN", userId);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            Object[] record = resultList.get(0);
+
+            BusinessCategories cat = new BusinessCategories(
+                    Integer.valueOf(record[0].toString()),
+                    record[1].toString(),
+                    record[2].toString(),
+                    formatter.parse(record[3].toString()),
+                    record[4] != null ? formatter.parse(record[4].toString()) : null
+            );
+
+            return cat;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
 }

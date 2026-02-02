@@ -71,12 +71,6 @@ public class JWT {
                 claims.put("role_names", roles);
             }
 
-            // role_id megtartása (opcionális, de hasznos)
-            Integer roleId = user.getRoleIdAsInteger();
-            if (roleId != null) {
-                claims.put("role_id", roleId);
-            }
-
             Integer companyId = user.getCompanyId();
             if (companyId != null) {
                 claims.put("company_id", companyId);
@@ -190,21 +184,6 @@ public class JWT {
         }
     }
 
-    /**
-     * Role ID kinyerése access tokenből
-     */
-    public static Integer getRoleIdFromAccessToken(String token) {
-        try {
-            Claims claims = getClaimsFromAccessToken(token);
-            return claims != null ? claims.get("role_id", Integer.class) : null;
-        } catch (Exception ex) {
-            return null;
-        }
-    }
-
-    /**
-     * Company ID kinyerése access tokenből
-     */
     public static Integer getCompanyIdFromAccessToken(String token) {
         try {
             Claims claims = getClaimsFromAccessToken(token);
@@ -214,9 +193,6 @@ public class JWT {
         }
     }
 
-    /**
-     * Email kinyerése access tokenből
-     */
     public static String getEmailFromAccessToken(String token) {
         try {
             Claims claims = getClaimsFromAccessToken(token);
@@ -226,9 +202,6 @@ public class JWT {
         }
     }
 
-    /**
-     * JTI (JWT ID) kinyerése - token visszavonáshoz
-     */
     public static String getJtiFromAccessToken(String token) {
         try {
             Claims claims = getClaimsFromAccessToken(token);
@@ -238,23 +211,14 @@ public class JWT {
         }
     }
 
-    /**
-     * Összes claim kinyerése access tokenből
-     */
     public static Claims getClaimsFromAccessToken(String token) {
         return getClaimsFromToken(token, getSecretKey(EnvConfig.getJwtSecret()));
     }
 
-    /**
-     * Összes claim kinyerése refresh tokenből
-     */
     public static Claims getClaimsFromRefreshToken(String token) {
         return getClaimsFromToken(token, getSecretKey(EnvConfig.getRefreshSecret()));
     }
 
-    /**
-     * Claims kinyerése tokenből
-     */
     private static Claims getClaimsFromToken(String token, SecretKey key) {
         try {
             return Jwts.parserBuilder()
@@ -268,9 +232,6 @@ public class JWT {
         }
     }
 
-    /**
-     * Role name kinyerése access tokenből
-     */
     public static String getRolesFromAccessToken(String token) {
         try {
             Claims claims = getClaimsFromAccessToken(token);
@@ -280,9 +241,6 @@ public class JWT {
         }
     }
 
-    /**
-     * SecretKey generálása a secret stringből
-     */
     private static SecretKey getSecretKey(String secret) {
         return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }

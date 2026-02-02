@@ -1,3 +1,7 @@
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
+ */
 package com.vizsgaremek.bookr.model;
 
 import java.io.Serializable;
@@ -12,7 +16,9 @@ import javax.persistence.EntityManagerFactory;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
+import javax.persistence.ManyToOne;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.ParameterMode;
@@ -28,7 +34,6 @@ import javax.xml.bind.annotation.XmlRootElement;
 import org.json.JSONObject;
 
 /**
- * AuditLog entity for tracking user actions in the system
  *
  * @author vben
  */
@@ -38,18 +43,16 @@ import org.json.JSONObject;
 @NamedQueries({
     @NamedQuery(name = "AuditLogs.findAll", query = "SELECT a FROM AuditLogs a"),
     @NamedQuery(name = "AuditLogs.findById", query = "SELECT a FROM AuditLogs a WHERE a.id = :id"),
-    @NamedQuery(name = "AuditLogs.findByPerformedByUserId", query = "SELECT a FROM AuditLogs a WHERE a.performedByUserId = :performedByUserId"),
-    @NamedQuery(name = "AuditLogs.findByAffectedUserId", query = "SELECT a FROM AuditLogs a WHERE a.affectedUserId = :affectedUserId"),
+    @NamedQuery(name = "AuditLogs.findByPerformedByRole", query = "SELECT a FROM AuditLogs a WHERE a.performedByRole = :performedByRole"),
     @NamedQuery(name = "AuditLogs.findByEmail", query = "SELECT a FROM AuditLogs a WHERE a.email = :email"),
     @NamedQuery(name = "AuditLogs.findByEntityType", query = "SELECT a FROM AuditLogs a WHERE a.entityType = :entityType"),
     @NamedQuery(name = "AuditLogs.findByAction", query = "SELECT a FROM AuditLogs a WHERE a.action = :action"),
     @NamedQuery(name = "AuditLogs.findByCreatedAt", query = "SELECT a FROM AuditLogs a WHERE a.createdAt = :createdAt")})
 public class AuditLogs implements Serializable {
 
-    private static final long serialVersionUID = 1L;
-
-    // EntityManagerFactory - ugyanúgy mint a Users.java-ban
     static EntityManagerFactory emf = Persistence.createEntityManagerFactory("com.vizsgaremek_bookr_war_1.0-SNAPSHOTPU");
+
+    private static final long serialVersionUID = 1L;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -66,8 +69,8 @@ public class AuditLogs implements Serializable {
     @Column(name = "performed_by_role")
     private String performedByRole;
 
-    @Column(name = "affected_user_id")
-    private Integer affectedUserId;
+    @Column(name = "affected_entity_id")
+    private Integer affectedEntityId;
 
     @Column(name = "company_id")
     private Integer companyId;
@@ -127,10 +130,10 @@ public class AuditLogs implements Serializable {
         this.action = action;
     }
 
-    public AuditLogs(Integer performedByUserId, String performedByRole, Integer affectedUserId, String email, String entityType, String action) {
+    public AuditLogs(Integer performedByUserId, String performedByRole, Integer affectedEntityId, String email, String entityType, String action) {
         this.performedByUserId = performedByUserId;
         this.performedByRole = performedByRole;
-        this.affectedUserId = affectedUserId;
+        this.affectedEntityId = affectedEntityId;
         this.email = email;
         this.entityType = entityType;
         this.action = action;
@@ -149,8 +152,8 @@ public class AuditLogs implements Serializable {
         return performedByRole;
     }
 
-    public Integer getAffectedUserId() {
-        return affectedUserId;
+    public Integer getAffectedEntityId() {
+        return affectedEntityId;
     }
 
     public Integer getCompanyId() {
@@ -218,8 +221,8 @@ public class AuditLogs implements Serializable {
         this.performedByRole = performedByRole;
     }
 
-    public void setAffectedUserId(Integer affectedUserId) {
-        this.affectedUserId = affectedUserId;
+    public void setAffectedEntityId(Integer affectedUserId) {
+        this.affectedEntityId = affectedUserId;
     }
 
     public void setCompanyId(Integer companyId) {
@@ -258,26 +261,6 @@ public class AuditLogs implements Serializable {
         this.newValuesMap = newValuesMap;
     }
 
-    /**
-     * Add a single old value to the old values map
-     */
-    public void addOldValue(String key, Object value) {
-        if (this.oldValuesMap == null) {
-            this.oldValuesMap = new HashMap<>();
-        }
-        this.oldValuesMap.put(key, value);
-    }
-
-    /**
-     * Add a single new value to the new values map
-     */
-    public void addNewValue(String key, Object value) {
-        if (this.newValuesMap == null) {
-            this.newValuesMap = new HashMap<>();
-        }
-        this.newValuesMap.put(key, value);
-    }
-
     @Override
     public int hashCode() {
         int hash = 0;
@@ -287,6 +270,7 @@ public class AuditLogs implements Serializable {
 
     @Override
     public boolean equals(Object object) {
+        // TODO: Warning - this method won't work in the case the id fields are not set
         if (!(object instanceof AuditLogs)) {
             return false;
         }
@@ -299,23 +283,24 @@ public class AuditLogs implements Serializable {
 
     @Override
     public String toString() {
-        return "AuditLogs{"
-                + "id=" + id
-                + ", performedByUserId=" + performedByUserId
-                + ", performedByRole='" + performedByRole + '\''
-                + ", affectedUserId=" + affectedUserId
-                + ", companyId=" + companyId
-                + ", email='" + email + '\''
-                + ", entityType='" + entityType + '\''
-                + ", action='" + action + '\''
-                + ", createdAt=" + createdAt
-                + '}';
+        return "com.vizsgaremek.bookr.model.AuditLogs[ id=" + id + " ]";
     }
 
-    // ========== DATABASE COMMUNICATION ==========
-    /**
-     * Logs this audit entry to the database using the logAudit stored procedure
-     */
+
+    public void addOldValue(String key, Object value) {
+        if (this.oldValuesMap == null) {
+            this.oldValuesMap = new HashMap<>();
+        }
+        this.oldValuesMap.put(key, value);
+    }
+
+    public void addNewValue(String key, Object value) {
+        if (this.newValuesMap == null) {
+            this.newValuesMap = new HashMap<>();
+        }
+        this.newValuesMap.put(key, value);
+    }
+
     public void logAudit() {
         EntityManager em = emf.createEntityManager();
 
@@ -356,8 +341,8 @@ public class AuditLogs implements Serializable {
             }
 
             // Handle nullable affectedUserId
-            if (this.affectedUserId != null) {
-                spq.setParameter("affectedUserIdIN", this.affectedUserId);
+            if (this.affectedEntityId != null) {
+                spq.setParameter("affectedUserIdIN", this.affectedEntityId);
             } else {
                 spq.unwrap(org.hibernate.procedure.ProcedureCall.class)
                         .getParameterRegistration("affectedUserIdIN")

@@ -4,6 +4,7 @@
  */
 package com.vizsgaremek.bookr.service;
 
+import com.vizsgaremek.bookr.model.AuditLogs;
 import com.vizsgaremek.bookr.model.BusinessCategories;
 import com.vizsgaremek.bookr.security.JWT;
 import java.util.List;
@@ -18,6 +19,7 @@ public class BusinessCategoriesService {
 
     private BusinessCategories layer = new BusinessCategories();
     private UsersService UsersService = new UsersService();
+    private AuditLogService AuditLogService = new AuditLogService();
 
     public JSONObject getAllBusinessCategories() {
         JSONObject toReturn = new JSONObject();
@@ -77,7 +79,6 @@ public class BusinessCategoriesService {
 
         Integer userId = JWT.getUserIdFromAccessToken(jwtToken);
 
-        // Company exist
         Boolean isUserExist = UsersService.validateUserExist(userId);
 
         if (isUserExist == null) {
@@ -100,6 +101,29 @@ public class BusinessCategoriesService {
         if (modelResult == null) {
             status = "InternalServerError";
             statusCode = 500;
+        } else {
+            try {
+                String userEmail = JWT.getEmailFromAccessToken(jwtToken);
+                String userRoles = JWT.getEmailFromAccessToken(jwtToken);
+
+                AuditLogs auditLog = new AuditLogs(
+                        userId,
+                        userRoles.split(",")[0].trim(),
+                        modelResult.getId(),
+                        userEmail,
+                        "BusinessCategory",
+                        "create"
+                );
+                auditLog.addNewValue("id", modelResult.getId());
+                auditLog.addNewValue("name", catCreated.getName());
+                auditLog.addNewValue("description", catCreated.getDescription());
+
+                AuditLogService.logAudit(auditLog);
+
+            } catch (Exception ex) {
+                // Log the error but don't fail the registration
+                ex.printStackTrace();
+            }
         }
 
         toReturn.put("status", status);
@@ -115,7 +139,6 @@ public class BusinessCategoriesService {
 
         Integer userId = JWT.getUserIdFromAccessToken(jwtToken);
 
-        // Company exist
         Boolean isUserExist = UsersService.validateUserExist(userId);
 
         if (isUserExist == null) {
@@ -133,11 +156,46 @@ public class BusinessCategoriesService {
             return toReturn;
         }
 
+        BusinessCategories oldData = BusinessCategories.getBusinessCategoryById(updatedCat.getId());
+
+        if (oldData == null) {
+            status = "CategoryNotFound";
+            statusCode = 404;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+            return toReturn;
+        }
+
         Boolean modelResult = layer.updateBusinessCategory(updatedCat);
 
         if (modelResult == false) {
             status = "InternalServerError";
             statusCode = 500;
+        } else {
+            try {
+                String userEmail = JWT.getEmailFromAccessToken(jwtToken);
+                String userRoles = JWT.getEmailFromAccessToken(jwtToken);
+
+                AuditLogs auditLog = new AuditLogs(
+                        userId,
+                        userRoles.split(",")[0].trim(),
+                        updatedCat.getId(),
+                        userEmail,
+                        "BusinessCategory",
+                        "updated"
+                );
+                auditLog.addOldValue("name", oldData.getName());
+                auditLog.addOldValue("description", oldData.getDescription());
+
+                auditLog.addNewValue("name", updatedCat.getName());
+                auditLog.addNewValue("description", updatedCat.getDescription());
+
+                AuditLogService.logAudit(auditLog);
+
+            } catch (Exception ex) {
+                // Log the error but don't fail the registration
+                ex.printStackTrace();
+            }
         }
 
         toReturn.put("status", status);
@@ -176,6 +234,26 @@ public class BusinessCategoriesService {
         if (modelResult == false) {
             status = "InternalServerError";
             statusCode = 500;
+        } else {
+            try {
+                String userEmail = JWT.getEmailFromAccessToken(jwtToken);
+                String userRoles = JWT.getEmailFromAccessToken(jwtToken);
+
+                AuditLogs auditLog = new AuditLogs(
+                        userId,
+                        userRoles.split(",")[0].trim(),
+                        id,
+                        userEmail,
+                        "BusinessCategory",
+                        "activate"
+                );
+
+                AuditLogService.logAudit(auditLog);
+
+            } catch (Exception ex) {
+                // Log the error but don't fail the registration
+                ex.printStackTrace();
+            }
         }
 
         toReturn.put("status", status);
@@ -214,6 +292,26 @@ public class BusinessCategoriesService {
         if (modelResult == false) {
             status = "InternalServerError";
             statusCode = 500;
+        } else {
+            try {
+                String userEmail = JWT.getEmailFromAccessToken(jwtToken);
+                String userRoles = JWT.getEmailFromAccessToken(jwtToken);
+
+                AuditLogs auditLog = new AuditLogs(
+                        userId,
+                        userRoles.split(",")[0].trim(),
+                        id,
+                        userEmail,
+                        "BusinessCategory",
+                        "deactivate"
+                );
+
+                AuditLogService.logAudit(auditLog);
+
+            } catch (Exception ex) {
+                // Log the error but don't fail the registration
+                ex.printStackTrace();
+            }
         }
 
         toReturn.put("status", status);

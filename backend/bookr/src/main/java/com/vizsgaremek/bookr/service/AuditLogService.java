@@ -47,7 +47,7 @@ public class AuditLogService {
                 email, entityType, action);
         
         
-        auditLog.setAffectedUserId(affectedUserId);
+        auditLog.setAffectedEntityId(affectedUserId);
         auditLog.setCompanyId(companyId);
 
         logAudit(auditLog);

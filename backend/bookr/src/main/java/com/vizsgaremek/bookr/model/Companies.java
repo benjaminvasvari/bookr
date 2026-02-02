@@ -935,19 +935,4 @@ public class Companies implements Serializable {
         }
     }
 
-    public Boolean getAllowSameDayBooking() {
-        return allowSameDayBooking;
-    }
-
-    public void setAllowSameDayBooking(Boolean allowSameDayBooking) {
-        this.allowSameDayBooking = allowSameDayBooking;
-    }
-
-    public Integer getMinimumBookingHoursAhead() {
-        return minimumBookingHoursAhead;
-    }
-
-    public void setMinimumBookingHoursAhead(Integer minimumBookingHoursAhead) {
-        this.minimumBookingHoursAhead = minimumBookingHoursAhead;
-    }
 }
