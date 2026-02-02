@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3307
--- Generation Time: Feb 02, 2026 at 08:46 AM
+-- Generation Time: Feb 02, 2026 at 11:57 AM
 -- Server version: 5.7.24
 -- PHP Version: 8.3.1
 
@@ -1357,6 +1357,55 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getCompanyShort` (IN `companyIdIN` 
              `companies`.`city`, 
              `companies`.`country`,
              `images`.`url`;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getDashboardActiveClients` (IN `companyIdIN` INT)   BEGIN
+    DECLARE weekStart DATE;
+    SET weekStart = DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY);
+    
+    SELECT 
+        COUNT(DISTINCT `client_id`) AS active_count
+    FROM `appointments`
+    WHERE `company_id` = companyIdIN
+      AND DATE(`start_time`) >= weekStart
+      AND `status` != 'cancelled';
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getDashboardAverageRating` (IN `companyIdIN` INT)   BEGIN
+    SELECT 
+        COALESCE(ROUND(AVG(`rating`), 1), 0) AS average_rating,
+        COUNT(*) AS total_reviews
+    FROM `reviews`
+    WHERE `company_id` = companyIdIN
+      AND `is_deleted` = FALSE;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getDashboardTodayBookings` (IN `companyIdIN` INT)   BEGIN
+    SELECT 
+        COUNT(*) AS today_count,
+        (SELECT COUNT(*) 
+         FROM `appointments` 
+         WHERE `company_id` = companyIdIN 
+           AND DATE(`start_time`) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+           AND `status` != 'cancelled'
+        ) AS yesterday_count
+    FROM `appointments`
+    WHERE `company_id` = companyIdIN
+      AND DATE(`start_time`) = CURDATE()
+      AND `status` != 'cancelled';
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getDashboardWeeklyRevenue` (IN `companyIdIN` INT)   BEGIN
+    DECLARE weekStart DATE;
+    SET weekStart = DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY);
+    
+    SELECT 
+        COALESCE(SUM(`price`), 0) AS weekly_revenue,
+        'HUF' AS currency
+    FROM `appointments`
+    WHERE `company_id` = companyIdIN
+      AND DATE(`start_time`) >= weekStart
+      AND `status` IN ('completed', 'confirmed');
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getFeaturedCompanies` (IN `limitIN` INT)   BEGIN
@@ -3669,78 +3718,77 @@ CREATE TABLE `audit_logs` (
   `action` varchar(100) COLLATE utf8mb4_hungarian_ci NOT NULL COMMENT 'create, update, delete, login, etc.',
   `old_values` json DEFAULT NULL,
   `new_values` json DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `user_id` int(11) NOT NULL
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
 
 --
 -- Dumping data for table `audit_logs`
 --
 
-INSERT INTO `audit_logs` (`id`, `performed_by_user_id`, `performed_by_role`, `affected_entity_id`, `company_id`, `email`, `entity_type`, `action`, `old_values`, `new_values`, `created_at`, `user_id`) VALUES
-(1, 41, 'client', 41, NULL, 'admin@admin.hu', 'user', 'register', NULL, '{\"role\": \"client\", \"email\": \"admin@admin.hu\", \"user_id\": 41, \"last_name\": \"Admin\", \"first_name\": \"Admin\"}', '2026-01-17 17:19:35', 0),
-(2, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'register', NULL, '{\"role\": \"client\", \"email\": \"admin@admin.hu\", \"user_id\": 41, \"last_name\": \"Admin\", \"first_name\": \"Admin\"}', '2026-01-17 17:19:35', 0),
-(3, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'email_verified', NULL, NULL, '2026-01-17 17:36:57', 0),
-(4, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-17 17:37:52', 0),
-(5, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-17 17:56:11', 0),
-(6, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-17 18:09:44', 0),
-(7, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-17 18:46:36', 0),
-(8, 24, NULL, NULL, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-01-18 20:46:23', 0),
-(9, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-18 20:47:27', 0),
-(10, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-18 20:49:01', 0),
-(11, 43, 'client', NULL, NULL, 'admin@admin.com', 'user', 'register', NULL, '{\"role\": \"client\", \"email\": \"admin@admin.com\", \"user_id\": 43, \"last_name\": \"Admin\", \"first_name\": \"Admin\"}', '2026-01-23 09:48:02', 0),
-(12, 43, NULL, NULL, NULL, 'admin@admin.com', 'user', 'email_verified', NULL, NULL, '2026-01-23 09:48:09', 0),
-(13, 43, 'client', NULL, NULL, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-23 09:48:28', 0),
-(14, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-23 10:18:22', 0),
-(15, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-23 19:11:44', 0),
-(16, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-23 19:13:53', 0),
-(17, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-23 19:13:59', 0),
-(18, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-23 19:17:16', 0),
-(19, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-23 19:17:28', 0),
-(20, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-23 19:42:25', 0),
-(22, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-27 09:00:51', 0),
-(23, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-27 09:02:29', 0),
-(24, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'company', 'deleteImage', NULL, NULL, '2026-01-27 09:04:10', 0),
-(25, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'password_reset_request', NULL, NULL, '2026-01-27 09:56:07', 0),
-(26, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'password_reset', NULL, NULL, '2026-01-27 09:57:09', 0),
-(27, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'password_reset_request', NULL, NULL, '2026-01-27 09:57:49', 0),
-(28, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'password_reset', NULL, NULL, '2026-01-27 09:58:29', 0),
-(29, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-27 09:58:39', 0),
-(30, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-27 10:05:29', 0),
-(31, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 18:08:38', 0),
-(32, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 18:42:39', 0),
-(33, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 18:43:29', 0),
-(34, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 18:43:38', 0),
-(35, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 20:04:36', 0),
-(36, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 20:18:31', 0),
-(37, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 20:29:44', 0),
-(38, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 20:29:58', 0),
-(39, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 20:30:05', 0),
-(40, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 21:02:46', 0),
-(41, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-29 16:27:08', 0),
-(42, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-29 16:31:53', 0),
-(43, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-29 20:39:05', 0),
-(44, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-29 20:45:37', 0),
-(45, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-29 21:29:48', 0),
-(46, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 08:49:07', 0),
-(47, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 15:08:44', 0),
-(48, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-30 15:08:57', 0),
-(49, 44, 'client', NULL, NULL, 'vben@gmail.com', 'user', 'register', NULL, '{\"role\": \"client\", \"email\": \"vben@gmail.com\", \"user_id\": 44, \"last_name\": \"Vasvári\", \"first_name\": \"Benjamin\"}', '2026-01-30 19:17:16', 0),
-(50, 44, NULL, NULL, NULL, 'vben@gmail.com', 'user', 'email_verified', NULL, NULL, '2026-01-30 19:17:54', 0),
-(51, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 19:18:21', 0),
-(52, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 19:26:28', 0),
-(53, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 19:32:33', 0),
-(54, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 19:41:14', 0),
-(55, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 19:50:38', 0),
-(56, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 19:59:28', 0),
-(57, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 20:08:07', 0),
-(58, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 20:13:27', 0),
-(59, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-31 19:35:49', 0),
-(60, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-02-01 11:50:29', 0),
-(61, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-02-01 13:32:13', 0),
-(62, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-02-01 13:33:06', 0),
-(63, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-02-01 13:38:36', 0),
-(64, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-02-01 13:43:48', 0);
+INSERT INTO `audit_logs` (`id`, `performed_by_user_id`, `performed_by_role`, `affected_entity_id`, `company_id`, `email`, `entity_type`, `action`, `old_values`, `new_values`, `created_at`) VALUES
+(1, 41, 'client', 41, NULL, 'admin@admin.hu', 'user', 'register', NULL, '{\"role\": \"client\", \"email\": \"admin@admin.hu\", \"user_id\": 41, \"last_name\": \"Admin\", \"first_name\": \"Admin\"}', '2026-01-17 17:19:35'),
+(2, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'register', NULL, '{\"role\": \"client\", \"email\": \"admin@admin.hu\", \"user_id\": 41, \"last_name\": \"Admin\", \"first_name\": \"Admin\"}', '2026-01-17 17:19:35'),
+(3, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'email_verified', NULL, NULL, '2026-01-17 17:36:57'),
+(4, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-17 17:37:52'),
+(5, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-17 17:56:11'),
+(6, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-17 18:09:44'),
+(7, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-17 18:46:36'),
+(8, 24, NULL, NULL, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-01-18 20:46:23'),
+(9, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-18 20:47:27'),
+(10, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-18 20:49:01'),
+(11, 43, 'client', NULL, NULL, 'admin@admin.com', 'user', 'register', NULL, '{\"role\": \"client\", \"email\": \"admin@admin.com\", \"user_id\": 43, \"last_name\": \"Admin\", \"first_name\": \"Admin\"}', '2026-01-23 09:48:02'),
+(12, 43, NULL, NULL, NULL, 'admin@admin.com', 'user', 'email_verified', NULL, NULL, '2026-01-23 09:48:09'),
+(13, 43, 'client', NULL, NULL, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-23 09:48:28'),
+(14, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-23 10:18:22'),
+(15, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-23 19:11:44'),
+(16, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-23 19:13:53'),
+(17, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-23 19:13:59'),
+(18, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-23 19:17:16'),
+(19, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-23 19:17:28'),
+(20, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-23 19:42:25'),
+(22, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-27 09:00:51'),
+(23, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-27 09:02:29'),
+(24, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'company', 'deleteImage', NULL, NULL, '2026-01-27 09:04:10'),
+(25, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'password_reset_request', NULL, NULL, '2026-01-27 09:56:07'),
+(26, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'password_reset', NULL, NULL, '2026-01-27 09:57:09'),
+(27, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'password_reset_request', NULL, NULL, '2026-01-27 09:57:49'),
+(28, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'password_reset', NULL, NULL, '2026-01-27 09:58:29'),
+(29, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-27 09:58:39'),
+(30, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-27 10:05:29'),
+(31, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 18:08:38'),
+(32, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 18:42:39'),
+(33, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 18:43:29'),
+(34, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 18:43:38'),
+(35, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 20:04:36'),
+(36, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 20:18:31'),
+(37, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 20:29:44'),
+(38, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 20:29:58'),
+(39, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 20:30:05'),
+(40, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 21:02:46'),
+(41, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-29 16:27:08'),
+(42, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-29 16:31:53'),
+(43, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-29 20:39:05'),
+(44, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-29 20:45:37'),
+(45, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-29 21:29:48'),
+(46, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 08:49:07'),
+(47, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 15:08:44'),
+(48, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-30 15:08:57'),
+(49, 44, 'client', NULL, NULL, 'vben@gmail.com', 'user', 'register', NULL, '{\"role\": \"client\", \"email\": \"vben@gmail.com\", \"user_id\": 44, \"last_name\": \"Vasvári\", \"first_name\": \"Benjamin\"}', '2026-01-30 19:17:16'),
+(50, 44, NULL, NULL, NULL, 'vben@gmail.com', 'user', 'email_verified', NULL, NULL, '2026-01-30 19:17:54'),
+(51, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 19:18:21'),
+(52, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 19:26:28'),
+(53, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 19:32:33'),
+(54, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 19:41:14'),
+(55, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 19:50:38'),
+(56, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 19:59:28'),
+(57, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 20:08:07'),
+(58, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 20:13:27'),
+(59, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-31 19:35:49'),
+(60, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-02-01 11:50:29'),
+(61, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-02-01 13:32:13'),
+(62, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-02-01 13:33:06'),
+(63, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-02-01 13:38:36'),
+(64, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-02-01 13:43:48');
 
 -- --------------------------------------------------------
 
@@ -3968,7 +4016,8 @@ INSERT INTO `images` (`id`, `company_id`, `user_id`, `url`, `is_main`, `uploaded
 (55, NULL, 26, 'https://storage.bookr.hu/staff/tamas-thai-specialist/profile.jpg', 0, '2024-03-15 21:05:00', NULL, 0),
 (56, NULL, 43, NULL, 0, '2026-01-23 09:48:02', NULL, 0),
 (58, 2, NULL, 'uploads/companies/2/cc09c873-09de-4693-8400-7d337ae8f585.jpg', 0, '2026-01-24 14:35:03', '2026-01-27 09:04:10', 1),
-(59, NULL, 44, NULL, 0, '2026-01-30 19:17:16', NULL, 0);
+(59, NULL, 44, NULL, 0, '2026-01-30 19:17:16', NULL, 0),
+(60, NULL, 45, NULL, 0, '2026-02-02 09:59:27', NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -4939,7 +4988,8 @@ CREATE TABLE `tokens` (
 INSERT INTO `tokens` (`id`, `user_id`, `token`, `type`, `expires_at`, `is_revoked`, `revoked_at`, `created_at`) VALUES
 (3, 41, '05ff244a5034e3f7cf664315d147a9b1', 'password_reset', '2026-01-27 11:11:07', 1, '2026-01-27 10:57:09', '2026-01-27 10:56:07'),
 (4, 41, 'f10f9c22b92be3700c88f5e90df9c839', 'password_reset', '2026-01-27 11:12:49', 1, '2026-01-27 10:58:29', '2026-01-27 10:57:49'),
-(5, 44, '3cdc27f86c916808a459d45a22238664', 'email_verify', '2026-01-31 20:17:16', 1, '2026-01-30 20:17:54', '2026-01-30 20:17:16');
+(5, 44, '3cdc27f86c916808a459d45a22238664', 'email_verify', '2026-01-31 20:17:16', 1, '2026-01-30 20:17:54', '2026-01-30 20:17:16'),
+(6, 45, '3deec21d8d9d4d00fab7e20061c8573a', 'email_verify', '2026-02-03 10:59:27', 0, NULL, '2026-02-02 10:59:27');
 
 -- --------------------------------------------------------
 
@@ -5030,8 +5080,9 @@ INSERT INTO `users` (`id`, `guid`, `first_name`, `last_name`, `email`, `password
 (39, '39222bc4-f069-11f0-bb19-94e23c940cf4', 'Simon', 'Balázs', 'balazs.simon@yahoo.com', '$2y$10$client13', '+36203456713', NULL, '2024-04-01 12:00:00', NULL, NULL, 0, NULL, '2024-04-01 12:00:00', 1, 0, NULL, NULL, NULL),
 (40, '39222c81-f069-11f0-bb19-94e23c940cf4', 'Takács', 'Nikoletta', 'nikoletta.takacs@gmail.com', '$2y$10$client14', '+36203456714', NULL, '2024-04-02 13:00:00', NULL, NULL, 0, NULL, '2024-04-02 13:00:00', 1, 0, NULL, NULL, NULL),
 (41, 'b1f05ffe-f3c8-11f0-9e1f-41a67f8a3877', 'Admin', 'Admin', 'admin@admin.hu', '$argon2id$v=19$m=65536,t=3,p=1$Ovn1EvOxM0EzsPJHJ7inqA$nkFzFuikclUha8Jaz3itNGdPMHwGAhrPvDlXElQos/k', '+3670123252', NULL, '2026-01-17 18:19:35', '2026-01-27 10:58:29', NULL, 0, '2026-02-01 14:32:13', '2026-01-17 18:36:57', 1, 0, NULL, NULL, NULL),
-(43, '9be7f6aa-f840-11f0-89b9-b5e6602fcb6e', 'Admin', 'Admin', 'admin@admin.com', '$argon2id$v=19$m=65536,t=3,p=1$neSrpLHeChl9iqqk6FQH0A$/3zpvnj5TlX9YNwOF4j87qT7xszB9UcLDMOT3YLwEDY', '+367012344356', 2, '2026-01-23 10:48:02', '2026-01-23 20:10:10', NULL, 0, '2026-02-01 14:43:48', '2026-01-23 10:48:09', 1, 0, NULL, NULL, NULL),
-(44, '4a23ba5e-fe10-11f0-b291-2d2d5b3f2a16', 'Benjamin', 'Vasvári', 'vben@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$TRB9TpdpKZUGgk1f6UJx2Q$xf7/9r7En197Ae+nOOSe39voTcXtd/YHhurfOymEUH8', '+3670123252', NULL, '2026-01-30 20:17:16', '2026-01-30 20:17:54', NULL, 0, NULL, '2026-01-30 20:17:54', 1, 0, NULL, NULL, NULL);
+(43, '9be7f6aa-f840-11f0-89b9-b5e6602fcb6e', 'Admin', 'Admin', 'admin@admin.com', '$argon2id$v=19$m=65536,t=3,p=1$neSrpLHeChl9iqqk6FQH0A$/3zpvnj5TlX9YNwOF4j87qT7xszB9UcLDMOT3YLwEDY', '+367012344356', 2, '2026-01-23 10:48:02', '2026-01-23 20:10:10', NULL, 0, '2026-02-02 12:45:29', '2026-01-23 10:48:09', 1, 0, NULL, NULL, NULL),
+(44, '4a23ba5e-fe10-11f0-b291-2d2d5b3f2a16', 'Benjamin', 'Vasvári', 'vben@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$TRB9TpdpKZUGgk1f6UJx2Q$xf7/9r7En197Ae+nOOSe39voTcXtd/YHhurfOymEUH8', '+3670123252', NULL, '2026-01-30 20:17:16', '2026-01-30 20:17:54', NULL, 0, NULL, '2026-01-30 20:17:54', 1, 0, NULL, NULL, NULL),
+(45, 'dc156670-001d-11f1-b548-94e23c940cf4', 'Ujhelyi', 'Hunor', 'uhunor41@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$Vt6xKq2Pg5jG54y5qoWLig$sClVSYAUPPP+b1KldK9U5WB8Uhlbk8spOJDG5CezPyk', '+36703477754', 1, '2026-02-02 10:59:27', NULL, NULL, 0, '2026-02-02 12:56:37', NULL, 0, 0, NULL, NULL, NULL);
 
 --
 -- Triggers `users`
@@ -5224,7 +5275,8 @@ INSERT INTO `user_x_role` (`id`, `user_id`, `role_id`, `assigned_at`, `un_assign
 (67, 41, 4, '2026-01-17 17:19:35', NULL, 0),
 (68, 43, 4, '2026-01-23 09:48:02', NULL, 0),
 (69, 43, 1, '2026-01-23 19:13:42', NULL, 0),
-(70, 44, 4, '2026-01-30 19:17:16', NULL, 0);
+(70, 44, 4, '2026-01-30 19:17:16', NULL, 0),
+(71, 45, 3, '2026-02-02 09:59:27', NULL, 0);
 
 --
 -- Indexes for dumped tables
@@ -5447,7 +5499,7 @@ ALTER TABLE `favorites`
 -- AUTO_INCREMENT for table `images`
 --
 ALTER TABLE `images`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=60;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=61;
 
 --
 -- AUTO_INCREMENT for table `notification_settings`
@@ -5495,7 +5547,7 @@ ALTER TABLE `service_category_map`
 -- AUTO_INCREMENT for table `staff`
 --
 ALTER TABLE `staff`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=100;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `staff_exceptions`
@@ -5525,7 +5577,7 @@ ALTER TABLE `temporary_closed_periods`
 -- AUTO_INCREMENT for table `tokens`
 --
 ALTER TABLE `tokens`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `two_factor_recovery_codes`
@@ -5537,13 +5589,13 @@ ALTER TABLE `two_factor_recovery_codes`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=45;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=46;
 
 --
 -- AUTO_INCREMENT for table `user_x_role`
 --
 ALTER TABLE `user_x_role`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=71;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=72;
 
 --
 -- Constraints for dumped tables

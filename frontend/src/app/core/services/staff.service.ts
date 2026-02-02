@@ -6,7 +6,7 @@ import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { API_ENDPOINTS } from '../constants/api-endpoints';
-import { StaffByServicesResponse } from '../models/staff.model';
+import { StaffByServicesResponse, StaffDashboardResponse } from '../models/staff.model';
 
 @Injectable({
   providedIn: 'root'
@@ -29,6 +29,17 @@ export class StaffService {
     return this.http.get<StaffByServicesResponse>(
       `${this.apiUrl}${API_ENDPOINTS.STAFF.BY_COMPANY_AND_SERVICES}`,
       { params }
+    );
+  }
+
+  /**
+   * Staff dashboard adatok lekérése userId alapján
+   *
+   * Endpoint: GET /api/staff/dashboard/{userId}
+   */
+  getStaffDashboard(userId: number): Observable<StaffDashboardResponse> {
+    return this.http.get<StaffDashboardResponse>(
+      `${this.apiUrl}${API_ENDPOINTS.STAFF.DASHBOARD(userId)}`
     );
   }
 }

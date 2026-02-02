@@ -1,0 +1,102 @@
+<section class="staff-dashboard">
+	<header class="staff-topbar">
+		<div>
+			<h1>Munkatársi Panel</h1>
+			<p class="subtitle">Saját időpontjaid és feladataid áttekintése.</p>
+		</div>
+		<div class="actions">
+			<button class="btn ghost" routerLink="/owner/calendar">Naptár</button>
+			<button class="btn primary" routerLink="/owner/services">Szolgáltatások</button>
+		</div>
+	</header>
+
+	@if (isLoading) {
+		<div class="state-card">Betöltés...</div>
+	} @else if (errorMessage) {
+		<div class="state-card error">{{ errorMessage }}</div>
+	} @else if (dashboard) {
+		<section class="welcome-card">
+			<div>
+				<p class="label">Üdv,</p>
+				<h2>{{ dashboard.staffName }}</h2>
+				<p class="muted">{{ dashboard.companyName }}</p>
+			</div>
+			<div class="pill">Mai időpontok: {{ dashboard.todayAppointments.length }}</div>
+		</section>
+
+		<section class="overview-grid">
+			<article class="panel">
+				<header class="panel-header">
+					<h3>Mai időpontok</h3>
+					<span class="panel-pill">{{ dashboard.todayAppointments.length }}</span>
+				</header>
+				<ul class="list">
+					@if (dashboard.todayAppointments.length === 0) {
+						<li class="empty">Nincs több időpont mára.</li>
+					} @else {
+						@for (appt of dashboard.todayAppointments; track appt.id) {
+							<li>
+								<div>
+									<strong>{{ appt.time }}</strong>
+									<span class="muted">{{ appt.serviceName }}</span>
+								</div>
+								<span class="badge">{{ appt.clientName }}</span>
+							</li>
+						}
+					}
+				</ul>
+			</article>
+
+			<article class="panel">
+				<header class="panel-header">
+					<h3>Rád osztott szolgáltatások</h3>
+					<span class="panel-pill">{{ dashboard.services.length }}</span>
+				</header>
+				<div class="chips">
+					@if (dashboard.services.length === 0) {
+						<span class="chip empty">Nincs hozzárendelt szolgáltatás</span>
+					} @else {
+						@for (service of dashboard.services; track service.id) {
+							<span class="chip">{{ service.name }} · {{ service.durationMinutes }} perc</span>
+						}
+					}
+				</div>
+			</article>
+		</section>
+
+		<section class="panel">
+			<header class="panel-header">
+				<h3>Közelgő időpontok</h3>
+				<span class="panel-pill">{{ dashboard.upcomingAppointments.length }}</span>
+			</header>
+			<table class="appointments-table">
+				<thead>
+					<tr>
+						<th>Dátum</th>
+						<th>Idő</th>
+						<th>Szolgáltatás</th>
+						<th>Ügyfél</th>
+						<th>Időtartam</th>
+					</tr>
+				</thead>
+				<tbody>
+					@if (dashboard.upcomingAppointments.length === 0) {
+						<tr>
+							<td colspan="5" class="empty">Nincs közelgő időpont.</td>
+						</tr>
+					} @else {
+						@for (appt of dashboard.upcomingAppointments; track appt.id) {
+							<tr>
+								<td>{{ appt.date }}</td>
+								<td>{{ appt.time }}</td>
+								<td>{{ appt.serviceName }}</td>
+								<td>{{ appt.clientName }}</td>
+								<td>{{ appt.durationMinutes }} perc</td>
+							</tr>
+						}
+					}
+				</tbody>
+			</table>
+		</section>
+	}
+</section>

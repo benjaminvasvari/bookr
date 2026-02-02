@@ -1,0 +1,200 @@
+.services-panel {
+	padding: 28px;
+	background: #f8fafc;
+	min-height: 100vh;
+	box-sizing: border-box;
+}
+
+.services-topbar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	margin-bottom: 18px;
+}
+
+.services-topbar h1 {
+	margin: 0 0 6px;
+	font-size: 24px;
+	font-weight: 700;
+	color: #111827;
+}
+
+.subtitle {
+	margin: 0;
+	color: #6b7280;
+	font-size: 14px;
+}
+
+.actions {
+	display: flex;
+	gap: 10px;
+}
+
+.btn {
+	border: 1px solid transparent;
+	border-radius: 10px;
+	padding: 10px 16px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	background: #ffffff;
+	color: #1f2937;
+}
+
+.btn.primary {
+	background: #38a179;
+	color: #ffffff;
+	border-color: #38a179;
+}
+
+.btn.primary:hover {
+	background: #2f8d66;
+	border-color: #2f8d66;
+}
+
+.btn.ghost {
+	background: #ffffff;
+	border-color: #e5e7eb;
+}
+
+.btn.ghost:hover {
+	border-color: #cbd5f5;
+	color: #1f2937;
+}
+
+.services-toolbar {
+	display: grid;
+	grid-template-columns: 1fr minmax(220px, 280px);
+	gap: 12px;
+	align-items: center;
+	background: #ffffff;
+	border: 1px solid #e5e7eb;
+	border-radius: 12px;
+	padding: 12px;
+	box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
+	margin-bottom: 18px;
+}
+
+.search-input {
+	width: 100%;
+}
+
+.search-input input {
+	width: 100%;
+	background: #f9fafb;
+	border: 1px solid #e5e7eb;
+	border-radius: 10px;
+	padding: 10px 12px;
+	font-size: 14px;
+	color: #111827;
+}
+
+.filter-select {
+	background: #f9fafb;
+	border: 1px solid #e5e7eb;
+	border-radius: 10px;
+	padding: 10px 12px;
+	font-size: 14px;
+	color: #111827;
+}
+
+.services-grid {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 16px;
+}
+
+.service-card {
+	background: #ffffff;
+	border-radius: 16px;
+	padding: 16px;
+	border: 1px solid #eef2f7;
+	box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+	display: grid;
+	gap: 12px;
+}
+
+.service-header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.service-header h3 {
+	margin: 0 0 4px;
+	font-size: 18px;
+	font-weight: 700;
+	color: #111827;
+}
+
+.muted {
+	margin: 0;
+	color: #6b7280;
+	font-size: 13px;
+}
+
+.service-desc {
+	margin: 0;
+	color: #4b5563;
+	font-size: 14px;
+	line-height: 1.5;
+}
+
+.service-meta {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 10px 12px;
+	background: #f8fafc;
+	border-radius: 12px;
+	border: 1px solid #e5e7eb;
+}
+
+.price {
+	font-weight: 700;
+	color: #111827;
+}
+
+.duration {
+	color: #6b7280;
+	font-size: 13px;
+}
+
+.service-actions {
+	display: flex;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+
+.status-pill {
+	padding: 6px 10px;
+	border-radius: 999px;
+	font-size: 12px;
+	font-weight: 600;
+}
+
+.status-pill.online {
+	background: #ecfdf3;
+	color: #1f8a5f;
+}
+
+.status-pill.busy {
+	background: #fff4e5;
+	color: #b45309;
+}
+
+@media (max-width: 900px) {
+	.services-toolbar {
+		grid-template-columns: 1fr;
+	}
+}
+
+@media (max-width: 720px) {
+	.services-topbar {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+}

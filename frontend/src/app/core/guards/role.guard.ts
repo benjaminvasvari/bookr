@@ -17,7 +17,7 @@ export const roleGuard: CanActivateFn = (route: ActivatedRouteSnapshot, state) =
   const router = inject(Router);
   
   // Ellenőrizzük hogy van-e user
-  const userString = localStorage.getItem('user');
+  const userString = localStorage.getItem('user') || localStorage.getItem('user_data');
   
   if (!userString) {
     console.warn('RoleGuard: No user found, redirecting to login');

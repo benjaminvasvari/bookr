@@ -251,6 +251,22 @@ export class AuthService {
   }
 
   /**
+   * Ellenőrzi, hogy a user staff szerepkörrel rendelkezik-e
+   */
+  isStaff(): boolean {
+    const user = this.getCurrentUser();
+    return !!user && user.roleId === 3;
+  }
+
+  /**
+   * Staff szerepkör + cég hozzárendelés ellenőrzése
+   */
+  isStaffWithCompany(): boolean {
+    const user = this.getCurrentUser();
+    return !!user && user.roleId === 3 && !!user.companyId;
+  }
+
+  /**
    * User companyId frissítése (cég regisztráció után)
    */
   updateUserCompany(companyId: number): void {

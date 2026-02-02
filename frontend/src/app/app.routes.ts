@@ -13,6 +13,7 @@ import { VerifyEmailComponent } from './verify-email/verify-email.component';
 import { ProfileComponent } from './profile/profile.component';
 import { AppointmentPaymentComponent } from './appointment-payment/appointment-payment.component';
 import { authGuard } from './core/guards/auth.guard';
+import { roleGuard } from './core/guards/role.guard';
 import { ResetPasswordComponent } from './reset-password/reset-password.component';
 
 export const appRoutes: Routes = [
@@ -72,6 +73,15 @@ export const appRoutes: Routes = [
     component: ResetPasswordComponent,
     data: { showFooter: false },
     canActivate: [authGuard],
+  },
+  {
+    path: 'staff/dashboard',
+    loadComponent: () =>
+      import('./features/staff-dashboard/staff-dashboard.component').then(
+        (m) => m.StaffDashboardComponent
+      ),
+    canActivate: [authGuard, roleGuard],
+    data: { showFooter: false, roles: ['staff'] },
   },
 
   {
