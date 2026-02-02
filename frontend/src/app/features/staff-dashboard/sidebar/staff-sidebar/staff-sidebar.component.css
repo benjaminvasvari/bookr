@@ -1,0 +1,148 @@
+.staff-sidebar {
+	width: 68px;
+	flex: 0 0 68px;
+	min-height: 100%;
+	height: auto;
+	background: #2d3748;
+	color: #ebf4ff;
+	padding: 18px 10px;
+	display: flex;
+	flex-direction: column;
+	gap: 24px;
+	transition: width 0.2s ease;
+	overflow: hidden;
+	box-sizing: border-box;
+	position: relative;
+}
+
+.staff-sidebar:hover {
+	width: 220px;
+	flex-basis: 220px;
+}
+
+.staff-sidebar.is-pinned {
+	width: 220px;
+	flex-basis: 220px;
+}
+
+.sidebar-header {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 4px 6px;
+	height: 48px;
+}
+
+.pin-btn {
+	position: absolute;
+	top: 14px;
+	right: 12px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0;
+	padding: 8px;
+	border-radius: 10px;
+	border: 1px solid rgba(124, 156, 191, 0.35);
+	background: rgba(124, 156, 191, 0.18);
+	color: #ebf4ff;
+	cursor: pointer;
+	font-size: 12px;
+	transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.staff-sidebar:not(:hover):not(.is-pinned) .pin-btn {
+	opacity: 0;
+	pointer-events: none;
+}
+
+.pin-btn:hover {
+	background: rgba(124, 156, 191, 0.28);
+	border-color: rgba(124, 156, 191, 0.55);
+}
+
+.staff-sidebar.is-pinned .pin-btn {
+	background: rgba(124, 156, 191, 0.4);
+	border-color: rgba(124, 156, 191, 0.7);
+}
+
+.pin-icon {
+	font-size: 14px;
+	line-height: 1;
+	color: #ebf4ff;
+	transform: rotate(25deg) translateY(1px);
+}
+
+.brand-icon {
+	width: 40px;
+	height: 40px;
+	border-radius: 12px;
+	border: none;
+	padding: 1px;
+	display: block;
+	object-fit: contain;
+	flex-shrink: 0;
+	z-index: 1;
+	line-height: 1;
+}
+
+.sidebar-nav {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	margin-top: 2px;
+}
+.sidebar-nav .home-link {
+	margin-bottom: 6px;
+	background: rgba(235, 244, 255, 0.2);
+	color: #ebf4ff;
+}
+
+.sidebar-nav .home-link.active {
+	background: #7c9cbf;
+	color: #ebf4ff;
+}
+
+.sidebar-nav a {
+	color: #ebf4ff;
+	text-decoration: none;
+	padding: 6px 12px;
+	border-radius: 8px;
+	font-weight: 600;
+	transition: background 0.2s ease, color 0.2s ease;
+	display: grid;
+	grid-template-columns: 20px 1fr;
+	align-items: center;
+	column-gap: 12px;
+}
+
+.sidebar-nav a i {
+	width: 20px;
+	text-align: center;
+	font-size: 15px;
+	justify-self: center;
+	flex-shrink: 0;
+	margin-left: 3px;
+}
+
+
+.nav-label {
+	opacity: 0;
+	transition: opacity 0.2s ease;
+	white-space: nowrap;
+}
+
+.staff-sidebar:hover .nav-label,
+.staff-sidebar.is-pinned .nav-label {
+	opacity: 1;
+}
+
+.sidebar-nav a:hover {
+	background: rgba(124, 156, 191, 0.22);
+	color: #ebf4ff;
+}
+
+.sidebar-nav a.active {
+	background: #7c9cbf;
+	color: #ebf4ff;
+}

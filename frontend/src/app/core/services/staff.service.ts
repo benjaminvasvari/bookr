@@ -37,9 +37,12 @@ export class StaffService {
    *
    * Endpoint: GET /api/staff/dashboard/{userId}
    */
-  getStaffDashboard(userId: number): Observable<StaffDashboardResponse> {
+  getStaffDashboard(userId: number, companyId?: number | null): Observable<StaffDashboardResponse> {
+    const params = companyId ? new HttpParams().set('companyId', companyId.toString()) : undefined;
+
     return this.http.get<StaffDashboardResponse>(
-      `${this.apiUrl}${API_ENDPOINTS.STAFF.DASHBOARD(userId)}`
+      `${this.apiUrl}${API_ENDPOINTS.STAFF.DASHBOARD(userId)}`,
+      { params }
     );
   }
 }

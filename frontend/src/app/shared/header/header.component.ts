@@ -74,7 +74,16 @@ export class HeaderComponent implements OnInit, OnDestroy {
       return false;
     }
 
-    return user.roleId === 3 && !!user.companyId;
+    if (typeof user.roles !== 'string') {
+      return false;
+    }
+
+    const hasStaffRole = user.roles
+      .split(',')
+      .map((role) => role.trim().toLowerCase())
+      .includes('staff');
+
+    return hasStaffRole && user.companyId !== null;
   }
 
   /**

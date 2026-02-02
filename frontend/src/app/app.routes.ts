@@ -75,13 +75,22 @@ export const appRoutes: Routes = [
     canActivate: [authGuard],
   },
   {
-    path: 'staff/dashboard',
+    path: 'staff/panel',
     loadComponent: () =>
       import('./features/staff-dashboard/staff-dashboard.component').then(
         (m) => m.StaffDashboardComponent
       ),
     canActivate: [authGuard, roleGuard],
-    data: { showFooter: false, roles: ['staff'] },
+    data: { showFooter: false, showHeader: false, roles: ['staff'] },
+  },
+  {
+    path: 'staff/calendar',
+    loadComponent: () =>
+      import('./features/staff-dashboard/staff-calendar/staff-calendar.component').then(
+        (m) => m.StaffCalendarComponent
+      ),
+    canActivate: [authGuard, roleGuard],
+    data: { showFooter: false, showHeader: false, roles: ['staff'] },
   },
 
   {

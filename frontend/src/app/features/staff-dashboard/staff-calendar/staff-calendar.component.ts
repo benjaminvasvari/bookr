@@ -1,19 +1,19 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
-import { AuthService } from '../../core/services/auth.service';
-import { StaffService } from '../../core/services/staff.service';
-import { StaffDashboardData } from '../../core/models/staff.model';
-import { StaffSidebarComponent } from './sidebar/staff-sidebar/staff-sidebar.component';
+import { AuthService } from '../../../core/services/auth.service';
+import { StaffService } from '../../../core/services/staff.service';
+import { StaffDashboardData } from '../../../core/models/staff.model';
+import { StaffSidebarComponent } from '../sidebar/staff-sidebar/staff-sidebar.component';
 
 @Component({
-  selector: 'app-staff-dashboard',
+  selector: 'app-staff-calendar',
   standalone: true,
   imports: [CommonModule, StaffSidebarComponent],
-  templateUrl: './staff-dashboard.component.html',
-  styleUrl: './staff-dashboard.component.css',
+  templateUrl: './staff-calendar.component.html',
+  styleUrl: './staff-calendar.component.css',
 })
-export class StaffDashboardComponent implements OnInit {
+export class StaffCalendarComponent implements OnInit {
   dashboard: StaffDashboardData | null = null;
   isLoading = true;
   errorMessage = '';
