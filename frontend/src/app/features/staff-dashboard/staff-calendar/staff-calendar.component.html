@@ -7,6 +7,11 @@
 				<h1>Naptár</h1>
 				<p class="subtitle">Heti foglalások naptár nézetben.</p>
 			</div>
+			<div class="week-actions">
+				<button class="btn ghost" type="button" (click)="prevWeek()">Előző hét</button>
+				<span class="week-range">{{ weekRangeLabel }}</span>
+				<button class="btn ghost" type="button" (click)="nextWeek()">Következő hét</button>
+			</div>
 		</header>
 
 		@if (isLoading) {
@@ -14,39 +19,46 @@
 		} @else if (errorMessage) {
 			<div class="state-card error">{{ errorMessage }}</div>
 		} @else if (dashboard) {
-			<section class="panel">
-				<header class="panel-header">
-					<h3>Közelgő foglalások</h3>
-					<span class="panel-pill">{{ dashboard.upcomingAppointments.length }}</span>
-				</header>
-				<table class="appointments-table">
-					<thead>
-						<tr>
-							<th>Dátum</th>
-							<th>Idő</th>
-							<th>Szolgáltatás</th>
-							<th>Ügyfél</th>
-							<th>Időtartam</th>
-						</tr>
-					</thead>
-					<tbody>
-						@if (dashboard.upcomingAppointments.length === 0) {
-							<tr>
-								<td colspan="5" class="empty">Nincs közelgő időpont.</td>
-							</tr>
-						} @else {
-							@for (appt of dashboard.upcomingAppointments; track appt.id) {
-								<tr>
-									<td>{{ appt.date }}</td>
-									<td>{{ appt.time }}</td>
-									<td>{{ appt.serviceName }}</td>
-									<td>{{ appt.clientName }}</td>
-									<td>{{ appt.durationMinutes }} perc</td>
-								</tr>
-							}
-						}
-					</tbody>
-				</table>
+			<section class="calendar-week">
+				<div class="calendar-header">
+					@for (column of weekColumns; track column.date) {
+						<div class="day-label">
+							<span class="day-name">{{ column.label }}</span>
+							<span class="day-date">{{ column.date }}</span>
+						</div>
+					}
+				</div>
+				<div class="calendar-body">
+					@for (column of weekColumns; track column.date) {
+						<div class="calendar-column" (dragover)="onDragOver($event)" (drop)="onDrop(column.date, column.items.length)">
+							<div class="day-meta">
+								<span class="panel-pill">{{ column.items.length }}</span>
+							</div>
+							<div class="day-list">
+								@if (column.items.length === 0) {
+									<div class="empty">Nincs időpont</div>
+								} @else {
+									@for (appt of column.items; track appt.id; let i = $index) {
+										<div
+											class="appointment-card"
+											draggable="true"
+											(dragstart)="onDragStart(column.date, appt.id)"
+											(dragover)="onDragOver($event)"
+											(drop)="onDrop(column.date, i)"
+										>
+											<div class="time">{{ appt.time }}</div>
+											<div class="details">
+												<strong>{{ appt.serviceName }}</strong>
+												<span>{{ appt.clientName }}</span>
+												<span class="muted">{{ appt.durationMinutes }} perc</span>
+											</div>
+										</div>
+									}
+								}
+							</div>
+						</div>
+					}
+				</div>
 			</section>
 		}
 	</main>
