@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 
 import { AuthService } from '../../../core/services/auth.service';
 import { StaffService } from '../../../core/services/staff.service';
@@ -9,7 +10,7 @@ import { StaffSidebarComponent } from '../sidebar/staff-sidebar/staff-sidebar.co
 @Component({
   selector: 'app-staff-calendar',
   standalone: true,
-  imports: [CommonModule, StaffSidebarComponent],
+  imports: [CommonModule, FormsModule, StaffSidebarComponent],
   templateUrl: './staff-calendar.component.html',
   styleUrl: './staff-calendar.component.css',
 })
@@ -18,6 +19,15 @@ export class StaffCalendarComponent implements OnInit {
   isLoading = true;
   errorMessage = '';
   weekColumns: Array<{ date: string; label: string; items: StaffDashboardAppointment[] }> = [];
+  selectedAppointment: StaffDashboardAppointment | null = null;
+  editModel: {
+    id: number;
+    serviceName: string;
+    clientName: string;
+    time: string;
+    durationMinutes: number;
+    date: string;
+  } | null = null;
   private dragId: number | null = null;
   private dragFromDate: string | null = null;
   private readonly dayLabels = ['Hétfő', 'Kedd', 'Szerda', 'Csütörtök', 'Péntek', 'Szombat', 'Vasárnap'];
@@ -179,6 +189,71 @@ export class StaffCalendarComponent implements OnInit {
 
     this.dragId = null;
     this.dragFromDate = null;
+  }
+
+  openEditor(appointment: StaffDashboardAppointment): void {
+    this.selectedAppointment = appointment;
+    this.editModel = {
+      id: appointment.id,
+      serviceName: appointment.serviceName,
+      clientName: appointment.clientName,
+      time: appointment.time,
+      durationMinutes: appointment.durationMinutes,
+      date: appointment.date,
+    };
+  }
+
+  saveAppointmentEdits(): void {
+    if (!this.editModel) {
+      return;
+    }
+
+    const normalizedDate = /^\d{4}-\d{2}-\d{2}$/.test(this.editModel.date) ? this.editModel.date : this.selectedAppointment?.date;
+    const normalizedDuration = Number.isFinite(this.editModel.durationMinutes) && this.editModel.durationMinutes > 0
+      ? this.editModel.durationMinutes
+      : this.selectedAppointment?.durationMinutes ?? 30;
+
+    this.appointments = this.appointments.map((item) =>
+      item.id === this.editModel!.id
+        ? {
+            ...item,
+            serviceName: this.editModel!.serviceName.trim() || item.serviceName,
+            clientName: this.editModel!.clientName.trim() || item.clientName,
+            time: this.editModel!.time.trim() || item.time,
+            durationMinutes: normalizedDuration,
+            date: normalizedDate ?? item.date,
+          }
+        : item
+    );
+
+    if (this.dashboard) {
+      this.dashboard.upcomingAppointments = this.appointments;
+    }
+    this.buildWeekColumns();
+    this.closeEditor();
+  }
+
+  confirmDeleteSelected(): void {
+    if (!this.editModel) {
+      return;
+    }
+
+    const confirmed = window.confirm('Biztosan törlöd ezt az időpontot?');
+    if (!confirmed) {
+      return;
+    }
+
+    this.appointments = this.appointments.filter((item) => item.id !== this.editModel!.id);
+    if (this.dashboard) {
+      this.dashboard.upcomingAppointments = this.appointments;
+    }
+    this.buildWeekColumns();
+    this.closeEditor();
+  }
+
+  closeEditor(): void {
+    this.selectedAppointment = null;
+    this.editModel = null;
   }
 
   private applyTimesForDate(column: { date: string; items: StaffDashboardAppointment[] }): void {

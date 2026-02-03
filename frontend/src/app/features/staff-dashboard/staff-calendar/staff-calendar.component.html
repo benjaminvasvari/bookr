@@ -14,6 +14,41 @@
 			</div>
 		</header>
 
+		@if (editModel) {
+			<section class="editor-panel">
+				<div class="editor-header">
+					<h2>Időpont szerkesztése</h2>
+					<button type="button" class="ghost-btn" (click)="closeEditor()">Bezárás</button>
+				</div>
+				<div class="editor-grid">
+					<label>
+						<span>Szolgáltatás</span>
+						<input type="text" [(ngModel)]="editModel.serviceName" />
+					</label>
+					<label>
+						<span>Ügyfél</span>
+						<input type="text" [(ngModel)]="editModel.clientName" />
+					</label>
+					<label>
+						<span>Időpont</span>
+						<input type="time" [(ngModel)]="editModel.time" />
+					</label>
+					<label>
+						<span>Dátum</span>
+						<input type="date" [(ngModel)]="editModel.date" />
+					</label>
+					<label>
+						<span>Időtartam (perc)</span>
+						<input type="number" min="5" step="5" [(ngModel)]="editModel.durationMinutes" />
+					</label>
+				</div>
+				<div class="editor-actions">
+					<button type="button" class="primary-btn" (click)="saveAppointmentEdits()">Mentés</button>
+					<button type="button" class="danger-btn" (click)="confirmDeleteSelected()">Törlés</button>
+				</div>
+			</section>
+		}
+
 		@if (isLoading) {
 			<div class="state-card">Betöltés...</div>
 		} @else if (errorMessage) {
@@ -45,6 +80,7 @@
 											(dragstart)="onDragStart(column.date, appt.id)"
 											(dragover)="onDragOver($event)"
 											(drop)="onDrop(column.date, i)"
+											(click)="openEditor(appt)"
 										>
 											<div class="time">{{ appt.time }}</div>
 											<div class="details">
