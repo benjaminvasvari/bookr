@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3307
--- Generation Time: Feb 02, 2026 at 11:57 AM
+-- Generation Time: Feb 03, 2026 at 09:19 AM
 -- Server version: 5.7.24
 -- PHP Version: 8.3.1
 
@@ -301,20 +301,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `checkAppointment` (IN `appointmentI
     WHERE appointments.id = appointmentIdIN;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `checkById` (IN `idIN` INT)   BEGIN
-
-SELECT
-	id,
-    is_deleted,
-    is_active
-    
-    FROM companies
-    WHERE
-    	id = idIN
-        AND is_deleted = 0
-        AND is_active = 1;
-END$$
-
 CREATE DEFINER=`root`@`localhost` PROCEDURE `checkCompany` (IN `idIN` INT)   BEGIN
 
 	SELECT 
@@ -352,6 +338,15 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `checkUser` (IN `userIdIN` INT)   BE
             users.is_active
     FROM users
     WHERE users.id = userIdIN;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `checkUserByEmail` (IN `userEmailIN` INT)   BEGIN
+    SELECT 
+			users.id,
+            users.is_deleted,
+            users.is_active
+    FROM users
+    WHERE users.email = userEmailIN;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `cleanExpiredTokens` ()   BEGIN
@@ -1062,6 +1057,19 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllBusinessCategories` ()   BEGI
     WHERE `business_categories`.`is_active` = TRUE
     ORDER BY `business_categories`.`name` ASC;
 END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllNotificationSettings` (IN `userIdIN` INT)   SELECT
+	`notification_settings`.`id`,
+    `notification_settings`.`user_id`,
+    `notification_settings`.`appointment_confirmation`,
+    `notification_settings`.`appointment_reminder`,
+    `notification_settings`.`appointment_cancellation`,
+    `notification_settings`.`marketing_emails`,
+    `notification_settings`.`updated_at`,
+    `notification_settings`.`created_at`
+FROM `notification_settings`
+WHERE `notification_settings`.`user_id` = userIdIN
+LIMIT 1$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getAppointmentsByClient` (IN `clientIdIN` INT, IN `isUpcomingIN` BOOLEAN, IN `limitIN` INT, IN `offsetIN` INT, OUT `countOUT` INT)   BEGIN
     -- 1. Összes találat számának lekérdezése
@@ -2145,6 +2153,19 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getUsers` (IN `companyIdIN` INT, IN
     ORDER BY u.created_at DESC;
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getUserTokensByEmail` (IN `userEmailIN` VARCHAR(100))   BEGIN
+    SELECT 
+        t.`id`,
+        t.`token`,
+        t.`type`,
+        t.`expires_at`,
+        t.`is_revoked`
+    FROM `tokens` t
+    INNER JOIN `users` u ON t.`user_id` = u.`id`
+    WHERE u.`email` = userEmailIN
+    ORDER BY t.`id` ASC;
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getWorkingHoursForDate` (IN `companyIdIN` INT, IN `staffIdIN` INT, IN `dateIN` DATE)   BEGIN
     DECLARE dayName VARCHAR(20);
     DECLARE companyOpen TIME;
@@ -2294,18 +2315,15 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `login` (IN `emailIN` VARCHAR(200)) 
         `users`.`password`,
        	`users`.`phone`,
         `users`.`company_id`,
-        `images`.`url` AS "imageUrl",  -- Ez lehet NULL, ha nincs kép!
+        `images`.`url` AS "imageUrl",
         GROUP_CONCAT(`roles`.`name` SEPARATOR ', ') AS "roles"
     FROM `users`
     INNER JOIN `user_x_role` ON `user_x_role`.`user_id` = `users`.`id`
     INNER JOIN `roles` ON `roles`.`id` = `user_x_role`.`role_id`
     
-    -- ================================================================
-    -- JAVÍTÁS: INNER JOIN → LEFT JOIN
-    -- ================================================================
+
     LEFT JOIN `images` ON `images`.`user_id` = `users`.id 
                        AND `images`.`is_deleted` = FALSE
-    -- ================================================================
     
     WHERE `users`.`email` = emailIN
       AND `users`.`is_deleted` = FALSE
@@ -2343,7 +2361,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerClient` (IN `firstNameIN` V
         SET MESSAGE_TEXT = 'Invalid role name';
     END IF;
     
-    -- User létrehozása (reg_token NÉLKÜL!)
+    -- User létrehozása
     INSERT INTO `users` (
         `first_name`,
         `last_name`,
@@ -2377,16 +2395,24 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerClient` (IN `firstNameIN` V
     );
     
     -- Images tábla insert NULL url-lel
-INSERT INTO `images` (
-    `user_id`,
-    `url`,
-    `uploaded_at`
-)
-VALUES (
-    newUserId,
-    NULL,
-    NOW()
-);
+	INSERT INTO `images` (
+    	`user_id`,
+    	`url`,
+    	`uploaded_at`
+	)
+	VALUES (
+    	newUserId,
+    	NULL,
+    	NOW()
+	);
+    
+    -- Notification Settings values
+    INSERT INTO `notification_settings` (
+        `user_id`
+    )
+    VALUES (
+        newUserId
+    );
     
     -- Token mentése a tokens táblába
     INSERT INTO `tokens` (
@@ -3120,6 +3146,17 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `updateLastLogin` (IN `userIdIN` INT
       AND `is_deleted` = FALSE;
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `updateNotificationSetting` (IN `userIdIN` INT, IN `confIN` BOOLEAN, IN `remindIN` BOOLEAN, IN `cancellIN` BOOLEAN, IN `marketingIN` BOOLEAN)   BEGIN
+    UPDATE `notification_settings`
+    SET 
+        `notification_settings`.`appointment_confirmation` = confIN,
+        `notification_settings`.`appointment_reminder` = remindIN,
+        `notification_settings`.`appointment_cancellation` = cancellIN,
+        `notification_settings`.`marketing_emails` = marketingIN,
+        `notification_settings`.`updated_at` = NOW()
+    WHERE `notification_settings`.`user_id` = userIdIN;
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `updateOpeningHoursDay` (IN `companyIdIN` INT, IN `dayOfWeekIN` VARCHAR(20), IN `openTimeIN` TIME, IN `closeTimeIN` TIME, IN `isClosedIN` TINYINT(1))   BEGIN
     UPDATE `opening_hours`
     SET 
@@ -3718,77 +3755,78 @@ CREATE TABLE `audit_logs` (
   `action` varchar(100) COLLATE utf8mb4_hungarian_ci NOT NULL COMMENT 'create, update, delete, login, etc.',
   `old_values` json DEFAULT NULL,
   `new_values` json DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `affected_user_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
 
 --
 -- Dumping data for table `audit_logs`
 --
 
-INSERT INTO `audit_logs` (`id`, `performed_by_user_id`, `performed_by_role`, `affected_entity_id`, `company_id`, `email`, `entity_type`, `action`, `old_values`, `new_values`, `created_at`) VALUES
-(1, 41, 'client', 41, NULL, 'admin@admin.hu', 'user', 'register', NULL, '{\"role\": \"client\", \"email\": \"admin@admin.hu\", \"user_id\": 41, \"last_name\": \"Admin\", \"first_name\": \"Admin\"}', '2026-01-17 17:19:35'),
-(2, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'register', NULL, '{\"role\": \"client\", \"email\": \"admin@admin.hu\", \"user_id\": 41, \"last_name\": \"Admin\", \"first_name\": \"Admin\"}', '2026-01-17 17:19:35'),
-(3, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'email_verified', NULL, NULL, '2026-01-17 17:36:57'),
-(4, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-17 17:37:52'),
-(5, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-17 17:56:11'),
-(6, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-17 18:09:44'),
-(7, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-17 18:46:36'),
-(8, 24, NULL, NULL, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-01-18 20:46:23'),
-(9, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-18 20:47:27'),
-(10, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-18 20:49:01'),
-(11, 43, 'client', NULL, NULL, 'admin@admin.com', 'user', 'register', NULL, '{\"role\": \"client\", \"email\": \"admin@admin.com\", \"user_id\": 43, \"last_name\": \"Admin\", \"first_name\": \"Admin\"}', '2026-01-23 09:48:02'),
-(12, 43, NULL, NULL, NULL, 'admin@admin.com', 'user', 'email_verified', NULL, NULL, '2026-01-23 09:48:09'),
-(13, 43, 'client', NULL, NULL, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-23 09:48:28'),
-(14, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-23 10:18:22'),
-(15, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-23 19:11:44'),
-(16, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-23 19:13:53'),
-(17, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-23 19:13:59'),
-(18, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-23 19:17:16'),
-(19, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-23 19:17:28'),
-(20, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-23 19:42:25'),
-(22, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-27 09:00:51'),
-(23, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-27 09:02:29'),
-(24, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'company', 'deleteImage', NULL, NULL, '2026-01-27 09:04:10'),
-(25, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'password_reset_request', NULL, NULL, '2026-01-27 09:56:07'),
-(26, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'password_reset', NULL, NULL, '2026-01-27 09:57:09'),
-(27, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'password_reset_request', NULL, NULL, '2026-01-27 09:57:49'),
-(28, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'password_reset', NULL, NULL, '2026-01-27 09:58:29'),
-(29, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-27 09:58:39'),
-(30, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-27 10:05:29'),
-(31, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 18:08:38'),
-(32, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 18:42:39'),
-(33, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 18:43:29'),
-(34, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 18:43:38'),
-(35, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 20:04:36'),
-(36, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 20:18:31'),
-(37, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 20:29:44'),
-(38, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 20:29:58'),
-(39, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 20:30:05'),
-(40, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 21:02:46'),
-(41, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-29 16:27:08'),
-(42, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-29 16:31:53'),
-(43, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-29 20:39:05'),
-(44, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-29 20:45:37'),
-(45, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-29 21:29:48'),
-(46, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 08:49:07'),
-(47, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 15:08:44'),
-(48, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-30 15:08:57'),
-(49, 44, 'client', NULL, NULL, 'vben@gmail.com', 'user', 'register', NULL, '{\"role\": \"client\", \"email\": \"vben@gmail.com\", \"user_id\": 44, \"last_name\": \"Vasvári\", \"first_name\": \"Benjamin\"}', '2026-01-30 19:17:16'),
-(50, 44, NULL, NULL, NULL, 'vben@gmail.com', 'user', 'email_verified', NULL, NULL, '2026-01-30 19:17:54'),
-(51, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 19:18:21'),
-(52, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 19:26:28'),
-(53, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 19:32:33'),
-(54, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 19:41:14'),
-(55, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 19:50:38'),
-(56, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 19:59:28'),
-(57, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 20:08:07'),
-(58, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 20:13:27'),
-(59, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-31 19:35:49'),
-(60, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-02-01 11:50:29'),
-(61, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-02-01 13:32:13'),
-(62, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-02-01 13:33:06'),
-(63, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-02-01 13:38:36'),
-(64, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-02-01 13:43:48');
+INSERT INTO `audit_logs` (`id`, `performed_by_user_id`, `performed_by_role`, `affected_entity_id`, `company_id`, `email`, `entity_type`, `action`, `old_values`, `new_values`, `created_at`, `affected_user_id`) VALUES
+(1, 41, 'client', 41, NULL, 'admin@admin.hu', 'user', 'register', NULL, '{\"role\": \"client\", \"email\": \"admin@admin.hu\", \"user_id\": 41, \"last_name\": \"Admin\", \"first_name\": \"Admin\"}', '2026-01-17 17:19:35', NULL),
+(2, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'register', NULL, '{\"role\": \"client\", \"email\": \"admin@admin.hu\", \"user_id\": 41, \"last_name\": \"Admin\", \"first_name\": \"Admin\"}', '2026-01-17 17:19:35', NULL),
+(3, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'email_verified', NULL, NULL, '2026-01-17 17:36:57', NULL),
+(4, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-17 17:37:52', NULL),
+(5, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-17 17:56:11', NULL),
+(6, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-17 18:09:44', NULL),
+(7, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-17 18:46:36', NULL),
+(8, 24, NULL, NULL, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-01-18 20:46:23', NULL),
+(9, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-18 20:47:27', NULL),
+(10, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-18 20:49:01', NULL),
+(11, 43, 'client', NULL, NULL, 'admin@admin.com', 'user', 'register', NULL, '{\"role\": \"client\", \"email\": \"admin@admin.com\", \"user_id\": 43, \"last_name\": \"Admin\", \"first_name\": \"Admin\"}', '2026-01-23 09:48:02', NULL),
+(12, 43, NULL, NULL, NULL, 'admin@admin.com', 'user', 'email_verified', NULL, NULL, '2026-01-23 09:48:09', NULL),
+(13, 43, 'client', NULL, NULL, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-23 09:48:28', NULL),
+(14, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-23 10:18:22', NULL),
+(15, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-23 19:11:44', NULL),
+(16, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-23 19:13:53', NULL),
+(17, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-23 19:13:59', NULL),
+(18, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-23 19:17:16', NULL),
+(19, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-23 19:17:28', NULL),
+(20, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-23 19:42:25', NULL),
+(22, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-27 09:00:51', NULL),
+(23, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-27 09:02:29', NULL),
+(24, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'company', 'deleteImage', NULL, NULL, '2026-01-27 09:04:10', NULL),
+(25, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'password_reset_request', NULL, NULL, '2026-01-27 09:56:07', NULL),
+(26, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'password_reset', NULL, NULL, '2026-01-27 09:57:09', NULL),
+(27, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'password_reset_request', NULL, NULL, '2026-01-27 09:57:49', NULL),
+(28, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'password_reset', NULL, NULL, '2026-01-27 09:58:29', NULL),
+(29, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-27 09:58:39', NULL),
+(30, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-27 10:05:29', NULL),
+(31, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 18:08:38', NULL),
+(32, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 18:42:39', NULL),
+(33, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 18:43:29', NULL),
+(34, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 18:43:38', NULL),
+(35, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 20:04:36', NULL),
+(36, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 20:18:31', NULL),
+(37, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 20:29:44', NULL),
+(38, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 20:29:58', NULL),
+(39, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 20:30:05', NULL),
+(40, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 21:02:46', NULL),
+(41, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-29 16:27:08', NULL),
+(42, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-29 16:31:53', NULL),
+(43, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-29 20:39:05', NULL),
+(44, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-29 20:45:37', NULL),
+(45, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-29 21:29:48', NULL),
+(46, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 08:49:07', NULL),
+(47, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 15:08:44', NULL),
+(48, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-30 15:08:57', NULL),
+(49, 44, 'client', NULL, NULL, 'vben@gmail.com', 'user', 'register', NULL, '{\"role\": \"client\", \"email\": \"vben@gmail.com\", \"user_id\": 44, \"last_name\": \"Vasvári\", \"first_name\": \"Benjamin\"}', '2026-01-30 19:17:16', NULL),
+(50, 44, NULL, NULL, NULL, 'vben@gmail.com', 'user', 'email_verified', NULL, NULL, '2026-01-30 19:17:54', NULL),
+(51, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 19:18:21', NULL),
+(52, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 19:26:28', NULL),
+(53, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 19:32:33', NULL),
+(54, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 19:41:14', NULL),
+(55, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 19:50:38', NULL),
+(56, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 19:59:28', NULL),
+(57, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 20:08:07', NULL),
+(58, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 20:13:27', NULL),
+(59, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-31 19:35:49', NULL),
+(60, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-02-01 11:50:29', NULL),
+(61, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-02-01 13:32:13', NULL),
+(62, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-02-01 13:33:06', NULL),
+(63, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-02-01 13:38:36', NULL),
+(64, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-02-01 13:43:48', NULL);
 
 -- --------------------------------------------------------
 
@@ -4028,10 +4066,10 @@ INSERT INTO `images` (`id`, `company_id`, `user_id`, `url`, `is_main`, `uploaded
 CREATE TABLE `notification_settings` (
   `id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
-  `appointment_confirmation` tinyint(1) DEFAULT '1',
-  `appointment_reminder` tinyint(1) DEFAULT '1',
-  `appointment_cancellation` tinyint(1) DEFAULT '1',
-  `marketing_emails` tinyint(1) DEFAULT '0',
+  `appointment_confirmation` tinyint(1) NOT NULL DEFAULT '1',
+  `appointment_reminder` tinyint(1) NOT NULL DEFAULT '1',
+  `appointment_cancellation` tinyint(1) NOT NULL DEFAULT '1',
+  `marketing_emails` tinyint(1) NOT NULL DEFAULT '0',
   `updated_at` timestamp NULL DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
@@ -4976,9 +5014,9 @@ CREATE TABLE `tokens` (
   `token` varchar(500) COLLATE utf8mb4_hungarian_ci NOT NULL,
   `type` varchar(100) COLLATE utf8mb4_hungarian_ci NOT NULL,
   `expires_at` datetime NOT NULL,
-  `is_revoked` tinyint(1) DEFAULT '0',
+  `is_revoked` tinyint(1) NOT NULL DEFAULT '0',
   `revoked_at` datetime DEFAULT NULL,
-  `created_at` datetime DEFAULT CURRENT_TIMESTAMP
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
 
 --
@@ -5741,6 +5779,42 @@ DELIMITER $$
 --
 -- Events
 --
+CREATE DEFINER=`root`@`localhost` EVENT `updateExpiredAppointments` ON SCHEDULE EVERY 1 HOUR STARTS '2025-12-12 10:16:13' ON COMPLETION NOT PRESERVE ENABLE DO BEGIN
+    -- Pending appointmentek amelyek már lejártak -> no_show
+    UPDATE `appointments`
+    SET 
+        `status` = 'no_show',
+        `updated_at` = NOW()
+    WHERE `status` = 'pending'
+      AND `start_time` < DATE_SUB(NOW(), INTERVAL 1 HOUR);
+    
+    -- Confirmed appointmentek amelyek véget értek -> completed
+    UPDATE `appointments`
+    SET 
+        `status` = 'completed',
+        `updated_at` = NOW()
+    WHERE `status` = 'confirmed'
+      AND `end_time` < NOW();
+END$$
+
+CREATE DEFINER=`root`@`localhost` EVENT `cleanOldAuditLogs` ON SCHEDULE EVERY 1 WEEK STARTS '2025-12-12 10:13:56' ON COMPLETION NOT PRESERVE ENABLE DO BEGIN
+    -- Régi audit logok törlése (365 napnál régebbiek)
+    DELETE FROM `audit_logs`
+    WHERE `created_at` < DATE_SUB(NOW(), INTERVAL 365 DAY);
+    
+END$$
+
+CREATE DEFINER=`root`@`localhost` EVENT `deactivateInactiveUsers` ON SCHEDULE EVERY 1 MONTH STARTS '2025-12-12 10:15:05' ON COMPLETION NOT PRESERVE DISABLE DO BEGIN
+    -- Userek akik 180 napja nem jelentkeztek be
+    UPDATE `users`
+    SET 
+        `is_active` = FALSE,
+        `updated_at` = NOW()
+    WHERE `last_login` < DATE_SUB(NOW(), INTERVAL 180 DAY)
+      AND `is_active` = TRUE
+      AND `is_deleted` = FALSE;
+END$$
+
 CREATE DEFINER=`root`@`localhost` EVENT `cleanupExpiredTokens` ON SCHEDULE EVERY 1 DAY STARTS '2025-12-12 02:00:00' ON COMPLETION NOT PRESERVE ENABLE COMMENT 'Automatikusan törli a lejárt vagy revoked tokeneket' DO BEGIN
     -- Futtatjuk a meglévő eljárást
     CALL cleanExpiredTokens();
@@ -5766,42 +5840,6 @@ CREATE DEFINER=`root`@`localhost` EVENT `cleanupExpiredTokens` ON SCHEDULE EVERY
         JSON_OBJECT('deleted_count', ROW_COUNT()),
         NOW()
     );
-END$$
-
-CREATE DEFINER=`root`@`localhost` EVENT `updateExpiredAppointments` ON SCHEDULE EVERY 1 HOUR STARTS '2025-12-12 10:16:13' ON COMPLETION NOT PRESERVE ENABLE DO BEGIN
-    -- Pending appointmentek amelyek már lejártak -> no_show
-    UPDATE `appointments`
-    SET 
-        `status` = 'no_show',
-        `updated_at` = NOW()
-    WHERE `status` = 'pending'
-      AND `start_time` < DATE_SUB(NOW(), INTERVAL 1 HOUR);
-    
-    -- Confirmed appointmentek amelyek véget értek -> completed
-    UPDATE `appointments`
-    SET 
-        `status` = 'completed',
-        `updated_at` = NOW()
-    WHERE `status` = 'confirmed'
-      AND `end_time` < NOW();
-END$$
-
-CREATE DEFINER=`root`@`localhost` EVENT `deactivateInactiveUsers` ON SCHEDULE EVERY 1 MONTH STARTS '2025-12-12 10:15:05' ON COMPLETION NOT PRESERVE DISABLE DO BEGIN
-    -- Userek akik 180 napja nem jelentkeztek be
-    UPDATE `users`
-    SET 
-        `is_active` = FALSE,
-        `updated_at` = NOW()
-    WHERE `last_login` < DATE_SUB(NOW(), INTERVAL 180 DAY)
-      AND `is_active` = TRUE
-      AND `is_deleted` = FALSE;
-END$$
-
-CREATE DEFINER=`root`@`localhost` EVENT `cleanOldAuditLogs` ON SCHEDULE EVERY 1 WEEK STARTS '2025-12-12 10:13:56' ON COMPLETION NOT PRESERVE ENABLE DO BEGIN
-    -- Régi audit logok törlése (365 napnál régebbiek)
-    DELETE FROM `audit_logs`
-    WHERE `created_at` < DATE_SUB(NOW(), INTERVAL 365 DAY);
-    
 END$$
 
 DELIMITER ;
