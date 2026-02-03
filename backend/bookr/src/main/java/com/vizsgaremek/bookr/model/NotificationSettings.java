@@ -214,10 +214,10 @@ public class NotificationSettings implements Serializable {
 
             StoredProcedureQuery spq = em.createStoredProcedureQuery("updateNotificationSetting");
             spq.registerStoredProcedureParameter("idIN", Integer.class, ParameterMode.IN);
-            spq.registerStoredProcedureParameter("confIN", String.class, ParameterMode.IN);
-            spq.registerStoredProcedureParameter("remindIN", String.class, ParameterMode.IN);
-            spq.registerStoredProcedureParameter("cancellIN", String.class, ParameterMode.IN);
-            spq.registerStoredProcedureParameter("marketingIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("confIN", Boolean.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("remindIN", Boolean.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("cancellIN", Boolean.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("marketingIN", Boolean.class, ParameterMode.IN);
 
             spq.setParameter("idIN", updatedSetting.getId());
             spq.setParameter("confIN", updatedSetting.getAppointmentConfirmation());
@@ -262,7 +262,7 @@ public class NotificationSettings implements Serializable {
                     Boolean.parseBoolean(record[3].toString()),
                     Boolean.parseBoolean(record[4].toString()),
                     Boolean.parseBoolean(record[5].toString()),
-                    record[7] == null ? null : formatter.parse(record[6].toString()),
+                    record[7] != null ? null : formatter.parse(record[6].toString()),
                     formatter.parse(record[7].toString())
                     );
 
