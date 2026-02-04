@@ -221,7 +221,7 @@ public class AuthService {
         }
         if (!isUserExist) {
             status = "NotFound";
-            statusCode = 404;
+            statusCode = 418;
             toReturn.put("status", status);
             toReturn.put("statusCode", statusCode);
             return toReturn;

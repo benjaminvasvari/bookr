@@ -1,6 +1,5 @@
 package com.vizsgaremek.bookr.service;
 
-import com.vizsgaremek.bookr.security.PasswordHasher;
 import com.vizsgaremek.bookr.util.ValidationUtil;
 import com.vizsgaremek.bookr.model.AuditLogs;
 import com.vizsgaremek.bookr.model.Tokens;
@@ -22,9 +21,6 @@ public class UsersService {
 
     @Inject
     private EmailService EmailService;
-
-    @Inject
-    private PasswordHasher PasswordHasher;
 
     public JSONObject getUserProfile(String token) {
 

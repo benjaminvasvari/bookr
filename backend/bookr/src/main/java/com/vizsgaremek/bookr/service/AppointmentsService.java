@@ -308,7 +308,7 @@ public class AppointmentsService {
                     group.put("companyName", company.getName());
                     group.put("companyLogo", company.getImageUrl());
                     group.put("staffId", staffId);
-                    group.put("staffName", staff.getLastName() + " " + staff.getFirstName());
+                    group.put("staffName", staff.getDisplayName());
                     group.put("services", new JSONArray());
                     group.put("totalPrice", BigDecimal.ZERO);
 

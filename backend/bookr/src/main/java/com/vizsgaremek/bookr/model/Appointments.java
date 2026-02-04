@@ -822,8 +822,7 @@ public class Appointments implements Serializable {
                 a.put("endTime", dateFormatter.format((java.sql.Timestamp) record[6]));
                 a.put("status", record[7].toString());
                 a.put("createdAt", dateFormatter.format((java.sql.Timestamp) record[8]));
-                a.put("updatedAt", dateFormatter.format((java.sql.Timestamp) record[9]));
-
+                a.put("updatedAt", record[9] != null ? dateFormatter.format((java.sql.Timestamp) record[9]) : null);
 
                 appointments.put(a);
             }
