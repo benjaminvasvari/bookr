@@ -50,6 +50,7 @@ export const API_ENDPOINTS = {
     UNAVAILABLE_DATES: '/appointments/unavailable-dates',
     OCCUPIED_SLOTS: '/appointments/occupied-slots',
     CREATE: '/create-appointment',
+    BY_CLIENT: '/appointments/getAppointmentsByClient',
   },
 
   REVIEWS: {

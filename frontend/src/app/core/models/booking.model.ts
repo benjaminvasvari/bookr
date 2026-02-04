@@ -80,3 +80,37 @@ export interface OccupiedSlot {
   serviceId: number;
   durationMinutes: number;
 }
+
+export interface ClientAppointmentService {
+  duration: number;
+  price: number;
+  serviceId: number;
+  serviceName: string;
+}
+
+export interface ClientAppointment {
+  appointmentId?: number;
+  id?: number;
+  companyId: number;
+  totalPrice: number;
+  companyLogo: string;
+  companyName: string;
+  staffName: string | null;
+  startTime: string;
+  endTime: string;
+  services: ClientAppointmentService[];
+  serviceNames?: string;
+  staffId?: number;
+  status: string;
+}
+
+export interface ClientAppointmentsResponse {
+  data: {
+    appointments: ClientAppointment[];
+    totalPages: number;
+    totalCount: number;
+    currentPage: number;
+  };
+  status: string;
+  statusCode: number;
+}
