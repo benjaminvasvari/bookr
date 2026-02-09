@@ -592,11 +592,11 @@ public class Users implements Serializable {
         this.roleId = roleId;
     }
 
-    public String getRoleString() {
+    public String getRolesString() {
         return rolesString;
     }
 
-    public void setRoleString(String roleString) {
+    public void setRolesString(String roleString) {
         this.rolesString = roleString;
     }
 
@@ -629,6 +629,14 @@ public class Users implements Serializable {
 
     public void setRegToken(String regToken) {
         this.regToken = regToken;
+    }
+    
+    public Integer getCompanyIdInt() {
+        return companyIdInt;
+    }
+
+    public void setCompanyIdInt(Integer companyIdInt) {
+        this.companyIdInt = companyIdInt;
     }
 
     @Override

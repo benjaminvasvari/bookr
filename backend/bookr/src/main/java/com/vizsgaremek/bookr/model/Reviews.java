@@ -4,11 +4,16 @@
  */
 package com.vizsgaremek.bookr.model;
 
+import static com.vizsgaremek.bookr.model.Users.emf;
+import static com.vizsgaremek.bookr.model.Users.formatter;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import javax.persistence.Basic;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EntityManager;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -17,9 +22,12 @@ import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
+import javax.persistence.ParameterMode;
+import javax.persistence.StoredProcedureQuery;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
+import javax.persistence.Transient;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import javax.xml.bind.annotation.XmlRootElement;
@@ -78,6 +86,13 @@ public class Reviews implements Serializable {
     @ManyToOne(optional = false)
     private Users clientId;
 
+    // Transient fields
+    @Transient
+    private String userName;
+
+    @Transient
+    private String userImage;
+
     public Reviews() {
     }
 
@@ -88,6 +103,16 @@ public class Reviews implements Serializable {
     public Reviews(Integer id, int rating, Date createdAt) {
         this.id = id;
         this.rating = rating;
+        this.createdAt = createdAt;
+    }
+
+    // getReviewsByCompanyId
+    public Reviews(Integer id, String userName, String userImage, int rating, String comment, Date createdAt) {
+        this.id = id;
+        this.userName = userName;
+        this.userImage = userImage;
+        this.rating = rating;
+        this.comment = comment;
         this.createdAt = createdAt;
     }
 
@@ -171,6 +196,23 @@ public class Reviews implements Serializable {
         this.clientId = clientId;
     }
 
+    // Getters and setters for transient fields
+    public String getUserName() {
+        return userName;
+    }
+
+    public void setUserName(String userName) {
+        this.userName = userName;
+    }
+
+    public String getUserImage() {
+        return userImage;
+    }
+
+    public void setUserImage(String userImage) {
+        this.userImage = userImage;
+    }
+
     @Override
     public int hashCode() {
         int hash = 0;
@@ -195,5 +237,50 @@ public class Reviews implements Serializable {
     public String toString() {
         return "com.vizsgaremek.bookr.model.Reviews[ id=" + id + " ]";
     }
-    
+
+    public static List<Reviews> getReviewsByCompanyId(Integer companyId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            // Ha van stored procedure:
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getReviewsByCompanyId");
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.setParameter("companyIdIN", companyId);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            // Empty list if no results
+            if (resultList.isEmpty()) {
+                return new ArrayList<>();  // Üres lista, nem null!
+            }
+
+            // Convert to Reviews list
+            List<Reviews> reviewsList = new ArrayList<>();
+
+            for (Object[] record : resultList) {
+                Reviews review = new Reviews(
+                        Integer.valueOf(record[0].toString()),
+                        record[1].toString(),
+                        record[2] != null ? record[2].toString() : null,
+                        Integer.valueOf(record[3].toString()),
+                        record[4].toString(),
+                        formatter.parse(record[5].toString())
+                );
+
+                reviewsList.add(review);  // Hozzáadjuk a listához!
+            }
+
+            return reviewsList;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return new ArrayList<>();  // Error esetén üres lista (nem null!)
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
 }

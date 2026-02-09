@@ -4,11 +4,16 @@
  */
 package com.vizsgaremek.bookr.model;
 
+import static com.vizsgaremek.bookr.model.Users.emf;
+import static com.vizsgaremek.bookr.model.Users.formatter;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import javax.persistence.Basic;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EntityManager;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -17,9 +22,12 @@ import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
+import javax.persistence.ParameterMode;
+import javax.persistence.StoredProcedureQuery;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
+import javax.persistence.Transient;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import javax.xml.bind.annotation.XmlRootElement;
@@ -53,7 +61,7 @@ public class Images implements Serializable {
     @Basic(optional = false)
     @NotNull
     @Column(name = "is_main")
-    private short isMain;
+    private boolean isMain;
     @Basic(optional = false)
     @NotNull
     @Column(name = "uploaded_at")
@@ -72,6 +80,12 @@ public class Images implements Serializable {
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     @ManyToOne
     private Users userId;
+    
+    @Transient
+    private Integer companyIdInt;
+    
+    @Transient
+    private Integer userIdInt;
 
     public Images() {
     }
@@ -80,11 +94,20 @@ public class Images implements Serializable {
         this.id = id;
     }
 
-    public Images(Integer id, short isMain, Date uploadedAt, boolean isDeleted) {
+    // getCompanyImages conttructor
+    public Images(Integer id, String url, boolean isMain, Date uploadedAt) {
         this.id = id;
+        this.url = url;
         this.isMain = isMain;
         this.uploadedAt = uploadedAt;
-        this.isDeleted = isDeleted;
+    }
+
+    public Images(Integer id, String url, Date uploadedAt, Integer companyIdInt, Integer userIdInt) {
+        this.id = id;
+        this.url = url;
+        this.uploadedAt = uploadedAt;
+        this.companyIdInt = companyIdInt;
+        this.userIdInt = userIdInt;
     }
 
     public Integer getId() {
@@ -103,11 +126,11 @@ public class Images implements Serializable {
         this.url = url;
     }
 
-    public short getIsMain() {
+    public boolean getIsMain() {
         return isMain;
     }
 
-    public void setIsMain(short isMain) {
+    public void setIsMain(boolean isMain) {
         this.isMain = isMain;
     }
 
@@ -150,6 +173,23 @@ public class Images implements Serializable {
     public void setUserId(Users userId) {
         this.userId = userId;
     }
+    
+    // CUSTOM SET/GET
+    public Integer getCompanyIdInt() {
+        return companyIdInt;
+    }
+
+    public void setCompanyIdInt(Integer companyIdInt) {
+        this.companyIdInt = companyIdInt;
+    }
+    
+    public Integer getUserIdInt() {
+        return userIdInt;
+    }
+
+    public void setUserIdInt(Integer userIdInt) {
+        this.userIdInt = userIdInt;
+    }
 
     @Override
     public int hashCode() {
@@ -175,5 +215,213 @@ public class Images implements Serializable {
     public String toString() {
         return "com.vizsgaremek.bookr.model.Images[ id=" + id + " ]";
     }
-    
+
+    public static List<Images> getCompanyNotMainImages(Integer companyId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            // Ha van stored procedure a company képekhez:
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getCompanyNotMainImages");
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.setParameter("companyIdIN", companyId);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            // Empty list if no results
+            if (resultList.isEmpty()) {
+                return new ArrayList<>();  // Üres lista, nem null!
+            }
+
+            // Convert to Images list
+            List<Images> imagesList = new ArrayList<>();
+
+            for (Object[] record : resultList) {
+                Images img = new Images(
+                        Integer.valueOf(record[0].toString()), // id
+                        record[1] == null ? null : record[1].toString(), // url
+                        Boolean.parseBoolean(record[2].toString()), // is_main
+                        record[3] == null ? null : formatter.parse(record[3].toString()) // uploaded_at
+                );
+
+                imagesList.add(img);  // Hozzáadjuk a listához!
+            }
+
+            return imagesList;  // Az ÖSSZES képet visszaadjuk!
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return new ArrayList<>();  // Error esetén üres lista (nem null!)
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static Images getUserProfilePicture(Integer userId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getUserProfilePicture");
+            spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("userIdIN", userId);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            // Stored procedure returns: id, user_id, url, uploaded_at
+            Object[] record = resultList.get(0);
+
+            Images image = new Images(
+                    Integer.valueOf(record[0].toString()), // id
+                    record[1].toString(), // url
+                    record[2] == null ? null : formatter.parse(record[2].toString()), // uploaded_at
+                    null, // companyIdInt - user profile picture has no company
+                    Integer.valueOf(record[3].toString()) // userIdInt
+            );
+
+            return image;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static Images uploadCompanyImage(Integer companyId, String relativePath, boolean isMain) {
+        EntityManager em = emf.createEntityManager();
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("uploadCompanyImage");
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("urlIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("isMainIN", Boolean.class, ParameterMode.IN);
+            spq.setParameter("companyIdIN", companyId);
+            spq.setParameter("urlIN", relativePath);
+            spq.setParameter("isMainIN", isMain);
+            spq.execute();
+
+            // A SELECT LAST_INSERT_ID() AS image_id egyetlen értéket ad vissza
+            Object result = spq.getSingleResult();
+
+            if (result == null) {
+                return null;
+            }
+
+            // Az image_id-t visszakapjuk
+            Integer imageId = Integer.valueOf(result.toString());
+
+            // Images objektum létrehozása az ID-val
+            Images image = new Images(imageId);
+            return image;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static Integer getCompanyImageCount(Integer companyId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getCompanyImageCount");
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("companyIdIN", companyId);
+
+            spq.execute();
+
+            Object result = spq.getSingleResult();
+
+            if (result == null) {
+                return null;
+            }
+
+            Integer imageCount = Integer.valueOf(result.toString());
+
+            return imageCount;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static Boolean softDeleteCompanyImage(Integer companyId, Integer imageId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("deleteCompanyImage");
+            spq.registerStoredProcedureParameter("imageIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("imageIdIN", imageId);
+            spq.setParameter("companyIdIN", companyId);
+
+            spq.execute();
+
+            return true;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return false;
+        }
+    }
+
+    public static Images uploadUserImage(Integer userId, String relativePath) {
+        EntityManager em = emf.createEntityManager();
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("uploadUserImage");
+            spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("urlIN", String.class, ParameterMode.IN);
+
+            spq.setParameter("userIdIN", userId);
+            spq.setParameter("urlIN", relativePath);
+
+            spq.execute();
+
+            // A SELECT LAST_INSERT_ID() AS image_id egyetlen értéket ad vissza
+            Object result = spq.getSingleResult();
+
+            if (result == null) {
+                return null;
+            }
+
+            // Az image_id-t visszakapjuk
+            Integer imageId = Integer.valueOf(result.toString());
+
+            // Images objektum létrehozása az ID-val
+            Images image = new Images(imageId);
+            return image;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
 }

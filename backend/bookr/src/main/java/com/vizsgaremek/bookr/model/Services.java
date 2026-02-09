@@ -4,14 +4,17 @@
  */
 package com.vizsgaremek.bookr.model;
 
+import static com.vizsgaremek.bookr.model.Users.emf;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 import javax.persistence.Basic;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EntityManager;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -21,9 +24,12 @@ import javax.persistence.ManyToOne;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.OneToMany;
+import javax.persistence.ParameterMode;
+import javax.persistence.StoredProcedureQuery;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
+import javax.persistence.Transient;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import javax.xml.bind.annotation.XmlRootElement;
@@ -97,6 +103,9 @@ public class Services implements Serializable {
     private Collection<ServiceCategoryMap> serviceCategoryMapCollection;
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "serviceId")
     private Collection<StaffServices> staffServicesCollection;
+    
+    @Transient
+    private Integer companyIdInt;
 
     public Services() {
     }
@@ -109,6 +118,16 @@ public class Services implements Serializable {
         this.id = id;
         this.name = name;
         this.durationMinutes = durationMinutes;
+    }
+
+    public Services(Integer id, Integer companyIdInt, String name, int durationMinutes, BigDecimal price, Boolean isDeleted) {
+        this.id = id;
+        this.companyIdInt = companyIdInt;
+        this.name = name;
+        this.durationMinutes = durationMinutes;
+        this.price = price;
+        this.isDeleted = isDeleted;
+
     }
 
     public Integer getId() {
@@ -233,6 +252,15 @@ public class Services implements Serializable {
     public void setStaffServicesCollection(Collection<StaffServices> staffServicesCollection) {
         this.staffServicesCollection = staffServicesCollection;
     }
+    
+    // CUSTOM GET/SET
+    public Integer getCompanyIdInt() {
+        return companyIdInt;
+    }
+    
+    public void setCompanyIdInt(Integer companyIdInt) {
+        this.companyIdInt = companyIdInt;
+    }
 
     @Override
     public int hashCode() {
@@ -258,5 +286,44 @@ public class Services implements Serializable {
     public String toString() {
         return "com.vizsgaremek.bookr.model.Services[ id=" + id + " ]";
     }
-    
+
+    public static Services getServiceShort(Integer id) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getServiceShort");
+            spq.registerStoredProcedureParameter("idIN", Integer.class, ParameterMode.IN);
+            spq.setParameter("idIN", id);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            Object[] record = resultList.get(0);
+
+            // Create Companies object with basic data
+            Services service = new Services(
+                    Integer.valueOf(record[0].toString()),
+                    Integer.valueOf(record[1].toString()),
+                    record[2].toString(),
+                    Integer.valueOf(record[3].toString()),
+                    new BigDecimal(record[4].toString()),
+                    Boolean.valueOf(record[5].toString())
+            );
+
+            return service;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
 }

@@ -4,11 +4,16 @@
  */
 package com.vizsgaremek.bookr.model;
 
+import static com.vizsgaremek.bookr.model.Users.emf;
+import static com.vizsgaremek.bookr.model.Users.formatter;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import javax.persistence.Basic;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EntityManager;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -16,6 +21,8 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
+import javax.persistence.ParameterMode;
+import javax.persistence.StoredProcedureQuery;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
@@ -85,13 +92,26 @@ public class Tokens implements Serializable {
         this.id = id;
     }
 
-    public Tokens(Integer id, String token, String type, Date expiresAt, boolean isRevoked, Date createdAt) {
+    public Tokens(Integer id, String token, String type, Date expiresAt) {
+        this.id = id;
+        this.token = token;
+        this.type = type;
+        this.expiresAt = expiresAt;
+    }
+
+    // generateEmailVerificationToken response
+    public Tokens(String token, Date expiresAt) {
+        this.token = token;
+        this.expiresAt = expiresAt;
+    }
+
+    // getUserTokens
+    public Tokens(Integer id, String token, String type, Date expiresAt, Boolean isRevoked) {
         this.id = id;
         this.token = token;
         this.type = type;
         this.expiresAt = expiresAt;
         this.isRevoked = isRevoked;
-        this.createdAt = createdAt;
     }
 
     public Integer getId() {
@@ -182,5 +202,119 @@ public class Tokens implements Serializable {
     public String toString() {
         return "com.vizsgaremek.bookr.model.Tokens[ id=" + id + " ]";
     }
-    
+
+    public static Tokens generateEmailVerificationToken(Integer userId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("generateEmailVerificationToken");
+            spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
+            spq.setParameter("userIdIN", userId);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            // Csak az első rekord kell (LIMIT 1 a stored procedure-ben)
+            Object[] record = resultList.get(0);
+
+            Tokens token = new Tokens(
+                    record[0].toString(),
+                    formatter.parse(record[1].toString())
+            );
+
+            return token;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static Tokens generatePasswordResetToken(Integer userId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("generatePasswordResetToken");
+            spq.registerStoredProcedureParameter("idIN", Integer.class, ParameterMode.IN);
+            spq.setParameter("idIN", userId);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            // Csak az első rekord kell (LIMIT 1 a stored procedure-ben)
+            Object[] record = resultList.get(0);
+
+            Tokens token = new Tokens(
+                    record[0].toString(),
+                    formatter.parse(record[1].toString())
+            );
+
+            return token;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static List<Tokens> getUserTokensByEmail(String userEmail) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getUserTokensByEmail");
+            spq.registerStoredProcedureParameter("userEmailIN", String.class, ParameterMode.IN);
+            spq.setParameter("userEmailIN", userEmail);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            // Empty list if no results
+            if (resultList.isEmpty()) {
+                return new ArrayList<>();
+            }
+
+            List<Tokens> tokensList = new ArrayList<>();
+
+            for (Object[] record : resultList) {
+                Tokens token = new Tokens(
+                        Integer.valueOf(record[0].toString()),
+                        record[1].toString(),
+                        record[2].toString(),
+                        formatter.parse(record[3].toString()),
+                        Boolean.parseBoolean(record[4].toString())
+                );
+
+                tokensList.add(token);
+            }
+
+            return tokensList;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
 }

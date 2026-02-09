@@ -314,7 +314,7 @@ public class AuthService {
                     userFromDB.getId(),
                     userFromDB.getRoleName(),
                     null,
-                    userFromDB.getCompanyId() != null ? userFromDB.getCompanyId() : null,
+                    userFromDB.getCompanyIdInt() != null ? userFromDB.getCompanyIdInt() : null,
                     userFromDB.getEmail(),
                     "user",
                     "login"
@@ -400,7 +400,7 @@ public class AuthService {
                             user.getId(),
                             user.getRoleName(),
                             null,
-                            user.getCompanyId() != null ? user.getCompanyId() : null,
+                            user.getCompanyIdInt() != null ? user.getCompanyIdInt() : null,
                             user.getEmail(),
                             "user",
                             "email_verified"
@@ -507,7 +507,7 @@ public class AuthService {
                     loggedoutUser.getId(),
                     loggedoutUser.getRoleName(),
                     null,
-                    loggedoutUser.getCompanyId() != null ? loggedoutUser.getCompanyId() : null,
+                    loggedoutUser.getCompanyIdInt() != null ? loggedoutUser.getCompanyIdInt() : null,
                     loggedoutUser.getEmail(),
                     "user",
                     "login"
