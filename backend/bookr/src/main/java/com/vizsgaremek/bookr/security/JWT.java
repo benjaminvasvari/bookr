@@ -240,6 +240,17 @@ public class JWT {
             return null;
         }
     }
+    
+    public static String getUserBestRoleFromAccessToken(String token) {
+        try {
+            Claims claims = getClaimsFromAccessToken(token);
+            String bestRole = claims.get("role_names", String.class).split(",")[0];
+            
+            return claims != null ? bestRole : null;
+        } catch (Exception ex) {
+            return null;
+        }
+    }
 
     private static SecretKey getSecretKey(String secret) {
         return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));

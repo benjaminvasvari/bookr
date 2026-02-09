@@ -7,6 +7,7 @@ package com.vizsgaremek.bookr.controller;
 import com.vizsgaremek.bookr.model.Users;
 import com.vizsgaremek.bookr.security.JWT;
 import com.vizsgaremek.bookr.service.AuthService;
+import com.vizsgaremek.bookr.util.RoleChecker;
 import javax.inject.Inject;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.UriInfo;
@@ -29,6 +30,9 @@ import org.json.JSONObject;
  */
 @Path("auth")
 public class AuthController {
+
+    private AuthService layer = new AuthService();
+    private RoleChecker RoleChecker = new RoleChecker();
 
     @Context
     private UriInfo context;
@@ -65,6 +69,17 @@ public class AuthController {
     @Inject
     private AuthService authService;
 
+    private Response buildErrorResponse(int statusCode, String status) {
+        JSONObject errorResponse = new JSONObject();
+        errorResponse.put("statusCode", statusCode);
+        errorResponse.put("status", status);
+
+        return Response.status(statusCode)
+                .entity(errorResponse.toString())
+                .type(MediaType.APPLICATION_JSON)
+                .build();
+    }
+
     @POST
     @Path("register")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -79,7 +94,7 @@ public class AuthController {
                 bodyObject.getString("phone")
         );
 
-        JSONObject toReturn = authService.clientRegister(clientRegistered);
+        JSONObject toReturn = layer.clientRegister(clientRegistered);
 
         return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
                 .entity(toReturn.toString())
@@ -101,7 +116,7 @@ public class AuthController {
                 bodyObject.getString("phone")
         );
 
-        JSONObject toReturn = authService.staffRegister(staffRegistered);
+        JSONObject toReturn = layer.staffRegister(staffRegistered);
 
         return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
                 .entity(toReturn.toString())
@@ -121,7 +136,7 @@ public class AuthController {
                 bodyObject.getString("password")
         );
 
-        JSONObject toReturn = authService.login(loginUser);
+        JSONObject toReturn = layer.login(loginUser);
 
         return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
                 .entity(toReturn.toString())
@@ -139,7 +154,7 @@ public class AuthController {
             String verifyToken = bodyObject.getString("token");
 
             // Service layer hívás - email verification
-            JSONObject toReturn = authService.verifyEmail(verifyToken);
+            JSONObject toReturn = layer.verifyEmail(verifyToken);
 
             return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
                     .entity(toReturn.toString())
@@ -161,14 +176,13 @@ public class AuthController {
 
     @POST
     @Path("refresh")
-    @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Response refresh(String body) {
         try {
             JSONObject bodyObject = new JSONObject(body);
             String refreshToken = bodyObject.getString("refresh_token");
 
-            JSONObject toReturn = authService.refreshTokens(refreshToken);
+            JSONObject toReturn = layer.refreshTokens(refreshToken);
 
             return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
                     .entity(toReturn.toString())
@@ -191,26 +205,40 @@ public class AuthController {
     @POST
     @Path("logout")
     @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public Response logout(String body) {
-        JSONObject bodyObject = new JSONObject(body);
+    public Response logout(
+            @HeaderParam("Authorization") String authHeader) {
 
-        // companyId nullable field kezelése
-        Integer companyId = bodyObject.has("companyId") && !bodyObject.isNull("companyId")
-                ? bodyObject.getInt("companyId")
-                : null;
+        // Extract token from "Bearer <token>"
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            System.out.println("Missing or invalid Authorization header");
+            return buildErrorResponse(401, "missingToken");
+        }
 
-        Users loggedoutUser = new Users(
-                bodyObject.getInt("id"),
-                bodyObject.getString("email"),
-                companyId // ← null-t is elfogad
-        );
+        // Remove "Bearer " prefix
+        String jwtToken = authHeader.substring(7);
+        Boolean validJwt = JWT.validateAccessToken(jwtToken);
 
-        JSONObject toReturn = authService.logout(loggedoutUser);
-        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
-                .entity(toReturn.toString())
-                .type(MediaType.APPLICATION_JSON)
-                .build();
+        if (validJwt == null) {
+            // Lejárt JWT
+            return buildErrorResponse(401, "tokenExpired");
+        } else if (validJwt == false) {
+            // Invalid JWT
+            return buildErrorResponse(401, "invalidToken");
+        } else {
+            // Valid token
+            String userRoles = JWT.getRolesFromAccessToken(jwtToken);
+            boolean hasPermission = RoleChecker.hasAnyRole(userRoles, "client");
+
+            if (!hasPermission) {
+                return buildErrorResponse(403, "forbidden");
+            }
+
+            JSONObject toReturn = layer.logout(jwtToken);
+            return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                    .entity(toReturn.toString())
+                    .type(MediaType.APPLICATION_JSON)
+                    .build();
+        }
     }
 
     @POST
@@ -240,7 +268,7 @@ public class AuthController {
             return Response.status(401).entity("invalidToken").build();
         } else {
             // Valid token
-            JSONObject toReturn = authService.changePasswordEmail(passString, jwtToken);
+            JSONObject toReturn = layer.changePasswordEmail(passString, jwtToken);
             return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
                     .entity(toReturn.toString())
                     .type(MediaType.APPLICATION_JSON)
@@ -276,7 +304,7 @@ public class AuthController {
             return Response.status(401).entity("invalidToken").build();
         } else {
             // Valid token
-            JSONObject toReturn = authService.resetPassUpdate(passString, token, jwtToken);
+            JSONObject toReturn = layer.resetPassUpdate(passString, token, jwtToken);
             return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
                     .entity(toReturn.toString())
                     .type(MediaType.APPLICATION_JSON)

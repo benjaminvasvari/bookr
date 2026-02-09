@@ -514,18 +514,23 @@ public class AuthService {
         return toReturn;
     }
 
-    public JSONObject logout(Users loggedoutUser) {
+    public JSONObject logout(String jwtToken) {
         JSONObject toReturn = new JSONObject();
-
+        
+        Integer userId = JWT.getUserIdFromAccessToken(jwtToken);
+        Integer companyId = JWT.getCompanyIdFromAccessToken(jwtToken);
+        String userEmail = JWT.getEmailFromAccessToken(jwtToken);
+        String userBestRole = JWT.getUserBestRoleFromAccessToken(jwtToken);
+        
         try {
             auditLogService.logSimpleAction(
-                    loggedoutUser.getId(),
-                    loggedoutUser.getRoleName(),
-                    null,
-                    loggedoutUser.getCompanyIdInt() != null ? loggedoutUser.getCompanyIdInt() : null,
-                    loggedoutUser.getEmail(),
+                    userId,
+                    userBestRole,
+                    userId,
+                    companyId != null ? companyId : null,
+                    userEmail,
                     "user",
-                    "login"
+                    "logout"
             );
 
             toReturn.put("status", "success");
