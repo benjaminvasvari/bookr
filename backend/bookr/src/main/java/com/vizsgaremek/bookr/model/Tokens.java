@@ -26,6 +26,7 @@ import javax.persistence.StoredProcedureQuery;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
+import javax.persistence.Transient;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import javax.xml.bind.annotation.XmlRootElement;
@@ -72,7 +73,7 @@ public class Tokens implements Serializable {
     @Basic(optional = false)
     @NotNull
     @Column(name = "is_revoked")
-    private boolean isRevoked;
+    private Boolean isRevoked;
     @Column(name = "revoked_at")
     @Temporal(TemporalType.TIMESTAMP)
     private Date revokedAt;
@@ -84,6 +85,9 @@ public class Tokens implements Serializable {
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     @ManyToOne(optional = false)
     private Users userId;
+    
+    @Transient
+    private Integer userIdInt;
 
     public Tokens() {
     }
@@ -113,6 +117,19 @@ public class Tokens implements Serializable {
         this.expiresAt = expiresAt;
         this.isRevoked = isRevoked;
     }
+
+    public Tokens(Integer id, Integer userIdInt, String token, String type, Date expiresAt, Boolean isRevoked, Date revokedAt, Date createdAt) {
+        this.id = id;
+        this.userIdInt = userIdInt;
+        this.token = token;
+        this.type = type;
+        this.expiresAt = expiresAt;
+        this.isRevoked = isRevoked;
+        this.revokedAt = revokedAt;
+        this.createdAt = createdAt;
+    }
+    
+    
 
     public Integer getId() {
         return id;
@@ -146,11 +163,11 @@ public class Tokens implements Serializable {
         this.expiresAt = expiresAt;
     }
 
-    public boolean getIsRevoked() {
+    public Boolean getIsRevoked() {
         return isRevoked;
     }
 
-    public void setIsRevoked(boolean isRevoked) {
+    public void setIsRevoked(Boolean isRevoked) {
         this.isRevoked = isRevoked;
     }
 
@@ -176,6 +193,14 @@ public class Tokens implements Serializable {
 
     public void setUserId(Users userId) {
         this.userId = userId;
+    }
+    
+    public Integer getUserIdInt() {
+        return userIdInt;
+    }
+
+    public void setUserIdInt(Integer userIdInt) {
+        this.userIdInt = userIdInt;
     }
 
     @Override
@@ -307,6 +332,48 @@ public class Tokens implements Serializable {
             }
 
             return tokensList;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static Tokens getTokenInfoByToken(String tokenIN) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getTokenInfoByToken");
+            spq.registerStoredProcedureParameter("tokenIN", String.class, ParameterMode.IN);
+            spq.setParameter("tokenIN", tokenIN);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            // Csak az első rekord kell (LIMIT 1 a stored procedure-ben)
+            Object[] record = resultList.get(0);
+
+            Tokens token = new Tokens(
+                    Integer.valueOf(record[0].toString()),
+                    Integer.valueOf(record[1].toString()),
+                    record[2].toString(),
+                    record[3].toString(),
+                    formatter.parse(record[4].toString()),
+                    record[5] != null ? Boolean.parseBoolean(record[5].toString()): null,
+                    formatter.parse(record[6].toString()),
+                    formatter.parse(record[7].toString())
+            );
+
+            return token;
 
         } catch (Exception ex) {
             ex.printStackTrace();

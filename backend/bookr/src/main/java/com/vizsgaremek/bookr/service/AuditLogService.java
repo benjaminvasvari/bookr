@@ -16,7 +16,7 @@ public class AuditLogService {
      */
     public void logAudit(AuditLogs auditLog) {
         // Validációk
-        if (auditLog.getPerformedByUserId() == null) {
+        if (auditLog.getPerformedByUserIdInt() == null) {
             throw new IllegalArgumentException("Performed by user ID cannot be null");
         }
 
@@ -33,21 +33,21 @@ public class AuditLogService {
      *
      * @param performedByUserId Ki hajtotta végre a műveletet
      * @param performedByRole Milyen szerepkörben (client, staff, admin, stb.)
-     * @param affectedUserId Kit érintett a művelet (nullable)
+     * @param affectedEntityId Kit érintett a művelet (nullable)
      * @param companyId Cég ID (nullable)
      * @param email Email cím (nullable)
      * @param entityType Entitás típus (user, appointment, company, stb.)
      * @param action Művelet típus (login, logout, create, update, delete, stb.)
      */
     public void logSimpleAction(Integer performedByUserId, String performedByRole,
-            Integer affectedUserId, Integer companyId,
+            Integer affectedEntityId, Integer companyId,
             String email, String entityType, String action) 
     {
         AuditLogs auditLog = new AuditLogs(performedByUserId, performedByRole,
                 email, entityType, action);
         
         
-        auditLog.setAffectedEntityIdInt(affectedUserId);
+        auditLog.setAffectedEntityIdInt(affectedEntityId);
         auditLog.setCompanyIdInt(companyId);
 
         logAudit(auditLog);

@@ -118,7 +118,6 @@ public class AuditLogs implements Serializable {
     }
 
     public AuditLogs(Integer id) {
-        this();
         this.id = id;
     }
 
@@ -356,7 +355,7 @@ public class AuditLogs implements Serializable {
             spq.registerStoredProcedureParameter("newValuesIN", String.class, ParameterMode.IN);
 
             // Set required parameters
-            spq.setParameter("performedByUserIdIN", this.performedByUserId);
+            spq.setParameter("performedByUserIdIN", this.performedByUserIdInt);
             spq.setParameter("actionIN", this.action);
 
             // Handle nullable performedByRole
@@ -370,8 +369,8 @@ public class AuditLogs implements Serializable {
             }
 
             // Handle nullable affectedUserId
-            if (this.affectedEntityId != null) {
-                spq.setParameter("affectedUserIdIN", this.affectedEntityId);
+            if (this.affectedEntityIdInt != null) {
+                spq.setParameter("affectedUserIdIN", this.affectedEntityIdInt);
             } else {
                 spq.unwrap(org.hibernate.procedure.ProcedureCall.class)
                         .getParameterRegistration("affectedUserIdIN")
@@ -380,8 +379,8 @@ public class AuditLogs implements Serializable {
             }
 
             // Handle nullable companyId
-            if (this.companyId != null) {
-                spq.setParameter("companyIdIN", this.companyId);
+            if (this.companyIdInt != null) {
+                spq.setParameter("companyIdIN", this.companyIdInt);
             } else {
                 spq.unwrap(org.hibernate.procedure.ProcedureCall.class)
                         .getParameterRegistration("companyIdIN")

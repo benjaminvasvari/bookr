@@ -851,44 +851,6 @@ public class Users implements Serializable {
         }
     }
 
-    public static Users getUserByRegToken(String token) {
-        EntityManager em = emf.createEntityManager();
-
-        try {
-            StoredProcedureQuery spq = em.createStoredProcedureQuery("getUserByRegToken");
-
-            spq.registerStoredProcedureParameter("tokenIN", String.class, ParameterMode.IN);
-            spq.setParameter("tokenIN", token);
-
-            spq.execute();
-            List<Object[]> resultList = spq.getResultList();
-
-            if (resultList.isEmpty()) {
-                return null;
-            }
-
-            Object[] record = resultList.get(0);
-
-            // User objektum összeállítása
-            Users user = new Users(
-                    Integer.valueOf(record[0].toString()), // id
-                    record[1].toString(), // email
-                    record[2] == null ? null : formatter.parse(record[2].toString()), // register_finished_at
-                    Boolean.parseBoolean(record[3].toString()) // isActive
-            );
-
-            return user;
-
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            return null;
-        } finally {
-            if (em != null && em.isOpen()) {
-                em.close();
-            }
-        }
-    }
-
     public static Users getUserById(Integer id) {
         EntityManager em = emf.createEntityManager();
 

@@ -7,6 +7,8 @@ import com.vizsgaremek.bookr.model.Tokens;
 import com.vizsgaremek.bookr.model.Users;
 import com.vizsgaremek.bookr.security.JWT;
 import com.vizsgaremek.bookr.util.FileStorageUtil;
+import java.time.LocalDate;
+import java.util.Date;
 import javax.enterprise.context.ApplicationScoped;
 import org.json.JSONObject;
 
@@ -306,14 +308,24 @@ public class AuthService {
         toReturn.put("statusCode", statusCode);
 
         // ========== UPDATE LAST LOGIN IN DB==========
-        Users.updateLastLogin(userFromDB.getId());
+        try {
+            Users.updateLastLogin(userFromDB.getId());
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            status = "InternalServerError";
+            statusCode = 500;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+            return toReturn;
+        }
 
         // ========== AUDIT LOG ==========
         try {
             auditLogService.logSimpleAction(
                     userFromDB.getId(),
                     userFromDB.getRoleName(),
-                    null,
+                    userFromDB.getId(),
                     userFromDB.getCompanyIdInt() != null ? userFromDB.getCompanyIdInt() : null,
                     userFromDB.getEmail(),
                     "user",
@@ -364,11 +376,12 @@ public class AuthService {
 
         try {
             // ========== 2. USER LEKÉRÉSE TOKEN ALAPJÁN (audit log-hoz) ==========
-            Users user = Users.getUserByRegToken(token);
+            Tokens tokenInfo = Tokens.getTokenInfoByToken(token);
+            Date most = new Date();
 
             // Ha nincs ilyen token
-            if (user == null) {
-                status = "InvalidToken";
+            if (tokenInfo == null || most.after(tokenInfo.getExpiresAt())) {
+                status = "InvalidOrExpiredToken";
                 statusCode = 400;
                 toReturn.put("status", status);
                 toReturn.put("statusCode", statusCode);
@@ -377,7 +390,7 @@ public class AuthService {
             // ====================================================================
 
             // ========== 3. ELLENŐRZÉS: MÁR AKTIVÁLVA VAN-E ==========
-            if (user.getIsActive() && user.getRegisterFinishedAt() != null) {
+            if (tokenInfo.getIsRevoked() && tokenInfo.getIsRevoked() != null) {
                 status = "AlreadyVerified";
                 statusCode = 409;
                 toReturn.put("status", status);
@@ -396,6 +409,8 @@ public class AuthService {
 
                 // ========== 5. AUDIT LOG ==========
                 try {
+                    Users user = Users.getUserProfile(tokenInfo.getUserIdInt());
+
                     auditLogService.logSimpleAction(
                             user.getId(),
                             user.getRoleName(),
