@@ -50,6 +50,7 @@ export const API_ENDPOINTS = {
     UNAVAILABLE_DATES: '/appointments/unavailable-dates',
     OCCUPIED_SLOTS: '/appointments/occupied-slots',
     CREATE: '/create-appointment',
+    BY_CLIENT: '/appointments/getAppointmentsByClient',
   },
 
   REVIEWS: {
@@ -69,5 +70,8 @@ export const API_ENDPOINTS = {
   STAFF: {
     BY_COMPANY_AND_SERVICES: '/staff/by-company-and-services',
     DASHBOARD: (userId: number) => `/staff/dashboard/${userId}`,
+  },
+  FAVORITES: {
+    GETALL: '/favorites/getFavorites',
   },
 };

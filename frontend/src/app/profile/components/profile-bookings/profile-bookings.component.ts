@@ -1,7 +1,9 @@
-import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import { forkJoin } from 'rxjs';
 import { Booking } from '../../../core/models';
+import { BookingService } from '../../../core/services/booking.service';
 
 type BookingTab = 'upcoming' | 'past';
 
@@ -22,103 +24,31 @@ export class ProfileBookingsComponent implements OnInit {
   showCancelModal: boolean = false;
   bookingToCancel: Booking | null = null;
 
-  constructor(private router: Router) {}
+  constructor(
+    private router: Router,
+    private bookingService: BookingService
+  ) {}
 
   ngOnInit(): void {
-    this.loadMockData();
+    this.loadBookings();
   }
 
-  loadMockData(): void {
-    // Mock upcoming bookings
-    this.upcomingBookings = [
-      {
-        id: 1,
-        companyId: 1,
-        companyName: 'Bella Szépségszalon',
-        companyImage: 'https://via.placeholder.com/80x80',
-        serviceName: 'Hajvágás + Mosás',
-        serviceCategory: 'Fodrászat',
-        specialistName: 'Nagy Anna',
-        date: '2024-12-15',
-        time: '14:00',
-        price: 8500,
-        status: 'upcoming',
-      },
-      {
-        id: 2,
-        companyId: 2,
-        companyName: 'Jungle Pécs',
-        companyImage: 'https://via.placeholder.com/80x80',
-        serviceName: 'Szakáll igazítás',
-        serviceCategory: 'Borbély',
-        specialistName: 'Kovács Péter',
-        date: '2024-12-18',
-        time: '10:30',
-        price: 4500,
-        status: 'upcoming',
-      },
-      {
-        id: 3,
-        companyId: 1,
-        companyName: 'Bella Szépségszalon',
-        companyImage: 'https://via.placeholder.com/80x80',
-        serviceName: 'Manikűr + Pedikűr',
-        serviceCategory: 'Kozmetika',
-        specialistName: 'Tóth Viktória',
-        date: '2024-12-20',
-        time: '16:00',
-        price: 12000,
-        status: 'upcoming',
-      },
-    ];
+  loadBookings(): void {
+    this.isLoading = true;
 
-    // Mock past bookings
-    this.pastBookings = [
-      {
-        id: 4,
-        companyId: 2,
-        companyName: 'Jungle Pécs',
-        companyImage: 'https://via.placeholder.com/80x80',
-        serviceName: 'Hajvágás',
-        serviceCategory: 'Borbély',
-        specialistName: 'Kiss János',
-        date: '2024-11-10',
-        time: '15:00',
-        price: 6000,
-        status: 'completed',
-        canReview: true,
-        reviewId: null,
+    forkJoin({
+      upcoming: this.bookingService.getAppointmentsByClient(true, 1, 5),
+      past: this.bookingService.getAppointmentsByClient(false, 1, 5),
+    }).subscribe({
+      next: ({ upcoming, past }) => {
+        this.upcomingBookings = upcoming;
+        this.pastBookings = past;
+        this.isLoading = false;
       },
-      {
-        id: 5,
-        companyId: 1,
-        companyName: 'Bella Szépségszalon',
-        companyImage: 'https://via.placeholder.com/80x80',
-        serviceName: 'Festés',
-        serviceCategory: 'Fodrászat',
-        specialistName: 'Nagy Anna',
-        date: '2024-10-25',
-        time: '11:00',
-        price: 15000,
-        status: 'completed',
-        canReview: false,
-        reviewId: 123,
+      error: () => {
+        this.isLoading = false;
       },
-      {
-        id: 6,
-        companyId: 3,
-        companyName: 'Relax Massage',
-        companyImage: 'https://via.placeholder.com/80x80',
-        serviceName: 'Svéd masszázs',
-        serviceCategory: 'Masszázs',
-        specialistName: 'Szabó Eszter',
-        date: '2024-09-15',
-        time: '13:30',
-        price: 9500,
-        status: 'cancelled',
-        canReview: false,
-      },
-    ];
+    });
   }
 
   selectTab(tab: BookingTab): void {
