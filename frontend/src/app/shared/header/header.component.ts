@@ -70,26 +70,30 @@ export class HeaderComponent implements OnInit, OnDestroy {
 
   get isStaff(): boolean {
     const user = this.currentUser;
-    if (!user) {
+
+    if (!user || this.isSuperadmin) {
       return false;
     }
 
-    if (typeof user.roles !== 'string') {
-      return false;
-    }
+    return this.hasRole('staff') && user.companyId !== null;
+  }
 
-    const hasStaffRole = user.roles
-      .split(',')
-      .map((role) => role.trim().toLowerCase())
-      .includes('staff');
+  get isSuperadmin(): boolean {
+    return this.hasRole('superadmin');
+  }
 
-    return hasStaffRole && user.companyId !== null;
+  get showSuperadminButton(): boolean {
+    return this.isSuperadmin;
+  }
+
+  get showOwnerButton(): boolean {
+    return !this.isSuperadmin || this.hasCompany;
   }
 
   /**
    * Dinamikus gomb kattintás kezelése
    */
-  handleBusinessButtonClick(): void {
+  handleOwnerButtonClick(): void {
     if (!this.currentUser) {
       this.router.navigate(['/login']);
     } else if (this.hasCompany) {
@@ -99,10 +103,19 @@ export class HeaderComponent implements OnInit, OnDestroy {
     }
   }
 
+  handleSuperadminButtonClick(): void {
+    if (!this.currentUser) {
+      this.router.navigate(['/login']);
+      return;
+    }
+
+    this.router.navigate(['/superadmin']);
+  }
+
   /**
    * Gomb szövege (dinamikus)
    */
-  getBusinessButtonText(): string {
+  getOwnerButtonText(): string {
     if (!this.currentUser) {
       return 'Cég regisztrálása';
     }
@@ -117,11 +130,28 @@ export class HeaderComponent implements OnInit, OnDestroy {
   /**
    * Gomb ikonja (dinamikus)
    */
-  getBusinessButtonIcon(): string {
+  getOwnerButtonIcon(): string {
     if (this.hasCompany) {
       return 'fas fa-chart-line';
     }
 
     return '';
+  }
+
+  getSuperadminButtonIcon(): string {
+    return 'fas fa-shield-alt';
+  }
+
+  private hasRole(role: string): boolean {
+    const user = this.currentUser;
+
+    if (!user || typeof user.roles !== 'string') {
+      return false;
+    }
+
+    return user.roles
+      .split(',')
+      .map((userRole) => userRole.trim().toLowerCase())
+      .includes(role.toLowerCase());
   }
 }

@@ -102,6 +102,65 @@ export const appRoutes: Routes = [
     data: { showFooter: false },
   },
 
+  {
+    path: 'superadmin',
+    loadComponent: () =>
+      import('./features/superadmin-dashboard/superadmin-dashboard/superadmin-dashboard.component').then(
+        (m) => m.SuperadminDashboardComponent
+      ),
+    canActivate: [authGuard, roleGuard],
+    data: { showFooter: false, showHeader: false, roles: ['superadmin'] },
+    children: [
+      {
+        path: '',
+        redirectTo: 'overview',
+        pathMatch: 'full'
+      },
+      {
+        path: 'overview',
+        loadComponent: () =>
+          import('./features/superadmin-dashboard/pages/overview/overview.component').then(
+            (m) => m.SuperadminOverviewComponent
+          )
+      },
+      {
+        path: 'companies',
+        loadComponent: () =>
+          import('./features/superadmin-dashboard/pages/companies/companies.component').then(
+            (m) => m.SuperadminCompaniesComponent
+          )
+      },
+      {
+        path: 'staff',
+        loadComponent: () =>
+          import('./features/superadmin-dashboard/pages/staff/staff.component').then(
+            (m) => m.SuperadminStaffComponent
+          )
+      },
+      {
+        path: 'owners',
+        loadComponent: () =>
+          import('./features/superadmin-dashboard/pages/owners/owners.component').then(
+            (m) => m.SuperadminOwnersComponent
+          )
+      },
+      {
+        path: 'bookings',
+        loadComponent: () =>
+          import('./features/superadmin-dashboard/pages/bookings/bookings.component').then(
+            (m) => m.SuperadminBookingsComponent
+          )
+      },
+      {
+        path: 'logs',
+        loadComponent: () =>
+          import('./features/superadmin-dashboard/pages/logs/logs.component').then(
+            (m) => m.SuperadminLogsComponent
+          )
+      }
+    ]
+  },
+
 
   {
     path: 'owner',

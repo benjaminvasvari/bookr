@@ -95,6 +95,12 @@
     box-shadow: 0 0 12px rgba(93, 189, 138, 0.35);
 }
 
+.business-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+}
+
 /* Welcome Text */
 .welcome-text {
     color: white;
@@ -288,6 +294,33 @@
   transform: scale(1.1);
 }
 
+.btn-superadmin {
+    background: linear-gradient(135deg, #f3c97a 0%, #e8b86a 100%);
+    color: #2d2a1f;
+    border: 2px solid #e8b86a;
+    padding: 10px 22px;
+    border-radius: 25px;
+    font-weight: 700;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+    cursor: pointer;
+    box-shadow: 0 10px 18px rgba(232, 184, 106, 0.28);
+}
+
+.btn-superadmin:hover {
+    background: linear-gradient(135deg, #f6d598 0%, #e8b86a 100%);
+    border-color: #f6d598;
+    color: #2d2a1f;
+}
+
+.btn-superadmin i {
+    font-size: 14px;
+}
+
 
 /* Dashboard gomb stílus (van cég esetén) */
 .btn-register-business.has-company {
@@ -315,6 +348,15 @@
   .btn-register-business i {
     margin: 0;
   }
+
+    .btn-superadmin {
+        padding: 8px 16px;
+        font-size: 13px;
+    }
+
+    .btn-superadmin span {
+        display: none;
+    }
 }
 
 /* Responsive */

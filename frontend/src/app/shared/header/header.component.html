@@ -13,13 +13,26 @@
       <div class="col"></div>
 
       @if (!isStaff) {
-        <div class="col-auto">
-          <button (click)="handleBusinessButtonClick()" class="btn btn-register-business">
-            @if (hasCompany) {
-              <i [class]="getBusinessButtonIcon()"></i>
-            }
-            <span>{{ getBusinessButtonText() }}</span>
-          </button>
+        <div class="col-auto business-actions">
+          @if (showSuperadminButton) {
+            <button (click)="handleSuperadminButtonClick()" class="btn btn-superadmin">
+              <i [class]="getSuperadminButtonIcon()"></i>
+              <span>Superadmin</span>
+            </button>
+          }
+
+          @if (showOwnerButton) {
+            <button
+              (click)="handleOwnerButtonClick()"
+              class="btn btn-register-business"
+              [class.has-company]="hasCompany"
+            >
+              @if (hasCompany) {
+                <i [class]="getOwnerButtonIcon()"></i>
+              }
+              <span>{{ getOwnerButtonText() }}</span>
+            </button>
+          }
         </div>
       }
 

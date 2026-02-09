@@ -1,0 +1,36 @@
+<section class="page">
+  <header class="page-header">
+    <div>
+      <h1>Foglalások</h1>
+      <p>Összes cég foglalása egy listában.</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-primary" type="button" (click)="onExportBookings()">Export</button>
+      <button class="btn btn-secondary" type="button" (click)="onBulkStatusUpdate()">Státusz frissítés</button>
+    </div>
+  </header>
+
+  <div class="table-card">
+    <div class="table-head">
+      <span>Ügyfél</span>
+      <span>Cég</span>
+      <span>Időpont</span>
+      <span>Státusz</span>
+      <span>Műveletek</span>
+    </div>
+    <div class="table-row">
+      <div>
+        <strong>Ügyfél 01</strong>
+        <span class="sub">ugyfel01@email.com</span>
+      </div>
+      <div>Példa cég 01</div>
+      <div>2026.02.10 10:00</div>
+      <div><span class="status-pill pending">Függőben</span></div>
+      <div class="actions">
+        <button class="btn btn-ghost" type="button" (click)="onViewBooking('BOOK-01')">Részletek</button>
+        <button class="btn btn-outline" type="button" (click)="onApproveBooking('BOOK-01')">Jóváhagy</button>
+        <button class="btn btn-danger" type="button" (click)="onCancelBooking('BOOK-01')">Törlés</button>
+      </div>
+    </div>
+  </div>
+</section>

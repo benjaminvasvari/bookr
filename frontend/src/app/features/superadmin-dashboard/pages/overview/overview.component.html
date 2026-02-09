@@ -1,0 +1,116 @@
+<section class="page">
+  <header class="page-header">
+    <div>
+      <h1>Superadmin áttekintés</h1>
+      <p>Átfogó riasztások, cégek és foglalások egy helyen.</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-primary" type="button" (click)="onCreateCompany()">Új cég</button>
+      <button class="btn btn-secondary" type="button" (click)="onExportLogs()">Log export</button>
+      <button class="btn btn-ghost" type="button" (click)="onRoleOverride()">Szerep felülírás</button>
+    </div>
+  </header>
+
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <p class="kpi-label">Aktív cégek</p>
+      <p class="kpi-value">0</p>
+      <p class="kpi-note">Összes regisztrált cég</p>
+    </div>
+    <div class="kpi-card">
+      <p class="kpi-label">Folyamatban lévő foglalások</p>
+      <p class="kpi-value">0</p>
+      <p class="kpi-note">Ma és holnap</p>
+    </div>
+    <div class="kpi-card">
+      <p class="kpi-label">Nyitott log riasztások</p>
+      <p class="kpi-value">0</p>
+      <p class="kpi-note">Utóbbi 24 óra</p>
+    </div>
+    <div class="kpi-card">
+      <p class="kpi-label">Felfüggesztett cégek</p>
+      <p class="kpi-value">0</p>
+      <p class="kpi-note">Manuálisan tiltva</p>
+    </div>
+  </div>
+
+  <section class="quick-actions">
+    <div class="action-card">
+      <h3>Gyors műveletek</h3>
+      <div class="action-row">
+        <button class="btn btn-primary" type="button" (click)="onSuspendCompany()">Cég letiltása</button>
+        <button class="btn btn-secondary" type="button" (click)="onChangeOwner()">Tulajdonos csere</button>
+        <button class="btn btn-ghost" type="button" (click)="onMoveStaff()">Staff mozgatása</button>
+      </div>
+    </div>
+    <div class="action-card">
+      <h3>Audit vezérlés</h3>
+      <p>Keress role és staff változásokat, és lockold a céget.</p>
+      <div class="action-row">
+        <button class="btn btn-dark" type="button" (click)="onAuditLock()">Audit lock</button>
+        <button class="btn btn-ghost" type="button" (click)="onOpenEvents()">Esemény lista</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="panel-grid">
+    <div class="panel">
+      <div class="panel-header">
+        <h2>Legutóbbi cégek</h2>
+        <button class="link-btn" type="button" (click)="onViewCompanies()">Mind</button>
+      </div>
+      <ul class="list">
+        <li>
+          <span>Példa cég 01</span>
+          <span class="badge">Új</span>
+        </li>
+        <li>
+          <span>Példa cég 02</span>
+          <span class="badge">Aktív</span>
+        </li>
+        <li>
+          <span>Példa cég 03</span>
+          <span class="badge">Aktív</span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <h2>Legutóbbi logok</h2>
+        <button class="link-btn" type="button" (click)="onViewLogs()">Részletek</button>
+      </div>
+      <ul class="list">
+        <li>
+          <span>Auth hiba</span>
+          <span class="muted">10 perc</span>
+        </li>
+        <li>
+          <span>Új foglalás</span>
+          <span class="muted">30 perc</span>
+        </li>
+        <li>
+          <span>Szerep módosítás</span>
+          <span class="muted">1 óra</span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <h2>Kritikus foglalások</h2>
+        <button class="link-btn" type="button" (click)="onViewCriticalBookings()">Megnyitás</button>
+      </div>
+      <ul class="list">
+        <li>
+          <span>Foglalás törlés vita</span>
+          <span class="badge warning">Ellenőrzés</span>
+        </li>
+        <li>
+          <span>Dupla terhelés</span>
+          <span class="badge warning">Ellenőrzés</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>

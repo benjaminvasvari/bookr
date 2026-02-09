@@ -1,0 +1,37 @@
+<section class="page">
+  <header class="page-header">
+    <div>
+      <h1>Logok</h1>
+      <p>Rendszer logok, audit és riasztások.</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-primary" type="button" (click)="onAddFilter()">Új szűrő</button>
+      <button class="btn btn-secondary" type="button" (click)="onExportLogs()">Export</button>
+    </div>
+  </header>
+
+  <div class="filters">
+    <div class="filter-chip">Auth</div>
+    <div class="filter-chip">Foglalás</div>
+    <div class="filter-chip">Szerep változás</div>
+    <div class="filter-chip">API hiba</div>
+  </div>
+
+  <div class="log-card">
+    <div class="log-head">
+      <span>Idő</span>
+      <span>Esemény</span>
+      <span>Cél</span>
+      <span>Műveletek</span>
+    </div>
+    <div class="log-row">
+      <div>10:22</div>
+      <div>Szerep módosítás</div>
+      <div>Példa cég 01</div>
+      <div class="actions">
+        <button class="btn btn-ghost" type="button" (click)="onViewLog('LOG-01')">Részletek</button>
+        <button class="btn btn-outline" type="button" (click)="onInvestigateLog('LOG-01')">Vizsgálat</button>
+      </div>
+    </div>
+  </div>
+</section>
