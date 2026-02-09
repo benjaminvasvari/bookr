@@ -4,28 +4,22 @@
  */
 package com.vizsgaremek.bookr.model;
 
-import static com.vizsgaremek.bookr.model.Users.emf;
-import static com.vizsgaremek.bookr.model.Users.formatter;
 import java.io.Serializable;
 import java.util.Date;
-import java.util.List;
 import javax.persistence.Basic;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.EntityManager;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
+import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
-import javax.persistence.ParameterMode;
-import javax.persistence.StoredProcedureQuery;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
-import javax.persistence.Transient;
 import javax.validation.constraints.NotNull;
 import javax.xml.bind.annotation.XmlRootElement;
 
@@ -53,14 +47,22 @@ public class NotificationSettings implements Serializable {
     @Basic(optional = false)
     @Column(name = "id")
     private Integer id;
+    @Basic(optional = false)
+    @NotNull
     @Column(name = "appointment_confirmation")
-    private Boolean appointmentConfirmation;
+    private boolean appointmentConfirmation;
+    @Basic(optional = false)
+    @NotNull
     @Column(name = "appointment_reminder")
-    private Boolean appointmentReminder;
+    private boolean appointmentReminder;
+    @Basic(optional = false)
+    @NotNull
     @Column(name = "appointment_cancellation")
-    private Boolean appointmentCancellation;
+    private boolean appointmentCancellation;
+    @Basic(optional = false)
+    @NotNull
     @Column(name = "marketing_emails")
-    private Boolean marketingEmails;
+    private boolean marketingEmails;
     @Column(name = "updated_at")
     @Temporal(TemporalType.TIMESTAMP)
     private Date updatedAt;
@@ -69,14 +71,12 @@ public class NotificationSettings implements Serializable {
     @Column(name = "created_at")
     @Temporal(TemporalType.TIMESTAMP)
     private Date createdAt;
+    @Lob
+    @Column(name = "userId")
+    private byte[] userId;
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     @ManyToOne(optional = false)
-    
-    @Transient
-    private Integer userIdInt;
-    
-    
-    private Users userId;
+    private Users userId1;
 
     public NotificationSettings() {
     }
@@ -85,30 +85,14 @@ public class NotificationSettings implements Serializable {
         this.id = id;
     }
 
-    public NotificationSettings(Integer id, Date createdAt) {
-        this.id = id;
-        this.createdAt = createdAt;
-    }
-
-    public NotificationSettings(Integer id, Integer userIdInt, Boolean appointmentConfirmation, Boolean appointmentReminder, Boolean appointmentCancellation, Boolean marketingEmails, Date updatedAt, Date createdAt) {
-        this.id = id;
-        this.userIdInt = userIdInt;
-        this.appointmentConfirmation = appointmentConfirmation;
-        this.appointmentReminder = appointmentReminder;
-        this.appointmentCancellation = appointmentCancellation;
-        this.marketingEmails = marketingEmails;
-        this.updatedAt = updatedAt;
-        this.createdAt = createdAt;
-    }
-
-    public NotificationSettings(Integer id, Boolean appointmentConfirmation, Boolean appointmentReminder, Boolean appointmentCancellation, Boolean marketingEmails) {
+    public NotificationSettings(Integer id, boolean appointmentConfirmation, boolean appointmentReminder, boolean appointmentCancellation, boolean marketingEmails, Date createdAt) {
         this.id = id;
         this.appointmentConfirmation = appointmentConfirmation;
         this.appointmentReminder = appointmentReminder;
         this.appointmentCancellation = appointmentCancellation;
         this.marketingEmails = marketingEmails;
+        this.createdAt = createdAt;
     }
-    
 
     public Integer getId() {
         return id;
@@ -118,35 +102,35 @@ public class NotificationSettings implements Serializable {
         this.id = id;
     }
 
-    public Boolean getAppointmentConfirmation() {
+    public boolean getAppointmentConfirmation() {
         return appointmentConfirmation;
     }
 
-    public void setAppointmentConfirmation(Boolean appointmentConfirmation) {
+    public void setAppointmentConfirmation(boolean appointmentConfirmation) {
         this.appointmentConfirmation = appointmentConfirmation;
     }
 
-    public Boolean getAppointmentReminder() {
+    public boolean getAppointmentReminder() {
         return appointmentReminder;
     }
 
-    public void setAppointmentReminder(Boolean appointmentReminder) {
+    public void setAppointmentReminder(boolean appointmentReminder) {
         this.appointmentReminder = appointmentReminder;
     }
 
-    public Boolean getAppointmentCancellation() {
+    public boolean getAppointmentCancellation() {
         return appointmentCancellation;
     }
 
-    public void setAppointmentCancellation(Boolean appointmentCancellation) {
+    public void setAppointmentCancellation(boolean appointmentCancellation) {
         this.appointmentCancellation = appointmentCancellation;
     }
 
-    public Boolean getMarketingEmails() {
+    public boolean getMarketingEmails() {
         return marketingEmails;
     }
 
-    public void setMarketingEmails(Boolean marketingEmails) {
+    public void setMarketingEmails(boolean marketingEmails) {
         this.marketingEmails = marketingEmails;
     }
 
@@ -166,20 +150,20 @@ public class NotificationSettings implements Serializable {
         this.createdAt = createdAt;
     }
 
-    public Users getUserId() {
+    public byte[] getUserId() {
         return userId;
     }
 
-    public void setUserId(Users userId) {
+    public void setUserId(byte[] userId) {
         this.userId = userId;
     }
-    
-    public Integer getUserIdInt() {
-        return userIdInt;
+
+    public Users getUserId1() {
+        return userId1;
     }
 
-    public void setUserIdInt(Integer userIdInt) {
-        this.userIdInt = userIdInt;
+    public void setUserId1(Users userId1) {
+        this.userId1 = userId1;
     }
 
     @Override
@@ -206,75 +190,5 @@ public class NotificationSettings implements Serializable {
     public String toString() {
         return "com.vizsgaremek.bookr.model.NotificationSettings[ id=" + id + " ]";
     }
-
-    public static Boolean updateNotificationSetting(NotificationSettings updatedSetting) {
-        EntityManager em = emf.createEntityManager();
-
-        try {
-
-            StoredProcedureQuery spq = em.createStoredProcedureQuery("updateNotificationSetting");
-            spq.registerStoredProcedureParameter("idIN", Integer.class, ParameterMode.IN);
-            spq.registerStoredProcedureParameter("confIN", Boolean.class, ParameterMode.IN);
-            spq.registerStoredProcedureParameter("remindIN", Boolean.class, ParameterMode.IN);
-            spq.registerStoredProcedureParameter("cancellIN", Boolean.class, ParameterMode.IN);
-            spq.registerStoredProcedureParameter("marketingIN", Boolean.class, ParameterMode.IN);
-
-            spq.setParameter("idIN", updatedSetting.getId());
-            spq.setParameter("confIN", updatedSetting.getAppointmentConfirmation());
-            spq.setParameter("remindIN", updatedSetting.getAppointmentReminder());
-            spq.setParameter("cancellIN", updatedSetting.getAppointmentCancellation());
-            spq.setParameter("marketingIN", updatedSetting.getMarketingEmails());
-
-            spq.execute();
-
-            return true;
-
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            return false;
-        }
-    }
-
-    public static NotificationSettings getAllNotificationSettings(Integer userId) {
-        EntityManager em = emf.createEntityManager();
-
-        try {
-            StoredProcedureQuery spq = em.createStoredProcedureQuery("getAllNotificationSettings");
-            spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
-
-            spq.setParameter("userIdIN", userId);
-
-            spq.execute();
-
-            List<Object[]> resultList = spq.getResultList();
-
-            // If no user found, return null
-            if (resultList.isEmpty()) {
-                return null;
-            }
-
-            Object[] record = resultList.get(0);
-
-            NotificationSettings s = new NotificationSettings(
-                    Integer.valueOf(record[0].toString()),
-                    Integer.valueOf(record[1].toString()),
-                    Boolean.parseBoolean(record[2].toString()),
-                    Boolean.parseBoolean(record[3].toString()),
-                    Boolean.parseBoolean(record[4].toString()),
-                    Boolean.parseBoolean(record[5].toString()),
-                    record[7] != null ? null : formatter.parse(record[6].toString()),
-                    formatter.parse(record[7].toString())
-                    );
-
-            return s;
-
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            return null;
-        } finally {
-            if (em != null && em.isOpen()) {
-                em.close();
-            }
-        }
-    }
+    
 }

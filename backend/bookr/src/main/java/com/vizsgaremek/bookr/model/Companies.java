@@ -4,18 +4,13 @@
  */
 package com.vizsgaremek.bookr.model;
 
-import static com.vizsgaremek.bookr.model.Users.emf;
-import static com.vizsgaremek.bookr.model.Users.formatter;
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
-import java.util.List;
 import javax.persistence.Basic;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.EntityManager;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -25,8 +20,6 @@ import javax.persistence.ManyToOne;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.OneToMany;
-import javax.persistence.ParameterMode;
-import javax.persistence.StoredProcedureQuery;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
@@ -58,16 +51,10 @@ import javax.xml.bind.annotation.XmlTransient;
     @NamedQuery(name = "Companies.findByUpdatedAt", query = "SELECT c FROM Companies c WHERE c.updatedAt = :updatedAt"),
     @NamedQuery(name = "Companies.findByDeletedAt", query = "SELECT c FROM Companies c WHERE c.deletedAt = :deletedAt"),
     @NamedQuery(name = "Companies.findByIsDeleted", query = "SELECT c FROM Companies c WHERE c.isDeleted = :isDeleted"),
-    @NamedQuery(name = "Companies.findByIsActive", query = "SELECT c FROM Companies c WHERE c.isActive = :isActive")})
+    @NamedQuery(name = "Companies.findByIsActive", query = "SELECT c FROM Companies c WHERE c.isActive = :isActive"),
+    @NamedQuery(name = "Companies.findByAllowSameDayBooking", query = "SELECT c FROM Companies c WHERE c.allowSameDayBooking = :allowSameDayBooking"),
+    @NamedQuery(name = "Companies.findByMinimumBookingHoursAhead", query = "SELECT c FROM Companies c WHERE c.minimumBookingHoursAhead = :minimumBookingHoursAhead")})
 public class Companies implements Serializable {
-
-    @Column(name = "allow_same_day_booking")
-    private Boolean allowSameDayBooking;
-    @Column(name = "minimum_booking_hours_ahead")
-    private Integer minimumBookingHoursAhead;
-
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "companyId")
-    private Collection<Favorites> favoritesCollection;
 
     private static final long serialVersionUID = 1L;
     @Id
@@ -129,8 +116,12 @@ public class Companies implements Serializable {
     @NotNull
     @Column(name = "is_active")
     private boolean isActive;
-    @Column(name = "business_category_id", insertable = false, updatable = false)
-    private Integer businessCategoryIdInt;
+    @Column(name = "allow_same_day_booking")
+    private Boolean allowSameDayBooking;
+    @Column(name = "minimum_booking_hours_ahead")
+    private Integer minimumBookingHoursAhead;
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "companyId")
+    private Collection<Favorites> favoritesCollection;
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "companyId")
     private Collection<Appointments> appointmentsCollection;
     @OneToMany(mappedBy = "companyId")
@@ -145,31 +136,18 @@ public class Companies implements Serializable {
     private Collection<AuditLogs> auditLogsCollection;
     @OneToMany(mappedBy = "companyId")
     private Collection<Users> usersCollection;
-    @JoinColumn(name = "owner_id", referencedColumnName = "id")
-    @ManyToOne(optional = false)
-    private Users ownerId;
     @JoinColumn(name = "business_category_id", referencedColumnName = "id")
     @ManyToOne
     private BusinessCategories businessCategoryId;
+    @JoinColumn(name = "owner_id", referencedColumnName = "id")
+    @ManyToOne(optional = false)
+    private Users ownerId;
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "companyId")
     private Collection<Reviews> reviewsCollection;
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "companyId")
     private Collection<OpeningHours> openingHoursCollection;
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "companyId")
     private Collection<TemporaryClosedPeriods> temporaryClosedPeriodsCollection;
-
-    // Transient fields for calculated values from getCompanyDataById stored procedure
-    @javax.persistence.Transient
-    private String categoryName;
-
-    @javax.persistence.Transient
-    private String imageUrl;
-
-    @javax.persistence.Transient
-    private Double rating;
-
-    @javax.persistence.Transient
-    private Integer reviewCount;
 
     public Companies() {
     }
@@ -185,77 +163,6 @@ public class Companies implements Serializable {
         this.isActive = isActive;
     }
 
-    public Companies(Integer id, String name, String description, String address, String city, String postalCode, String country, String phone, String email, String website, Integer bookingAdvanceDays, Integer cancellationHours, Date createdAt, Date updatedAt, boolean isActive) {
-        this.id = id;
-        this.name = name;
-        this.description = description;
-        this.address = address;
-        this.city = city;
-        this.postalCode = postalCode;
-        this.country = country;
-        this.phone = phone;
-        this.email = email;
-        this.website = website;
-        this.bookingAdvanceDays = bookingAdvanceDays;
-        this.cancellationHours = cancellationHours;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
-        this.isActive = isActive;
-    }
-
-    // CheckCompany request
-    public Companies(Boolean isDeleted, boolean isActive) {
-        this.isDeleted = isDeleted;
-        this.isActive = isActive;
-    }
-
-    public Companies(Integer id, String name, String description, String address, String city, String postalCode, String country, String phone, String email, String website, Integer businessCategoryIdInt, String categoryName, String imageUrl, Double rating, Integer reviewCount) {
-        this.id = id;
-        this.name = name;
-        this.description = description;
-        this.address = address;
-        this.city = city;
-        this.postalCode = postalCode;
-        this.country = country;
-        this.phone = phone;
-        this.email = email;
-        this.website = website;
-        this.businessCategoryIdInt = businessCategoryIdInt;
-        this.categoryName = categoryName;
-        this.imageUrl = imageUrl;
-        this.rating = rating;
-        this.reviewCount = reviewCount;
-    }
-
-    // get Top & New & Featured recommendations
-    public Companies(Integer id, String name, Double rating, Integer reviewCount, String address, String imageUrl) {
-        this.id = id;
-        this.name = name;
-        this.rating = rating;
-        this.reviewCount = reviewCount;
-        this.address = address;
-        this.imageUrl = imageUrl;
-    }
-
-    // getCompnayShort response
-    public Companies(Integer id, String name, String address, String postalCode, String city, String country, String categoryName, Double rating, Integer reviewCount, String imageUrl) {
-        this.id = id;
-        this.name = name;
-        this.address = address;
-        this.postalCode = postalCode;
-        this.city = city;
-        this.country = country;
-        this.categoryName = categoryName;
-        this.rating = rating;
-        this.reviewCount = reviewCount;
-        this.imageUrl = imageUrl;
-    }
-
-    public Companies(Integer id, Integer bookingAdvanceDays) {
-        this.id = id;
-        this.bookingAdvanceDays = bookingAdvanceDays;
-    }
-    
     public Integer getId() {
         return id;
     }
@@ -392,12 +299,29 @@ public class Companies implements Serializable {
         this.isActive = isActive;
     }
 
-    public Integer getBusinessCategoryIdInt() {
-        return businessCategoryIdInt;
+    public Boolean getAllowSameDayBooking() {
+        return allowSameDayBooking;
     }
 
-    public void setBusinessCategoryIdInt(Integer businessCategoryIdInt) {
-        this.businessCategoryIdInt = businessCategoryIdInt;
+    public void setAllowSameDayBooking(Boolean allowSameDayBooking) {
+        this.allowSameDayBooking = allowSameDayBooking;
+    }
+
+    public Integer getMinimumBookingHoursAhead() {
+        return minimumBookingHoursAhead;
+    }
+
+    public void setMinimumBookingHoursAhead(Integer minimumBookingHoursAhead) {
+        this.minimumBookingHoursAhead = minimumBookingHoursAhead;
+    }
+
+    @XmlTransient
+    public Collection<Favorites> getFavoritesCollection() {
+        return favoritesCollection;
+    }
+
+    public void setFavoritesCollection(Collection<Favorites> favoritesCollection) {
+        this.favoritesCollection = favoritesCollection;
     }
 
     @XmlTransient
@@ -459,25 +383,8 @@ public class Companies implements Serializable {
         return usersCollection;
     }
 
-    @XmlTransient
-    public Collection<Favorites> getFavoritesCollection() {
-        return favoritesCollection;
-    }
-
-    public void setFavoritesCollection(Collection<Favorites> favoritesCollection) {
-        this.favoritesCollection = favoritesCollection;
-    }
-
     public void setUsersCollection(Collection<Users> usersCollection) {
         this.usersCollection = usersCollection;
-    }
-
-    public Users getOwnerId() {
-        return ownerId;
-    }
-
-    public void setOwnerId(Users ownerId) {
-        this.ownerId = ownerId;
     }
 
     public BusinessCategories getBusinessCategoryId() {
@@ -486,6 +393,14 @@ public class Companies implements Serializable {
 
     public void setBusinessCategoryId(BusinessCategories businessCategoryId) {
         this.businessCategoryId = businessCategoryId;
+    }
+
+    public Users getOwnerId() {
+        return ownerId;
+    }
+
+    public void setOwnerId(Users ownerId) {
+        this.ownerId = ownerId;
     }
 
     @XmlTransient
@@ -522,39 +437,6 @@ public class Companies implements Serializable {
         return hash;
     }
 
-    // Getters and setters for transient fields
-    public String getCategoryName() {
-        return categoryName;
-    }
-
-    public void setCategoryName(String categoryName) {
-        this.categoryName = categoryName;
-    }
-
-    public String getImageUrl() {
-        return imageUrl;
-    }
-
-    public void setImageUrl(String imageUrl) {
-        this.imageUrl = imageUrl;
-    }
-
-    public Double getRating() {
-        return rating;
-    }
-
-    public void setRating(Double rating) {
-        this.rating = rating;
-    }
-
-    public Integer getReviewCount() {
-        return reviewCount;
-    }
-
-    public void setReviewCount(Integer reviewCount) {
-        this.reviewCount = reviewCount;
-    }
-
     @Override
     public boolean equals(Object object) {
         // TODO: Warning - this method won't work in the case the id fields are not set
@@ -572,367 +454,5 @@ public class Companies implements Serializable {
     public String toString() {
         return "com.vizsgaremek.bookr.model.Companies[ id=" + id + " ]";
     }
-
-    public static Companies getCompanyById(Integer id) {
-        EntityManager em = emf.createEntityManager();
-
-        try {
-            StoredProcedureQuery spq = em.createStoredProcedureQuery("getCompanyById");
-            spq.registerStoredProcedureParameter("idIN", Integer.class, ParameterMode.IN);
-
-            spq.setParameter("idIN", id);
-
-            spq.execute();
-
-            List<Object[]> resultList = spq.getResultList();
-
-            if (resultList.isEmpty()) {
-                return null;
-            }
-
-            // Csak az első rekord kell (LIMIT 1 a stored procedure-ben)
-            Object[] record = resultList.get(0);
-
-            Companies company = new Companies(
-                    Integer.valueOf(record[0].toString()),
-                    record[1].toString(),
-                    record[2].toString(),
-                    record[3].toString(),
-                    record[4].toString(),
-                    record[5].toString(),
-                    record[6].toString(),
-                    record[7].toString(),
-                    record[8].toString(),
-                    record[9].toString(),
-                    Integer.valueOf(record[10].toString()),
-                    Integer.valueOf(record[11].toString()),
-                    formatter.parse(record[12].toString()),
-                    record[13] == null ? null : formatter.parse(record[13].toString()), // updated_at
-                    Boolean.parseBoolean(record[14].toString())
-            );
-
-            return company;
-
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            return null;
-        } finally {
-            if (em != null && em.isOpen()) {
-                em.close();
-            }
-        }
-    }
-
-    public static Companies checkCompany(Integer id) {
-        EntityManager em = emf.createEntityManager();
-
-        try {
-            StoredProcedureQuery spq = em.createStoredProcedureQuery("checkCompany");
-            spq.registerStoredProcedureParameter("idIN", Integer.class, ParameterMode.IN);
-
-            spq.setParameter("idIN", id);
-
-            spq.execute();
-
-            List<Object[]> resultList = spq.getResultList();
-
-            if (resultList.isEmpty()) {
-                return null;
-            }
-
-            // Csak az első rekord kell (LIMIT 1 a stored procedure-ben)
-            Object[] record = resultList.get(0);
-
-            Companies company = new Companies(
-                    Boolean.parseBoolean(record[0].toString()),
-                    Boolean.parseBoolean(record[1].toString())
-            );
-
-            return company;
-
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            return null;
-        } finally {
-            if (em != null && em.isOpen()) {
-                em.close();
-            }
-        }
-    }
-
-    /**
-     * Get complete company data with calculated fields This method calls the
-     * getCompanyDataById stored procedure which returns: - All company fields -
-     * business_category_id - category name (from business_categories table) -
-     * image_url (main image URL) - rating (average from reviews) - review_count
-     * (total reviews)
-     *
-     * @param id Company ID
-     * @return Companies object with all data or null if not found
-     */
-    public static Companies getCompanyDataById(Integer id) {
-        EntityManager em = emf.createEntityManager();
-
-        try {
-            StoredProcedureQuery spq = em.createStoredProcedureQuery("getCompanyDataById");
-            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
-            spq.setParameter("companyIdIN", id);
-
-            spq.execute();
-
-            List<Object[]> resultList = spq.getResultList();
-
-            if (resultList.isEmpty()) {
-                return null;
-            }
-
-            Object[] record = resultList.get(0);
-
-            // Create Companies object with basic data
-            Companies company = new Companies(
-                    Integer.valueOf(record[0].toString()),
-                    record[1].toString(),
-                    record[2] != null ? record[2].toString() : null,
-                    record[3] != null ? record[3].toString() : null,
-                    record[4] != null ? record[4].toString() : null,
-                    record[5] != null ? record[5].toString() : null,
-                    record[6] != null ? record[6].toString() : null,
-                    record[7] != null ? record[7].toString() : null,
-                    record[8] != null ? record[8].toString() : null,
-                    record[9] != null ? record[9].toString() : null,
-                    // Business category ID
-                    record[10] != null ? Integer.valueOf(record[10].toString()) : null,
-                    // Calculated/joined fields (transient)
-                    record[11] != null ? record[11].toString() : null,
-                    record[12] != null ? record[12].toString() : null,
-                    record[13] != null ? Double.valueOf(record[13].toString()) : 0.0,
-                    record[14] != null ? Integer.valueOf(record[14].toString()) : 0
-            );
-
-            return company;
-
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            return null;
-        } finally {
-            if (em != null && em.isOpen()) {
-                em.close();
-            }
-        }
-    }
-
-    public static List<Companies> getTopRecommendations(Integer limit) {
-        EntityManager em = emf.createEntityManager();
-
-        try {
-            StoredProcedureQuery spq = em.createStoredProcedureQuery("getTopRecommendations");
-            spq.registerStoredProcedureParameter("limitIN", Integer.class, ParameterMode.IN);
-            spq.setParameter("limitIN", limit);
-
-            spq.execute();
-
-            List<Object[]> resultList = spq.getResultList();
-
-            // Empty list if no results
-            if (resultList.isEmpty()) {
-                return new ArrayList<>();
-            }
-
-            List<Companies> companiesList = new ArrayList<>();
-
-            for (Object[] record : resultList) {
-                Companies company = new Companies(
-                        Integer.valueOf(record[0].toString()),
-                        record[1].toString(),
-                        Double.parseDouble(record[2].toString()),
-                        Integer.valueOf(record[3].toString()),
-                        record[4].toString(),
-                        record[5].toString()
-                );
-
-                companiesList.add(company);  // Hozzáadjuk a listához!
-            }
-
-            return companiesList;  // Az ÖSSZES képet visszaadjuk!
-
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            return new ArrayList<>();  // Error esetén üres lista (nem null!)
-        } finally {
-            if (em != null && em.isOpen()) {
-                em.close();
-            }
-        }
-    }
-
-    public static List<Companies> getNewCompanies(Integer limit) {
-        EntityManager em = emf.createEntityManager();
-
-        try {
-            StoredProcedureQuery spq = em.createStoredProcedureQuery("getNewCompanies");
-            spq.registerStoredProcedureParameter("limitIN", Integer.class, ParameterMode.IN);
-            spq.setParameter("limitIN", limit);
-
-            spq.execute();
-
-            List<Object[]> resultList = spq.getResultList();
-
-            // Empty list if no results
-            if (resultList.isEmpty()) {
-                return new ArrayList<>();
-            }
-
-            List<Companies> companiesList = new ArrayList<>();
-
-            for (Object[] record : resultList) {
-                Companies company = new Companies(
-                        Integer.valueOf(record[0].toString()),
-                        record[1].toString(),
-                        Double.parseDouble(record[2].toString()),
-                        Integer.valueOf(record[3].toString()),
-                        record[4].toString(),
-                        record[5].toString()
-                );
-
-                companiesList.add(company);  // Hozzáadjuk a listához!
-            }
-
-            return companiesList;  // Az ÖSSZES képet visszaadjuk!
-
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            return new ArrayList<>();  // Error esetén üres lista (nem null!)
-        } finally {
-            if (em != null && em.isOpen()) {
-                em.close();
-            }
-        }
-    }
-
-    public static List<Companies> getFeaturedCompanies(Integer limit) {
-        EntityManager em = emf.createEntityManager();
-
-        try {
-            StoredProcedureQuery spq = em.createStoredProcedureQuery("getFeaturedCompanies");
-            spq.registerStoredProcedureParameter("limitIN", Integer.class, ParameterMode.IN);
-            spq.setParameter("limitIN", limit);
-
-            spq.execute();
-
-            List<Object[]> resultList = spq.getResultList();
-
-            // Empty list if no results
-            if (resultList.isEmpty()) {
-                return new ArrayList<>();
-            }
-
-            List<Companies> companiesList = new ArrayList<>();
-
-            for (Object[] record : resultList) {
-                Companies company = new Companies(
-                        Integer.valueOf(record[0].toString()),
-                        record[1].toString(),
-                        Double.parseDouble(record[2].toString()),
-                        Integer.valueOf(record[3].toString()),
-                        record[4].toString(),
-                        record[5].toString()
-                );
-
-                companiesList.add(company);  // Hozzáadjuk a listához!
-            }
-
-            return companiesList;  // Az ÖSSZES képet visszaadjuk!
-
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            return new ArrayList<>();  // Error esetén üres lista (nem null!)
-        } finally {
-            if (em != null && em.isOpen()) {
-                em.close();
-            }
-        }
-    }
-
-    public static Companies getCompanyShort(Integer id) {
-        EntityManager em = emf.createEntityManager();
-
-        try {
-            StoredProcedureQuery spq = em.createStoredProcedureQuery("getCompanyShort");
-            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
-            spq.setParameter("companyIdIN", id);
-
-            spq.execute();
-
-            List<Object[]> resultList = spq.getResultList();
-
-            if (resultList.isEmpty()) {
-                return null;
-            }
-
-            Object[] record = resultList.get(0);
-
-            // Create Companies object with basic data
-            Companies company = new Companies(
-                    Integer.valueOf(record[0].toString()),
-                    record[1].toString(),
-                    record[2].toString(),
-                    record[3].toString(),
-                    record[4].toString(),
-                    record[5].toString(),
-                    record[6].toString(),
-                    Double.parseDouble(record[7].toString()),
-                    Integer.valueOf(record[8].toString()),
-                    record[9] == null ? null : record[9].toString()
-            );
-
-            return company;
-
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            return null;
-        } finally {
-            if (em != null && em.isOpen()) {
-                em.close();
-            }
-        }
-    }
-
-    public static Companies getCompanyBookingAdvanceDays(Integer id) {
-        EntityManager em = emf.createEntityManager();
-
-        try {
-            StoredProcedureQuery spq = em.createStoredProcedureQuery("getCompanyBookingAdvanceDays");
-            
-            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
-            
-            spq.setParameter("companyIdIN", id);
-
-            spq.execute();
-
-            List<Object[]> resultList = spq.getResultList();
-
-            if (resultList.isEmpty()) {
-                return null;
-            }
-
-            Object[] record = resultList.get(0);
-
-            // Create Companies object with basic data
-            Companies company = new Companies(
-                    Integer.valueOf(record[0].toString()),
-                    Integer.valueOf(record[1].toString())
-            );
-
-            return company;
-
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            return null;
-        } finally {
-            if (em != null && em.isOpen()) {
-                em.close();
-            }
-        }
-    }
-
+    
 }

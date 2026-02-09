@@ -63,16 +63,7 @@ import javax.xml.bind.annotation.XmlTransient;
     @NamedQuery(name = "Users.findByTwoFactorEnabled", query = "SELECT u FROM Users u WHERE u.twoFactorEnabled = :twoFactorEnabled"),
     @NamedQuery(name = "Users.findByTwoFactorSecret", query = "SELECT u FROM Users u WHERE u.twoFactorSecret = :twoFactorSecret"),
     @NamedQuery(name = "Users.findByTwoFactorConfirmedAt", query = "SELECT u FROM Users u WHERE u.twoFactorConfirmedAt = :twoFactorConfirmedAt")})
-
 public class Users implements Serializable {
-
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "performedByUserId")
-    private Collection<AuditLogs> auditLogsCollection;
-    @OneToMany(mappedBy = "affectedEntityId")
-    private Collection<AuditLogs> auditLogsCollection1;
-
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "userId")
-    private Collection<Favorites> favoritesCollection;
 
     private static final long serialVersionUID = 1L;
     @Id
@@ -109,8 +100,6 @@ public class Users implements Serializable {
     @Size(min = 1, max = 30)
     @Column(name = "phone")
     private String phone;
-    @Column(name = "company_id", insertable = false, updatable = false)
-    private Integer companyId;
     @Basic(optional = false)
     @NotNull
     @Column(name = "created_at")
@@ -132,7 +121,6 @@ public class Users implements Serializable {
     @Column(name = "register_finished_at")
     @Temporal(TemporalType.TIMESTAMP)
     private Date registerFinishedAt;
-
     @Basic(optional = false)
     @NotNull
     @Column(name = "is_active")
@@ -148,22 +136,28 @@ public class Users implements Serializable {
     @Temporal(TemporalType.TIMESTAMP)
     private Date twoFactorConfirmedAt;
     @Lob
-    @Size(max = 65535)
+    @Size(max = 2147483647)
     @Column(name = "two_factor_recovery_codes")
     private String twoFactorRecoveryCodes;
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "userId")
+    private Collection<Favorites> favoritesCollection;
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "clientId")
     private Collection<Appointments> appointmentsCollection;
     @OneToMany(mappedBy = "cancelledBy")
     private Collection<Appointments> appointmentsCollection1;
     @OneToMany(mappedBy = "userId")
     private Collection<Images> imagesCollection;
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "userId")
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "userId1")
     private Collection<NotificationSettings> notificationSettingsCollection;
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "userId")
     private Collection<Staff> staffCollection;
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "performedByUserId")
+    private Collection<AuditLogs> auditLogsCollection;
+    @OneToMany(mappedBy = "affectedEntityId")
+    private Collection<AuditLogs> auditLogsCollection1;
     @JoinColumn(name = "company_id", referencedColumnName = "id")
     @ManyToOne
-    private Companies company;
+    private Companies companyId;
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "ownerId")
     private Collection<Companies> companiesCollection;
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "clientId")
@@ -182,6 +176,9 @@ public class Users implements Serializable {
     private Integer roleId;
 
     @Transient
+    private Integer companyIdInt;
+
+    @Transient
     private String rolesString;
 
     @Transient
@@ -192,9 +189,6 @@ public class Users implements Serializable {
 
     @Transient
     private String regToken;
-
-    static EntityManagerFactory emf = Persistence.createEntityManagerFactory("com.vizsgaremek_bookr_war_1.0-SNAPSHOTPU");
-    static SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     public Users() {
     }
@@ -237,14 +231,14 @@ public class Users implements Serializable {
     }
 
     // login response constructor (data from stored procedure)
-    public Users(Integer id, String firstName, String lastName, String email, String password, String phone, Integer companyId, String avatarUrl, String rolesString) {
+    public Users(Integer id, String firstName, String lastName, String email, String password, String phone, Integer companyIdInt, String avatarUrl, String rolesString) {
         this.id = id;
         this.firstName = firstName;
         this.lastName = lastName;
         this.email = email;
         this.password = password;
         this.phone = phone;
-        this.companyId = companyId;
+        this.companyIdInt = companyIdInt;
         this.imageUrl = avatarUrl;
         this.rolesString = rolesString;
 
@@ -262,14 +256,14 @@ public class Users implements Serializable {
     }
 
     // getUserById
-    public Users(Integer id, String firstName, String lastName, String email, String phone, String imageUrl, Integer companyId, String rolesString, Date createdAt, Date lastLogin, Boolean isDeleted, Boolean isActive) {
+    public Users(Integer id, String firstName, String lastName, String email, String phone, String imageUrl, Integer companyIdInt, String rolesString, Date createdAt, Date lastLogin, Boolean isDeleted, Boolean isActive) {
         this.id = id;
         this.firstName = firstName;
         this.lastName = lastName;
         this.email = email;
         this.phone = phone;
         this.imageUrl = imageUrl;
-        this.companyId = companyId;
+        this.companyIdInt = companyIdInt;
         this.rolesString = rolesString;
         this.createdAt = createdAt;
         this.lastLogin = lastLogin;
@@ -293,7 +287,7 @@ public class Users implements Serializable {
     public Users(Integer id, String email, Integer companyId) {
         this.id = id;
         this.email = email;
-        this.companyId = companyId;
+        this.companyIdInt = companyIdInt;
     }
 
     // checkUser
@@ -312,13 +306,20 @@ public class Users implements Serializable {
         this.phone = phone;
     }
 
-    public Users(Integer id, String password) {
-        this.id = id;
-        this.password = password;
-    }
-
     public Integer getId() {
         return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public String getGuid() {
+        return guid;
+    }
+
+    public void setGuid(String guid) {
+        this.guid = guid;
     }
 
     public String getFirstName() {
@@ -361,14 +362,6 @@ public class Users implements Serializable {
         this.phone = phone;
     }
 
-    public Integer getCompanyId() {
-        return companyId;
-    }
-
-    public void setCompanyId(Integer companyId) {
-        this.companyId = companyId;
-    }
-
     public Date getCreatedAt() {
         return createdAt;
     }
@@ -389,8 +382,16 @@ public class Users implements Serializable {
         return deletedAt;
     }
 
+    public void setDeletedAt(Date deletedAt) {
+        this.deletedAt = deletedAt;
+    }
+
     public boolean getIsDeleted() {
         return isDeleted;
+    }
+
+    public void setIsDeleted(boolean isDeleted) {
+        this.isDeleted = isDeleted;
     }
 
     public Date getLastLogin() {
@@ -449,43 +450,13 @@ public class Users implements Serializable {
         this.twoFactorRecoveryCodes = twoFactorRecoveryCodes;
     }
 
-    public ArrayList<Roles> getRoles() {
-        return roles;
+    @XmlTransient
+    public Collection<Favorites> getFavoritesCollection() {
+        return favoritesCollection;
     }
 
-    public void setRoles(ArrayList<Roles> roles) {
-        this.roles = roles;
-    }
-
-    public String getRolesString() {
-        return rolesString;
-    }
-
-    public void setRolesString(String rolesString) {
-        this.rolesString = rolesString;
-    }
-
-    public String getRoleName() {
-        if (roleName != null) {
-            return roleName;
-        }
-        // Ha nincs beállítva, kivesszük a rolesString első elemét
-        if (rolesString != null && !rolesString.isEmpty()) {
-            return rolesString.split(",")[0].trim();
-        }
-        return null;
-    }
-
-    public void setRoleName(String roleName) {
-        this.roleName = roleName;
-    }
-
-    public String getRegToken() {
-        return regToken;
-    }
-
-    public void setRegToken(String regToken) {
-        this.regToken = regToken;
+    public void setFavoritesCollection(Collection<Favorites> favoritesCollection) {
+        this.favoritesCollection = favoritesCollection;
     }
 
     @XmlTransient
@@ -533,23 +504,30 @@ public class Users implements Serializable {
         this.staffCollection = staffCollection;
     }
 
-    public Companies getCompany() {
-        return company;
+    @XmlTransient
+    public Collection<AuditLogs> getAuditLogsCollection() {
+        return auditLogsCollection;
     }
 
-    public Integer getRoleId() {
-        return roleId;
+    public void setAuditLogsCollection(Collection<AuditLogs> auditLogsCollection) {
+        this.auditLogsCollection = auditLogsCollection;
     }
 
-    /**
-     * Helper method for JWT - returns role ID as Integer
-     */
-    public Integer getRoleIdAsInteger() {
-        return roleId;
+    @XmlTransient
+    public Collection<AuditLogs> getAuditLogsCollection1() {
+        return auditLogsCollection1;
     }
 
-    public void setRoleId(Integer roleId) {
-        this.roleId = roleId;
+    public void setAuditLogsCollection1(Collection<AuditLogs> auditLogsCollection1) {
+        this.auditLogsCollection1 = auditLogsCollection1;
+    }
+
+    public Companies getCompanyId() {
+        return companyId;
+    }
+
+    public void setCompanyId(Companies companyId) {
+        this.companyId = companyId;
     }
 
     @XmlTransient
@@ -580,6 +558,15 @@ public class Users implements Serializable {
     }
 
     @XmlTransient
+    public Collection<Tokens> getTokensCollection() {
+        return tokensCollection;
+    }
+
+    public void setTokensCollection(Collection<Tokens> tokensCollection) {
+        this.tokensCollection = tokensCollection;
+    }
+
+    @XmlTransient
     public Collection<UserXRole> getUserXRoleCollection() {
         return userXRoleCollection;
     }
@@ -588,19 +575,67 @@ public class Users implements Serializable {
         this.userXRoleCollection = userXRoleCollection;
     }
 
-    @Override
-    public int hashCode() {
-        int hash = 0;
-        hash += (id != null ? id.hashCode() : 0);
-        return hash;
+    // CUSTOM GET/SET
+    public ArrayList<Roles> getRoles() {
+        return roles;
+    }
+
+    public void setRoles(ArrayList<Roles> roles) {
+        this.roles = roles;
+    }
+
+    public Integer getRoleId() {
+        return roleId;
+    }
+
+    public void setRoleId(Integer roleId) {
+        this.roleId = roleId;
+    }
+
+    public String getRoleString() {
+        return rolesString;
+    }
+
+    public void setRoleString(String roleString) {
+        this.rolesString = roleString;
+    }
+
+    public String getRoleName() {
+        if (roleName != null) {
+            return roleName;
+        }
+        // Ha nincs beállítva, kivesszük a rolesString első elemét
+        if (rolesString != null && !rolesString.isEmpty()) {
+            return rolesString.split(",")[0].trim();
+        }
+        return null;
+    }
+
+    public void setRoleName(String roleName) {
+        this.roleName = roleName;
     }
 
     public String getImageUrl() {
         return imageUrl;
     }
 
-    public void setImageUrl(String avatarUrl) {
-        this.imageUrl = avatarUrl;
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    public String getRegToken() {
+        return regToken;
+    }
+
+    public void setRegToken(String regToken) {
+        this.regToken = regToken;
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 0;
+        hash += (id != null ? id.hashCode() : 0);
+        return hash;
     }
 
     @Override
@@ -620,6 +655,9 @@ public class Users implements Serializable {
     public String toString() {
         return "com.vizsgaremek.bookr.model.Users[ id=" + id + " ]";
     }
+
+    static EntityManagerFactory emf = Persistence.createEntityManagerFactory("com.vizsgaremek_bookr_war_1.0-SNAPSHOTPU");
+    static SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     // ----------- TÁROLT ELJÁRÁS MEGHÍVÁSOK------------
     public static Users clientRegister(Users clientRegistered) {
@@ -1114,32 +1152,5 @@ public class Users implements Serializable {
                 em.close();
             }
         }
-    }
-
-    @XmlTransient
-    public Collection<Favorites> getFavoritesCollection() {
-        return favoritesCollection;
-    }
-
-    public void setFavoritesCollection(Collection<Favorites> favoritesCollection) {
-        this.favoritesCollection = favoritesCollection;
-    }
-
-    @XmlTransient
-    public Collection<AuditLogs> getAuditLogsCollection() {
-        return auditLogsCollection;
-    }
-
-    public void setAuditLogsCollection(Collection<AuditLogs> auditLogsCollection) {
-        this.auditLogsCollection = auditLogsCollection;
-    }
-
-    @XmlTransient
-    public Collection<AuditLogs> getAuditLogsCollection1() {
-        return auditLogsCollection1;
-    }
-
-    public void setAuditLogsCollection1(Collection<AuditLogs> auditLogsCollection1) {
-        this.auditLogsCollection1 = auditLogsCollection1;
     }
 }
