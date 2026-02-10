@@ -1,0 +1,36 @@
+<section class="page">
+  <header class="page-header">
+    <div>
+      <h1>Staff</h1>
+      <p>Staff tagok cégenként, jogosultságokkal.</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-primary" type="button" (click)="onAddStaff()">Staff hozzáadása</button>
+      <button class="btn btn-secondary" type="button" (click)="onBulkRoleUpdate()">Tömeges szerepkör frissítés</button>
+    </div>
+  </header>
+
+  <div class="table-card">
+    <div class="table-head">
+      <span>Név</span>
+      <span>Cég</span>
+      <span>Szerepkör</span>
+      <span>Státusz</span>
+      <span>Műveletek</span>
+    </div>
+    <div class="table-row">
+      <div>
+        <strong>Staff 01</strong>
+        <span class="sub">staff01@email.com</span>
+      </div>
+      <div>Példa cég 01</div>
+      <div><span class="role-pill">staff</span></div>
+      <div><span class="status-pill active">Aktív</span></div>
+      <div class="actions">
+        <button class="btn btn-ghost" type="button" (click)="onChangeRole('Staff 01')">Szerepkör csere</button>
+        <button class="btn btn-outline" type="button" (click)="onChangeCompany('Staff 01')">Cég csere</button>
+        <button class="btn btn-danger" type="button" (click)="onDisableStaff('Staff 01')">Letiltás</button>
+      </div>
+    </div>
+  </div>
+</section>

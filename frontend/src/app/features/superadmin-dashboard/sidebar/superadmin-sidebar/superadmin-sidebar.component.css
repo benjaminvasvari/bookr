@@ -1,0 +1,155 @@
+.superadmin-sidebar {
+  width: 68px;
+  flex: 0 0 68px;
+  min-height: 100%;
+  height: auto;
+  background: #1f2937;
+  color: #f8fafc;
+  padding: 18px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  transition: width 0.2s ease;
+  overflow: hidden;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.superadmin-sidebar:hover {
+  width: 220px;
+  flex-basis: 220px;
+}
+
+.superadmin-sidebar.is-pinned {
+  width: 220px;
+  flex-basis: 220px;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 6px;
+  height: 48px;
+}
+
+.brand-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: none;
+  padding: 1px;
+  display: block;
+  object-fit: contain;
+  flex-shrink: 0;
+  z-index: 1;
+  line-height: 1;
+}
+
+.pin-btn {
+  position: absolute;
+  top: 14px;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(148, 163, 184, 0.18);
+  color: #f8fafc;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.superadmin-sidebar:not(:hover):not(.is-pinned) .pin-btn {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pin-btn:hover {
+  background: rgba(148, 163, 184, 0.28);
+  border-color: rgba(148, 163, 184, 0.55);
+}
+
+.superadmin-sidebar.is-pinned .pin-btn {
+  background: rgba(148, 163, 184, 0.4);
+  border-color: rgba(148, 163, 184, 0.7);
+}
+
+.pin-icon {
+  font-size: 14px;
+  line-height: 1;
+  color: #f8fafc;
+  transform: rotate(25deg) translateY(1px);
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sidebar-nav a {
+  color: #f8fafc;
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: background 0.2s ease, color 0.2s ease;
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  align-items: center;
+  column-gap: 12px;
+}
+
+.sidebar-nav .home-link {
+  margin-bottom: 6px;
+  background: rgba(248, 250, 252, 0.12);
+  color: #f8fafc;
+}
+
+.sidebar-nav .home-link.active {
+  background: #f3c97a;
+  color: #2d3748;
+}
+
+.nav-divider {
+  height: 1px;
+  background: rgba(148, 163, 184, 0.35);
+  margin: 6px 4px 10px;
+}
+
+.sidebar-nav a i {
+  width: 20px;
+  text-align: center;
+  font-size: 15px;
+  justify-self: center;
+  flex-shrink: 0;
+  margin-left: 3px;
+}
+
+.nav-label {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  white-space: nowrap;
+}
+
+.superadmin-sidebar:hover .nav-label {
+  opacity: 1;
+}
+
+.superadmin-sidebar.is-pinned .nav-label {
+  opacity: 1;
+}
+
+.sidebar-nav a:hover {
+  background: rgba(148, 163, 184, 0.22);
+  color: #f8fafc;
+}
+
+.sidebar-nav a.active {
+  background: #f3c97a;
+  color: #2d3748;
+}

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 
@@ -11,6 +11,8 @@ import { Company } from '../core/models';
 import { CompaniesService } from '../core/services/companies.service';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Service } from '../core/models/service.model';
+import { Favorite, FavoritesService } from '../core/services/favorites.service';
+import { combineLatest, Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-sel-industry',
@@ -19,30 +21,53 @@ import { Service } from '../core/models/service.model';
   templateUrl: './sel-industry.component.html',
   styleUrls: ['./sel-industry.component.css'],
 })
-export class SelIndustryComponent implements OnInit {
+export class SelIndustryComponent implements OnInit, OnDestroy {
   companyId: number | null = null;
   company: Company | null = null;
   selectedCategoryId: number | null = null;
   isLoading: boolean = false;
   errorMessage: string = '';
   isFavorite: boolean = false;
+  private favoritesLoaded = false;
+  private favorites: Favorite[] = [];
+  private routeSubscription?: Subscription;
+  private favoritesSubscription?: Subscription;
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private companiesService: CompaniesService,
     private sanitizer: DomSanitizer,
-    private title: Title
+    private title: Title,
+    private favoritesService: FavoritesService
   ) {}
 
   ngOnInit(): void {
     // URL paraméterből kinyerjük a company ID-t
-    this.route.params.subscribe((params) => {
+    this.routeSubscription = this.route.params.subscribe((params) => {
       this.companyId = +params['id'];
       this.loadCompanyDetails();
+      this.updateFavoriteState();
     });
+
+    this.favoritesSubscription = combineLatest([
+      this.favoritesService.favorites$,
+      this.favoritesService.favoritesLoaded$
+    ]).subscribe(([favorites, loaded]) => {
+      this.favorites = favorites;
+      this.favoritesLoaded = loaded;
+      if (loaded) {
+        this.updateFavoriteState();
+      }
+    });
+
     // Oldal tetejére görgetés
     window.scrollTo(0, 0);
+  }
+
+  ngOnDestroy(): void {
+    this.routeSubscription?.unsubscribe();
+    this.favoritesSubscription?.unsubscribe();
   }
 
   loadCompanyDetails(): void {
@@ -75,6 +100,8 @@ export class SelIndustryComponent implements OnInit {
           this.isFavorite = data.isFavorite;
         }
 
+        this.updateFavoriteState();
+
         console.log('Cég adatok betöltve:', data);
       },
 
@@ -92,8 +119,33 @@ export class SelIndustryComponent implements OnInit {
   }
 
   toggleFavorite(): void {
-    this.isFavorite = !this.isFavorite;
-    // TODO: Később amikor van kedvencek API
+    if (!this.companyId) {
+      return;
+    }
+
+    const nextState = !this.isFavorite;
+    this.isFavorite = nextState;
+
+    const request$ = nextState
+      ? this.favoritesService.addFavorite(this.companyId)
+      : this.favoritesService.removeFavorite(this.companyId);
+
+    request$.subscribe({
+      error: (error) => {
+        console.error('Hiba a kedvenc módosítása során:', error);
+        this.isFavorite = !nextState;
+      },
+    });
+  }
+
+  private updateFavoriteState(): void {
+    if (!this.companyId || !this.favoritesLoaded) {
+      return;
+    }
+
+    this.isFavorite = this.favorites.some(
+      (favorite) => favorite.company.companyId === this.companyId
+    );
   }
 
   shareCompany(): void {

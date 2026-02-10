@@ -1,7 +1,8 @@
+// profile-favorites.component.ts
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { Company } from '../../../core/models';
+import { FavoritesService, Favorite } from '../../../core/services/favorites.service';
 
 @Component({
   selector: 'app-profile-favorites',
@@ -11,49 +12,41 @@ import { Company } from '../../../core/models';
   styleUrls: ['./profile-favorites.component.css'],
 })
 export class ProfileFavoritesComponent implements OnInit {
-  favorites: Company[] = [];
+  favorites: Favorite[] = [];
   isLoading: boolean = false;
+  error: string | null = null;
 
-  constructor(private router: Router) {}
+  constructor(
+    private router: Router,
+    private favoritesService: FavoritesService
+  ) {}
 
   ngOnInit(): void {
-    this.loadMockData();
+    this.favoritesService.favorites$.subscribe((favorites) => {
+      this.favorites = favorites;
+    });
+    this.loadFavorites();
   }
 
-  loadMockData(): void {
-    // Mock kedvenc cégek
-    this.favorites = [
-      {
-        id: 1,
-        name: 'Bella Szépségszalon',
-        imageUrl: 'https://via.placeholder.com/300x200',
-        rating: 4.8,
-        reviewCount: 142,
-        address: 'Pécs, Király utca 12.',
-        category: 'Fodrászat & Kozmetika',
-        description: 'Professzionális hajápolás és szépségápolás egy helyen.',
+  /**
+   * Kedvencek betöltése a backendről
+   */
+  loadFavorites(): void {
+    this.isLoading = true;
+    this.error = null;
+
+    this.favoritesService.getUserFavorites().subscribe({
+      next: (response) => {
+        this.favorites = response.result;
+        this.isLoading = false;
+        console.log('Kedvencek betöltve:', response);
       },
-      {
-        id: 2,
-        name: 'Jungle Pécs',
-        imageUrl: 'https://via.placeholder.com/300x200',
-        rating: 4.9,
-        reviewCount: 98,
-        address: 'Pécs, Jókai utca 5.',
-        category: 'Borbély',
-        description: 'Modern férfi borbély szakértő fodrászokkal.',
-      },
-      {
-        id: 3,
-        name: 'Relax Massage',
-        imageUrl: 'https://via.placeholder.com/300x200',
-        rating: 4.7,
-        reviewCount: 67,
-        address: 'Pécs, Rákóczi út 33.',
-        category: 'Masszázs',
-        description: 'Professzionális masszázs szolgáltatások relaxációhoz.',
-      },
-    ];
+      error: (err) => {
+        console.error('Hiba a kedvencek betöltése során:', err);
+        this.error = 'Nem sikerült betölteni a kedvenceket.';
+        this.isLoading = false;
+      }
+    });
   }
 
   /**
@@ -61,13 +54,6 @@ export class ProfileFavoritesComponent implements OnInit {
    */
   getRatingStars(rating: number): number[] {
     return Array(Math.floor(rating)).fill(0);
-  }
-
-  /**
-   * Ár formázás
-   */
-  formatPrice(price: number): string {
-    return new Intl.NumberFormat('hu-HU').format(price) + ' Ft-tól';
   }
 
   /**
@@ -80,21 +66,43 @@ export class ProfileFavoritesComponent implements OnInit {
   /**
    * Kedvenc eltávolítása
    */
-  removeFavorite(companyId: number, event: Event): void {
-    event.stopPropagation(); // Ne menjen át a cég oldalára amikor törlünk
+  removeFavorite(favoriteId: number, event: Event): void {
+    event.stopPropagation();
 
-    // TODO: Később API hívás lesz itt - DELETE /api/favorites/{companyId}
-    console.log('Eltávolítás kedvencekből:', companyId);
+    const favorite = this.favorites.find((fav) => fav.favoriteId === favoriteId);
+    if (!favorite) {
+      return;
+    }
 
-    // Mock: Eltávolítjuk a listából
-    this.favorites = this.favorites.filter((company) => company.id !== companyId);
+    this.favoritesService.removeFavorite(favorite.company.companyId).subscribe({
+      next: () => {
+        console.log('Kedvenc törölve:', favoriteId);
+        this.favorites = this.favorites.filter(fav => fav.favoriteId !== favoriteId);
+      },
+      error: (err) => {
+        console.error('Hiba a kedvenc törlése során:', err);
+        alert('Nem sikerült törölni a kedvencet.');
+      }
+    });
   }
 
   /**
    * Foglalás indítása
    */
   bookCompany(companyId: number, event: Event): void {
-    event.stopPropagation(); // Ne menjen át a cég oldalára
+    event.stopPropagation();
     this.router.navigate(['/appointment', companyId, 'services']);
+  }
+
+  /**
+   * Dátum formázása
+   */
+  formatDate(dateString: string): string {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('hu-HU', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
   }
 }

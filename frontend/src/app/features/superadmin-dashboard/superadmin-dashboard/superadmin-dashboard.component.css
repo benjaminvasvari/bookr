@@ -1,0 +1,17 @@
+.superadmin-dashboard {
+  display: flex;
+  gap: 0;
+  background: radial-gradient(circle at top left, rgba(240, 222, 190, 0.35), transparent 55%),
+    linear-gradient(135deg, #f8fafc 0%, #f3f1ec 50%, #f8fafc 100%);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.superadmin-dashboard-content {
+  flex: 1;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}

@@ -71,4 +71,9 @@ export const API_ENDPOINTS = {
     BY_COMPANY_AND_SERVICES: '/staff/by-company-and-services',
     DASHBOARD: (userId: number) => `/staff/dashboard/${userId}`,
   },
+  FAVORITES: {
+    GETALL: (userId: number) => `/favorites/getFavorites?id=${userId}`,
+    ADD: (companyId: number) => `/favorites/addFavorite/${companyId}`,
+    REMOVE: (companyId: number) => `/favorites/removeFavorite/${companyId}`,
+  },
 };

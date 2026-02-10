@@ -1,0 +1,46 @@
+<aside class="superadmin-sidebar" [class.is-pinned]="isPinned">
+  <div class="sidebar-header">
+    <img class="brand-icon" src="../../../../../assets/images/logo.png" alt="Bookr logo" />
+    <button
+      class="pin-btn"
+      type="button"
+      (click)="togglePin()"
+      [attr.aria-pressed]="isPinned"
+      aria-label="Rögzítés"
+    >
+      <i class="fas fa-thumbtack pin-icon" aria-hidden="true"></i>
+    </button>
+  </div>
+
+  <nav class="sidebar-nav">
+    <a class="home-link" routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+      <i class="fas fa-home"></i>
+      <span class="nav-label">Home</span>
+    </a>
+    <div class="nav-divider"></div>
+    <a routerLink="/superadmin/overview" routerLinkActive="active">
+      <i class="fas fa-shield-alt"></i>
+      <span class="nav-label">Áttekintés</span>
+    </a>
+    <a routerLink="/superadmin/companies" routerLinkActive="active">
+      <i class="fas fa-building"></i>
+      <span class="nav-label">Cégek</span>
+    </a>
+    <a routerLink="/superadmin/staff" routerLinkActive="active">
+      <i class="fas fa-user-friends"></i>
+      <span class="nav-label">Staff</span>
+    </a>
+    <a routerLink="/superadmin/owners" routerLinkActive="active">
+      <i class="fas fa-user-tie"></i>
+      <span class="nav-label">Tulajdonosok</span>
+    </a>
+    <a routerLink="/superadmin/bookings" routerLinkActive="active">
+      <i class="fas fa-calendar-check"></i>
+      <span class="nav-label">Foglalások</span>
+    </a>
+    <a routerLink="/superadmin/logs" routerLinkActive="active">
+      <i class="fas fa-file-alt"></i>
+      <span class="nav-label">Logok</span>
+    </a>
+  </nav>
+</aside>

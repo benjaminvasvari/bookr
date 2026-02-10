@@ -1,0 +1,34 @@
+<section class="page">
+  <header class="page-header">
+    <div>
+      <h1>Tulajdonosok</h1>
+      <p>Tulajdonos felhasználók és cég hozzárendelések.</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-primary" type="button" (click)="onInviteOwner()">Tulajdonos meghívás</button>
+      <button class="btn btn-secondary" type="button" (click)="onAuditRoles()">Szerep audit</button>
+    </div>
+  </header>
+
+  <div class="table-card">
+    <div class="table-head">
+      <span>Név</span>
+      <span>Cég</span>
+      <span>Staff</span>
+      <span>Műveletek</span>
+    </div>
+    <div class="table-row">
+      <div>
+        <strong>Tulajdonos 01</strong>
+        <span class="sub">owner01@email.com</span>
+      </div>
+      <div>Példa cég 01</div>
+      <div>12</div>
+      <div class="actions">
+        <button class="btn btn-ghost" type="button" (click)="onChangeOwner('Tulajdonos 01')">Tulajdonos csere</button>
+        <button class="btn btn-outline" type="button" (click)="onViewStaff('Példa cég 01')">Staff lista</button>
+        <button class="btn btn-danger" type="button" (click)="onDisableOwner('Tulajdonos 01')">Letiltás</button>
+      </div>
+    </div>
+  </div>
+</section>

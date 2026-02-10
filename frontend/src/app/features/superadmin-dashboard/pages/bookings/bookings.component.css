@@ -1,0 +1,135 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 18px 22px;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+}
+
+.page-header h1 {
+  margin: 0 0 6px;
+  font-size: 22px;
+  color: #111827;
+}
+
+.page-header p {
+  margin: 0;
+  color: #6b7280;
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  border: none;
+  border-radius: 10px;
+  padding: 9px 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.btn-primary {
+  background: #38a169;
+  color: #ffffff;
+}
+
+.btn-secondary {
+  background: #f3c97a;
+  color: #3a2a14;
+}
+
+.btn-ghost {
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  color: #111827;
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid #94a3b8;
+  color: #1f2937;
+}
+
+.btn-danger {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+
+.table-card {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 12px 0;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.table-head,
+.table-row {
+  display: grid;
+  grid-template-columns: minmax(200px, 1.4fr) minmax(140px, 1fr) minmax(160px, 1fr) 120px minmax(220px, 1.3fr);
+  align-items: center;
+  gap: 12px;
+  padding: 12px 22px;
+}
+
+.table-head {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6b7280;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.table-row {
+  background: #f9fafb;
+  border-radius: 12px;
+  margin: 0 12px;
+}
+
+.table-row strong {
+  display: block;
+  color: #111827;
+}
+
+.sub {
+  display: block;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-pill.pending {
+  background: rgba(243, 201, 122, 0.35);
+  color: #7a4b11;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

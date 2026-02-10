@@ -294,7 +294,28 @@
   align-items: center;
   min-height: 400px;
   font-size: 1.2rem;
-  color: #7f8c8d;
+  color: #6c757d;
+}
+
+.error-state {
+  background: white;
+  padding: 60px 40px;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.error-state p {
+  color: #dc3545;
+  font-size: 18px;
+  margin-bottom: 20px;
+}
+
+.added-date {
+  font-size: 14px;
+  color: #999;
+  margin-top: 12px;
+  font-style: italic;
 }
 
 /* Responsive */
