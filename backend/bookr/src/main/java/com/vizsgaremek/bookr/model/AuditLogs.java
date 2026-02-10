@@ -5,6 +5,7 @@
 package com.vizsgaremek.bookr.model;
 
 import static com.vizsgaremek.bookr.model.Users.emf;
+import com.vizsgaremek.bookr.util.StoredProcedureUtil;
 import java.io.Serializable;
 import java.util.Date;
 import java.util.HashMap;
@@ -101,13 +102,13 @@ public class AuditLogs implements Serializable {
 
     @Transient
     private Map<String, Object> newValuesMap;
-    
+
     @Transient
     private Integer performedByUserIdInt;
-    
+
     @Transient
     private Integer affectedEntityIdInt;
-    
+
     @Transient
     private Integer companyIdInt;
 
@@ -265,7 +266,7 @@ public class AuditLogs implements Serializable {
         }
         return newValuesMap;
     }
-    
+
     public Integer getAffectedEntityIdInt() {
         return affectedEntityIdInt;
     }
@@ -273,7 +274,7 @@ public class AuditLogs implements Serializable {
     public void setAffectedEntityIdInt(Integer affectedEntityIdInt) {
         this.affectedEntityIdInt = affectedEntityIdInt;
     }
-    
+
     public Integer getPerformedByUserIdInt() {
         return performedByUserIdInt;
     }
@@ -281,7 +282,7 @@ public class AuditLogs implements Serializable {
     public void setPerformedByUserIdInt(Integer performedByUserIdInt) {
         this.performedByUserIdInt = performedByUserIdInt;
     }
-    
+
     public Integer getCompanyIdInt() {
         return companyIdInt;
     }
@@ -354,79 +355,24 @@ public class AuditLogs implements Serializable {
             spq.registerStoredProcedureParameter("oldValuesIN", String.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("newValuesIN", String.class, ParameterMode.IN);
 
-            // Set required parameters
+            // Set required parameters (ezek mindig vannak)
             spq.setParameter("performedByUserIdIN", this.performedByUserIdInt);
             spq.setParameter("actionIN", this.action);
 
-            // Handle nullable performedByRole
-            if (this.performedByRole != null && !this.performedByRole.isEmpty()) {
-                spq.setParameter("performedByRoleIN", this.performedByRole);
-            } else {
-                spq.unwrap(org.hibernate.procedure.ProcedureCall.class)
-                        .getParameterRegistration("performedByRoleIN")
-                        .enablePassingNulls(true);
-                spq.setParameter("performedByRoleIN", null);
-            }
+            // Az összes nullable paraméter - HELPER METÓDUSSAL
+            StoredProcedureUtil.setNullableParameter(spq, "performedByRoleIN", (this.performedByRole != null && !this.performedByRole.isEmpty()) ? this.performedByRole : null);
 
-            // Handle nullable affectedUserId
-            if (this.affectedEntityIdInt != null) {
-                spq.setParameter("affectedUserIdIN", this.affectedEntityIdInt);
-            } else {
-                spq.unwrap(org.hibernate.procedure.ProcedureCall.class)
-                        .getParameterRegistration("affectedUserIdIN")
-                        .enablePassingNulls(true);
-                spq.setParameter("affectedUserIdIN", null);
-            }
+            StoredProcedureUtil.setNullableParameter(spq, "affectedUserIdIN", this.affectedEntityIdInt);
 
-            // Handle nullable companyId
-            if (this.companyIdInt != null) {
-                spq.setParameter("companyIdIN", this.companyIdInt);
-            } else {
-                spq.unwrap(org.hibernate.procedure.ProcedureCall.class)
-                        .getParameterRegistration("companyIdIN")
-                        .enablePassingNulls(true);
-                spq.setParameter("companyIdIN", null);
-            }
+            StoredProcedureUtil.setNullableParameter(spq, "companyIdIN", this.companyIdInt);
 
-            // Handle nullable email
-            if (this.email != null && !this.email.isEmpty()) {
-                spq.setParameter("emailIN", this.email);
-            } else {
-                spq.unwrap(org.hibernate.procedure.ProcedureCall.class)
-                        .getParameterRegistration("emailIN")
-                        .enablePassingNulls(true);
-                spq.setParameter("emailIN", null);
-            }
+            StoredProcedureUtil.setNullableParameter(spq, "emailIN", (this.email != null && !this.email.isEmpty()) ? this.email : null);
 
-            // Handle nullable entityType
-            if (this.entityType != null && !this.entityType.isEmpty()) {
-                spq.setParameter("entityTypeIN", this.entityType);
-            } else {
-                spq.unwrap(org.hibernate.procedure.ProcedureCall.class)
-                        .getParameterRegistration("entityTypeIN")
-                        .enablePassingNulls(true);
-                spq.setParameter("entityTypeIN", null);
-            }
+            StoredProcedureUtil.setNullableParameter(spq, "entityTypeIN", (this.entityType != null && !this.entityType.isEmpty()) ? this.entityType : null);
 
-            // Handle nullable oldValues
-            if (this.oldValues != null && !this.oldValues.isEmpty()) {
-                spq.setParameter("oldValuesIN", this.oldValues);
-            } else {
-                spq.unwrap(org.hibernate.procedure.ProcedureCall.class)
-                        .getParameterRegistration("oldValuesIN")
-                        .enablePassingNulls(true);
-                spq.setParameter("oldValuesIN", null);
-            }
+            StoredProcedureUtil.setNullableParameter(spq, "oldValuesIN", (this.oldValues != null && !this.oldValues.isEmpty()) ? this.oldValues : null);
 
-            // Handle nullable newValues
-            if (this.newValues != null && !this.newValues.isEmpty()) {
-                spq.setParameter("newValuesIN", this.newValues);
-            } else {
-                spq.unwrap(org.hibernate.procedure.ProcedureCall.class)
-                        .getParameterRegistration("newValuesIN")
-                        .enablePassingNulls(true);
-                spq.setParameter("newValuesIN", null);
-            }
+            StoredProcedureUtil.setNullableParameter(spq, "newValuesIN", (this.newValues != null && !this.newValues.isEmpty()) ? this.newValues : null);
 
             spq.execute();
 

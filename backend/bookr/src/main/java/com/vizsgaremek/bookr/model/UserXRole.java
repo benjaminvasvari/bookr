@@ -4,11 +4,13 @@
  */
 package com.vizsgaremek.bookr.model;
 
+import static com.vizsgaremek.bookr.model.Users.emf;
 import java.io.Serializable;
 import java.util.Date;
 import javax.persistence.Basic;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EntityManager;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -16,6 +18,8 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
+import javax.persistence.ParameterMode;
+import javax.persistence.StoredProcedureQuery;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
@@ -136,5 +140,26 @@ public class UserXRole implements Serializable {
     public String toString() {
         return "com.vizsgaremek.bookr.model.UserXRole[ id=" + id + " ]";
     }
-    
+
+    public static Boolean assignRole(Integer userId, Integer roleId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("assignRole");
+            spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("roleIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("userIdIN", userId);
+            spq.setParameter("roleIdIN", roleId);
+
+            spq.execute();
+
+            return true;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return false;
+        }
+    }
 }

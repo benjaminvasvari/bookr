@@ -283,8 +283,8 @@ public class AuthService {
         userData.put("phone", userFromDB.getPhone());
 
         // Company ID kezelése (lehet null)
-        if (userFromDB.getCompanyId() != null) {
-            userData.put("companyId", userFromDB.getCompanyId());
+        if (userFromDB.getCompanyIdInt() != null) {
+            userData.put("companyId", userFromDB.getCompanyIdInt());
         } else {
             userData.put("companyId", JSONObject.NULL);
         }

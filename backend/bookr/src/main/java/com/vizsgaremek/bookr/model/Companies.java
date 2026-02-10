@@ -168,9 +168,12 @@ public class Companies implements Serializable {
 
     @Transient
     private Integer reviewCount;
-    
+
     @Transient
     private Integer businessCategoryIdInt;
+
+    @Transient
+    private Integer ownerIdInt;
 
     public Companies() {
     }
@@ -255,6 +258,25 @@ public class Companies implements Serializable {
     public Companies(Integer id, Integer bookingAdvanceDays) {
         this.id = id;
         this.bookingAdvanceDays = bookingAdvanceDays;
+    }
+
+    // createFUll request
+    public Companies(String name, String description, String address, String city, String postalCode, String country, String phone, String email, String website, Integer businessCategoryIdInt, Integer ownerIdInt, Integer bookingAdvanceDays, Integer cancellationHours, Boolean allowSameDayBooking, Integer minimumBookingHoursAhead) {
+        this.name = name;
+        this.description = description;
+        this.address = address;
+        this.city = city;
+        this.postalCode = postalCode;
+        this.country = country;
+        this.phone = phone;
+        this.email = email;
+        this.website = website;
+        this.businessCategoryIdInt = businessCategoryIdInt;
+        this.ownerIdInt = ownerIdInt;
+        this.bookingAdvanceDays = bookingAdvanceDays;
+        this.cancellationHours = cancellationHours;
+        this.allowSameDayBooking = allowSameDayBooking;
+        this.minimumBookingHoursAhead = minimumBookingHoursAhead;
     }
 
     public Integer getId() {
@@ -565,6 +587,14 @@ public class Companies implements Serializable {
         this.businessCategoryIdInt = businessCategoryIdInt;
     }
 
+    public Integer getOwnerIdInt() {
+        return ownerIdInt;
+    }
+
+    public void setOwnerIdInt(Integer ownerIdInt) {
+        this.ownerIdInt = ownerIdInt;
+    }
+
     @Override
     public int hashCode() {
         int hash = 0;
@@ -677,16 +707,6 @@ public class Companies implements Serializable {
         }
     }
 
-    /**
-     * Get complete company data with calculated fields This method calls the
-     * getCompanyDataById stored procedure which returns: - All company fields -
-     * business_category_id - category name (from business_categories table) -
-     * image_url (main image URL) - rating (average from reviews) - review_count
-     * (total reviews)
-     *
-     * @param id Company ID
-     * @return Companies object with all data or null if not found
-     */
     public static Companies getCompanyDataById(Integer id) {
         EntityManager em = emf.createEntityManager();
 
@@ -941,6 +961,73 @@ public class Companies implements Serializable {
             );
 
             return company;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static Integer createFull(Companies company) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("createCompany");
+            spq.registerStoredProcedureParameter("nameIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("descriptionIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("addressIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("cityIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("postalCodeIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("countryIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("phoneIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("emailIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("websiteIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("ownerIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("allowSameDayBookingIN", Boolean.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("minimumBookingHoursAheadIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("bookingAdvanceDaysIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("cancellationHoursIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("businessCategoryIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("nameIN", company.getName());
+            spq.setParameter("descriptionIN", company.getDescription());
+            spq.setParameter("addressIN", company.getAddress());
+            spq.setParameter("cityIN", company.getCity());
+            spq.setParameter("postalCodeIN", company.getPostalCode());
+            spq.setParameter("countryIN", company.getCountry());
+            spq.setParameter("phoneIN", company.getPhone());
+            spq.setParameter("emailIN", company.getEmail());
+            spq.setParameter("ownerIdIN", company.getOwnerIdInt());
+            spq.setParameter("allowSameDayBookingIN", company.getAllowSameDayBooking());
+            spq.setParameter("minimumBookingHoursAheadIN", company.getMinimumBookingHoursAhead());
+            spq.setParameter("bookingAdvanceDaysIN", company.getBookingAdvanceDays());
+            spq.setParameter("cancellationHoursIN", company.getCancellationHours());
+            spq.setParameter("businessCategoryIdIN", company.getBusinessCategoryIdInt());
+
+            // Handle website Null
+            if (company.getWebsite() != null && !company.getWebsite().isEmpty()) {
+                spq.setParameter("websiteIN", company.getWebsite());
+            } else {
+                spq.unwrap(org.hibernate.procedure.ProcedureCall.class)
+                        .getParameterRegistration("websiteIN")
+                        .enablePassingNulls(true);
+                spq.setParameter("websiteIN", null);
+            }
+
+            spq.execute();
+
+            Object singleResult = spq.getSingleResult();
+
+            if (singleResult == null) {
+                return null;
+            }
+
+            Integer companyId = Integer.valueOf(singleResult.toString());
+            return companyId;
 
         } catch (Exception ex) {
             ex.printStackTrace();

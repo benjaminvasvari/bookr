@@ -4,12 +4,17 @@
  */
 package com.vizsgaremek.bookr.controller;
 
+import com.vizsgaremek.bookr.DTO.CompanyRegisterRequest;
+import com.vizsgaremek.bookr.security.JWT;
 import com.vizsgaremek.bookr.service.CompaniesService;
+import com.vizsgaremek.bookr.util.RoleChecker;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.Produces;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
+import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PUT;
 import javax.ws.rs.QueryParam;
@@ -26,6 +31,7 @@ import org.json.JSONObject;
 public class CompaniesController {
 
     private CompaniesService layer = new CompaniesService();
+    private RoleChecker RoleChecker = new RoleChecker();
 
     @Context
     private UriInfo context;
@@ -57,6 +63,17 @@ public class CompaniesController {
     @PUT
     @Consumes(MediaType.APPLICATION_XML)
     public void putXml(String content) {
+    }
+
+    private Response buildErrorResponse(int statusCode, String status) {
+        JSONObject errorResponse = new JSONObject();
+        errorResponse.put("statusCode", statusCode);
+        errorResponse.put("status", status);
+
+        return Response.status(statusCode)
+                .entity(errorResponse.toString())
+                .type(MediaType.APPLICATION_JSON)
+                .build();
     }
 
     @GET
@@ -129,4 +146,58 @@ public class CompaniesController {
                     .build();
         }
     }
+
+    @POST
+    @Path("createFull")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response createFull(@HeaderParam("Authorization") String authHeader, CompanyRegisterRequest request) {
+
+        
+        // 1. Auth header check
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return buildErrorResponse(401, "missingToken");
+        }
+        
+        // 2. Request body check
+        if (request == null) {
+            return buildErrorResponse(400, "missingBody");
+        }
+
+        String jwtToken = authHeader.substring(7);
+        Boolean validJwt = JWT.validateAccessToken(jwtToken);
+
+        if (validJwt == null) {
+            return buildErrorResponse(401, "tokenExpired");
+        } else if (validJwt == false) {
+            return buildErrorResponse(401, "invalidToken");
+        }
+
+        // 3. Role check
+        String userRoles = JWT.getRolesFromAccessToken(jwtToken);
+        boolean hasPermission = RoleChecker.hasAnyRole(userRoles, "client");
+        if (!hasPermission) {
+            return buildErrorResponse(403, "forbidden");
+        }
+
+        // 4. Kötelező mezők validálása
+        if (request.getName() == null || request.getName().trim().isEmpty()) {
+            return buildErrorResponse(400, "companyNameRequired");
+        }
+        if (request.getBusinessCategoryId() == null) {
+            return buildErrorResponse(400, "businessCategoryRequired");
+        }
+        if (request.getOpeningHours() == null || request.getOpeningHours().isEmpty()) {
+            return buildErrorResponse(400, "openingHoursRequired");
+        }
+
+        // 5. Service hívás
+        JSONObject toReturn = layer.createFull(jwtToken, request);
+
+        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                .entity(toReturn.toString())
+                .type(MediaType.APPLICATION_JSON)
+                .build();
+    }
+
 }

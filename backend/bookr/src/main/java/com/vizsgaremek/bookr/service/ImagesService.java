@@ -352,25 +352,19 @@ public class ImagesService {
                 String userEmail = JWT.getEmailFromAccessToken(jwtToken);
                 String userRoles = JWT.getRolesFromAccessToken(jwtToken);
 
-                try {
-                    AuditLogs auditLog = new AuditLogs(
-                            jwtUserId,
-                            userRoles.split(",")[0].trim(),
-                            userId,
-                            userEmail,
-                            "user",
-                            "updateUser"
-                    );
+                AuditLogs auditLog = new AuditLogs(
+                        jwtUserId,
+                        userRoles.split(",")[0].trim(),
+                        userId,
+                        userEmail,
+                        "user",
+                        "updateUser"
+                );
 
-                    auditLog.addNewValue("userId", userId);
-                    auditLog.addNewValue("imageId", imageId);
+                auditLog.addNewValue("userId", userId);
+                auditLog.addNewValue("imageId", imageId);
 
-                    AuditLogService.logAudit(auditLog);
-
-                } catch (Exception ex) {
-                    // Log the error but don't fail the registration
-                    ex.printStackTrace();
-                }
+                AuditLogService.logAudit(auditLog);
 
             } catch (Exception ex) {
                 // Log the error but don't fail the registration

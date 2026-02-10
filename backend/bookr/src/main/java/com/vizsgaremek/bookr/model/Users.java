@@ -630,7 +630,7 @@ public class Users implements Serializable {
     public void setRegToken(String regToken) {
         this.regToken = regToken;
     }
-    
+
     public Integer getCompanyIdInt() {
         return companyIdInt;
     }
@@ -798,7 +798,7 @@ public class Users implements Serializable {
                     record[7] == null ? null : record[7].toString(), // avatarUrl
                     record[8] == null ? null : record[8].toString() // roles (GROUP_CONCAT string)
             );
-
+            
             return user;
 
         } catch (Exception ex) {
@@ -1121,6 +1121,28 @@ public class Users implements Serializable {
             if (em != null && em.isOpen()) {
                 em.close();
             }
+        }
+    }
+
+    public static Boolean assignCompanyToUser(Integer userId, Integer companyId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("assignCompanyToUser");
+            spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("userIdIN", userId);
+            spq.setParameter("companyIdIN", companyId);
+
+            spq.execute();
+
+            return true;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return false;
         }
     }
 }
