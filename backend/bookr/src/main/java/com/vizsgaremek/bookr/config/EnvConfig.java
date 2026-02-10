@@ -1,27 +1,148 @@
 package com.vizsgaremek.bookr.config;
 
-import io.github.cdimascio.dotenv.Dotenv;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.logging.Logger;
 
 /**
- * Környezeti változók kezelése .env fájlból tölti be a konfigurációt
+ * Környezeti változók kezelése .env fájlból tölti be a konfigurációt KÜLSŐ
+ * LIBRARY NÉLKÜL - natív Java implementáció A .env fájlt a src/main/resources/
+ * mappából olvassa classpath-ról
  */
 public class EnvConfig {
 
-    private static final Dotenv dotenv;
+    private static final Logger LOGGER = Logger.getLogger(EnvConfig.class.getName());
+    private static final Map<String, String> envVariables = new HashMap<>();
+    private static boolean loaded = false;
 
     // Statikus inicializálás
     static {
         try {
-            dotenv = Dotenv.configure()
-                    .load();
-
+            loadEnvFile();
             validateConfiguration();
-
         } catch (Exception e) {
             throw new IllegalStateException(
                     "HIBA: .env fájl betöltése sikertelen: " + e.getMessage()
             );
+        }
+    }
+
+    /**
+     * .env fájl beolvasása Először a classpath-ról (resources/), majd
+     * fájlrendszerből
+     */
+    private static void loadEnvFile() {
+        if (loaded) {
+            return;
+        }
+
+        // 1. Próbáljuk a classpath-ról (WAR/JAR-ban: WEB-INF/classes/.env)
+        try (InputStream is = EnvConfig.class.getClassLoader().getResourceAsStream(".env")) {
+            if (is != null) {
+                LOGGER.info("✓ .env fájl betöltve classpath-ról (resources mappából)");
+                loadFromInputStream(is);
+                return;
+            }
+        } catch (IOException e) {
+            LOGGER.warning("Classpath-ról való olvasás sikertelen: " + e.getMessage());
+        }
+
+        // Ha egyik sem sikerült
+        String currentDir = System.getProperty("user.dir");
+        throw new IllegalStateException(
+                "\n╔══════════════════════════════════════════════════════════════╗\n"
+                + "║  HIBA: .env fájl nem található!                              ║\n"
+                + "╠══════════════════════════════════════════════════════════════╣\n"
+                + "║  Working directory: " + currentDir + "\n"
+                + "║                                                              ║\n"
+                + "║  Megoldás:                                                   ║\n"
+                + "║  1. Másold a .env-t: src/main/resources/.env                ║\n"
+                + "║  2. Futtass: mvn clean package                              ║\n"
+                + "║  3. Deploy újra                                             ║\n"
+                + "╚══════════════════════════════════════════════════════════════╝"
+        );
+    }
+
+    /**
+     * .env betöltése InputStream-ből (classpath resource)
+     */
+    private static void loadFromInputStream(InputStream is) throws IOException {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+            String line;
+
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+
+                // Üres sorok és kommentek átugrása
+                if (line.isEmpty() || line.startsWith("#")) {
+                    continue;
+                }
+
+                // KEY=VALUE parsing
+                int separatorIndex = line.indexOf('=');
+                if (separatorIndex > 0) {
+                    String key = line.substring(0, separatorIndex).trim();
+                    String value = line.substring(separatorIndex + 1).trim();
+
+                    // Idézőjelek eltávolítása
+                    if ((value.startsWith("\"") && value.endsWith("\""))
+                            || (value.startsWith("'") && value.endsWith("'"))) {
+                        value = value.substring(1, value.length() - 1);
+                    }
+
+                    envVariables.put(key, value);
+                }
+            }
+
+            loaded = true;
+            LOGGER.info("✓ " + envVariables.size() + " környezeti változó betöltve");
+        }
+    }
+
+    /**
+     * .env fájl beolvasása konkrét fájlból (fallback fejlesztéshez)
+     */
+    private static void loadFromFile(File envFile) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(envFile))) {
+            LOGGER.info("✓ .env fájl betöltve: " + envFile.getAbsolutePath());
+            String line;
+
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+
+                // Üres sorok és kommentek átugrása
+                if (line.isEmpty() || line.startsWith("#")) {
+                    continue;
+                }
+
+                // KEY=VALUE parsing
+                int separatorIndex = line.indexOf('=');
+                if (separatorIndex > 0) {
+                    String key = line.substring(0, separatorIndex).trim();
+                    String value = line.substring(separatorIndex + 1).trim();
+
+                    // Idézőjelek eltávolítása
+                    if ((value.startsWith("\"") && value.endsWith("\""))
+                            || (value.startsWith("'") && value.endsWith("'"))) {
+                        value = value.substring(1, value.length() - 1);
+                    }
+
+                    envVariables.put(key, value);
+                }
+            }
+
+            loaded = true;
+            LOGGER.info("✓ " + envVariables.size() + " környezeti változó betöltve");
+
+        } catch (IOException e) {
+            throw new IllegalStateException("HIBA: .env beolvasása sikertelen: " + e.getMessage());
         }
     }
 
@@ -31,7 +152,7 @@ public class EnvConfig {
      * @throws IllegalStateException ha hiányzik
      */
     private static String getRequired(String key) {
-        String value = dotenv.get(key);
+        String value = get(key);
 
         if (value == null || value.trim().isEmpty()) {
             throw new IllegalStateException(
@@ -48,7 +169,18 @@ public class EnvConfig {
      * használható más config osztályokból is!
      */
     public static String get(String key, String defaultValue) {
-        String value = dotenv.get(key);
+        String value = envVariables.get(key);
+
+        // Fallback: system environment változó
+        if (value == null || value.trim().isEmpty()) {
+            value = System.getenv(key);
+        }
+
+        // Fallback: system property
+        if (value == null || value.trim().isEmpty()) {
+            value = System.getProperty(key);
+        }
+
         return (value != null && !value.trim().isEmpty()) ? value.trim() : defaultValue;
     }
 
@@ -56,8 +188,7 @@ public class EnvConfig {
      * Környezeti változó lekérése default érték nélkül
      */
     private static String get(String key) {
-        String value = dotenv.get(key);
-        return (value != null && !value.trim().isEmpty()) ? value.trim() : null;
+        return get(key, null);
     }
 
     /**
@@ -104,14 +235,6 @@ public class EnvConfig {
             );
         }
 
-        System.out.println("✓ Konfiguráció sikeres");
-        System.out.println("  - Access Token: " + accessMinutes + " perc");
-        System.out.println("  - Refresh Token: " + refreshDays + " nap");
-        System.out.println("===========================");
-
-        System.out.println("=== EnvConfig Validálás ===");
-
-        // ... meglévő JWT és Argon2 validációk ...
         // ===== FILE UPLOAD VALIDÁCIÓ =====
         // 1. Upload könyvtár ellenőrzése
         String uploadDir = getUploadBaseDir();
@@ -177,13 +300,12 @@ public class EnvConfig {
         }
 
         System.out.println("✓ Konfiguráció sikeres");
-        System.out.println("  - Access Token: " + getAccessTokenExpirationMinutes() + " perc");
-        System.out.println("  - Refresh Token: " + getRefreshTokenExpirationDays() + " nap");
+        System.out.println("  - Access Token: " + accessMinutes + " perc");
+        System.out.println("  - Refresh Token: " + refreshDays + " nap");
         System.out.println("  - Upload dir: " + uploadDir);
         System.out.println("  - Max file size: " + getUploadMaxFileSizeMB() + " MB");
         System.out.println("  - Company max images: " + getCompanyMaxImages());
         System.out.println("===========================");
-
     }
 
     // ===== JWT Configuration =====
