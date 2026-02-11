@@ -19,7 +19,7 @@ export const API_ENDPOINTS = {
     NEW: '/companies/new',
     SEARCH: '/companies/search',
     BUSINESS_CATEGORIES: '/business-categories',
-    REGISTER: '/companies/register',
+    REGISTER: '/companies/createFull',
   },
 
   SERVICES: {
@@ -49,7 +49,7 @@ export const API_ENDPOINTS = {
   APPOINTMENTS: {
     UNAVAILABLE_DATES: '/appointments/unavailable-dates',
     OCCUPIED_SLOTS: '/appointments/occupied-slots',
-    CREATE: '/create-appointment',
+    CREATE: '/appointments/createAppointment',
     BY_CLIENT: '/appointments/getAppointmentsByClient',
   },
 
@@ -60,6 +60,7 @@ export const API_ENDPOINTS = {
   },
 
   USER: {
+    ME: '/users/me',
     PROFILE: '/user/profile',
     UPDATE_PROFILE: '/user/updateProfile',
     CHANGE_PASSWORD: '/user/change-password',

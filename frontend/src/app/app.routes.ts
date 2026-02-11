@@ -92,6 +92,24 @@ export const appRoutes: Routes = [
     canActivate: [authGuard, roleGuard],
     data: { showFooter: false, showHeader: false, roles: ['staff'] },
   },
+  {
+    path: 'staff/bookings',
+    loadComponent: () =>
+      import('./features/staff-dashboard/staff-bookings/staff-bookings.component').then(
+        (m) => m.StaffBookingsComponent
+      ),
+    canActivate: [authGuard, roleGuard],
+    data: { showFooter: false, showHeader: false, roles: ['staff'] },
+  },
+  {
+    path: 'staff/profile',
+    loadComponent: () =>
+      import('./features/staff-dashboard/staff-profile/staff-profile.component').then(
+        (m) => m.StaffProfileComponent
+      ),
+    canActivate: [authGuard, roleGuard],
+    data: { showFooter: false, showHeader: false, roles: ['staff'] },
+  },
 
   {
     path: 'register-business',

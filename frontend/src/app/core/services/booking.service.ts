@@ -11,6 +11,7 @@ import {
   Booking,
   ClientAppointment,
   ClientAppointmentsResponse,
+  CreateAppointmentRequest,
   UnavailableDate,
   UnavailableDatesResponse,
   OccupiedSlotsResponse
@@ -95,6 +96,16 @@ export class BookingService {
           appointments.map(appointment => this.mapAppointmentToBooking(appointment, isUpcoming))
         )
       );
+  }
+
+  /**
+   * Foglalas letrehozasa
+   */
+  createAppointment(request: CreateAppointmentRequest): Observable<any> {
+    const serviceIds = request.serviceIds.length === 1 ? request.serviceIds[0] : request.serviceIds;
+    const payload = { ...request, serviceIds };
+
+    return this.http.post(`${this.apiUrl}${API_ENDPOINTS.APPOINTMENTS.CREATE}`, payload);
   }
 
   private mapAppointmentToBooking(

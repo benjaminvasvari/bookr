@@ -1,6 +1,6 @@
 .settings-panel {
 	padding: 28px;
-	background: #f6f8fb;
+	background: transparent;
 	min-height: 100vh;
 	box-sizing: border-box;
 }
@@ -78,7 +78,7 @@
 	background: #ffffff;
 	border-radius: 18px;
 	padding: 18px 20px;
-	border: 1px solid #e6edf5;
+	border: 1px solid var(--owner-border);
 	box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
 	display: grid;
 	gap: 16px;
