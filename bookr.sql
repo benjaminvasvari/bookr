@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3307
--- Generation Time: Feb 11, 2026 at 08:49 AM
+-- Generation Time: Feb 11, 2026 at 11:52 AM
 -- Server version: 5.7.24
 -- PHP Version: 8.3.1
 
@@ -3879,7 +3879,23 @@ INSERT INTO `audit_logs` (`id`, `performed_by_user_id`, `performed_by_role`, `af
 (106, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-02-11 08:35:59', 41),
 (107, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'logout', NULL, NULL, '2026-02-11 08:36:03', 41),
 (108, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-02-11 08:36:16', 43),
-(109, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'logout', NULL, NULL, '2026-02-11 08:36:19', 43);
+(109, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'logout', NULL, NULL, '2026-02-11 08:36:19', 43),
+(110, 47, 'client', NULL, 13, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-11 08:51:45', 47),
+(111, 47, 'client', NULL, 13, 'vasvariben@gmail.com', 'user', 'logout', NULL, NULL, '2026-02-11 09:26:50', 47),
+(112, 47, 'client', NULL, 13, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-11 09:27:07', 47),
+(113, 47, 'client', NULL, 13, 'vasvariben@gmail.com', 'user', 'logout', NULL, NULL, '2026-02-11 09:27:24', 47),
+(114, 47, 'client', NULL, 13, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-11 09:27:42', 47),
+(115, 47, 'client', NULL, 13, 'vasvariben@gmail.com', 'user', 'logout', NULL, NULL, '2026-02-11 09:34:45', 47),
+(116, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-02-11 09:35:00', 41),
+(117, 41, 'client', NULL, NULL, 'admin@admin.hu', 'company', 'create', NULL, '{\"city\": \"Pécs\", \"name\": \"Sándor Home\", \"email\": \"sandorhome@gmail.com\", \"phone\": \"+36703477754\", \"address\": \"Jedlik Ányos 3/B\", \"country\": \"Magyarország\", \"ownerId\": 41, \"postalCode\": \"7633\", \"description\": \"Nagyon szuper, kiváló tehetséges barberek vannak, kiváló szakemberek\", \"cancellationHours\": 24, \"bookingAdvanceDays\": 60, \"businessCategoryId\": 3, \"allowSameDayBooking\": true, \"minimumBookingHoursahead\": 2}', '2026-02-11 09:53:31', NULL),
+(118, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'logout', NULL, NULL, '2026-02-11 09:54:23', 41),
+(119, 41, 'client', NULL, 14, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-02-11 09:54:34', 41),
+(120, 45, 'staff', NULL, 1, 'uhunor41@gmail.com', 'user', 'login', NULL, NULL, '2026-02-11 10:23:39', 45),
+(121, 43, 'client', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-02-11 10:24:13', 43),
+(122, 43, 'client', NULL, 14, 'admin@admin.com', 'company', 'uploadedMainImage', NULL, NULL, '2026-02-11 10:24:18', NULL),
+(123, 41, 'client', NULL, 14, 'admin@admin.hu', 'user', 'logout', NULL, NULL, '2026-02-11 10:31:54', 41),
+(124, 45, 'staff', NULL, 1, 'uhunor41@gmail.com', 'user', 'login', NULL, NULL, '2026-02-11 10:32:04', 45),
+(125, 45, 'staff', NULL, 1, 'uhunor41@gmail.com', 'user', 'login', NULL, NULL, '2026-02-11 11:37:49', 45);
 
 -- --------------------------------------------------------
 
@@ -3959,7 +3975,8 @@ INSERT INTO `companies` (`id`, `name`, `description`, `address`, `city`, `postal
 (8, 'BarberShop Budapest', 'Férfi fodrászat és borbély szolgáltatások', 'Wesselényi utca 18.', 'Budapest', '1077', 'Hungary', '+36301111008', 'booking@barbershop.hu', 'www.barbershop-bp.hu', 3, 9, 14, 12, '2024-03-05 16:30:00', NULL, NULL, 0, 1, 1, 2),
 (9, 'Naturál Szépségstúdió', 'Természetes alapanyagokkal dolgozó családias szalon', 'Fő utca 23.', 'Győr', '9021', 'Hungary', '+36301111009', 'hello@naturalszepseg.hu', 'www.naturalszepseg.hu', 1, 10, 21, 24, '2024-03-10 17:30:00', NULL, NULL, 0, 1, 1, 2),
 (10, 'ZenSpa Központ', 'Ázsiai ihletésű spa és wellness központ', 'Dózsa György út 34.', 'Szeged', '6720', 'Hungary', '+36301111010', 'reception@zenspa.hu', 'www.zenspa.hu', 2, 11, 60, 48, '2024-03-15 18:30:00', NULL, NULL, 0, 1, 1, 2),
-(13, 'Jungle Salon Pécs', 'Ahol TE vagy a lényeg! Próbáld ki bármelyik szolgáltatásunkat, nem fogsz csalódni. Szakmai tudásunk folyamatos fejlesztése nagyon fontos számunkra. Itt kerülsz TE a középpontba! Szolgáltatásaink során figyelünk az egyéniségedre, fejformádra, hajtípusodra és persze a kezelhetőségre is. Várunk sok szeretettel szalonunkban!', 'Koller utca 7', 'Pécs', '7626', 'Hungary', '+36209876543', 'durvajunglesalon@jungle.hu', NULL, 3, 47, 45, 48, '2026-02-11 00:27:11', NULL, NULL, 0, 1, 1, 4);
+(13, 'Jungle Salon Pécs', 'Ahol TE vagy a lényeg! Próbáld ki bármelyik szolgáltatásunkat, nem fogsz csalódni. Szakmai tudásunk folyamatos fejlesztése nagyon fontos számunkra. Itt kerülsz TE a középpontba! Szolgáltatásaink során figyelünk az egyéniségedre, fejformádra, hajtípusodra és persze a kezelhetőségre is. Várunk sok szeretettel szalonunkban!', 'Koller utca 7', 'Pécs', '7626', 'Hungary', '+36209876543', 'durvajunglesalon@jungle.hu', NULL, 3, 47, 45, 48, '2026-02-11 00:27:11', NULL, NULL, 0, 1, 1, 4),
+(14, 'Sándor Home', 'Nagyon szuper, kiváló tehetséges barberek vannak, kiváló szakemberek', 'Jedlik Ányos 3/B', 'Pécs', '7633', 'Magyarország', '+36703477754', 'sandorhome@gmail.com', NULL, 3, 41, 60, 24, '2026-02-11 10:53:31', NULL, NULL, 0, 1, 1, 2);
 
 -- --------------------------------------------------------
 
@@ -4113,7 +4130,8 @@ INSERT INTO `images` (`id`, `company_id`, `user_id`, `url`, `is_main`, `uploaded
 (60, NULL, 45, NULL, 0, '2026-02-02 09:59:27', NULL, 0),
 (61, NULL, 41, NULL, 0, '2026-02-09 17:25:03', NULL, 0),
 (62, NULL, 47, NULL, 0, '2026-02-09 17:30:58', NULL, 0),
-(65, 13, NULL, NULL, 1, '2026-02-10 23:27:11', NULL, 0);
+(65, 13, NULL, NULL, 1, '2026-02-10 23:27:11', NULL, 0),
+(66, 14, NULL, 'uploads/companies/14/fdef5235-3659-463f-adaf-6aa8a400d444.jpg', 1, '2026-02-11 09:53:31', NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -4279,7 +4297,14 @@ INSERT INTO `opening_hours` (`id`, `company_id`, `day_of_week`, `open_time`, `cl
 (74, 13, 'thursday', '08:00:00', '19:00:00', 0, '2026-02-10 23:27:11', NULL),
 (75, 13, 'friday', '08:00:00', '19:00:00', 0, '2026-02-10 23:27:11', NULL),
 (76, 13, 'saturday', '08:00:00', '19:00:00', 0, '2026-02-10 23:27:11', NULL),
-(77, 13, 'sunday', NULL, NULL, 1, '2026-02-10 23:27:11', NULL);
+(77, 13, 'sunday', NULL, NULL, 1, '2026-02-10 23:27:11', NULL),
+(78, 14, 'monday', '09:00:00', '16:00:00', 0, '2026-02-11 09:53:31', NULL),
+(79, 14, 'tuesday', '09:00:00', '16:00:00', 0, '2026-02-11 09:53:31', NULL),
+(80, 14, 'wednesday', '09:00:00', '17:00:00', 0, '2026-02-11 09:53:31', NULL),
+(81, 14, 'thursday', '09:00:00', '17:00:00', 0, '2026-02-11 09:53:31', NULL),
+(82, 14, 'friday', '09:00:00', '17:00:00', 0, '2026-02-11 09:53:31', NULL),
+(83, 14, 'saturday', NULL, NULL, 1, '2026-02-11 09:53:31', NULL),
+(84, 14, 'sunday', NULL, NULL, 1, '2026-02-11 09:53:31', NULL);
 
 -- --------------------------------------------------------
 
@@ -5186,11 +5211,11 @@ INSERT INTO `users` (`id`, `guid`, `first_name`, `last_name`, `email`, `password
 (38, '39222b04-f069-11f0-bb19-94e23c940cf4', 'Papp', 'Bernadett', 'bernadett.papp@citromail.hu', '$2y$10$client12', '+36203456712', NULL, '2024-03-31 11:00:00', NULL, NULL, 0, NULL, '2024-03-31 11:00:00', 1, 0, NULL, NULL, NULL),
 (39, '39222bc4-f069-11f0-bb19-94e23c940cf4', 'Simon', 'Balázs', 'balazs.simon@yahoo.com', '$2y$10$client13', '+36203456713', NULL, '2024-04-01 12:00:00', NULL, NULL, 0, NULL, '2024-04-01 12:00:00', 1, 0, NULL, NULL, NULL),
 (40, '39222c81-f069-11f0-bb19-94e23c940cf4', 'Takács', 'Nikoletta', 'nikoletta.takacs@gmail.com', '$2y$10$client14', '+36203456714', NULL, '2024-04-02 13:00:00', NULL, NULL, 0, NULL, '2024-04-02 13:00:00', 1, 0, NULL, NULL, NULL),
-(41, 'b1f05ffe-f3c8-11f0-9e1f-41a67f8a3877', 'Admin', 'Admin', 'admin@admin.hu', '$argon2id$v=19$m=65536,t=3,p=1$Ovn1EvOxM0EzsPJHJ7inqA$nkFzFuikclUha8Jaz3itNGdPMHwGAhrPvDlXElQos/k', '+3670123252', NULL, '2026-01-17 18:19:35', '2026-01-27 10:58:29', NULL, 0, '2026-02-11 09:35:59', '2026-01-17 18:36:57', 1, 0, NULL, NULL, NULL),
-(43, '9be7f6aa-f840-11f0-89b9-b5e6602fcb6e', 'Admin', 'Admin', 'admin@admin.com', '$argon2id$v=19$m=65536,t=3,p=1$neSrpLHeChl9iqqk6FQH0A$/3zpvnj5TlX9YNwOF4j87qT7xszB9UcLDMOT3YLwEDY', '+367012344356', 2, '2026-01-23 10:48:02', '2026-01-23 20:10:10', NULL, 0, '2026-02-11 09:36:16', '2026-01-23 10:48:09', 1, 0, NULL, NULL, NULL),
+(41, 'b1f05ffe-f3c8-11f0-9e1f-41a67f8a3877', 'Admin', 'Admin', 'admin@admin.hu', '$argon2id$v=19$m=65536,t=3,p=1$Ovn1EvOxM0EzsPJHJ7inqA$nkFzFuikclUha8Jaz3itNGdPMHwGAhrPvDlXElQos/k', '+3670123252', 14, '2026-01-17 18:19:35', '2026-02-11 10:53:31', NULL, 0, '2026-02-11 10:54:34', '2026-01-17 18:36:57', 1, 0, NULL, NULL, NULL),
+(43, '9be7f6aa-f840-11f0-89b9-b5e6602fcb6e', 'Admin', 'Admin', 'admin@admin.com', '$argon2id$v=19$m=65536,t=3,p=1$neSrpLHeChl9iqqk6FQH0A$/3zpvnj5TlX9YNwOF4j87qT7xszB9UcLDMOT3YLwEDY', '+367012344356', 2, '2026-01-23 10:48:02', '2026-01-23 20:10:10', NULL, 0, '2026-02-11 11:24:13', '2026-01-23 10:48:09', 1, 0, NULL, NULL, NULL),
 (44, '4a23ba5e-fe10-11f0-b291-2d2d5b3f2a16', 'Benjamin', 'Vasvári', 'vben@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$TRB9TpdpKZUGgk1f6UJx2Q$xf7/9r7En197Ae+nOOSe39voTcXtd/YHhurfOymEUH8', '+3670123252', NULL, '2026-01-30 20:17:16', '2026-01-30 20:17:54', NULL, 0, NULL, '2026-01-30 20:17:54', 1, 0, NULL, NULL, NULL),
-(45, 'dc156670-001d-11f1-b548-94e23c940cf4', 'Ujhelyi', 'Hunor', 'uhunor41@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$Vt6xKq2Pg5jG54y5qoWLig$sClVSYAUPPP+b1KldK9U5WB8Uhlbk8spOJDG5CezPyk', '+36703477754', 1, '2026-02-02 10:59:27', NULL, NULL, 0, '2026-02-09 18:14:30', NULL, 1, 0, NULL, NULL, NULL),
-(47, '185fbdd6-05dd-11f1-906a-ad4a6c3ef204', 'Benjamin', 'Vasvári', 'vasvariben@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$pH8GOc2tdYSG0DZDMBNDug$iXdhos2XjSQcAHrC6DfvQJ105G647p9ZpHjksBKS1po', '+3670123252', 13, '2026-02-09 18:30:58', '2026-02-11 00:27:11', NULL, 0, '2026-02-11 00:51:16', '2026-02-09 18:31:36', 1, 0, NULL, NULL, NULL);
+(45, 'dc156670-001d-11f1-b548-94e23c940cf4', 'Ujhelyi', 'Hunor', 'uhunor41@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$Vt6xKq2Pg5jG54y5qoWLig$sClVSYAUPPP+b1KldK9U5WB8Uhlbk8spOJDG5CezPyk', '+36703477754', 1, '2026-02-02 10:59:27', NULL, NULL, 0, '2026-02-11 12:37:49', NULL, 1, 0, NULL, NULL, NULL),
+(47, '185fbdd6-05dd-11f1-906a-ad4a6c3ef204', 'Benjamin', 'Vasvári', 'vasvariben@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$pH8GOc2tdYSG0DZDMBNDug$iXdhos2XjSQcAHrC6DfvQJ105G647p9ZpHjksBKS1po', '+3670123252', 13, '2026-02-09 18:30:58', '2026-02-11 00:27:11', NULL, 0, '2026-02-11 10:27:42', '2026-02-09 18:31:36', 1, 0, NULL, NULL, NULL);
 
 --
 -- Triggers `users`
@@ -5387,7 +5412,8 @@ INSERT INTO `user_x_role` (`id`, `user_id`, `role_id`, `assigned_at`, `un_assign
 (71, 45, 3, '2026-02-02 09:59:27', NULL, 0),
 (72, 47, 4, '2026-02-09 17:30:58', NULL, 0),
 (73, 47, 2, '2026-02-10 23:39:57', NULL, 0),
-(74, 47, 1, '2026-02-10 23:51:01', NULL, 0);
+(74, 47, 1, '2026-02-10 23:51:01', NULL, 0),
+(75, 41, 2, '2026-02-11 09:53:31', NULL, 0);
 
 --
 -- Indexes for dumped tables
@@ -5586,7 +5612,7 @@ ALTER TABLE `appointments`
 -- AUTO_INCREMENT for table `audit_logs`
 --
 ALTER TABLE `audit_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=110;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=126;
 
 --
 -- AUTO_INCREMENT for table `business_categories`
@@ -5598,7 +5624,7 @@ ALTER TABLE `business_categories`
 -- AUTO_INCREMENT for table `companies`
 --
 ALTER TABLE `companies`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT for table `favorites`
@@ -5610,7 +5636,7 @@ ALTER TABLE `favorites`
 -- AUTO_INCREMENT for table `images`
 --
 ALTER TABLE `images`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=66;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=67;
 
 --
 -- AUTO_INCREMENT for table `notification_settings`
@@ -5622,7 +5648,7 @@ ALTER TABLE `notification_settings`
 -- AUTO_INCREMENT for table `opening_hours`
 --
 ALTER TABLE `opening_hours`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=78;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=85;
 
 --
 -- AUTO_INCREMENT for table `reviews`
@@ -5706,7 +5732,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `user_x_role`
 --
 ALTER TABLE `user_x_role`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=75;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=76;
 
 --
 -- Constraints for dumped tables
