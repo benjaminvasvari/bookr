@@ -13,6 +13,7 @@ import com.vizsgaremek.bookr.model.Reviews;
 import com.vizsgaremek.bookr.model.UserXRole;
 import com.vizsgaremek.bookr.model.Users;
 import com.vizsgaremek.bookr.security.JWT;
+import static com.vizsgaremek.bookr.util.ErrorResponseBuilder.buildErrorResponseJSON;
 import com.vizsgaremek.bookr.util.FileStorageUtil;
 import java.text.SimpleDateFormat;
 import java.util.List;
@@ -422,7 +423,7 @@ public class CompaniesService {
         try {
             JSONObject toReturn = new JSONObject();
             String status = "success";
-            Integer statusCode = 200;
+            Integer statusCode = 201;
 
             // EntityManager létrehozása
             em = emf.createEntityManager();
@@ -436,7 +437,7 @@ public class CompaniesService {
 
                 if (userId == null) {
                     em.getTransaction().rollback();
-                    return buildErrorResponse(401, "invalidToken");
+                    return buildErrorResponseJSON(401, "invalidToken");
                 }
 
                 // 2. Company objektum összeállítása
@@ -463,7 +464,7 @@ public class CompaniesService {
 
                 if (companyId == null) {
                     em.getTransaction().rollback();
-                    return buildErrorResponse(500, "companyCreationFailed");
+                    return buildErrorResponseJSON(500, "companyCreationFailed");
                 }
 
                 // 4. User company_id mezőjének frissítése
@@ -471,7 +472,7 @@ public class CompaniesService {
 
                 if (isCompanyAssignSuccess == null || !isCompanyAssignSuccess) {
                     em.getTransaction().rollback();
-                    return buildErrorResponse(500, "userAssignmentFailed");
+                    return buildErrorResponseJSON(500, "userAssignmentFailed");
                 }
                 
                 // 5. Give owner role
@@ -479,7 +480,7 @@ public class CompaniesService {
 
                 if (isRoleAssignSuccess == null || !isRoleAssignSuccess) {
                     em.getTransaction().rollback();
-                    return buildErrorResponse(500, "userRoleAssignmentFailed");
+                    return buildErrorResponseJSON(500, "userRoleAssignmentFailed");
                 }
 
                 // 6. OpeningHours létrehozása
@@ -490,7 +491,7 @@ public class CompaniesService {
 
                     if (!openingHoursCreated) {
                         em.getTransaction().rollback();
-                        return buildErrorResponse(500, "openingHoursCreationFailed");
+                        return buildErrorResponseJSON(500, "openingHoursCreationFailed");
                     }
                 }
 
@@ -552,12 +553,12 @@ public class CompaniesService {
                 }
 
                 e.printStackTrace();
-                return buildErrorResponse(500, "transactionFailed");
+                return buildErrorResponseJSON(500, "transactionFailed");
             }
 
         } catch (Exception e) {
             e.printStackTrace();
-            return buildErrorResponse(500, "internalServerError");
+            return buildErrorResponseJSON(500, "internalServerError");
 
         } finally {
             // EntityManager bezárása
@@ -565,12 +566,5 @@ public class CompaniesService {
                 em.close();
             }
         }
-    }
-
-    private JSONObject buildErrorResponse(int statusCode, String status) {
-        JSONObject errorResponse = new JSONObject();
-        errorResponse.put("statusCode", statusCode);
-        errorResponse.put("status", status);
-        return errorResponse;
     }
 }
