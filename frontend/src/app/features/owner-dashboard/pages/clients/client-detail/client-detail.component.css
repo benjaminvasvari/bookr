@@ -1,6 +1,6 @@
 .client-detail {
 	padding: 28px;
-	background: #f8fafc;
+	background: transparent;
 	min-height: 100vh;
 	box-sizing: border-box;
 }
@@ -17,7 +17,7 @@
 	background: #ffffff;
 	border-radius: 16px;
 	padding: 20px;
-	border: 1px solid #eef2f7;
+	border: 1px solid var(--owner-border);
 	box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
 }
 
@@ -84,7 +84,7 @@
 	background: #ffffff;
 	border-radius: 16px;
 	padding: 20px;
-	border: 1px solid #eef2f7;
+	border: 1px solid var(--owner-border);
 	box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
 }
 

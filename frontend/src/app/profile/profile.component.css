@@ -109,6 +109,26 @@
     fill: #38a179;
 }
 
+/* Divider */
+.nav-divider {
+    height: 1px;
+    background-color: #e9ecef;
+    margin: 12px 24px;
+}
+
+/* Logout Button */
+.nav-item-logout {
+    color: #dc3545;
+}
+
+.nav-item-logout:hover {
+    background-color: rgba(220, 53, 69, 0.05);
+}
+
+.nav-item-logout .nav-icon {
+    fill: #dc3545;
+}
+
 /* Main Content */
 .profile-content {
     flex: 1;

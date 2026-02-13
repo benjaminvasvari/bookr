@@ -22,6 +22,9 @@ export class ProfileFavoritesComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.favoritesService.favorites$.subscribe((favorites) => {
+      this.favorites = favorites;
+    });
     this.loadFavorites();
   }
 
@@ -66,19 +69,21 @@ export class ProfileFavoritesComponent implements OnInit {
   removeFavorite(favoriteId: number, event: Event): void {
     event.stopPropagation();
 
-    if (confirm('Biztosan törölni szeretnéd ezt a kedvencet?')) {
-      this.favoritesService.removeFavorite(favoriteId).subscribe({
-        next: () => {
-          console.log('Kedvenc törölve:', favoriteId);
-          // Eltávolítjuk a listából
-          this.favorites = this.favorites.filter(fav => fav.favoriteId !== favoriteId);
-        },
-        error: (err) => {
-          console.error('Hiba a kedvenc törlése során:', err);
-          alert('Nem sikerült törölni a kedvencet.');
-        }
-      });
+    const favorite = this.favorites.find((fav) => fav.favoriteId === favoriteId);
+    if (!favorite) {
+      return;
     }
+
+    this.favoritesService.removeFavorite(favorite.company.companyId).subscribe({
+      next: () => {
+        console.log('Kedvenc törölve:', favoriteId);
+        this.favorites = this.favorites.filter(fav => fav.favoriteId !== favoriteId);
+      },
+      error: (err) => {
+        console.error('Hiba a kedvenc törlése során:', err);
+        alert('Nem sikerült törölni a kedvencet.');
+      }
+    });
   }
 
   /**

@@ -77,27 +77,6 @@
         </div>
       </div>
 
-      @if (notificationSettingsChanged) {
-        <div class="save-notification-bar">
-          <span>Van mentetlen módosítás</span>
-          <button class="btn btn-primary btn-sm" (click)="saveNotificationSettings()">
-            @if (isSavingNotifications) {
-              <span>Mentés...</span>
-            } @else {
-              <span>Beállítások mentése</span>
-            }
-          </button>
-        </div>
-      }
-
-      @if (notificationSaveSuccess) {
-        <div class="alert alert-success">
-          <svg class="alert-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-          </svg>
-          <span>Értesítési beállítások sikeresen mentve!</span>
-        </div>
-      }
     </div>
   </div>
 
@@ -242,9 +221,7 @@
           </div>
         </div>
 
-        <p class="modal-description">
-          A folytatáshoz add meg a jelszavadat és erősítsd meg a törlést.
-        </p>
+        <p class="modal-description">A folytatáshoz add meg a jelszavadat.</p>
 
         <div class="form-group">
           <label class="form-label">Jelenlegi jelszó</label>
@@ -256,19 +233,6 @@
           />
         </div>
 
-        <div class="form-group">
-          <div class="checkbox-group">
-            <input
-              type="checkbox"
-              id="confirmDelete"
-              formControlName="confirmDelete"
-            />
-            <label for="confirmDelete" class="checkbox-label">
-              Megértettem, hogy ez a művelet végleges és nem visszafordítható. 
-              Véglegesen törlöm a fiókomat.
-            </label>
-          </div>
-        </div>
       </form>
 
       <div class="modal-footer">

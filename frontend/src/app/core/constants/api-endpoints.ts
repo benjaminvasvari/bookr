@@ -19,7 +19,7 @@ export const API_ENDPOINTS = {
     NEW: '/companies/new',
     SEARCH: '/companies/search',
     BUSINESS_CATEGORIES: '/business-categories',
-    REGISTER: '/companies/register',
+    REGISTER: '/companies/createFull',
   },
 
   SERVICES: {
@@ -49,7 +49,7 @@ export const API_ENDPOINTS = {
   APPOINTMENTS: {
     UNAVAILABLE_DATES: '/appointments/unavailable-dates',
     OCCUPIED_SLOTS: '/appointments/occupied-slots',
-    CREATE: '/create-appointment',
+    CREATE: '/appointments/createAppointment',
     BY_CLIENT: '/appointments/getAppointmentsByClient',
   },
 
@@ -60,11 +60,13 @@ export const API_ENDPOINTS = {
   },
 
   USER: {
-    PROFILE: '/user/profile',
-    UPDATE_PROFILE: '/user/updateProfile',
-    CHANGE_PASSWORD: '/user/change-password',
-    UPLOAD_AVATAR: '/user/uploadAvatar',
-    DELETE_AVATAR: '/user/deleteAvatar',
+    ME: '/users/me',
+    PROFILE: '/users/profile',
+    UPDATE_PROFILE: '/users/updateProfile',
+    CHANGE_PASSWORD: '/users/change-password',
+    UPLOAD_AVATAR: '/users/uploadAvatar',
+    DELETE_AVATAR: '/users/deleteAvatar',
+    UPDATE_NOTIFICATION_SETTINGS: '/notifsetting/update',
   },
 
   STAFF: {
@@ -72,6 +74,10 @@ export const API_ENDPOINTS = {
     DASHBOARD: (userId: number) => `/staff/dashboard/${userId}`,
   },
   FAVORITES: {
-    GETALL: '/favorites/getFavorites',
+    GETALL: (userId: number) => `/favorites/getFavorites?id=${userId}`,
+    ADD: (companyId: number) => `/favorites/addFavorite/${companyId}`,
+    REMOVE: (companyId: number) => `/favorites/removeFavorite/${companyId}`,
   },
+
+  DELETE_USER: '/users/deleteUser',
 };

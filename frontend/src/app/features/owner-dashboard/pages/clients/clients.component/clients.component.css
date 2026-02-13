@@ -1,6 +1,6 @@
 .clients-panel {
 	padding: 28px;
-	background: #ffffff;
+	background: transparent;
 	min-height: 100vh;
 	box-sizing: border-box;
 }
@@ -20,7 +20,7 @@
 	display: inline-flex;
 	align-items: center;
 	gap: 8px;
-	border: 1px solid #e5e7eb;
+	border: 1px solid var(--owner-border);
 	border-radius: 999px;
 	padding: 8px 12px;
 	background: #ffffff;
@@ -53,7 +53,7 @@
 	align-items: center;
 	gap: 14px;
 	padding: 16px;
-	border: 1px solid #e5e7eb;
+	border: 1px solid var(--owner-border);
 	border-radius: 12px;
 	background: #ffffff;
 	box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
@@ -61,7 +61,7 @@
 }
 
 .client-card:hover {
-	border-color: #cbd5f5;
+	border-color: var(--owner-border-strong);
 	box-shadow: 0 10px 22px rgba(15, 23, 42, 0.1);
 	transform: translateY(-1px);
 }

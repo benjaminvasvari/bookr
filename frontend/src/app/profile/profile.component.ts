@@ -64,4 +64,8 @@ export class ProfileComponent implements OnInit {
   isActive(tab: TabType): boolean {
     return this.activeTab === tab;
   }
+
+  onLogout(): void {
+    this.authService.logout();
+  }
 }

@@ -9,6 +9,7 @@ import { StepBusinessDetailsComponent } from '../steps/step-business-details/ste
 import { StepOpeningHoursComponent } from '../steps/step-opening-hours/step-opening-hours.component';
 import { AuthService } from '../../../core/services/auth.service';
 import { CookieService } from '../../../core/services/cookie.service';
+import { CompaniesService } from '../../../core/services/companies.service';
 
 @Component({
   selector: 'app-company-registration-container',
@@ -55,7 +56,12 @@ export class CompanyRegistrationContainerComponent implements OnInit {
     { number: 5, title: 'Nyitvatartás', completed: false, active: false }
   ];
 
-  constructor(private authService: AuthService, private router: Router, private cookieService: CookieService) {}
+  constructor(
+    private authService: AuthService,
+    private router: Router,
+    private cookieService: CookieService,
+    private companyService: CompaniesService
+  ) {}
 
   ngOnInit() {
     // Cookie-ből betöltjük az elmentett adatokat
@@ -96,7 +102,7 @@ export class CompanyRegistrationContainerComponent implements OnInit {
       this.steps[this.currentStep - 1].active = false;
       this.currentStep++;
       this.steps[this.currentStep - 1].active = true;
-      this.isCurrentStepValid = false;
+      this.setStepValidityAfterNavigation();
     } else {
       console.log('🎯 Last step reached - calling submitRegistration()');
       this.submitRegistration();
@@ -111,7 +117,7 @@ export class CompanyRegistrationContainerComponent implements OnInit {
       this.currentStep--;
       this.steps[this.currentStep - 1].active = true;
       this.steps[this.currentStep - 1].completed = false;
-      this.checkCurrentStepValidity();
+      this.setStepValidityAfterNavigation();
     }
 
     // Scroll to top
@@ -218,78 +224,53 @@ export class CompanyRegistrationContainerComponent implements OnInit {
     this.isCurrentStepValid = isValid;
   }
 
-private submitRegistration(): void {
+  private setStepValidityAfterNavigation(): void {
+    if (this.currentStep === 3 || this.currentStep === 5) {
+      this.isCurrentStepValid = true;
+      return;
+    }
+
+    this.checkCurrentStepValidity();
+  }
+
+  private submitRegistration(): void {
     console.log('📦 Registration data:', this.registrationData);
     console.log('🔐 Is logged in:', this.isUserLoggedIn);
-    
-    this.isSubmitting = true;
-    
-    // TODO: API hívás helyett most MOCK-oljuk
-    // Szimuláljuk, hogy a backend visszaadja a company ID-t
-    setTimeout(() => {
-      this.isSubmitting = false;
-      
-      // ✅ MOCK - Backend response szimuláció
-      const mockCompanyId = Math.floor(Math.random() * 1000) + 1;
-      console.log('🏢 Mock Company ID created:', mockCompanyId);
 
-      // ✅ Ha nincs bejelentkezve, hozzunk létre mock session-t
-      if (!this.isUserLoggedIn && this.registrationData?.ownerInfo) {
-        this.authService.setMockSession({
-          id: Date.now(),
-          email: this.registrationData.ownerInfo.email,
-          phone: this.registrationData.ownerInfo.phone,
-          firstName: this.registrationData.ownerInfo.firstName,
-          lastName: this.registrationData.ownerInfo.lastName,
-          roles: 'owner',
-          companyId: mockCompanyId,
-          avatarUrl: null,
-          roleId: null,
-        });
-        this.isUserLoggedIn = true;
-      }
-      
-      // ✅ User companyId frissítése az AuthService-ben
-      this.authService.updateUserCompany(mockCompanyId);
-      console.log('✅ User companyId updated in AuthService');
-      
-      // ✅ Success modal megjelenítése
-      this.showSuccessModal = true;
-      
-      // ✅ Cookie-k törlése sikeres regisztráció után
-      this.cookieService.clearRegistrationCookies();
-      console.log('🗑️ Registration cookies cleared');
-      
-      // ✅ 3 másodperc után átirányítás a FŐOLDAL-ra
-      setTimeout(() => {
-        this.router.navigate(['/']);
-        console.log('🚀 Redirected to / (main page)');
-      }, 3000);
-      
-    }, 1500);
-    
-    /* 
-    ═══════════════════════════════════════════════════════════
-    TODO: ÉLES API HÍVÁS (amikor backend kész)
-    ═══════════════════════════════════════════════════════════
-    
-    this.companyService.registerCompany(this.registrationData).subscribe({
+    this.isSubmitting = true;
+
+    const payload = this.buildRegistrationPayload();
+    console.log('📤 Registration payload:', payload);
+
+    this.companyService.registerCompany(payload).subscribe({
       next: (response) => {
         this.isSubmitting = false;
-        
-        // Backend response-ból kinyerjük a company ID-t
-        const companyId = response.companyId;
-        
-        // User companyId frissítése
-        this.authService.updateUserCompany(companyId);
-        
-        // Success modal
+
+        const companyId =
+          response?.companyId ??
+          response?.data?.companyId ??
+          response?.data?.id ??
+          response?.id ??
+          null;
+
+        if (companyId) {
+          this.authService.updateUserCompany(companyId);
+          console.log('✅ User companyId updated in AuthService:', companyId);
+        } else {
+          console.warn('⚠️ CompanyId not found in response:', response);
+        }
+
+        if (this.isUserLoggedIn) {
+          this.authService.refreshCurrentUser().subscribe({
+            next: () => console.log('✅ User refreshed from /users/me'),
+            error: (refreshError) =>
+              console.warn('⚠️ Failed to refresh user from /users/me:', refreshError)
+          });
+        }
+
         this.showSuccessModal = true;
-        
-        // Cookie-k törlése
         this.cookieService.clearRegistrationCookies();
-        
-        // Redirect főoldalra
+
         setTimeout(() => {
           this.router.navigate(['/']);
         }, 3000);
@@ -297,10 +278,103 @@ private submitRegistration(): void {
       error: (error) => {
         this.isSubmitting = false;
         console.error('❌ Hiba a regisztráció során:', error);
-        alert('Hiba történt a regisztráció során. Kérjük próbálja újra!');
+        const message = error?.message || 'Hiba történt a regisztráció során. Kérjük próbálja újra!';
+        alert(message);
       }
     });
-    */
+  }
+
+  private buildRegistrationPayload(): any {
+    const ownerInfo = this.registrationData?.ownerInfo || {};
+    const companyInfo = this.registrationData?.companyInfo || {};
+    const businessDetails = this.registrationData?.businessDetails || {};
+
+    const payload: any = {
+      name: companyInfo.name || null,
+      description: companyInfo.description || null,
+      address: companyInfo.address || null,
+      city: companyInfo.city || null,
+      postalCode: companyInfo.postalCode || null,
+      country: companyInfo.country || null,
+      phone: companyInfo.phone || null,
+      email: companyInfo.email || null,
+      website: companyInfo.website || null,
+      businessCategoryId: companyInfo.businessCategoryId ?? null,
+      bookingAdvanceDays: businessDetails.maxAdvanceBookingDays ?? null,
+      cancellationHours: businessDetails.cancellationHours ?? null,
+      minimumBookingHoursAhead: this.parseHoursAhead(businessDetails.minBookingHoursSameDay),
+      openingHours: this.formatOpeningHours(this.registrationData?.openingHours)
+    };
+
+    if (!this.isUserLoggedIn) {
+      payload.firstName = ownerInfo.firstName || null;
+      payload.lastName = ownerInfo.lastName || null;
+      payload.email = ownerInfo.email || payload.email;
+      payload.phone = ownerInfo.phone || payload.phone;
+      payload.password = ownerInfo.password || null;
+    }
+
+    return payload;
+  }
+
+  private parseHoursAhead(value: string | boolean | null | undefined): number | null {
+    if (value === false || value === null || value === undefined || value === '') {
+      return 0;
+    }
+
+    if (typeof value === 'string') {
+      const parts = value.split(':');
+      if (parts.length === 2) {
+        const hours = Number(parts[0]);
+        const minutes = Number(parts[1]);
+        if (!Number.isNaN(hours) && !Number.isNaN(minutes)) {
+          return hours + minutes / 60;
+        }
+      }
+    }
+
+    return typeof value === 'number' ? value : null;
+  }
+
+  private formatOpeningHours(openingHoursData: any): Record<string, string> | null {
+    if (!openingHoursData?.days || !Array.isArray(openingHoursData.days)) {
+      return null;
+    }
+
+    const dayMap: Record<number, string> = {
+      1: 'monday',
+      2: 'tuesday',
+      3: 'wednesday',
+      4: 'thursday',
+      5: 'friday',
+      6: 'saturday',
+      7: 'sunday'
+    };
+
+    const result: Record<string, string> = {
+      monday: 'closed',
+      tuesday: 'closed',
+      wednesday: 'closed',
+      thursday: 'closed',
+      friday: 'closed',
+      saturday: 'closed',
+      sunday: 'closed'
+    };
+
+    openingHoursData.days.forEach((day: any) => {
+      const key = dayMap[day.dayNumber];
+      if (!key) return;
+      if (!day.isOpen) {
+        result[key] = 'closed';
+        return;
+      }
+
+      const openTime = day.openTime || '00:00';
+      const closeTime = day.closeTime || '00:00';
+      result[key] = `${openTime}-${closeTime}`;
+    });
+
+    return result;
   }
 
   getButtonText(): string {
@@ -321,7 +395,7 @@ private submitRegistration(): void {
       this.currentStep = stepNumber;
       this.steps[stepNumber - 1].active = true;
       this.steps[this.currentStep].active = false;
-      this.checkCurrentStepValidity();
+      this.setStepValidityAfterNavigation();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else if (stepNumber === this.currentStep + 1 && this.isCurrentStepValid) {
       // Előre lépés

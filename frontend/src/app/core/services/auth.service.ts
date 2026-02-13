@@ -145,6 +145,27 @@ export class AuthService {
   }
 
   /**
+   * Aktuális user frissítése (users/me)
+   * Akkor hasznos, ha a backend frissíti a companyId-t.
+   */
+  refreshCurrentUser(): Observable<User> {
+    return this.http
+      .get<User>(`${this.apiUrl}${API_ENDPOINTS.USER.ME}`)
+      .pipe(
+        tap((user) => {
+          const currentUser = this.getCurrentUser();
+          const mergedUser: User = {
+            ...(currentUser || {}),
+            ...user,
+          } as User;
+
+          localStorage.setItem(this.USER_KEY, JSON.stringify(mergedUser));
+          this.currentUserSubject.next(mergedUser);
+        })
+      );
+  }
+
+  /**
    * Access token lekérése
    */
   getToken(): string | null {

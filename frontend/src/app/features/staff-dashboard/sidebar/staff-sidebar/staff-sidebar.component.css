@@ -15,7 +15,8 @@
 	position: relative;
 }
 
-.staff-sidebar:hover {
+.staff-sidebar:hover,
+.staff-sidebar.is-hovered {
 	width: 220px;
 	flex-basis: 220px;
 }
@@ -51,7 +52,7 @@
 	transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
-.staff-sidebar:not(:hover):not(.is-pinned) .pin-btn {
+.staff-sidebar:not(:hover):not(.is-hovered):not(.is-pinned) .pin-btn {
 	opacity: 0;
 	pointer-events: none;
 }
@@ -133,6 +134,7 @@
 }
 
 .staff-sidebar:hover .nav-label,
+.staff-sidebar.is-hovered .nav-label,
 .staff-sidebar.is-pinned .nav-label {
 	opacity: 1;
 }

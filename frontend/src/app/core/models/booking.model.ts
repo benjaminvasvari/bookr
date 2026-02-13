@@ -114,3 +114,13 @@ export interface ClientAppointmentsResponse {
   status: string;
   statusCode: number;
 }
+
+export interface CreateAppointmentRequest {
+  companyId: number;
+  serviceIds: number[];
+  staffId: number;
+  startTime: string;
+  endTime: string;
+  notes?: string;
+  price: number;
+}

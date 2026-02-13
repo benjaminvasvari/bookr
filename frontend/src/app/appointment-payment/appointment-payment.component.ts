@@ -1,8 +1,16 @@
 // src/app/appointment-payment/appointment-payment.component.ts
 import { Component, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { CartService, CartItem, SelectedSpecialist, SelectedAppointment } from '../core/services/cart.service';
+import {
+  CartService,
+  CartItem,
+  SelectedSpecialist,
+  SelectedAppointment,
+} from '../core/services/cart.service';
+import { BookingService } from '../core/services/booking.service';
+import { CompaniesService } from '../core/services/companies.service';
+import { CompanyShort } from '../core/models/company.model';
 import { SuccessOverlayComponent } from '../shared/components/success-overlay/success-overlay.component';
 
 @Component({
@@ -14,7 +22,8 @@ import { SuccessOverlayComponent } from '../shared/components/success-overlay/su
 })
 export class AppointmentPaymentComponent implements OnInit {
   // Adatok
-  company: any = null;
+  company: CompanyShort | null = null;
+  companyId: number | null = null;
   specialist: SelectedSpecialist | null = null;
   appointment: SelectedAppointment | null = null;
   cart: CartItem[] = [];
@@ -24,13 +33,19 @@ export class AppointmentPaymentComponent implements OnInit {
 
   // Success overlay
   showSuccessOverlay = false;
+  isSubmitting = false;
 
   constructor(
     private router: Router,
-    private cartService: CartService
+    private route: ActivatedRoute,
+    private cartService: CartService,
+    private bookingService: BookingService,
+    private companiesService: CompaniesService
   ) {}
 
   ngOnInit(): void {
+    const companyId = Number(this.route.snapshot.paramMap.get('companyId'));
+    this.companyId = Number.isNaN(companyId) ? null : companyId;
     this.loadBookingData();
     window.scrollTo(0, 0);
     this.validateBookingData();
@@ -49,17 +64,20 @@ export class AppointmentPaymentComponent implements OnInit {
       this.appointment = appointment;
     });
 
-    this.company = {
-      id: 1,
-      name: 'Szalon neve',
-      address: 'Újhelyi u. 86',
-      rating: 5.0,
-      imageUrl: 'assets/placeholder.jpg',
-    };
+    if (this.companyId) {
+      this.companiesService.getCompanyShort(this.companyId).subscribe({
+        next: (company) => {
+          this.company = company;
+        },
+        error: (error) => {
+          console.error('Hiba a ceg betoltese soran:', error);
+        },
+      });
+    }
   }
 
   validateBookingData(): void {
-    if (!this.cart || this.cart.length === 0 || !this.specialist || !this.appointment) {
+    if (!this.companyId || !this.cart || this.cart.length === 0 || !this.specialist || !this.appointment) {
       console.warn('Hiányos foglalási adatok, visszanavigálás...');
       this.router.navigate(['/']);
     }
@@ -70,34 +88,44 @@ export class AppointmentPaymentComponent implements OnInit {
   }
 
   confirmBooking(): void {
-    if (!this.selectedPaymentMethod) {
+    if (!this.selectedPaymentMethod || !this.companyId || !this.specialist || !this.appointment) {
       return;
     }
 
-    const booking = {
-      company: this.company,
-      specialist: this.specialist,
-      appointment: this.appointment,
-      services: this.cart,
-      paymentMethod: this.selectedPaymentMethod,
-      totalPrice: this.getCartTotal(),
+    if (this.isSubmitting) {
+      return;
+    }
+
+    const startDateTime = this.toDateTime(this.appointment.date, this.appointment.time);
+    const endDateTime = new Date(startDateTime.getTime() + this.getTotalDurationMinutes() * 60000);
+
+    const payload = {
+      companyId: this.companyId,
+      serviceIds: this.cart.map((item) => item.id),
+      staffId: this.specialist.id,
+      startTime: this.formatDateTime(startDateTime),
+      endTime: this.formatDateTime(endDateTime),
+      notes: '',
+      price: this.getCartTotal(),
     };
 
-    console.log('Véglegesített foglalás:', booking);
-     console.log('showSuccessOverlay beállítva TRUE-ra'); // Debug
-
-    // TODO: API hívás a foglalás mentéséhez
-    // this.bookingService.createBooking(booking).subscribe(...)
-
-    // Success overlay megjelenítése
-    this.showSuccessOverlay = true;
-
-     console.log('showSuccessOverlay értéke:', this.showSuccessOverlay); // Debug
+    this.isSubmitting = true;
+    this.bookingService.createAppointment(payload).subscribe({
+      next: () => {
+        this.isSubmitting = false;
+        this.showSuccessOverlay = true;
+      },
+      error: (error) => {
+        this.isSubmitting = false;
+        console.error('Hiba a foglalas veglegesitese soran:', error);
+        alert('Nem sikerult a foglalas veglegesitese. Kerlek probald ujra.');
+      },
+    });
   }
 
   onSuccessCompleted(): void {
     // Kosár törlése
-    this.cartService.clearCart();
+    this.cartService.clearBooking();
 
     // Navigálás a főoldalra (main page)
     this.router.navigate(['/']);
@@ -116,5 +144,30 @@ export class AppointmentPaymentComponent implements OnInit {
     const months = ['jan', 'feb', 'már', 'ápr', 'máj', 'jún', 'júl', 'aug', 'szep', 'okt', 'nov', 'dec'];
     
     return `${months[date.getMonth()]}. ${date.getDate()}. ${this.appointment.time}`;
+  }
+
+  private toDateTime(date: Date, time: string): Date {
+    const [hours, minutes] = time.split(':').map(Number);
+    const result = new Date(date);
+    result.setHours(hours, minutes, 0, 0);
+    return result;
+  }
+
+  private formatDateTime(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}:00`;
+  }
+
+  private getTotalDurationMinutes(): number {
+    return this.cart.reduce((sum, item) => sum + this.parseDuration(item.duration), 0);
+  }
+
+  private parseDuration(duration: string): number {
+    const match = duration.match(/(\d+)\s*perc/);
+    return match ? parseInt(match[1], 10) : 60;
   }
 }

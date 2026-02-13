@@ -3,7 +3,8 @@
 	align-items: center;
 	justify-content: space-between;
 	gap: 16px;
-	background: #ebf4ff;
+	background: #ffffff;
+	border: 1px solid var(--owner-border);
 	border-radius: 16px;
 	padding: 20px 24px;
 	box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
@@ -59,7 +60,8 @@
 }
 
 .kpi-card {
-	background: #ebf4ff;
+	background: #ffffff;
+	border: 1px solid var(--owner-border);
 	border-radius: 14px;
 	padding: 16px 18px;
 	box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
@@ -120,7 +122,8 @@
 }
 
 .panel {
-	background: #ebf4ff;
+	background: #ffffff;
+	border: 1px solid var(--owner-border);
 	border-radius: 14px;
 	padding: 16px 18px;
 	box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);

@@ -1,6 +1,6 @@
 .staff-panel {
 	padding: 28px;
-	background: #f8fafc;
+	background: transparent;
 	min-height: 100vh;
 	box-sizing: border-box;
 }
@@ -70,7 +70,7 @@
 	gap: 12px;
 	align-items: center;
 	background: #ffffff;
-	border: 1px solid #e5e7eb;
+	border: 1px solid var(--owner-border);
 	border-radius: 12px;
 	padding: 12px;
 	box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
@@ -92,7 +92,7 @@
 .search-input input {
 	width: 100%;
 	background: #f9fafb;
-	border: 1px solid #e5e7eb;
+	border: 1px solid var(--owner-border);
 	border-radius: 10px;
 	padding: 10px 12px;
 	font-size: 14px;
@@ -101,7 +101,7 @@
 
 .filter-select {
 	background: #f9fafb;
-	border: 1px solid #e5e7eb;
+	border: 1px solid var(--owner-border);
 	border-radius: 10px;
 	padding: 10px 12px;
 	font-size: 14px;
@@ -134,7 +134,7 @@
 	background: #ffffff;
 	border-radius: 16px;
 	padding: 16px;
-	border: 1px solid #eef2f7;
+	border: 1px solid var(--owner-border);
 	box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
 	display: grid;
 	gap: 12px;

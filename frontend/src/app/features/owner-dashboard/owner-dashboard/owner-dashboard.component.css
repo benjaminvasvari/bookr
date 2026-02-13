@@ -1,6 +1,8 @@
 .owner-dashboard {
 	display: flex;
 	gap: 0;
+	--owner-border: rgba(124, 156, 191, 0.55);
+	--owner-border-strong: #7c9cbf;
 	background: #ebf4ff;
 	min-height: 100vh;
 	overflow-x: hidden;
@@ -13,6 +15,7 @@
 	flex-direction: column;
 	gap: 24px;
 	min-width: 0;
+	background: transparent;
 }
 
 .dashboard-header {

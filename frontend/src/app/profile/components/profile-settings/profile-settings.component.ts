@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { UserService } from '../../../core/services/user.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { Router } from '@angular/router';
+import { UpdateNotificationSettingsRequest } from '../../../core/models';
 
 interface NotificationSettings {
   appointmentConfirmation: boolean;
@@ -35,6 +35,7 @@ export class ProfileSettingsComponent implements OnInit, OnDestroy {
   notificationSettingsChanged = false;
   isSavingNotifications = false;
   notificationSaveSuccess = false;
+  private hasPendingNotificationSave = false;
 
   // Password modal states
   showPasswordModal = false;
@@ -52,8 +53,7 @@ export class ProfileSettingsComponent implements OnInit, OnDestroy {
   constructor(
     private fb: FormBuilder,
     private userService: UserService,
-    private authService: AuthService,
-    private router: Router
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
@@ -76,7 +76,6 @@ export class ProfileSettingsComponent implements OnInit, OnDestroy {
     // Delete Account Form
     this.deleteAccountForm = this.fb.group({
       password: ['', [Validators.required, Validators.minLength(8)]],
-      confirmDelete: [false, [Validators.requiredTrue]],
     });
   }
 
@@ -93,57 +92,51 @@ export class ProfileSettingsComponent implements OnInit, OnDestroy {
   }
 
   onNotificationChange(): void {
-    // Ellenőrizzük, hogy változott-e valami
-    this.notificationSettingsChanged =
-      JSON.stringify(this.notificationSettings) !==
-      JSON.stringify(this.originalNotificationSettings);
+    this.notificationSaveSuccess = false;
 
-    // Sikeres mentés üzenet eltűntetése
-    if (this.notificationSettingsChanged) {
-      this.notificationSaveSuccess = false;
+    if (this.isSavingNotifications) {
+      this.hasPendingNotificationSave = true;
+      return;
     }
+
+    this.saveNotificationSettings();
   }
 
   saveNotificationSettings(): void {
     this.isSavingNotifications = true;
     this.notificationSaveSuccess = false;
 
-    // TODO: Backend API hívás lesz később
-    // Egyelőre localStorage-ba mentjük
-    setTimeout(() => {
-      localStorage.setItem('notificationSettings', JSON.stringify(this.notificationSettings));
-      this.originalNotificationSettings = { ...this.notificationSettings };
-      this.notificationSettingsChanged = false;
-      this.isSavingNotifications = false;
-      this.notificationSaveSuccess = true;
+    const currentUser = this.authService.getCurrentUser();
+    const request: UpdateNotificationSettingsRequest = {
+      id: String(currentUser?.id ?? ''),
+      confirm: this.notificationSettings.appointmentConfirmation,
+      reminder: this.notificationSettings.appointmentReminder,
+      cancel: this.notificationSettings.appointmentCancellation,
+      marketing: this.notificationSettings.marketingEmails,
+    };
 
-      console.log('Notification settings saved:', this.notificationSettings);
-
-      // Sikeres mentés üzenet eltűntetése 3 mp után
-      setTimeout(() => {
-        this.notificationSaveSuccess = false;
-      }, 3000);
-    }, 500);
-
-    // Később így fog kinézni:
-    /*
-    this.userService.updateNotificationSettings(this.notificationSettings).subscribe({
+    this.userService.updateNotificationSettings(request).subscribe({
       next: () => {
+        localStorage.setItem('notificationSettings', JSON.stringify(this.notificationSettings));
         this.originalNotificationSettings = { ...this.notificationSettings };
         this.notificationSettingsChanged = false;
         this.isSavingNotifications = false;
-        this.notificationSaveSuccess = true;
 
-        setTimeout(() => {
-          this.notificationSaveSuccess = false;
-        }, 3000);
+        if (this.hasPendingNotificationSave) {
+          this.hasPendingNotificationSave = false;
+          this.saveNotificationSettings();
+        }
       },
       error: (error) => {
         console.error('Error saving notification settings:', error);
         this.isSavingNotifications = false;
+
+        if (this.hasPendingNotificationSave) {
+          this.hasPendingNotificationSave = false;
+          this.saveNotificationSettings();
+        }
       },
     });
-    */
   }
 
   // ==================== PASSWORD RESET ====================
@@ -228,33 +221,13 @@ export class ProfileSettingsComponent implements OnInit, OnDestroy {
       this.isDeletingAccount = true;
       this.deleteAccountError = '';
 
-      // TODO: Backend endpoint lesz később
-      // Egyelőre csak console.log
-      setTimeout(() => {
-        console.log('Account deletion requested with password:', password);
-        console.log('Confirmation checkbox:', this.deleteAccountForm.get('confirmDelete')?.value);
-
-        // Sikeres törlés után logout és átirányítás
-        this.isDeletingAccount = false;
-        this.closeDeleteAccountModal();
-
-        alert('Fiók törlése sikeres! (Demo mód - backend endpoint szükséges)');
-
-        // Logout és redirect
-        // this.authService.logout();
-        // this.router.navigate(['/']);
-      }, 1000);
-
-      // Később így fog kinézni:
-      /*
       this.userService.deleteAccount(password).subscribe({
         next: () => {
           this.isDeletingAccount = false;
           this.closeDeleteAccountModal();
 
-          // Logout és redirect
+          // Session törlése és redirect
           this.authService.logout();
-          this.router.navigate(['/']);
         },
         error: (error) => {
           console.error('Account deletion error:', error);
@@ -262,9 +235,8 @@ export class ProfileSettingsComponent implements OnInit, OnDestroy {
           this.isDeletingAccount = false;
         },
       });
-      */
     } else {
-      this.deleteAccountError = 'Kérjük, töltsd ki az összes mezőt és erősítsd meg a törlést.';
+      this.deleteAccountError = 'A jelszónak legalább 8 karakter hosszúnak kell lennie.';
     }
   }
 }
