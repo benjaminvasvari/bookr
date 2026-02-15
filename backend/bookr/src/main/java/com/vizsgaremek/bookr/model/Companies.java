@@ -1038,4 +1038,35 @@ public class Companies implements Serializable {
             }
         }
     }
+    
+    public static Integer getCompanyIdByOwnerId(Integer userId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getCompanyIdByOwnerId");
+            spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("userIdIN", userId);
+
+            spq.execute();
+
+            Object singleResult = spq.getSingleResult();
+
+            if (singleResult == null) {
+                return null;
+            }
+
+            Integer companyId = Integer.valueOf(singleResult.toString());
+            
+            return companyId;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
 }

@@ -4,6 +4,8 @@
  */
 package com.vizsgaremek.bookr.model;
 
+import com.vizsgaremek.bookr.DTO.OwnerDashboardDTO;
+import com.vizsgaremek.bookr.DTO.OwnerDashboardDTO.AverageRatingDTO;
 import static com.vizsgaremek.bookr.model.Users.emf;
 import static com.vizsgaremek.bookr.model.Users.formatter;
 import java.io.Serializable;
@@ -277,6 +279,43 @@ public class Reviews implements Serializable {
         } catch (Exception ex) {
             ex.printStackTrace();
             return new ArrayList<>();  // Error esetén üres lista (nem null!)
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static AverageRatingDTO getAverageReviewsByCompany(Integer companyId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getDashboardAverageRating");
+
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("companyIdIN", companyId);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            Object[] record = resultList.get(0);
+
+            AverageRatingDTO rating = new AverageRatingDTO(
+                    Double.parseDouble(record[0].toString()),
+                    Integer.valueOf(record[1].toString())
+            );
+
+            return rating;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
         } finally {
             if (em != null && em.isOpen()) {
                 em.close();

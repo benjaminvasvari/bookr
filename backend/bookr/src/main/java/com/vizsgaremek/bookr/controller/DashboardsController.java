@@ -67,7 +67,7 @@ public class DashboardsController {
     }
 
     @GET
-    @Path("get")
+    @Path("owner")
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
     public Response getOwnerDashboard(@HeaderParam("Authorization") String authHeader) {

@@ -152,7 +152,7 @@ public class NotificationSettingsController {
             }
 
             NotificationSettings updatedNotif = new NotificationSettings(
-                    bodyObject.getInt("id"),
+                    bodyObject.getInt("id"), 
                     bodyObject.getBoolean("confirm"),
                     bodyObject.getBoolean("reminder"),
                     bodyObject.getBoolean("cancel"),

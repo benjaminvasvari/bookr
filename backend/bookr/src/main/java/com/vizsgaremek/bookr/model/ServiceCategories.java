@@ -299,7 +299,7 @@ public class ServiceCategories implements Serializable {
                         Integer.parseInt(record[0].toString()),
                         record[1].toString(),
                         record[2] != null ? record[2].toString() : null, // categoryDescription 
-                        Integer.valueOf(record[3].toString()),
+                        Integer.valueOf(record[3].toString()), 
                         record[4].toString(),
                         Integer.valueOf(record[5].toString()),
                         record[6] != null ? Double.parseDouble(record[6].toString()) : null, // price

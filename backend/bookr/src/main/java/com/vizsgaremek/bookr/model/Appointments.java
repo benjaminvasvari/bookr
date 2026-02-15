@@ -4,6 +4,10 @@
  */
 package com.vizsgaremek.bookr.model;
 
+import com.vizsgaremek.bookr.DTO.OwnerDashboardDTO.ActiveClientsDTO;
+import com.vizsgaremek.bookr.DTO.OwnerDashboardDTO.UpcomingAppointmentsDTO;
+import com.vizsgaremek.bookr.DTO.OwnerDashboardDTO.TodayBookingsCountDTO;
+import com.vizsgaremek.bookr.DTO.OwnerDashboardDTO.WeeklyRevenueDTO;
 import static com.vizsgaremek.bookr.model.OpeningHours.timeFormatter;
 import static com.vizsgaremek.bookr.model.Users.emf;
 import java.io.Serializable;
@@ -11,6 +15,8 @@ import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -843,6 +849,160 @@ public class Appointments implements Serializable {
         } catch (Exception ex) {
             ex.printStackTrace();
             return null;
+        }
+    }
+
+    public static WeeklyRevenueDTO getWeeklyRevenue(Integer companyId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getDashboardWeeklyRevenue");
+
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("companyIdIN", companyId);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            Object[] record = resultList.get(0);
+
+            WeeklyRevenueDTO weeklyRevenue = new WeeklyRevenueDTO(
+                    record[0].toString(),
+                    record[1].toString(),
+                    record[2].toString()
+            );
+
+            return weeklyRevenue;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static ActiveClientsDTO getActiveClients(Integer companyId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getDashboardActiveClients");
+
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("companyIdIN", companyId);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            Object[] record = resultList.get(0);
+
+            ActiveClientsDTO activeClients = new ActiveClientsDTO(
+                    Integer.valueOf(record[0].toString()),
+                    Integer.valueOf(record[1].toString())
+            );
+
+            return activeClients;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static ArrayList<UpcomingAppointmentsDTO> getDashboardUpcomingAppointments(Integer companyId, Integer limit) {
+        EntityManager em = emf.createEntityManager();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getDashboardUpcomingAppointments");
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("limitIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("companyIdIN", companyId);
+            spq.setParameter("limitIN", limit);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+            ArrayList<UpcomingAppointmentsDTO> toReturn = new ArrayList<>();
+
+            for (Object[] record : resultList) {
+                UpcomingAppointmentsDTO a = new UpcomingAppointmentsDTO(
+                        Integer.valueOf(record[0].toString()),
+                        LocalDateTime.parse(record[1].toString(), formatter),
+                        LocalDateTime.parse(record[2].toString(), formatter),
+                        record[3].toString(),
+                        record[4].toString(),
+                        record[5].toString(),
+                        LocalDate.parse(record[6].toString(), formatter)
+                );
+
+                toReturn.add(a);
+            }
+
+            return toReturn;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+
+        } finally {
+            em.close();
+        }
+    }
+
+    public static TodayBookingsCountDTO getTodayBookingsCount(Integer companyId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getDashboardTodayBookingsCount");
+
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("companyIdIN", companyId);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            Object[] record = resultList.get(0);
+
+            TodayBookingsCountDTO todayBookingsCOunt = new TodayBookingsCountDTO(
+                    Integer.valueOf(record[0].toString()),
+                    Integer.valueOf(record[1].toString())
+            );
+
+            return todayBookingsCOunt;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
         }
     }
 }

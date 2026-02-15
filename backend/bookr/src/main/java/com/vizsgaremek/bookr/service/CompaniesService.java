@@ -474,7 +474,7 @@ public class CompaniesService {
                     em.getTransaction().rollback();
                     return buildErrorResponseJSON(500, "userAssignmentFailed");
                 }
-                
+
                 // 5. Give owner role
                 Boolean isRoleAssignSuccess = UserXRole.assignRole(userId, 2);
 
@@ -565,6 +565,29 @@ public class CompaniesService {
             if (em != null && em.isOpen()) {
                 em.close();
             }
+        }
+    }
+
+    public Integer getCompanyIdByOwnerId(Integer id) {
+
+        try {
+            // 1. VALIDÁCIÓ
+            if (id == null || id <= 0) {
+                return null;
+            }
+
+            Integer companyId = Companies.getCompanyIdByOwnerId(id);
+
+            if (companyId == null) {
+                return null;
+            }
+
+            return companyId;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+
+            return null;
         }
     }
 }

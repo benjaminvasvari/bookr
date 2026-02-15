@@ -87,7 +87,7 @@ public class UsersService {
         }
 
         //code
-        if (userId >= 0) {
+        if (userId <= 0) {
             status = "InvalidParam";
             statusCode = 417;
         } else {
