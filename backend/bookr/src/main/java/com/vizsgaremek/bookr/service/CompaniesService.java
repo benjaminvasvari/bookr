@@ -64,7 +64,7 @@ public class CompaniesService {
             JSONArray serviceCategories = serviceCategoryService.getServiceCategoriesWithServicesByCompanyId(id);
 
             // 4. REVIEWS
-            List<Reviews> reviewsList = Reviews.getReviewsByCompanyId(id);
+            List<Reviews> reviewsList = Reviews.getReviewsByCompanyId(id, 10);
             JSONArray reviews = new JSONArray();
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy. MM. dd.");
 

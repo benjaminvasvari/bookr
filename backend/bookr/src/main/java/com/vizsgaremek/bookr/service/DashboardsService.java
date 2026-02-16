@@ -1,6 +1,5 @@
 package com.vizsgaremek.bookr.service;
 
-import com.vizsgaremek.bookr.DTO.OwnerDashboardDTO;
 import com.vizsgaremek.bookr.DTO.OwnerDashboardDTO.ActiveClientsDTO;
 import com.vizsgaremek.bookr.DTO.OwnerDashboardDTO.AverageRatingDTO;
 import com.vizsgaremek.bookr.DTO.OwnerDashboardDTO.TodayBookingsCountDTO;
@@ -9,7 +8,9 @@ import com.vizsgaremek.bookr.DTO.OwnerDashboardDTO.WeeklyRevenueDTO;
 import com.vizsgaremek.bookr.model.Appointments;
 import com.vizsgaremek.bookr.model.Reviews;
 import com.vizsgaremek.bookr.security.JWT;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.List;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -65,29 +66,34 @@ public class DashboardsService {
 
             // UpcomingAppointments
             ArrayList<UpcomingAppointmentsDTO> upcomingAppointmentsList = Appointments.getDashboardUpcomingAppointments(companyId, 3);
-            JSONArray upcomingAppointmentsArray = new JSONArray();
+            if (upcomingAppointmentsList != null) {
+                JSONArray upcomingAppointmentsArray = new JSONArray();
 
-            for (UpcomingAppointmentsDTO record : upcomingAppointmentsList) {
-                JSONObject upcomingAppointmentObj = new JSONObject();
+                for (UpcomingAppointmentsDTO record : upcomingAppointmentsList) {
+                    JSONObject upcomingAppointmentObj = new JSONObject();
 
-                upcomingAppointmentObj.put("appointmentId", record.getAppointmentId());
-                upcomingAppointmentObj.put("startTime", record.getStartTime());
-                upcomingAppointmentObj.put("endTime", record.getEndTime());
-                upcomingAppointmentObj.put("status", record.getStatus());
-                upcomingAppointmentObj.put("serviceName", record.getServiceName());
-                upcomingAppointmentObj.put("clientName", record.getClientName());
-                upcomingAppointmentObj.put("relativeDate", record.getRelativeDate());
+                    upcomingAppointmentObj.put("appointmentId", record.getAppointmentId());
+                    upcomingAppointmentObj.put("startTime", record.getStartTime());
+                    upcomingAppointmentObj.put("endTime", record.getEndTime());
+                    upcomingAppointmentObj.put("status", record.getStatus());
+                    upcomingAppointmentObj.put("serviceName", record.getServiceName());
+                    upcomingAppointmentObj.put("clientName", record.getClientName());
+                    upcomingAppointmentObj.put("relativeDate", record.getRelativeDate());
 
-                upcomingAppointmentsArray.put(upcomingAppointmentObj);
+                    upcomingAppointmentsArray.put(upcomingAppointmentObj);
+                }
+
+                result.put("upcomingAppointmentsData", upcomingAppointmentsArray);
+            } else {
+                result.put("upcomingAppointmentsData", new JSONArray());
             }
-
-            result.put("upcomingAppointmentsData", upcomingAppointmentsArray);
 
             // Services By Categories
             JSONArray servicesByCategories = ServiceCategoryService.getServiceCategoriesWithServicesByCompanyId(companyId);
+            System.out.println("dolog" + servicesByCategories);
 
             result.put("servicesByCategories", servicesByCategories);
-            
+
             // todayBookings
             TodayBookingsCountDTO todayBookings = Appointments.getTodayBookingsCount(companyId);
             JSONObject todayBookingsObj = new JSONObject();
@@ -96,7 +102,7 @@ public class DashboardsService {
             todayBookingsObj.put("yesterdayCount", todayBookings.getYesterdayCount());
 
             result.put("todayBookingsCount", todayBookingsObj);
-            
+
             // Average Rating
             AverageRatingDTO ratings = Reviews.getAverageReviewsByCompany(companyId);
             JSONObject ratingsObj = new JSONObject();
@@ -105,7 +111,25 @@ public class DashboardsService {
             ratingsObj.put("totalReviews", ratings.getTotalReviews());
 
             result.put("averageRating", ratingsObj);
-            
+
+            // 4. REVIEWS
+            List<Reviews> reviewsList = Reviews.getReviewsByCompanyId(companyId, 2);
+            JSONArray reviews = new JSONArray();
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy. MM. dd.");
+
+            for (Reviews review : reviewsList) {
+                JSONObject reviewObj = new JSONObject();
+                reviewObj.put("id", review.getId());
+                reviewObj.put("userName", review.getUserName());
+                reviewObj.put("userImage", review.getUserImage());
+                reviewObj.put("rating", review.getRating());
+                reviewObj.put("comment", review.getComment());
+                reviewObj.put("date", sdf.format(review.getCreatedAt()));
+                reviews.put(reviewObj);
+            }
+
+            result.put("reviewsLimited", reviews);
+
             toReturn.put("result", result);
             toReturn.put("status", status);
             toReturn.put("statusCode", statusCode);

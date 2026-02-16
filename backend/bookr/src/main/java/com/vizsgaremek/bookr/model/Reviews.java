@@ -4,7 +4,6 @@
  */
 package com.vizsgaremek.bookr.model;
 
-import com.vizsgaremek.bookr.DTO.OwnerDashboardDTO;
 import com.vizsgaremek.bookr.DTO.OwnerDashboardDTO.AverageRatingDTO;
 import static com.vizsgaremek.bookr.model.Users.emf;
 import static com.vizsgaremek.bookr.model.Users.formatter;
@@ -240,14 +239,16 @@ public class Reviews implements Serializable {
         return "com.vizsgaremek.bookr.model.Reviews[ id=" + id + " ]";
     }
 
-    public static List<Reviews> getReviewsByCompanyId(Integer companyId) {
+    public static List<Reviews> getReviewsByCompanyId(Integer companyId, Integer limit) {
         EntityManager em = emf.createEntityManager();
 
         try {
-            // Ha van stored procedure:
-            StoredProcedureQuery spq = em.createStoredProcedureQuery("getReviewsByCompanyId");
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getReviewsByCompanyLimited");
             spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("limitIN", Integer.class, ParameterMode.IN);
+            
             spq.setParameter("companyIdIN", companyId);
+            spq.setParameter("limitIN", limit);
 
             spq.execute();
 

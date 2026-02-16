@@ -77,7 +77,7 @@ public class ServiceCategoryController {
                 response.put("message", "Categories retrieved successfully");
                 response.put("data", categories);
             } else {
-                response.put("statusCode", 40);
+                response.put("statusCode", 400);
                 response.put("message", "InvalidParam");
                 response.put("data", new JSONArray());
             }
