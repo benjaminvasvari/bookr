@@ -4,12 +4,14 @@
  */
 package com.vizsgaremek.bookr.model;
 
-import com.vizsgaremek.bookr.DTO.OwnerDashboardDTO.ActiveClientsDTO;
-import com.vizsgaremek.bookr.DTO.OwnerDashboardDTO.UpcomingAppointmentsDTO;
-import com.vizsgaremek.bookr.DTO.OwnerDashboardDTO.TodayBookingsCountDTO;
-import com.vizsgaremek.bookr.DTO.OwnerDashboardDTO.WeeklyRevenueDTO;
+import com.vizsgaremek.bookr.DTO.OwnerPanelDTO.ActiveClientsDTO;
+import com.vizsgaremek.bookr.DTO.OwnerPanelDTO.UpcomingAppointmentsDTO;
+import com.vizsgaremek.bookr.DTO.OwnerPanelDTO.TodayBookingsCountDTO;
+import com.vizsgaremek.bookr.DTO.OwnerPanelDTO.WeeklyRevenueDTO;
+import com.vizsgaremek.bookr.DTO.OwnerPanelDTO.getAllFutureAppointmentsByCompanyDTO;
 import static com.vizsgaremek.bookr.model.OpeningHours.timeFormatter;
 import static com.vizsgaremek.bookr.model.Users.emf;
+import static com.vizsgaremek.bookr.model.Users.formatter;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
@@ -1004,6 +1006,49 @@ public class Appointments implements Serializable {
             if (em != null && em.isOpen()) {
                 em.close();
             }
+        }
+    }
+
+    public static ArrayList<getAllFutureAppointmentsByCompanyDTO> getAllFutureAppointmentsByCompany(Integer companyId) {
+        EntityManager em = emf.createEntityManager();
+        DateTimeFormatter dateOnlyFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        SimpleDateFormat timeParser = new SimpleDateFormat("HH:mm:ss");
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getAllFutureAppointmentsByCompany");
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.setParameter("companyIdIN", companyId);
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+            ArrayList<getAllFutureAppointmentsByCompanyDTO> toReturn = new ArrayList<>();
+
+            for (Object[] record : resultList) {
+                getAllFutureAppointmentsByCompanyDTO a = new getAllFutureAppointmentsByCompanyDTO(
+                        Integer.valueOf(record[0].toString()),
+                        LocalDate.parse(record[1].toString(), dateOnlyFormatter),
+                        timeParser.parse(record[2].toString()), // "12:00:00"
+                        timeParser.parse(record[3].toString()), // "13:00:00"
+                        record[4].toString(),
+                        record[5].toString(),
+                        record[6] != null ? record[6].toString() : null,
+                        record[7].toString(),
+                        record[8] != null ? record[8].toString() : null,
+                        Integer.valueOf(record[9].toString()),
+                        record[10].toString(),
+                        Double.parseDouble(record[11].toString()),
+                        record[12].toString(),
+                        formatter.parse(record[13].toString()) // created_at még teljes datetime
+                );
+                toReturn.add(a);
+            }
+            return toReturn;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            em.close();
         }
     }
 }

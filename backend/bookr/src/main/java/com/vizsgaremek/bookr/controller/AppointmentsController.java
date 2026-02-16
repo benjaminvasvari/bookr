@@ -17,6 +17,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 /**
@@ -251,6 +252,49 @@ public class AppointmentsController {
             }
 
             JSONObject toReturn = layer.getAppointmentsByClient(userId, page, amount, isUpComing);
+            return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                    .entity(toReturn.toString())
+                    .type(MediaType.APPLICATION_JSON)
+                    .build();
+        }
+    }
+
+    @GET
+    @Path("getAllByCompany")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response getAllFutureAppointmentsByCompany(@HeaderParam("Authorization") String authHeader, @QueryParam("companyId") Integer companyId) {
+
+        // Extract token from "Bearer <token>"
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            System.out.println("Missing or invalid Authorization header");
+            return buildErrorResponse(401, "missingToken");
+        }
+
+        // Validate parameters
+        if (companyId == null || companyId <= 0) {
+            return buildErrorResponse(417, "invalidParam");
+        }
+
+        // Remove "Bearer " prefix
+        String jwtToken = authHeader.substring(7);
+        Boolean validJwt = JWT.validateAccessToken(jwtToken);
+
+        if (validJwt == null) {
+            // Lejárt JWT
+            return buildErrorResponse(401, "tokenExpired");
+        } else if (validJwt == false) {
+            // Invalid JWT
+            return buildErrorResponse(401, "invalidToken");
+        } else {
+            // Valid token
+            String userRoles = JWT.getRolesFromAccessToken(jwtToken);
+            boolean hasPermission = RoleChecker.hasAllRoles(userRoles, "client", "owner") || RoleChecker.hasAllRoles(userRoles, "client", "superadmin");
+
+            if (!hasPermission) {
+                return buildErrorResponse(403, "forbidden");
+            }
+
+            JSONObject toReturn = layer.getAllFutureAppointmentsByCompany(companyId);
             return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
                     .entity(toReturn.toString())
                     .type(MediaType.APPLICATION_JSON)

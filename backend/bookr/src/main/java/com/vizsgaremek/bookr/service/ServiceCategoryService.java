@@ -37,11 +37,11 @@ public class ServiceCategoryService {
 
         try {
 
-            List<ServiceCategories> ServiceCategory = ServiceCategories.getServiceCategoriesWithServicesByCompanyId(id);
+            List<ServiceCategories> modelResult = layer.getServiceCategoriesWithServicesByCompanyId(id);
 
             Map<Integer, JSONObject> categoriesMap = new LinkedHashMap<>();
 
-            for (ServiceCategories service : ServiceCategory) {
+            for (ServiceCategories service : modelResult) {
                 int categoryId = service.getCategoryId();
 
                 if (!categoriesMap.containsKey(categoryId)) {

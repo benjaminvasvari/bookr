@@ -1,5 +1,6 @@
 package com.vizsgaremek.bookr.service;
 
+import com.vizsgaremek.bookr.DTO.OwnerPanelDTO.getAllFutureAppointmentsByCompanyDTO;
 import com.vizsgaremek.bookr.model.Appointments;
 import com.vizsgaremek.bookr.model.AuditLogs;
 import com.vizsgaremek.bookr.model.Companies;
@@ -14,6 +15,8 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -25,8 +28,9 @@ public class AppointmentsService {
     private Companies Companies = new Companies();
     private Staff Staff = new Staff();
     private Services Services = new Services();
+    private Appointments layer = new Appointments();
 
-    static SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    static SimpleDateFormat timeFormatter = new SimpleDateFormat("HH:mm");
 
     public JSONObject getUnavailableDates(Integer companyId, Integer staffId) {
 
@@ -51,7 +55,7 @@ public class AppointmentsService {
         LocalDate dateTo = currentDate.plusDays(companyBookingAdvanceDays);
 
         // Model hívás
-        ArrayList<Appointments> modelResult = Appointments.getUnavailableDatesInRange(companyId, staffId, currentDate, dateTo);
+        ArrayList<Appointments> modelResult = layer.getUnavailableDatesInRange(companyId, staffId, currentDate, dateTo);
 
         if (modelResult == null) {
             statusCode = 500;
@@ -108,7 +112,7 @@ public class AppointmentsService {
         SimpleDateFormat timeFormatter = new SimpleDateFormat("HH:mm");
 
         // Model hívás
-        Appointments workingHModelResult = Appointments.getWorkingHoursForDate(companyId, staffId, date);
+        Appointments workingHModelResult = layer.getWorkingHoursForDate(companyId, staffId, date);
 
         if (workingHModelResult == null) {
             statusCode = 500;
@@ -132,7 +136,7 @@ public class AppointmentsService {
             workingHoursArray.put(workingHoursObj);
             data.put("workingHours", workingHoursArray);
 
-            ArrayList<Appointments> OccupiedModelResult = Appointments.getOccupiedSlotsForDate(staffId, date);
+            ArrayList<Appointments> OccupiedModelResult = layer.getOccupiedSlotsForDate(staffId, date);
 
             if (OccupiedModelResult == null) {
                 statusCode = 500;
@@ -186,7 +190,7 @@ public class AppointmentsService {
         Timestamp endTime = Timestamp.valueOf(endTimeString);
 
         //code
-        Integer appointmentId = Appointments.createAppointment(companyId, serviceId, staffId, clientId, startTime, endTime, notes, price);
+        Integer appointmentId = layer.createAppointment(companyId, serviceId, staffId, clientId, startTime, endTime, notes, price);
 
         if (appointmentId == null) {
             status = "serverError";
@@ -225,7 +229,7 @@ public class AppointmentsService {
             // ========== EMAIL KÜLDÉS ==========
             try {
 
-                Appointments appointmentDataFromDB = Appointments.getInfoForBookingEmail(appointmentId);
+                Appointments appointmentDataFromDB = layer.getInfoForBookingEmail(appointmentId);
                 Users userFromDB = Users.getUserProfile(userId);
                 String userName = userFromDB.getFirstName() + userFromDB.getLastName();
 
@@ -268,7 +272,7 @@ public class AppointmentsService {
         }
 
         // Model hívás - nyers adatok
-        JSONObject appointmentsModelResult = Appointments.getAppointmentsByClient(userId, page, amount, isUpcoming);
+        JSONObject appointmentsModelResult = layer.getAppointmentsByClient(userId, page, amount, isUpcoming);
 
         if (appointmentsModelResult == null) {
             statusCode = 500;
@@ -363,7 +367,7 @@ public class AppointmentsService {
             responseData.put("appointments", finalData);
             responseData.put("totalCount", totalCount);
             responseData.put("currentPage", page);
-            
+
             // Oldalak számának kiszámítása: Math.ceil felfelé kerekít, így a maradék elemek is kapnak egy külön oldalt (pl. 25 elem / 10 = 2.5 → 3 oldal)
             responseData.put("totalPages", (int) Math.ceil((double) totalCount / amount));
 
@@ -373,5 +377,93 @@ public class AppointmentsService {
         toReturn.put("status", status);
         toReturn.put("statusCode", statusCode);
         return toReturn;
+    }
+
+    private String formatDuration(int minutes) {
+        if (minutes < 60) {
+            return minutes + " perc";
+        } else if (minutes == 60) {
+            return "1 óra";
+        } else if (minutes % 60 == 0) {
+            return (minutes / 60) + " óra";
+        } else {
+            int hours = minutes / 60;
+            int remainingMinutes = minutes % 60;
+            return remainingMinutes + " perc - " + hours + " óra";
+        }
+    }
+
+    public JSONObject getAllFutureAppointmentsByCompany(Integer companyId) {
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        try {
+            List<getAllFutureAppointmentsByCompanyDTO> modelResult = layer.getAllFutureAppointmentsByCompany(companyId);
+
+            if (modelResult == null || modelResult.isEmpty()) {
+                toReturn.put("status", "success");
+                toReturn.put("statusCode", 200);
+                toReturn.put("result", new JSONArray()); // üres array
+                return toReturn;
+            }
+
+            Map<LocalDate, JSONObject> appointmentsMap = new LinkedHashMap<>();
+
+            for (getAllFutureAppointmentsByCompanyDTO app : modelResult) {
+                LocalDate appointmentDate = app.getAppointmentDate();
+
+                // date array create
+                if (!appointmentsMap.containsKey(appointmentDate)) {
+                    JSONObject date = new JSONObject();
+                    date.put("date", appointmentDate.toString()); // toString() kell JSONhoz!
+                    date.put("appointments", new JSONArray());
+                    appointmentsMap.put(appointmentDate, date);
+                }
+
+                // appointments section
+                JSONObject date = appointmentsMap.get(appointmentDate);
+                JSONObject appointmentObj = new JSONObject();
+
+                appointmentObj.put("id", app.getAppoinmentId());
+                appointmentObj.put("startTime", timeFormatter.format(app.getStartTime()));
+                appointmentObj.put("endTime", timeFormatter.format(app.getEndTime()));
+                appointmentObj.put("serviceName", app.getServiceName());
+                appointmentObj.put("staffName", app.getStaffName());
+                appointmentObj.put("staffImage", app.getStaffImage());
+                appointmentObj.put("clientName", app.getClientName());
+                appointmentObj.put("clientImage", app.getClientImage());
+                appointmentObj.put("durationFormatted", formatDuration(app.getDurationMinutes()));
+                appointmentObj.put("status", app.getStatus());
+                appointmentObj.put("price", app.getPrice());
+                appointmentObj.put("currency", app.getCurrency());
+                appointmentObj.put("createdAt", app.getCreateAt() != null ? app.getCreateAt().toString() : null);
+
+                date.getJSONArray("appointments").put(appointmentObj);
+            }
+
+            JSONArray result = new JSONArray();
+            for (JSONObject date : appointmentsMap.values()) {
+                date.put("count", date.getJSONArray("appointments").length());
+                
+                result.put(date);
+            }
+
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+            toReturn.put("result", result);
+
+            return toReturn;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+
+            toReturn.put("status", "InternalServerError");
+            toReturn.put("statusCode", 500);
+            toReturn.put("error", e.getMessage());
+            toReturn.put("result", new JSONArray()); // üres array
+
+            return toReturn;
+        }
     }
 }

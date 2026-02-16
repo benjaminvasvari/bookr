@@ -4,7 +4,7 @@
  */
 package com.vizsgaremek.bookr.model;
 
-import com.vizsgaremek.bookr.DTO.OwnerDashboardDTO.AverageRatingDTO;
+import com.vizsgaremek.bookr.DTO.OwnerPanelDTO.AverageRatingDTO;
 import static com.vizsgaremek.bookr.model.Users.emf;
 import static com.vizsgaremek.bookr.model.Users.formatter;
 import java.io.Serializable;

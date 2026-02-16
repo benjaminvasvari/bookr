@@ -1,10 +1,10 @@
 package com.vizsgaremek.bookr.service;
 
-import com.vizsgaremek.bookr.DTO.OwnerDashboardDTO.ActiveClientsDTO;
-import com.vizsgaremek.bookr.DTO.OwnerDashboardDTO.AverageRatingDTO;
-import com.vizsgaremek.bookr.DTO.OwnerDashboardDTO.TodayBookingsCountDTO;
-import com.vizsgaremek.bookr.DTO.OwnerDashboardDTO.UpcomingAppointmentsDTO;
-import com.vizsgaremek.bookr.DTO.OwnerDashboardDTO.WeeklyRevenueDTO;
+import com.vizsgaremek.bookr.DTO.OwnerPanelDTO.ActiveClientsDTO;
+import com.vizsgaremek.bookr.DTO.OwnerPanelDTO.AverageRatingDTO;
+import com.vizsgaremek.bookr.DTO.OwnerPanelDTO.TodayBookingsCountDTO;
+import com.vizsgaremek.bookr.DTO.OwnerPanelDTO.UpcomingAppointmentsDTO;
+import com.vizsgaremek.bookr.DTO.OwnerPanelDTO.WeeklyRevenueDTO;
 import com.vizsgaremek.bookr.model.Appointments;
 import com.vizsgaremek.bookr.model.Reviews;
 import com.vizsgaremek.bookr.security.JWT;
