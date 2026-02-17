@@ -115,13 +115,10 @@
 									(click)="selectAppointment(apt)"
 									[class.selected]="selectedAppointment?.id === apt.id"
 									[class.block-small]="apt.duration < 45"
-									[class.has-service]="shouldShowService(apt, dayIndex)"
-									[title]="apt.clientName + ' – ' + apt.title"
+									[title]="apt.startTime + ' • ' + apt.title + ' • ' + apt.clientName"
 								>
 									<div class="apt-time">{{ apt.startTime }}</div>
-									@if (shouldShowService(apt, dayIndex)) {
-										<div class="apt-service">{{ apt.title }}</div>
-									}
+									<div class="apt-service">{{ apt.title }}</div>
 								</div>
 							}
 						</div>

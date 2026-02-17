@@ -360,6 +360,231 @@ export class CalendarComponent implements OnInit, OnDestroy {
       price: 5000,
       status: 'confirmed',
       notes: ''
+    },
+    // More appointments for fuller calendar view
+    {
+      id: 17,
+      staffId: 1,
+      staffName: 'Barni Kiss',
+      title: 'Festés',
+      clientName: 'Kiss Laura',
+      dayIndex: 0,
+      startTime: '14:00',
+      duration: 90,
+      color: '#3b82f6',
+      phone: '+36 30 111 1111',
+      service: 'Festés',
+      price: 12000,
+      status: 'confirmed',
+      notes: ''
+    },
+    {
+      id: 18,
+      staffId: 3,
+      staffName: 'Anna Kovács',
+      title: 'Pedikűr',
+      clientName: 'Nagy Bea',
+      dayIndex: 0,
+      startTime: '14:15',
+      duration: 60,
+      color: '#ec4899',
+      phone: '+36 30 222 2222',
+      service: 'Pedikűr',
+      price: 7000,
+      status: 'confirmed',
+      notes: ''
+    },
+    {
+      id: 19,
+      staffId: 2,
+      staffName: 'Bálint László',
+      title: 'Hajvágás',
+      clientName: 'Szabó Máté',
+      dayIndex: 1,
+      startTime: '14:00',
+      duration: 45,
+      color: '#10b981',
+      phone: '+36 30 333 3333',
+      service: 'Hajvágás',
+      price: 5000,
+      status: 'pending',
+      notes: ''
+    },
+    {
+      id: 20,
+      staffId: 4,
+      staffName: 'Dóra Tóth',
+      title: 'Masszázs',
+      clientName: 'Varga Kata',
+      dayIndex: 1,
+      startTime: '14:30',
+      duration: 60,
+      color: '#8b5cf6',
+      phone: '+36 30 444 4444',
+      service: 'Masszázs',
+      price: 8000,
+      status: 'confirmed',
+      notes: ''
+    },
+    {
+      id: 21,
+      staffId: 1,
+      staffName: 'Barni Kiss',
+      title: 'Hajvágás',
+      clientName: 'Tóth Márk',
+      dayIndex: 2,
+      startTime: '13:00',
+      duration: 45,
+      color: '#3b82f6',
+      phone: '+36 30 555 5555',
+      service: 'Hajvágás',
+      price: 5000,
+      status: 'confirmed',
+      notes: ''
+    },
+    {
+      id: 22,
+      staffId: 3,
+      staffName: 'Anna Kovács',
+      title: 'Manikűr',
+      clientName: 'Kovács Réka',
+      dayIndex: 2,
+      startTime: '13:15',
+      duration: 50,
+      color: '#ec4899',
+      phone: '+36 30 666 6666',
+      service: 'Manikűr',
+      price: 6000,
+      status: 'confirmed',
+      notes: ''
+    },
+    {
+      id: 23,
+      staffId: 2,
+      staffName: 'Bálint László',
+      title: 'Szakáll igazítás',
+      clientName: 'Nagy András',
+      dayIndex: 3,
+      startTime: '09:00',
+      duration: 30,
+      color: '#10b981',
+      phone: '+36 30 777 7777',
+      service: 'Szakáll igazítás',
+      price: 3500,
+      status: 'confirmed',
+      notes: ''
+    },
+    {
+      id: 24,
+      staffId: 4,
+      staffName: 'Dóra Tóth',
+      title: 'Pedikűr',
+      clientName: 'Horváth Éva',
+      dayIndex: 3,
+      startTime: '09:15',
+      duration: 60,
+      color: '#8b5cf6',
+      phone: '+36 30 888 8888',
+      service: 'Pedikűr',
+      price: 7000,
+      status: 'pending',
+      notes: ''
+    },
+    {
+      id: 25,
+      staffId: 1,
+      staffName: 'Barni Kiss',
+      title: 'Hajvágás',
+      clientName: 'Kiss Dániel',
+      dayIndex: 3,
+      startTime: '09:30',
+      duration: 45,
+      color: '#3b82f6',
+      phone: '+36 30 999 9999',
+      service: 'Hajvágás',
+      price: 5000,
+      status: 'confirmed',
+      notes: ''
+    },
+    {
+      id: 26,
+      staffId: 3,
+      staffName: 'Anna Kovács',
+      title: 'Festés',
+      clientName: 'Szabó Nóra',
+      dayIndex: 4,
+      startTime: '13:00',
+      duration: 90,
+      color: '#ec4899',
+      phone: '+36 30 101 0101',
+      service: 'Festés',
+      price: 12000,
+      status: 'confirmed',
+      notes: 'Szőke árnyalat'
+    },
+    {
+      id: 27,
+      staffId: 2,
+      staffName: 'Bálint László',
+      title: 'Hajvágás',
+      clientName: 'Molnár Péter',
+      dayIndex: 4,
+      startTime: '13:15',
+      duration: 45,
+      color: '#10b981',
+      phone: '+36 30 202 0202',
+      service: 'Hajvágás',
+      price: 5000,
+      status: 'confirmed',
+      notes: ''
+    },
+    {
+      id: 28,
+      staffId: 4,
+      staffName: 'Dóra Tóth',
+      title: 'Masszázs',
+      clientName: 'Varga Zoltán',
+      dayIndex: 4,
+      startTime: '13:30',
+      duration: 60,
+      color: '#8b5cf6',
+      phone: '+36 30 303 0303',
+      service: 'Masszázs',
+      price: 8000,
+      status: 'confirmed',
+      notes: ''
+    },
+    {
+      id: 29,
+      staffId: 1,
+      staffName: 'Barni Kiss',
+      title: 'Szakáll igazítás',
+      clientName: 'Tóth Gergő',
+      dayIndex: 1,
+      startTime: '16:00',
+      duration: 30,
+      color: '#3b82f6',
+      phone: '+36 30 404 0404',
+      service: 'Szakáll igazítás',
+      price: 3500,
+      status: 'pending',
+      notes: ''
+    },
+    {
+      id: 30,
+      staffId: 3,
+      staffName: 'Anna Kovács',
+      title: 'Manikűr',
+      clientName: 'Kiss Eszter',
+      dayIndex: 1,
+      startTime: '16:15',
+      duration: 50,
+      color: '#ec4899',
+      phone: '+36 30 505 0505',
+      service: 'Manikűr',
+      price: 6000,
+      status: 'confirmed',
+      notes: ''
     }
   ];
 
@@ -522,7 +747,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     return dayAppts.filter(apt => this.selectedStaffIds.includes(apt.staffId));
   }
 
-  // Smart vertical stacking for overlapping appointments
+  // Column layout - equal width side-by-side appointments
   getAppointmentStyleWithOverlap(appointment: CalendarAppointment, dayIndex: number): any {
     const [hours, minutes] = appointment.startTime.split(':').map(Number);
     const startMinutes = (hours - 8) * 60 + minutes;
@@ -530,23 +755,20 @@ export class CalendarComponent implements OnInit, OnDestroy {
     const top = startMinutes;
     const height = appointment.duration;
 
-    // Find appointments that ACTUALLY overlap in time
+    // Find appointments that overlap in time
     const dayAppointments = this.getAppointmentsForDay(dayIndex);
     const overlapping = dayAppointments.filter(apt => {
       const [aptHours, aptMinutes] = apt.startTime.split(':').map(Number);
       const aptStart = (aptHours - 8) * 60 + aptMinutes;
       const aptEnd = aptStart + apt.duration;
-      
-      // True overlap: one appointment is still running when another starts
-      return apt.id !== appointment.id && 
-             aptStart < endMinutes && aptEnd > startMinutes;
+      return apt.id !== appointment.id && aptStart < endMinutes && aptEnd > startMinutes;
     });
 
     let width = 'calc(100% - 4px)';
     let left = '2px';
     let zIndex = 1;
     
-    // Card deck style: overlapping appointments stacked like cards
+    // Equal width columns when overlapping
     if (overlapping.length > 0) {
       const allAppointments = [appointment, ...overlapping].sort((a, b) => {
         const [aH, aM] = a.startTime.split(':').map(Number);
@@ -557,38 +779,17 @@ export class CalendarComponent implements OnInit, OnDestroy {
         return a.id - b.id;
       });
       
-      const position = allAppointments.findIndex(a => a.id === appointment.id);
+      const totalColumns = allAppointments.length;
+      const columnIndex = allAppointments.findIndex(a => a.id === appointment.id);
       
-      // Mobile view (≤480px): side-by-side 50-50% layout
-      if (this.isMobileView) {
-        const columnWidth = 50; // 50% for each overlapping appointment
-        const column = position % 2; // Only 2 columns in mobile
-        
-        width = `calc(${columnWidth}% - 6px)`;
-        left = `calc(${column * columnWidth}% + 2px)`;
-        zIndex = position + 1;
-      } 
-      // Desktop view: card deck style
-      else {
-        // Each block gets 67.5% width (between 65-70%), stacked like cards
-        const blockWidth = 67.5; // percentage
-        const offsetPerBlock = 20; // pixels - offset for each subsequent block
-        
-        // Calculate width - ensure minimum 80px
-        width = `max(${blockWidth}%, 80px)`;
-        
-        // Calculate left position - each block shifts right by 20px
-        if (position === 0) {
-          left = '2px';
-        } else {
-          left = `${2 + position * offsetPerBlock}px`;
-        }
-        
-        zIndex = position + 1;
-      }
+      // Each column gets equal width
+      const columnWidth = 100 / totalColumns;
+      width = `calc(${columnWidth}% - 2px)`;
+      left = `${columnWidth * columnIndex}%`;
+      zIndex = columnIndex + 1;
     }
 
-    // Convert hex to RGBA for 15% opacity background
+    // Convert hex to RGBA
     const hexToRgba = (hex: string, opacity: number) => {
       const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
       if (!result) return `rgba(99, 102, 241, ${opacity})`;
