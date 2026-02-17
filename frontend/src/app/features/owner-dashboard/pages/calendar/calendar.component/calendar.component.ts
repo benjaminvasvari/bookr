@@ -747,7 +747,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     return dayAppts.filter(apt => this.selectedStaffIds.includes(apt.staffId));
   }
 
-  // Column layout - equal width side-by-side appointments
+  // Column layout - overflow allowed for better visibility
   getAppointmentStyleWithOverlap(appointment: CalendarAppointment, dayIndex: number): any {
     const [hours, minutes] = appointment.startTime.split(':').map(Number);
     const startMinutes = (hours - 8) * 60 + minutes;
@@ -768,7 +768,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     let left = '2px';
     let zIndex = 1;
     
-    // Equal width columns when overlapping
+    // Each appointment gets equal space with min-width guarantee
     if (overlapping.length > 0) {
       const allAppointments = [appointment, ...overlapping].sort((a, b) => {
         const [aH, aM] = a.startTime.split(':').map(Number);
@@ -782,10 +782,10 @@ export class CalendarComponent implements OnInit, OnDestroy {
       const totalColumns = allAppointments.length;
       const columnIndex = allAppointments.findIndex(a => a.id === appointment.id);
       
-      // Each column gets equal width
+      // Calculate width - ensure minimum 85px
       const columnWidth = 100 / totalColumns;
-      width = `calc(${columnWidth}% - 2px)`;
-      left = `${columnWidth * columnIndex}%`;
+      width = `max(${columnWidth}%, 85px)`;
+      left = `calc(${columnWidth}% * ${columnIndex})`;
       zIndex = columnIndex + 1;
     }
 
@@ -802,9 +802,9 @@ export class CalendarComponent implements OnInit, OnDestroy {
       width: width,
       left: left,
       zIndex: zIndex,
-      background: hexToRgba(appointment.color, 0.15),
+      background: hexToRgba(appointment.color, 0.12),
       borderLeft: `6px solid ${appointment.color}`,
-      '--hover-bg': hexToRgba(appointment.color, 0.25),
+      '--hover-bg': hexToRgba(appointment.color, 0.22),
       '--border-color': appointment.color
     };
   }

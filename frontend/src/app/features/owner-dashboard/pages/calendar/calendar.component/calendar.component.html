@@ -11,6 +11,7 @@
 								class="staff-chip" 
 								[class.chip-active]="isStaffSelected(staff.id)"
 								[style.border-color]="isStaffSelected(staff.id) ? staff.color : '#e5e7eb'"
+								[style.background]="isStaffSelected(staff.id) ? staff.color : '#ffffff'"
 								(click)="toggleStaff(staff.id)"
 							>
 								<span class="chip-color" [style.background]="staff.color"></span>

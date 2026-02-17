@@ -77,13 +77,12 @@
 }
 
 .staff-chip.chip-active {
-	border-width: 2px;
-	background: #f9fafb;
-	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+	border: none;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 .staff-chip.chip-active:hover {
-	background: #f3f4f6;
+	opacity: 0.9;
 }
 
 .chip-color {
@@ -97,9 +96,10 @@
 }
 
 .staff-chip.chip-active .chip-color {
-	transform: scale(1.15);
-	box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25), 0 0 10px rgba(0, 0, 0, 0.15);
-	border-width: 2.5px;
+	transform: scale(1.1);
+	background: #ffffff;
+	border: 2px solid #ffffff;
+	box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
 }
 
 .chip-name {
@@ -110,7 +110,7 @@
 }
 
 .staff-chip.chip-active .chip-name {
-	color: #1f2937;
+	color: #ffffff;
 	font-weight: 700;
 }
 
@@ -258,6 +258,7 @@
 	background: #ffffff;
 	min-width: 0;
 	flex: 1;
+	overflow: visible;
 }
 
 .day-column:last-child {
@@ -265,7 +266,7 @@
 }
 
 .day-column.day-today {
-	background: rgba(99, 102, 241, 0.05);
+	background: rgba(99, 102, 241, 0.04);
 }
 
 .day-column.day-today .day-header {
@@ -336,7 +337,7 @@
 .closed-badge {
 	font-size: 9px;
 	font-weight: 700;
-	color: #ee8888;
+	color: #ffaaaa;
 	background: #fee2e2;
 	padding: 2px 6px;
 	border-radius: 8px;
@@ -345,7 +346,7 @@
 }
 
 .day-column.day-closed .day-date {
-	color: #ee8888;
+	color: #ffaaaa;
 }
 
 /* Time Grid - Fixed height container */
@@ -358,7 +359,7 @@
 
 .grid-cell {
 	height: 60px; /* Fixed: 1 hour = 60px */
-	border-bottom: 1px solid #e5e7eb;
+	border-bottom: 1px solid rgba(0, 0, 0, 0.04);
 	position: relative;
 	flex-shrink: 0;
 }
@@ -370,7 +371,7 @@
 	left: 0;
 	right: 0;
 	height: 1px;
-	background: #f3f4f6;
+	background: rgba(0, 0, 0, 0.02);
 	pointer-events: none;
 }
 
@@ -408,37 +409,52 @@
 	bottom: 0;
 	pointer-events: none;
 	container-type: inline-size;
+	overflow: visible;
 }
 
-/* Appointment Blocks - Column layout */
+/* Appointment Blocks - Column layout with min-width */
 .appointment-block {
 	position: absolute;
-	border-radius: 4px;
+	border-radius: 6px;
 	cursor: pointer;
 	pointer-events: all;
 	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 	transition: all 0.2s ease;
-	padding: 6px 8px;
+	padding: 6px 8px 6px 10px;
 	display: flex;
 	flex-direction: row;
 	align-items: center;
 	gap: 6px;
 	container-type: inline-size;
 	overflow: hidden;
+	min-width: 85px;
+}
+
+/* Compact mode for narrow columns */
+@container (max-width: 90px) {
+	.appointment-block {
+		padding: 4px 6px;
+		gap: 4px;
+	}
+	
+	.apt-time {
+		font-size: 10px;
+	}
 }
 
 /* Hide service text when too narrow - only show if it fits completely */
-@container (max-width: 110px) {
+@container (max-width: 95px) {
 	.apt-service {
 		display: none;
 	}
 }
 
 .appointment-block:hover {
-	box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 	transform: translateY(-1px);
 	z-index: 100 !important;
 	background: var(--hover-bg) !important;
+	cursor: pointer;
 }
 
 .appointment-block.selected {
@@ -480,7 +496,7 @@
 	top: 50%;
 	left: 50%;
 	transform: translate(-50%, -50%);
-	color: #d1d5db;
+	color: #9ca3af;
 	font-size: 11px;
 	font-weight: 500;
 	pointer-events: none;
