@@ -1,8 +1,7 @@
 .staff-sidebar {
 	width: 68px;
 	flex: 0 0 68px;
-	min-height: 100%;
-	height: auto;
+	height: 100vh;
 	background: #2d3748;
 	color: #ebf4ff;
 	padding: 18px 10px;

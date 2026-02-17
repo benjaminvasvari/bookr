@@ -4,278 +4,268 @@ import { FormsModule } from '@angular/forms';
 
 import { AuthService } from '../../../core/services/auth.service';
 import { StaffService } from '../../../core/services/staff.service';
-import { StaffDashboardAppointment, StaffDashboardData } from '../../../core/models/staff.model';
-import { StaffSidebarComponent } from '../sidebar/staff-sidebar/staff-sidebar.component';
+
+interface TimeSlot {
+  time: string;
+  hour: number;
+}
+
+interface CalendarAppointment {
+  id: number;
+  staffId: number;
+  staffName: string;
+  title: string;
+  clientName: string;
+  dayIndex: number; // 0 = Monday, 6 = Sunday
+  startTime: string;
+  duration: number; // minutes
+  color: string;
+  phone?: string;
+  service?: string;
+}
+
+interface StaffMember {
+  id: number;
+  name: string;
+}
 
 @Component({
   selector: 'app-staff-calendar',
   standalone: true,
-  imports: [CommonModule, FormsModule, StaffSidebarComponent],
+  imports: [CommonModule, FormsModule],
   templateUrl: './staff-calendar.component.html',
   styleUrl: './staff-calendar.component.css',
 })
 export class StaffCalendarComponent implements OnInit {
-  dashboard: StaffDashboardData | null = null;
-  isLoading = true;
-  errorMessage = '';
-  weekColumns: Array<{ date: string; label: string; items: StaffDashboardAppointment[] }> = [];
-  selectedAppointment: StaffDashboardAppointment | null = null;
-  editModel: {
-    id: number;
-    serviceName: string;
-    clientName: string;
-    time: string;
-    durationMinutes: number;
-    date: string;
-  } | null = null;
-  private dragId: number | null = null;
-  private dragFromDate: string | null = null;
-  private readonly dayLabels = ['Hétfő', 'Kedd', 'Szerda', 'Csütörtök', 'Péntek', 'Szombat', 'Vasárnap'];
-  private readonly timeSlots = ['09:00', '10:00', '11:00', '13:00', '14:00', '15:30', '17:00'];
-  private appointments: StaffDashboardAppointment[] = [];
-  currentWeekStart = this.startOfWeek(new Date());
+  isLoading = false;
+  
+  selectedStaffId: number = 1;
+  staffMembers: StaffMember[] = [
+    { id: 1, name: 'Hunor Ujhelyi' },
+    { id: 2, name: 'Barni Kiss' },
+    { id: 3, name: 'Anna Kovács' },
+    { id: 4, name: 'Dóra Tóth' }
+  ];
+
+  weekDays = [
+    { name: 'Hétfő', date: '2026. február 16.' },
+    { name: 'Kedd', date: '2026. február 17.' },
+    { name: 'Szerda', date: '2026. február 18.' },
+    { name: 'Csütörtök', date: '2026. február 19.' },
+    { name: 'Péntek', date: '2026. február 20.' },
+    { name: 'Szombat', date: '2026. február 21.' },
+    { name: 'Vasárnap', date: '2026. február 22.' }
+  ];
+
+  timeSlots: TimeSlot[] = [
+    { time: '08:00', hour: 8 },
+    { time: '09:00', hour: 9 },
+    { time: '10:00', hour: 10 },
+    { time: '11:00', hour: 11 },
+    { time: '12:00', hour: 12 },
+    { time: '13:00', hour: 13 },
+    { time: '14:00', hour: 14 },
+    { time: '15:00', hour: 15 },
+    { time: '16:00', hour: 16 },
+    { time: '17:00', hour: 17 },
+    { time: '18:00', hour: 18 },
+    { time: '19:00', hour: 19 }
+  ];
+
+  allAppointments: CalendarAppointment[] = [
+    {
+      id: 1,
+      staffId: 1,
+      staffName: 'Hunor Ujhelyi',
+      title: 'Hajvágás',
+      clientName: 'Mészáros Anna',
+      dayIndex: 0,
+      startTime: '09:00',
+      duration: 45,
+      color: '#3b82f6',
+      phone: '+36 30 123 4567',
+      service: 'Hajvágás'
+    },
+    {
+      id: 2,
+      staffId: 1,
+      staffName: 'Hunor Ujhelyi',
+      title: 'Manikűr',
+      clientName: 'Kovács Éva',
+      dayIndex: 0,
+      startTime: '10:00',
+      duration: 50,
+      color: '#ec4899',
+      service: 'Manikűr'
+    },
+    {
+      id: 3,
+      staffId: 1,
+      staffName: 'Hunor Ujhelyi',
+      title: 'Frizura + Szakáll igazítás',
+      clientName: 'Nagy Péter',
+      dayIndex: 1,
+      startTime: '09:00',
+      duration: 60,
+      color: '#ef4444',
+      service: 'Frizura + Szakáll'
+    },
+    {
+      id: 4,
+      staffId: 1,
+      staffName: 'Hunor Ujhelyi',
+      title: 'Szigor',
+      clientName: 'Kovács András',
+      dayIndex: 1,
+      startTime: '11:00',
+      duration: 30,
+      color: '#8b5cf6',
+      service: 'Szigor'
+    },
+    {
+      id: 5,
+      staffId: 1,
+      staffName: 'Hunor Ujhelyi',
+      title: 'Szépülés nőknek',
+      clientName: 'Szabó Petra',
+      dayIndex: 1,
+      startTime: '12:00',
+      duration: 90,
+      color: '#06b6d4',
+      service: 'Szépülés'
+    },
+    {
+      id: 6,
+      staffId: 1,
+      staffName: 'Hunor Ujhelyi',
+      title: 'Hajvágás',
+      clientName: 'Horváth Dávid',
+      dayIndex: 2,
+      startTime: '13:30',
+      duration: 45,
+      color: '#10b981',
+      service: 'Hajvágás'
+    },
+    {
+      id: 7,
+      staffId: 1,
+      staffName: 'Hunor Ujhelyi',
+      title: 'Relax',
+      clientName: 'Kiss Zita',
+      dayIndex: 2,
+      startTime: '15:00',
+      duration: 60,
+      color: '#14b8a6',
+      service: 'Relax masszázs'
+    },
+    {
+      id: 8,
+      staffId: 1,
+      staffName: 'Hunor Ujhelyi',
+      title: 'Hajvágás, szakáll borotva',
+      clientName: 'Tóth László',
+      dayIndex: 3,
+      startTime: '14:30',
+      duration: 75,
+      color: '#f59e0b',
+      service: 'Hajvágás + szakáll'
+    },
+    {
+      id: 9,
+      staffId: 1,
+      staffName: 'Hunor Ujhelyi',
+      title: 'Festés+Vágás',
+      clientName: 'Varga Éva',
+      dayIndex: 4,
+      startTime: '15:00',
+      duration: 120,
+      color: '#3b82f6',
+      service: 'Festés+Vágás'
+    },
+    {
+      id: 10,
+      staffId: 1,
+      staffName: 'Hunor Ujhelyi',
+      title: 'Ráhangolás',
+      clientName: 'Molnár Zoltán',
+      dayIndex: 5,
+      startTime: '08:30',
+      duration: 30,
+      color: '#ec4899',
+      service: 'Ráhangolás'
+    },
+    // Staff 2 appointments
+    {
+      id: 11,
+      staffId: 2,
+      staffName: 'Barni Kiss',
+      title: 'Hajvágás',
+      clientName: 'Balogh István',
+      dayIndex: 0,
+      startTime: '10:00',
+      duration: 45,
+      color: '#3b82f6',
+      service: 'Hajvágás'
+    },
+    {
+      id: 12,
+      staffId: 2,
+      staffName: 'Barni Kiss',
+      title: 'Szakáll igazítás',
+      clientName: 'Németh Gábor',
+      dayIndex: 1,
+      startTime: '14:00',
+      duration: 30,
+      color: '#8b5cf6',
+      service: 'Szakáll igazítás'
+    }
+  ];
+
+  selectedAppointment: CalendarAppointment | null = null;
 
   constructor(private authService: AuthService, private staffService: StaffService) {}
 
   ngOnInit(): void {
-    this.appointments = [
-      {
-        id: 1,
-        date: '2026-02-03',
-        time: '09:30',
-        serviceName: 'Hajvágás',
-        clientName: 'Kiss Anna',
-        durationMinutes: 45,
-      },
-      {
-        id: 2,
-        date: '2026-02-03',
-        time: '11:00',
-        serviceName: 'Szakáll igazítás',
-        clientName: 'Nagy Bálint',
-        durationMinutes: 30,
-      },
-      {
-        id: 3,
-        date: '2026-02-04',
-        time: '14:00',
-        serviceName: 'Festés',
-        clientName: 'Kovács Lili',
-        durationMinutes: 90,
-      },
-      {
-        id: 4,
-        date: '2026-02-05',
-        time: '10:00',
-        serviceName: 'Hot towel',
-        clientName: 'Horváth Dávid',
-        durationMinutes: 20,
-      },
-    ];
-
-    this.dashboard = {
-      staffId: 12,
-      staffName: 'Ujhelyi Hunor',
-      companyName: 'Bookr Studio',
-      todayAppointments: [],
-      upcomingAppointments: this.appointments,
-      services: [],
-    };
-
-    this.buildWeekColumns();
-    this.isLoading = false;
+    // Initial load
   }
 
-  get weekRangeLabel(): string {
-    const end = new Date(this.currentWeekStart);
-    end.setDate(end.getDate() + 6);
-    return `${this.formatDate(this.currentWeekStart)} - ${this.formatDate(end)}`;
+  get filteredAppointments(): CalendarAppointment[] {
+    return this.allAppointments.filter(apt => apt.staffId === this.selectedStaffId);
   }
 
-  prevWeek(): void {
-    const newDate = new Date(this.currentWeekStart);
-    newDate.setDate(newDate.getDate() - 7);
-    this.currentWeekStart = this.startOfWeek(newDate);
-    this.buildWeekColumns();
-  }
-
-  nextWeek(): void {
-    const newDate = new Date(this.currentWeekStart);
-    newDate.setDate(newDate.getDate() + 7);
-    this.currentWeekStart = this.startOfWeek(newDate);
-    this.buildWeekColumns();
-  }
-
-  private buildWeekColumns(): void {
-    const days = this.getWeekDays(this.currentWeekStart);
-    this.weekColumns = days.map((day, index) => {
-      const dateKey = this.toDateKey(day);
-      const items = this.appointments
-        .filter((appointment) => appointment.date === dateKey)
-        .sort((a, b) => a.time.localeCompare(b.time));
-      return {
-        date: dateKey,
-        label: this.dayLabels[index],
-        items: items.map((item) => ({ ...item })),
-      };
-    });
-  }
-
-  private getWeekDays(start: Date): Date[] {
-    return Array.from({ length: 7 }, (_, i) => {
-      const date = new Date(start);
-      date.setDate(start.getDate() + i);
-      return date;
-    });
-  }
-
-  private startOfWeek(date: Date): Date {
-    const result = new Date(date);
-    const day = result.getDay();
-    const diff = (day === 0 ? -6 : 1) - day;
-    result.setDate(result.getDate() + diff);
-    result.setHours(0, 0, 0, 0);
-    return result;
-  }
-
-  private toDateKey(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
-
-  private formatDate(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}.${month}.${day}.`;
-  }
-
-  onDragStart(date: string, appointmentId: number): void {
-    this.dragFromDate = date;
-    this.dragId = appointmentId;
-  }
-
-  onDragOver(event: DragEvent): void {
-    event.preventDefault();
-  }
-
-  onDrop(date: string, targetIndex: number): void {
-    if (!this.dragId || !this.dragFromDate) {
-      return;
-    }
-
-    const sourceColumn = this.weekColumns.find((column) => column.date === this.dragFromDate);
-    const targetColumn = this.weekColumns.find((column) => column.date === date);
-    if (!sourceColumn || !targetColumn) {
-      return;
-    }
-
-    const draggedIndex = sourceColumn.items.findIndex((item) => item.id === this.dragId);
-    if (draggedIndex === -1) {
-      return;
-    }
-
-    const [dragged] = sourceColumn.items.splice(draggedIndex, 1);
-    dragged.date = date;
-    targetColumn.items.splice(targetIndex, 0, dragged);
-
-    this.applyTimesForDate(sourceColumn);
-    this.applyTimesForDate(targetColumn);
-
-    this.syncAppointmentsFromColumns();
-    this.buildWeekColumns();
-
-    this.dragId = null;
-    this.dragFromDate = null;
-  }
-
-  openEditor(appointment: StaffDashboardAppointment): void {
-    this.selectedAppointment = appointment;
-    this.editModel = {
-      id: appointment.id,
-      serviceName: appointment.serviceName,
-      clientName: appointment.clientName,
-      time: appointment.time,
-      durationMinutes: appointment.durationMinutes,
-      date: appointment.date,
-    };
-  }
-
-  saveAppointmentEdits(): void {
-    if (!this.editModel) {
-      return;
-    }
-
-    const normalizedDate = /^\d{4}-\d{2}-\d{2}$/.test(this.editModel.date) ? this.editModel.date : this.selectedAppointment?.date;
-    const normalizedDuration = Number.isFinite(this.editModel.durationMinutes) && this.editModel.durationMinutes > 0
-      ? this.editModel.durationMinutes
-      : this.selectedAppointment?.durationMinutes ?? 30;
-
-    this.appointments = this.appointments.map((item) =>
-      item.id === this.editModel!.id
-        ? {
-            ...item,
-            serviceName: this.editModel!.serviceName.trim() || item.serviceName,
-            clientName: this.editModel!.clientName.trim() || item.clientName,
-            time: this.editModel!.time.trim() || item.time,
-            durationMinutes: normalizedDuration,
-            date: normalizedDate ?? item.date,
-          }
-        : item
-    );
-
-    if (this.dashboard) {
-      this.dashboard.upcomingAppointments = this.appointments;
-    }
-    this.buildWeekColumns();
-    this.closeEditor();
-  }
-
-  confirmDeleteSelected(): void {
-    if (!this.editModel) {
-      return;
-    }
-
-    const confirmed = window.confirm('Biztosan törlöd ezt az időpontot?');
-    if (!confirmed) {
-      return;
-    }
-
-    this.appointments = this.appointments.filter((item) => item.id !== this.editModel!.id);
-    if (this.dashboard) {
-      this.dashboard.upcomingAppointments = this.appointments;
-    }
-    this.buildWeekColumns();
-    this.closeEditor();
-  }
-
-  closeEditor(): void {
+  onStaffChange(): void {
     this.selectedAppointment = null;
-    this.editModel = null;
   }
 
-  private applyTimesForDate(column: { date: string; items: StaffDashboardAppointment[] }): void {
-    column.items.forEach((item, index) => {
-      item.time = this.timeSlots[index] ?? item.time;
-      item.date = column.date;
-    });
+  getAppointmentsForDay(dayIndex: number): CalendarAppointment[] {
+    return this.filteredAppointments.filter(apt => apt.dayIndex === dayIndex);
   }
 
-  private syncAppointmentsFromColumns(): void {
-    const updated: StaffDashboardAppointment[] = [];
-    this.weekColumns.forEach((column) => {
-      column.items.forEach((item) => updated.push({ ...item }));
-    });
+  getAppointmentStyle(appointment: CalendarAppointment): any {
+    const [hours, minutes] = appointment.startTime.split(':').map(Number);
+    const startMinutes = hours * 60 + minutes;
+    const startHour = 8; // Calendar starts at 8:00
+    const pixelsPerHour = 60; // Height of each hour slot in pixels
+    
+    const topPosition = ((startMinutes - (startHour * 60)) / 60) * pixelsPerHour;
+    const height = (appointment.duration / 60) * pixelsPerHour;
 
-    const outsideWeek = this.appointments.filter(
-      (appointment) => !this.weekColumns.some((column) => column.date === appointment.date)
-    );
+    return {
+      'top.px': topPosition,
+      'height.px': height,
+      'background-color': appointment.color
+    };
+  }
 
-    this.appointments = [...updated, ...outsideWeek];
-    if (this.dashboard) {
-      this.dashboard.upcomingAppointments = this.appointments;
-    }
+  selectAppointment(appointment: CalendarAppointment): void {
+    this.selectedAppointment = appointment;
+  }
+
+  closeDetails(): void {
+    this.selectedAppointment = null;
+  }
+
+  getSelectedStaffName(): string {
+    return this.staffMembers.find(s => s.id === this.selectedStaffId)?.name || '';
   }
 }

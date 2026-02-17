@@ -1,8 +1,6 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
-import { StaffSidebarComponent } from '../sidebar/staff-sidebar/staff-sidebar.component';
-
 interface StaffBookingItem {
   id: number;
   date: string;
@@ -15,7 +13,7 @@ interface StaffBookingItem {
 @Component({
   selector: 'app-staff-bookings',
   standalone: true,
-  imports: [CommonModule, StaffSidebarComponent],
+  imports: [CommonModule],
   templateUrl: './staff-bookings.component.html',
   styleUrl: './staff-bookings.component.css',
 })

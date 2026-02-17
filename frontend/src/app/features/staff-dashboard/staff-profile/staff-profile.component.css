@@ -18,11 +18,6 @@
     padding: 40px;
 }
 
-    gap: 24px;
-  display: flex;
-    background: #f8f9fa;
-  justify-content: space-between;
-}
 
   .profile-info-container {
     display: flex;

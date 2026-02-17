@@ -61,11 +61,12 @@ export const API_ENDPOINTS = {
 
   USER: {
     ME: '/users/me',
-    PROFILE: '/user/profile',
-    UPDATE_PROFILE: '/user/updateProfile',
-    CHANGE_PASSWORD: '/user/change-password',
-    UPLOAD_AVATAR: '/user/uploadAvatar',
-    DELETE_AVATAR: '/user/deleteAvatar',
+    PROFILE: '/users/profile',
+    UPDATE_PROFILE: '/users/updateProfile',
+    CHANGE_PASSWORD: '/users/change-password',
+    UPLOAD_AVATAR: '/users/uploadAvatar',
+    DELETE_AVATAR: '/users/deleteAvatar',
+    UPDATE_NOTIFICATION_SETTINGS: '/notifsetting/update',
   },
 
   STAFF: {
@@ -77,4 +78,6 @@ export const API_ENDPOINTS = {
     ADD: (companyId: number) => `/favorites/addFavorite/${companyId}`,
     REMOVE: (companyId: number) => `/favorites/removeFavorite/${companyId}`,
   },
+
+  DELETE_USER: '/users/deleteUser',
 };

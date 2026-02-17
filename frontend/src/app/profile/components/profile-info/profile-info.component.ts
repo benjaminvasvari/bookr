@@ -65,6 +65,7 @@ export class ProfileInfoComponent implements OnInit, OnDestroy {
   initForms(): void {
     // Profile Form
     this.profileForm = this.fb.group({
+      id: [this.currentUser?.id],
       firstName: [
         this.currentUser?.firstName || '',
         [Validators.required, Validators.minLength(2)],

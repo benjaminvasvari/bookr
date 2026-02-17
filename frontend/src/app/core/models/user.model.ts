@@ -67,6 +67,7 @@ export interface VerifyEmailRequest {
 }
 
 export interface UpdateProfileRequest {
+  id: number;
   firstName: string;
   lastName: string;
   email: string;
@@ -79,4 +80,17 @@ export interface PasswordResetRequest {
 
 export interface AvatarUploadResponse {
   avatarUrl: string;
+}
+
+export interface UpdateNotificationSettingsRequest {
+  id: string;
+  confirm: boolean;
+  reminder: boolean;
+  cancel: boolean;
+  marketing: boolean;
+}
+
+export interface ApiStatusResponse {
+  status: string;
+  statusCode: number;
 }

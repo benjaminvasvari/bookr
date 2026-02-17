@@ -4,12 +4,11 @@ import { CommonModule } from '@angular/common';
 import { AuthService } from '../../core/services/auth.service';
 import { StaffService } from '../../core/services/staff.service';
 import { StaffDashboardData } from '../../core/models/staff.model';
-import { StaffSidebarComponent } from './sidebar/staff-sidebar/staff-sidebar.component';
 
 @Component({
   selector: 'app-staff-dashboard',
   standalone: true,
-  imports: [CommonModule, StaffSidebarComponent],
+  imports: [CommonModule],
   templateUrl: './staff-dashboard.component.html',
   styleUrl: './staff-dashboard.component.css',
 })

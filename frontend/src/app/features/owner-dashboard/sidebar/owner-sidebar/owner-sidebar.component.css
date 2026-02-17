@@ -1,8 +1,7 @@
 .owner-sidebar {
 	width: 68px;
 	flex: 0 0 68px;
-	min-height: 100%;
-	height: auto;
+	height: 100vh;
 	background: #2d3748;
 	color: #ebf4ff;
 	padding: 18px 10px;
@@ -13,16 +12,19 @@
 	overflow: hidden;
 	box-sizing: border-box;
 	position: relative;
+	max-width: 68px;
 }
 
 .owner-sidebar:hover {
 	width: 220px;
 	flex-basis: 220px;
+	max-width: 220px;
 }
 
 .owner-sidebar.is-pinned {
 	width: 220px;
 	flex-basis: 220px;
+	max-width: 220px;
 }
 
 .sidebar-header {

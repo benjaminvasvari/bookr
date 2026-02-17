@@ -75,40 +75,48 @@ export const appRoutes: Routes = [
     canActivate: [authGuard],
   },
   {
-    path: 'staff/panel',
+    path: 'staff',
     loadComponent: () =>
-      import('./features/staff-dashboard/staff-dashboard.component').then(
-        (m) => m.StaffDashboardComponent
+      import('./features/staff-dashboard/staff-shell/staff-shell.component').then(
+        (m) => m.StaffShellComponent
       ),
     canActivate: [authGuard, roleGuard],
     data: { showFooter: false, showHeader: false, roles: ['staff'] },
-  },
-  {
-    path: 'staff/calendar',
-    loadComponent: () =>
-      import('./features/staff-dashboard/staff-calendar/staff-calendar.component').then(
-        (m) => m.StaffCalendarComponent
-      ),
-    canActivate: [authGuard, roleGuard],
-    data: { showFooter: false, showHeader: false, roles: ['staff'] },
-  },
-  {
-    path: 'staff/bookings',
-    loadComponent: () =>
-      import('./features/staff-dashboard/staff-bookings/staff-bookings.component').then(
-        (m) => m.StaffBookingsComponent
-      ),
-    canActivate: [authGuard, roleGuard],
-    data: { showFooter: false, showHeader: false, roles: ['staff'] },
-  },
-  {
-    path: 'staff/profile',
-    loadComponent: () =>
-      import('./features/staff-dashboard/staff-profile/staff-profile.component').then(
-        (m) => m.StaffProfileComponent
-      ),
-    canActivate: [authGuard, roleGuard],
-    data: { showFooter: false, showHeader: false, roles: ['staff'] },
+    children: [
+      {
+        path: '',
+        redirectTo: 'panel',
+        pathMatch: 'full'
+      },
+      {
+        path: 'panel',
+        loadComponent: () =>
+          import('./features/staff-dashboard/staff-dashboard.component').then(
+            (m) => m.StaffDashboardComponent
+          )
+      },
+      {
+        path: 'calendar',
+        loadComponent: () =>
+          import('./features/staff-dashboard/staff-calendar/staff-calendar.component').then(
+            (m) => m.StaffCalendarComponent
+          )
+      },
+      {
+        path: 'bookings',
+        loadComponent: () =>
+          import('./features/staff-dashboard/staff-bookings/staff-bookings.component').then(
+            (m) => m.StaffBookingsComponent
+          )
+      },
+      {
+        path: 'profile',
+        loadComponent: () =>
+          import('./features/staff-dashboard/staff-profile/staff-profile.component').then(
+            (m) => m.StaffProfileComponent
+          )
+      }
+    ]
   },
 
   {

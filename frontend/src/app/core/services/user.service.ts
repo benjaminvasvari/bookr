@@ -4,7 +4,13 @@ import { Observable, tap } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { API_ENDPOINTS } from '../constants/api-endpoints';
-import { User, UpdateProfileRequest, AvatarUploadResponse } from '../models';
+import {
+  User,
+  UpdateProfileRequest,
+  AvatarUploadResponse,
+  UpdateNotificationSettingsRequest,
+  ApiStatusResponse,
+} from '../models';
 
 @Injectable({
   providedIn: 'root',
@@ -80,11 +86,30 @@ export class UserService {
   /**
    * Jelszó változtatás request (email küldés)
    */
-  requestPasswordReset(currentPassword: string): Observable<{ status: string; statusCode: number }> {
-    return this.http.post<{ status: string; statusCode: number }>(
+  requestPasswordReset(currentPassword: string): Observable<ApiStatusResponse> {
+    return this.http.post<ApiStatusResponse>(
       `${this.apiUrl}${API_ENDPOINTS.AUTH.REQUEST_PASSWORD_RESET}`,
       { currentPassword }
     );
+  }
+
+  /**
+   * Értesítési beállítások frissítése
+   */
+  updateNotificationSettings(data: UpdateNotificationSettingsRequest): Observable<ApiStatusResponse> {
+    return this.http.put<ApiStatusResponse>(
+      `${this.apiUrl}${API_ENDPOINTS.USER.UPDATE_NOTIFICATION_SETTINGS}`,
+      data
+    );
+  }
+
+  /**
+   * Fiók végleges törlése
+   */
+  deleteAccount(password: string): Observable<ApiStatusResponse> {
+    return this.http.delete<ApiStatusResponse>(`${this.apiUrl}${API_ENDPOINTS.DELETE_USER}`, {
+      body: { password },
+    });
   }
 
   /**
