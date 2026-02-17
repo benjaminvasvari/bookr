@@ -445,7 +445,6 @@ public class AppointmentsService {
             JSONArray result = new JSONArray();
             for (JSONObject date : appointmentsMap.values()) {
                 date.put("count", date.getJSONArray("appointments").length());
-                
                 result.put(date);
             }
 

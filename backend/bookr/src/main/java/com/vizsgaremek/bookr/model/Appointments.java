@@ -196,6 +196,9 @@ public class Appointments implements Serializable {
     private String reason;
 
     @Transient
+    private String imageUrl;
+
+    @Transient
     private Boolean isAvailable;
 
     public Appointments() {
@@ -244,6 +247,14 @@ public class Appointments implements Serializable {
         this.companyAddress = companyAddress;
         this.companyPhone = companyPhone;
         this.companyEmail = companyEmail;
+    }
+
+    public Appointments(Integer id, Date startTime, String serviceName, String clientName, String imageUrl) {
+        this.id = id;
+        this.startTime = startTime;
+        this.serviceName = serviceName;
+        this.clientName = clientName;
+        this.imageUrl = imageUrl;
     }
 
     public Integer getId() {
@@ -534,6 +545,14 @@ public class Appointments implements Serializable {
 
     public void setReason(String reason) {
         this.reason = reason;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 
     public Boolean getIsAvailable() {
@@ -1039,6 +1058,44 @@ public class Appointments implements Serializable {
                         Double.parseDouble(record[11].toString()),
                         record[12].toString(),
                         formatter.parse(record[13].toString()) // created_at még teljes datetime
+                );
+                toReturn.add(a);
+            }
+            return toReturn;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            em.close();
+        }
+    }
+
+    public static ArrayList<Appointments> getUpcomingAppointmentsByStaffLimited(Integer staffId, Integer limit) {
+        EntityManager em = emf.createEntityManager();
+        DateTimeFormatter dateOnlyFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        SimpleDateFormat timeParser = new SimpleDateFormat("HH:mm:ss");
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getUpcomingAppointmentsByStaffLimited");
+            spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("limitIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("staffIdIN", staffId);
+            spq.setParameter("limitIN", limit);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+            ArrayList<Appointments> toReturn = new ArrayList<>();
+
+            for (Object[] record : resultList) {
+                Appointments a = new Appointments(
+                        Integer.valueOf(record[0].toString()),
+                        timeParser.parse(record[1].toString()), // "12:00:00"
+                        record[2].toString(),
+                        record[3].toString(),
+                        record[4] != null ? record[4].toString() : null
                 );
                 toReturn.add(a);
             }

@@ -5,6 +5,7 @@
 package com.vizsgaremek.bookr.model;
 
 import static com.vizsgaremek.bookr.model.Users.emf;
+import static com.vizsgaremek.bookr.model.Users.formatter;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -142,6 +143,20 @@ public class Staff implements Serializable {
         this.isActive = isActive;
         this.isDeleted = isDeleted;
         this.imageUrl = imageUrl;
+    }
+
+    public Staff(Integer id, Integer userIdInt, String displayName, String specialties, String bio, Date createdAt, Date updatedAt, String firstName, String lastName, String imageUrl) {
+        this.id = id;
+        this.userIdInt = userIdInt;
+        this.displayName = displayName;
+        this.specialties = specialties;
+        this.bio = bio;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.imageUrl = imageUrl;
+
     }
 
     public Integer getId() {
@@ -423,6 +438,52 @@ public class Staff implements Serializable {
             if (em != null && em.isOpen()) {
                 em.close();
             }
+        }
+    }
+
+    public static ArrayList<Staff> getAllActiveStaffByCompany(Integer companyId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getAllActiveStaffByCompany");
+
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("companyIdIN", companyId);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+            ArrayList<Staff> toReturn = new ArrayList();
+
+            for (Object[] record : resultList) {
+
+                Staff s = new Staff(
+                        Integer.valueOf(record[0].toString()),
+                        Integer.valueOf(record[1].toString()), 
+                       record[2].toString(),
+                        record[3] != null ? record[3].toString() : null,
+                        record[4] != null ? record[4].toString() : null,
+                        formatter.parse(record[5].toString()),
+                        record[6] != null ? formatter.parse(record[6].toString()) : null,
+                        record[7].toString(),
+                        record[8].toString(),
+                        record[9] != null ? record[9].toString() : null
+                );
+
+                toReturn.add(s);
+
+            }
+
+            return toReturn;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+
+        } finally {
+            em.close();
         }
     }
 }
