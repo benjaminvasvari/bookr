@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3307
--- Generation Time: Feb 18, 2026 at 04:51 PM
+-- Generation Time: Feb 18, 2026 at 05:56 PM
 -- Server version: 5.7.24
 -- PHP Version: 8.3.1
 
@@ -4440,6 +4440,7 @@ CREATE TABLE `pending_staff` (
   `company_id` int(11) NOT NULL,
   `tokenId` varchar(100) COLLATE utf8mb4_hungarian_ci NOT NULL,
   `position` text COLLATE utf8mb4_hungarian_ci NOT NULL,
+  `status` varchar(20) COLLATE utf8mb4_hungarian_ci DEFAULT 'pending',
   `created_at` datetime NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
 
@@ -6066,9 +6067,6 @@ CREATE DEFINER=`root`@`localhost` EVENT `cleanOldAuditLogs` ON SCHEDULE EVERY 1 
     
 END$$
 
-CREATE DEFINER=`root`@`localhost` EVENT `cleanup_pending_staff` ON SCHEDULE EVERY 1 DAY STARTS '2026-02-18 17:50:12' ON COMPLETION NOT PRESERVE ENABLE DO DELETE FROM `pending_staff` 
-    WHERE `created_at` < DATE_SUB(NOW(), INTERVAL 7 DAY)$$
-
 CREATE DEFINER=`root`@`localhost` EVENT `deactivateInactiveUsers` ON SCHEDULE EVERY 1 MONTH STARTS '2025-12-12 10:15:05' ON COMPLETION NOT PRESERVE DISABLE DO BEGIN
     -- Userek akik 180 napja nem jelentkeztek be
     UPDATE `users`
@@ -6097,6 +6095,11 @@ CREATE DEFINER=`root`@`localhost` EVENT `updateExpiredAppointments` ON SCHEDULE 
     WHERE `status` = 'confirmed'
       AND `end_time` < NOW();
 END$$
+
+CREATE DEFINER=`root`@`localhost` EVENT `expire_pending_staff` ON SCHEDULE EVERY 1 DAY STARTS '2026-02-18 18:55:41' ON COMPLETION NOT PRESERVE ENABLE DO UPDATE `pending_staff`
+    SET `status` = 'lejart'
+    WHERE `status` = 'pending'
+    AND `created_at` < DATE_SUB(NOW(), INTERVAL 7 DAY)$$
 
 DELIMITER ;
 COMMIT;
