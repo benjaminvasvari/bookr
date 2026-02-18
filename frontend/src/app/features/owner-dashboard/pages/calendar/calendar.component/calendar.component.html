@@ -81,57 +81,56 @@
 				@if (!isMobileView || dayIndex === currentMobileDayIndex) {
 				<div class="day-column" 
 					[class.day-closed]="day.isClosed"
-					[class.day-today]="day.isToday">
-					<!-- Day header - Clickable to open day panel -->
-					<div class="day-header" 
-						[class.header-closed]="day.isClosed"
-						[class.clickable]="!day.isClosed"
-						(click)="!day.isClosed && openDayPanel(dayIndex)"
-						[title]="!day.isClosed ? 'Kattints a napi részletes nézetért' : ''">
-						<div class="day-name">{{ day.name }}</div>
-						<div class="day-date">{{ day.dayNumber }}.</div>
-						@if (day.isClosed) {
-							<span class="closed-badge">Zárva</span>
-						} @else {
-							<div class="day-hours">{{ day.openingHours }}</div>
-						}
-					</div>
+				[class.day-today]="day.isToday"
+				[class.day-focused]="isFocused(dayIndex)"
+				[class.day-unfocused]="!isFocused(dayIndex) && !day.isClosed">
+				<!-- Day header - Clickable to focus day -->
+				<div class="day-header" 
+					[class.header-closed]="day.isClosed"
+					[class.header-clickable]="!day.isClosed"
+					(click)="!day.isClosed && setFocusedDay(dayIndex)">
+					<div class="day-short-name">{{ day.shortName }}</div>
+					<div class="day-name">{{ day.name }}</div>
+					<div class="day-date">{{ day.dayNumber }}.</div>
+					@if (day.isClosed) {
+						<span class="closed-badge">Zárva</span>
+					} @else {
+						<div class="day-hours">{{ day.openingHours }}</div>
+					}
+				</div>
 
-					<!-- Time grid -->
-					<div class="time-grid">
-						@for (slot of timeSlots; track slot.hour) {
-							<div class="grid-cell">
-								<!-- 30-minute helper line -->
-								<div class="half-hour-line"></div>
+				<!-- Time grid -->
+				<div class="time-grid">
+					<!-- Grid cells for hour slots -->
+					@for (slot of timeSlots; track slot.hour) {
+						<div class="grid-cell"></div>
+					}
+					
+					<!-- Current time indicator (only for today) -->
+					@if (day.isToday && currentTimePosition > 0) {
+						<div class="current-time-line" [style.top.px]="currentTimePosition"></div>
+					}
+
+					<!-- Appointments overlay - single layer for all appointments -->
+					<div class="appointments-layer">
+						@for (apt of getAppointmentsForDay(dayIndex); track apt.id) {
+							<div 
+								class="appointment-block"
+								[ngStyle]="getAppointmentStyleWithOverlap(apt, dayIndex)"
+								(click)="selectAppointment(apt)"
+								[class.selected]="selectedAppointment?.id === apt.id"
+								[class.block-small]="apt.duration < 45"
+								[title]="apt.startTime + ' • ' + apt.title + ' • ' + apt.clientName"
+							>
+								<div class="apt-time">{{ apt.startTime }}</div>
+								<div class="apt-service">{{ apt.title }}</div>
 							</div>
 						}
-
-						<!-- Current time indicator (only for today) -->
-						@if (day.isToday && currentTimePosition > 0) {
-							<div class="current-time-line" [style.top.px]="currentTimePosition"></div>
-						}
-
-						<!-- Appointments overlay -->
-						<div class="appointments-layer">
-							@for (apt of getAppointmentsForDay(dayIndex); track apt.id) {
-								<div 
-									class="appointment-block"
-									[ngStyle]="getAppointmentStyleWithOverlap(apt, dayIndex)"
-									(click)="selectAppointment(apt)"
-									[class.selected]="selectedAppointment?.id === apt.id"
-									[class.block-small]="apt.duration < 45"
-									[title]="apt.startTime + ' • ' + apt.title + ' • ' + apt.clientName"
-								>
-									<div class="apt-time">{{ apt.startTime }}</div>
-									<div class="apt-service">{{ apt.title }}</div>
-								</div>
-							}
-						</div>
 					</div>
 				</div>
-				}
+			</div>
 			}
-		</div>
+		}
 
 		<!-- Appointment details sidebar -->
 		@if (selectedAppointment) {
@@ -196,78 +195,8 @@
 						<button class="btn btn-status">Státusz váltás</button>
 						<button class="btn btn-cancel">Lemondás</button>
 					</div>
-				</div>
+				</div>	
 			</div>
 		}
 	</div>
-
-	<!-- Day Panel Overlay -->
-	@if (dayPanelOpen) {
-		<div class="day-panel-overlay" (click)="closeDayPanel()"></div>
-	}
-
-	<!-- Day Panel -->
-	@if (dayPanelOpen && selectedDayIndex !== null) {
-		<div class="day-panel" [class.open]="dayPanelOpen">
-			<!-- Panel Header -->
-			<div class="day-panel-header">
-				<div class="day-panel-title">
-					<h2>{{ getSelectedDay()?.name }}</h2>
-					<p class="day-panel-date">{{ getSelectedDay()?.date }}</p>
-				</div>
-				<button class="panel-close-btn" (click)="closeDayPanel()">
-					<i class="fas fa-times"></i>
-				</button>
-			</div>
-
-			<!-- Panel Body -->
-			<div class="day-panel-body">
-				@for (staff of staffMembers; track staff.id) {
-					@if (staff.id !== 0) {
-						<div class="staff-day-section">
-							<div class="staff-day-header">
-								<span class="staff-color-dot" [style.background]="staff.color"></span>
-								<h3>{{ staff.name }}</h3>
-							</div>
-
-							@let staffAppointments = getStaffAppointmentsForDay(staff.id, selectedDayIndex);
-							
-							@if (staffAppointments.length === 0) {
-								<div class="no-appointments">
-									<i class="fas fa-calendar-times"></i>
-									<span>Nincs foglalás</span>
-								</div>
-							} @else {
-								<div class="staff-appointments-list">
-									@for (apt of staffAppointments; track apt.id) {
-										<div class="day-appointment-card" 
-											[style.border-left-color]="apt.color"
-											(click)="selectAppointment(apt)">
-											<div class="apt-time-range">
-												<span class="apt-start">{{ apt.startTime }}</span>
-												<i class="fas fa-arrow-right"></i>
-												<span class="apt-end">{{ getEndTime(apt.startTime, apt.duration) }}</span>
-												<span class="apt-duration">({{ apt.duration }} perc)</span>
-											</div>
-											<div class="apt-client">
-												<i class="fas fa-user"></i>
-												{{ apt.clientName }}
-											</div>
-											<div class="apt-service-info">
-												<i class="fas fa-scissors"></i>
-												{{ apt.service }}
-											</div>
-											@if (apt.price) {
-												<div class="apt-price">{{ apt.price }} Ft</div>
-											}
-										</div>
-									}
-								</div>
-							}
-						</div>
-					}
-				}
-			</div>
-		</div>
-	}
 </div>

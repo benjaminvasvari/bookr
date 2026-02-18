@@ -260,14 +260,42 @@
 	min-width: 0;
 	flex: 1 1 0;
 	overflow: visible;
+	transition: all 0.3s ease;
 }
 
 .day-column:last-child {
 	border-right: none;
 }
 
+/* Fókuszált nap - széles oszlop */
+.day-column.day-focused {
+	flex: 4 1 0;
+}
+
+/* Nem fókuszált, de nyitott napok - normál oszlop */
+.day-column.day-unfocused {
+	flex: 1 1 0;
+	cursor: pointer;
+	background: #f7f8fa;
+}
+
+/* Hover effekt az összeszűkült napokon */
+.day-column.day-unfocused:hover {
+	background: #e8ebf0;
+	transition: background 0.2s ease;
+}
+
 .day-column.day-today {
 	background: rgba(99, 102, 241, 0.04);
+}
+
+/* Today oszlop unfocused állapotban megtartja az unfocused hátteret */
+.day-column.day-today.day-unfocused {
+	background: #f7f8fa;
+}
+
+.day-column.day-today:hover.day-unfocused {
+	background: #e8ebf0;
 }
 
 .day-column.day-today .day-header {
@@ -285,11 +313,12 @@
 		#f3f4f6 16px
 	);
 	pointer-events: none;
-	flex: 0 0 80px;
-	min-width: 80px;
-	max-width: 80px;
+	flex: 0 0 140px;
+	min-width: 140px;
+	max-width: 140px;
 	border-right: 1px solid #e5e7eb;
 	border-left: none;
+	transition: none;
 }
 
 /* Első zárt nap bal bordere */
@@ -323,6 +352,22 @@
 	z-index: 10;
 	flex-shrink: 0;
 	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+	transition: all 0.3s ease;
+}
+
+/* Kattintható fejléc */
+.day-header.header-clickable {
+	cursor: pointer;
+}
+
+.day-header.header-clickable:hover {
+	background: linear-gradient(to bottom, #f9fafb 0%, #f3f4f6 100%);
+	transform: translateY(-1px);
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.day-header.header-clickable:active {
+	transform: translateY(0);
 }
 
 .day-header.header-closed {
@@ -336,6 +381,18 @@
 	color: #6b7280;
 	text-transform: uppercase;
 	letter-spacing: 0.8px;
+	transition: opacity 0.3s ease;
+}
+
+/* Rövid napnév - csak unfocused állapotban látható */
+.day-short-name {
+	display: none;
+	font-size: 11px;
+	font-weight: 700;
+	color: #6b7280;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	transition: opacity 0.3s ease;
 }
 
 /* Zárt nap fejléc színei */
@@ -360,6 +417,40 @@
 	font-size: 9px;
 	color: #9ca3af;
 	font-weight: 500;
+	transition: opacity 0.3s ease;
+}
+
+/* Összeszűkült napokon a nevek és órák elrejtése, de dátumszám látható marad */
+.day-column.day-unfocused .day-name,
+.day-column.day-unfocused .day-hours {
+	display: none;
+}
+
+/* Rövid napnév megjelenítése unfocused állapotban */
+.day-column.day-unfocused .day-short-name {
+	display: block;
+}
+
+/* Fókuszált napon elrejtjük a short name-et */
+.day-column.day-focused .day-short-name {
+	display: none;
+}
+
+/* Dátumszám kicsinyítése unfocused napokon */
+.day-column.day-unfocused .day-date {
+	font-size: 16px;
+}
+
+/* Unfocused fejléc kicsinyítése */
+.day-column.day-unfocused .day-header {
+	padding: 8px 4px;
+	min-height: 60px;
+}
+
+/* A dátum szám kisebben marad látható */
+.day-column.day-unfocused .day-date {
+	font-size: 14px;
+	transition: font-size 0.3s ease;
 }
 
 .closed-badge {
@@ -384,7 +475,7 @@
 	position: relative;
 	height: 660px; /* 11 hours × 60px = 660px */
 	flex-shrink: 0;
-	overflow: hidden;
+	overflow: visible;
 }
 
 .grid-cell {
@@ -392,6 +483,12 @@
 	border-bottom: 1px solid rgba(0, 0, 0, 0.04);
 	position: relative;
 	flex-shrink: 0;
+}
+
+/* Unfocused napokon tiszta háttér a grid-cellekben */
+.day-column.day-unfocused .grid-cell {
+	border-bottom-color: transparent;
+	background: transparent;
 }
 
 /* 30-minute helper line - subtle divider */
@@ -449,7 +546,7 @@
 	cursor: pointer;
 	pointer-events: all;
 	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-	transition: all 0.2s ease;
+	transition: all 0.3s ease;
 	padding: 6px 8px 6px 10px;
 	display: flex;
 	flex-direction: row;
@@ -458,6 +555,54 @@
 	container-type: inline-size;
 	overflow: hidden;
 	min-width: 85px;
+}
+
+/* Összeszűkült napokon a foglalási blokkok csak mint vékony csíkok */
+.day-column.day-unfocused .appointment-block {
+	padding: 0;
+	margin: 0;
+	border-radius: 7px;
+	box-shadow: none;
+	overflow: hidden;
+	border-left-width: 14px !important; /* Teljes szélesség kitöltése */
+	background: transparent !important; /* Csak a border szín látszik */
+	transition: all 0.3s ease;
+}
+
+/* Összeszűkült napokon szövegek elrejtése a foglalásoknál */
+.day-column.day-unfocused .apt-time,
+.day-column.day-unfocused .apt-service {
+	display: none;
+}
+
+/* Unfocused blokkok hover effekt letiltása és kattinthatóság */
+.day-column.day-unfocused .appointment-block {
+	pointer-events: none;
+	cursor: default;
+}
+
+.day-column.day-unfocused .appointment-block:hover {
+	box-shadow: none;
+	transform: none;
+	z-index: 1;
+}
+
+/* Zárt napokon vastagabb csíkok a teljes felület kitöltésére */
+.day-column.day-closed .appointment-block {
+	padding: 0;
+	margin: 0;
+	border-radius: 7px;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+	overflow: hidden;
+	border-left-width: 18px !important;
+	background: transparent !important;
+	pointer-events: none;
+	opacity: 0.85;
+}
+
+.day-column.day-closed .apt-time,
+.day-column.day-closed .apt-service {
+	display: none;
 }
 
 /* Compact mode for narrow columns */
@@ -939,283 +1084,5 @@
 		top: 0;
 		bottom: 0;
 		z-index: 40;
-	}
-}
-
-/* ========== DAY PANEL STYLES ========== */
-
-/* Day header clickable state */
-.day-header.clickable {
-	cursor: pointer;
-	transition: all 0.2s ease;
-}
-
-.day-header.clickable:hover {
-	background: linear-gradient(to bottom, #f9fafb 0%, #f3f4f6 100%);
-	transform: translateY(-1px);
-	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
-}
-
-.day-header.clickable:active {
-	transform: translateY(0);
-}
-
-/* Overlay - dark semi-transparent background */
-.day-panel-overlay {
-	position: fixed;
-	top: 0;
-	left: 0;
-	right: 0;
-	bottom: 0;
-	background: rgba(0, 0, 0, 0.4);
-	z-index: 49;
-	animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-	from {
-		opacity: 0;
-	}
-	to {
-		opacity: 1;
-	}
-}
-
-/* Day Panel - slides in from right */
-.day-panel {
-	position: fixed;
-	top: 0;
-	right: 0;
-	bottom: 0;
-	width: 450px;
-	max-width: 100%;
-	background: #ffffff;
-	box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
-	z-index: 50;
-	display: flex;
-	flex-direction: column;
-	transform: translateX(100%);
-	transition: transform 0.3s ease;
-}
-
-.day-panel.open {
-	transform: translateX(0);
-}
-
-/* Panel Header */
-.day-panel-header {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	padding: 20px 24px;
-	border-bottom: 2px solid #e5e7eb;
-	background: linear-gradient(to bottom, #ffffff 0%, #fafbfc 100%);
-	flex-shrink: 0;
-}
-
-.day-panel-title h2 {
-	margin: 0;
-	font-size: 24px;
-	font-weight: 800;
-	color: #111827;
-	line-height: 1.2;
-}
-
-.day-panel-date {
-	margin: 4px 0 0 0;
-	font-size: 13px;
-	color: #6b7280;
-	font-weight: 500;
-}
-
-.panel-close-btn {
-	background: #f3f4f6;
-	border: none;
-	width: 36px;
-	height: 36px;
-	border-radius: 8px;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	cursor: pointer;
-	color: #6b7280;
-	font-size: 18px;
-	transition: all 0.2s;
-}
-
-.panel-close-btn:hover {
-	background: #e5e7eb;
-	color: #374151;
-	transform: rotate(90deg);
-}
-
-/* Panel Body - scrollable content */
-.day-panel-body {
-	flex: 1;
-	overflow-y: auto;
-	padding: 20px 24px;
-}
-
-/* Staff Day Section */
-.staff-day-section {
-	margin-bottom: 28px;
-}
-
-.staff-day-section:last-child {
-	margin-bottom: 0;
-}
-
-.staff-day-header {
-	display: flex;
-	align-items: center;
-	gap: 10px;
-	margin-bottom: 12px;
-	padding-bottom: 8px;
-	border-bottom: 2px solid #f3f4f6;
-}
-
-.staff-color-dot {
-	width: 14px;
-	height: 14px;
-	border-radius: 50%;
-	border: 3px solid white;
-	box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
-	flex-shrink: 0;
-}
-
-.staff-day-header h3 {
-	margin: 0;
-	font-size: 16px;
-	font-weight: 700;
-	color: #374151;
-}
-
-/* No Appointments State */
-.no-appointments {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	padding: 16px;
-	background: #f9fafb;
-	border-radius: 8px;
-	color: #9ca3af;
-	font-size: 13px;
-	font-weight: 500;
-}
-
-.no-appointments i {
-	font-size: 16px;
-}
-
-/* Staff Appointments List */
-.staff-appointments-list {
-	display: flex;
-	flex-direction: column;
-	gap: 10px;
-}
-
-/* Day Appointment Card */
-.day-appointment-card {
-	background: #ffffff;
-	border: 1px solid #e5e7eb;
-	border-left: 4px solid #6366f1;
-	border-radius: 8px;
-	padding: 14px 16px;
-	cursor: pointer;
-	transition: all 0.2s ease;
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-.day-appointment-card:hover {
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-	transform: translateY(-2px);
-	border-color: #d1d5db;
-}
-
-/* Appointment Time Range */
-.apt-time-range {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	margin-bottom: 10px;
-	font-size: 15px;
-	font-weight: 700;
-	color: #111827;
-}
-
-.apt-time-range i {
-	font-size: 12px;
-	color: #9ca3af;
-}
-
-.apt-duration {
-	font-size: 12px;
-	font-weight: 500;
-	color: #6b7280;
-	margin-left: 4px;
-}
-
-/* Appointment Client */
-.apt-client {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	margin-bottom: 8px;
-	font-size: 14px;
-	font-weight: 600;
-	color: #374151;
-}
-
-.apt-client i {
-	font-size: 13px;
-	color: #6b7280;
-	width: 16px;
-}
-
-/* Appointment Service Info */
-.apt-service-info {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	font-size: 13px;
-	color: #6b7280;
-	margin-bottom: 8px;
-}
-
-.apt-service-info i {
-	font-size: 12px;
-	width: 16px;
-}
-
-/* Appointment Price */
-.apt-price {
-	display: inline-block;
-	background: #d1fae5;
-	color: #065f46;
-	padding: 4px 10px;
-	border-radius: 6px;
-	font-size: 13px;
-	font-weight: 700;
-	margin-top: 4px;
-}
-
-/* Responsive - Mobile */
-@media (max-width: 768px) {
-	.day-panel {
-		width: 380px;
-	}
-}
-
-@media (max-width: 480px) {
-	.day-panel {
-		width: 100%;
-	}
-	
-	.day-panel-header {
-		padding: 16px 20px;
-	}
-	
-	.day-panel-body {
-		padding: 16px 20px;
 	}
 }

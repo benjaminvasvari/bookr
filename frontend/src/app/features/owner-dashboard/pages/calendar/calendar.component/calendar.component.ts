@@ -37,6 +37,7 @@ interface StaffMember {
 
 interface WeekDay {
   name: string;
+  shortName: string; // Egybetűs/kétbetűs rövidítés (H, K, Sze, Cs, P, Szo, V)
   date: string;
   dayIndex: number;
   dayNumber: number;
@@ -77,21 +78,13 @@ export class CalendarComponent implements OnInit, OnDestroy {
   currentMobileDayIndex: number = 1; // Start with today (Tuesday = index 1)
   isMobileView: boolean = false;
   companyOpeningHours: OpeningHours | null = null;
-
-  // Day panel state
-  dayPanelOpen: boolean = false;
-  selectedDayIndex: number | null = null;
+  
+  // Focused day state
+  focusedDayIndex: number | null = null;
 
   @HostListener('window:resize')
   onResize() {
     this.isMobileView = window.innerWidth <= 480;
-  }
-
-  @HostListener('document:keydown.escape')
-  onEscapeKey() {
-    if (this.dayPanelOpen) {
-      this.closeDayPanel();
-    }
   }
 
   // Staff color mapping
@@ -103,13 +96,13 @@ export class CalendarComponent implements OnInit, OnDestroy {
   };
 
   weekDays: WeekDay[] = [
-    { name: 'Hétfő', date: '2026. február 16.', dayIndex: 0, dayNumber: 16, fullDate: new Date(2026, 1, 16), openingHours: '09:00–17:00', isClosed: false, isToday: false },
-    { name: 'Kedd', date: '2026. február 17.', dayIndex: 1, dayNumber: 17, fullDate: new Date(2026, 1, 17), openingHours: '09:00–17:00', isClosed: false, isToday: true },
-    { name: 'Szerda', date: '2026. február 18.', dayIndex: 2, dayNumber: 18, fullDate: new Date(2026, 1, 18), openingHours: '09:00–17:00', isClosed: false, isToday: false },
-    { name: 'Csütörtök', date: '2026. február 19.', dayIndex: 3, dayNumber: 19, fullDate: new Date(2026, 1, 19), openingHours: '09:00–17:00', isClosed: false, isToday: false },
-    { name: 'Péntek', date: '2026. február 20.', dayIndex: 4, dayNumber: 20, fullDate: new Date(2026, 1, 20), openingHours: '09:00–17:00', isClosed: false, isToday: false },
-    { name: 'Szombat', date: '2026. február 21.', dayIndex: 5, dayNumber: 21, fullDate: new Date(2026, 1, 21), openingHours: '', isClosed: true, isToday: false },
-    { name: 'Vasárnap', date: '2026. február 22.', dayIndex: 6, dayNumber: 22, fullDate: new Date(2026, 1, 22), openingHours: '', isClosed: true, isToday: false }
+    { name: 'Hétfő', shortName: 'H', date: '2026. február 16.', dayIndex: 0, dayNumber: 16, fullDate: new Date(2026, 1, 16), openingHours: '09:00–17:00', isClosed: false, isToday: false },
+    { name: 'Kedd', shortName: 'K', date: '2026. február 17.', dayIndex: 1, dayNumber: 17, fullDate: new Date(2026, 1, 17), openingHours: '09:00–17:00', isClosed: false, isToday: true },
+    { name: 'Szerda', shortName: 'Sze', date: '2026. február 18.', dayIndex: 2, dayNumber: 18, fullDate: new Date(2026, 1, 18), openingHours: '09:00–17:00', isClosed: false, isToday: false },
+    { name: 'Csütörtök', shortName: 'Cs', date: '2026. február 19.', dayIndex: 3, dayNumber: 19, fullDate: new Date(2026, 1, 19), openingHours: '09:00–17:00', isClosed: false, isToday: false },
+    { name: 'Péntek', shortName: 'P', date: '2026. február 20.', dayIndex: 4, dayNumber: 20, fullDate: new Date(2026, 1, 20), openingHours: '09:00–17:00', isClosed: false, isToday: false },
+    { name: 'Szombat', shortName: 'Szo', date: '2026. február 21.', dayIndex: 5, dayNumber: 21, fullDate: new Date(2026, 1, 21), openingHours: '', isClosed: true, isToday: false },
+    { name: 'Vasárnap', shortName: 'V', date: '2026. február 22.', dayIndex: 6, dayNumber: 22, fullDate: new Date(2026, 1, 22), openingHours: '', isClosed: true, isToday: false }
   ];
 
   timeSlots: TimeSlot[] = [
@@ -719,17 +712,23 @@ export class CalendarComponent implements OnInit, OnDestroy {
     today.setHours(0, 0, 0, 0);
     
     const days = ['Hétfő', 'Kedd', 'Szerda', 'Csütörtök', 'Péntek', 'Szombat', 'Vasárnap'];
+    const dayShortNames = ['H', 'K', 'Sze', 'Cs', 'P', 'Szo', 'V'];
     const dayKeys: (keyof OpeningHours)[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
     const months = ['január', 'február', 'március', 'április', 'május', 'június', 
                     'július', 'augusztus', 'szeptember', 'október', 'november', 'december'];
     
     this.weekDays = [];
+    let todayIndex: number | null = null;
+    
     for (let i = 0; i < 7; i++) {
       const date = new Date(this.currentWeekStart);
       date.setDate(date.getDate() + i);
       date.setHours(0, 0, 0, 0);
       
       const isToday = date.getTime() === today.getTime();
+      if (isToday) {
+        todayIndex = i;
+      }
       
       // Dinamikus zárt/nyitott állapot számítása staff availability adatok alapján
       const isDayClosed = this.isDayClosedForAllStaff(i);
@@ -744,6 +743,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
       
       this.weekDays.push({
         name: days[i],
+        shortName: dayShortNames[i],
         date: `${date.getFullYear()}. ${months[date.getMonth()]} ${date.getDate()}.`,
         dayIndex: i,
         dayNumber: date.getDate(),
@@ -752,6 +752,24 @@ export class CalendarComponent implements OnInit, OnDestroy {
         isClosed: isDayClosed,
         isToday: isToday
       });
+    }
+    
+    // Set default focused day
+    this.setDefaultFocusedDay(todayIndex);
+  }
+
+  /**
+   * Alapértelmezett fókuszált nap beállítása
+   * - Ha a mai nap a héten van, az legyen fókuszban
+   * - Ha nincs, az első nyitott nap legyen fókuszban
+   */
+  private setDefaultFocusedDay(todayIndex: number | null): void {
+    if (todayIndex !== null && !this.weekDays[todayIndex]?.isClosed) {
+      this.focusedDayIndex = todayIndex;
+    } else {
+      // Keressük meg az első nyitott napot
+      const firstOpenDay = this.weekDays.findIndex(day => !day.isClosed);
+      this.focusedDayIndex = firstOpenDay !== -1 ? firstOpenDay : null;
     }
   }
 
@@ -913,12 +931,69 @@ export class CalendarComponent implements OnInit, OnDestroy {
       return apt.id !== appointment.id && aptStart < endMinutes && aptEnd > startMinutes;
     });
 
+    // Check if this day is closed or unfocused
+    const isClosed = this.weekDays[dayIndex]?.isClosed || false;
+    const isUnfocused = !this.isFocused(dayIndex);
+    
     let width = 'calc(100% - 4px)';
     let left = '2px';
     let zIndex = 1;
     
-    // Each appointment gets equal space with min-width guarantee
-    if (overlapping.length > 0) {
+    // Zárt napok - vastagabb csíkok (18px) egymás mellett
+    if (isClosed && overlapping.length > 0) {
+      const allAppointments = [appointment, ...overlapping].sort((a, b) => {
+        const [aH, aM] = a.startTime.split(':').map(Number);
+        const [bH, bM] = b.startTime.split(':').map(Number);
+        const aStart = aH * 60 + aM;
+        const bStart = bH * 60 + bM;
+        if (aStart !== bStart) return aStart - bStart;
+        return a.id - b.id;
+      });
+      
+      const totalColumns = allAppointments.length;
+      const columnIndex = allAppointments.findIndex(a => a.id === appointment.id);
+      
+      // Zárt napokon: 18px széles csíkok
+      const stripWidth = 18;
+      const spacing = 1; // Pixel távolság a csíkok között
+      const totalWidth = totalColumns * stripWidth + (totalColumns - 1) * spacing;
+      const startOffset = `calc(50% - ${totalWidth / 2}px)`;
+      
+      width = `${stripWidth}px`;
+      left = `calc(${startOffset} + ${columnIndex * (stripWidth + spacing)}px)`;
+      zIndex = columnIndex + 1;
+    }
+    // Zárt nap, nincs overlap - középre igazított egyetlen vastagabb csík
+    else if (isClosed) {
+      width = '18px';
+      left = 'calc(50% - 9px)';
+    }
+    // Unfocused napok - vékony csíkok egymás mellett
+    else if (isUnfocused && overlapping.length > 0) {
+      const allAppointments = [appointment, ...overlapping].sort((a, b) => {
+        const [aH, aM] = a.startTime.split(':').map(Number);
+        const [bH, bM] = b.startTime.split(':').map(Number);
+        const aStart = aH * 60 + aM;
+        const bStart = bH * 60 + bM;
+        if (aStart !== bStart) return aStart - bStart;
+        return a.id - b.id;
+      });
+      
+      const totalColumns = allAppointments.length;
+      const columnIndex = allAppointments.findIndex(a => a.id === appointment.id);
+      
+      // Ha unfocused: 14px széles csíkok, egymás mellett
+      const stripWidth = 14;
+      const spacing = 1; // Pixel távolság a csíkok között
+      const totalWidth = totalColumns * stripWidth + (totalColumns - 1) * spacing;
+      const startOffset = `calc(50% - ${totalWidth / 2}px)`;
+      
+      width = `${stripWidth}px`;
+      left = `calc(${startOffset} + ${columnIndex * (stripWidth + spacing)}px)`;
+      zIndex = columnIndex + 1;
+    }
+    // Focused napok - normál széles overlap kezelés
+    else if (overlapping.length > 0) {
       const allAppointments = [appointment, ...overlapping].sort((a, b) => {
         const [aH, aM] = a.startTime.split(':').map(Number);
         const [bH, bM] = b.startTime.split(':').map(Number);
@@ -936,6 +1011,11 @@ export class CalendarComponent implements OnInit, OnDestroy {
       width = `max(${columnWidth}%, 85px)`;
       left = `calc(${columnWidth}% * ${columnIndex})`;
       zIndex = columnIndex + 1;
+    }
+    // Unfocused, nincs overlap - középre igazított egyetlen csík
+    else if (isUnfocused) {
+      width = '14px';
+      left = 'calc(50% - 7px)';
     }
 
     // Convert hex to RGBA
@@ -1006,43 +1086,21 @@ export class CalendarComponent implements OnInit, OnDestroy {
     return appointment.duration >= 45;
   }
 
-  // ========== DAY PANEL METHODS ==========
-
-  openDayPanel(dayIndex: number): void {
-    if (this.weekDays[dayIndex]?.isClosed) {
-      return; // Ne nyissa meg zárt napokra
+  /**
+   * Fókusz beállítása egy adott napra
+   */
+  setFocusedDay(dayIndex: number): void {
+    const day = this.weekDays[dayIndex];
+    if (!day || day.isClosed) {
+      return; // Zárt napokra nem lehet fókuszálni
     }
-    this.selectedDayIndex = dayIndex;
-    this.dayPanelOpen = true;
+    this.focusedDayIndex = dayIndex;
   }
 
-  closeDayPanel(): void {
-    this.dayPanelOpen = false;
-    setTimeout(() => {
-      this.selectedDayIndex = null;
-    }, 300); // Wait for animation to finish
-  }
-
-  getSelectedDay(): WeekDay | null {
-    if (this.selectedDayIndex === null) return null;
-    return this.weekDays[this.selectedDayIndex] || null;
-  }
-
-  getStaffAppointmentsForDay(staffId: number, dayIndex: number): CalendarAppointment[] {
-    return this.allAppointments
-      .filter(apt => apt.staffId === staffId && apt.dayIndex === dayIndex)
-      .sort((a, b) => {
-        const [aH, aM] = a.startTime.split(':').map(Number);
-        const [bH, bM] = b.startTime.split(':').map(Number);
-        return (aH * 60 + aM) - (bH * 60 + bM);
-      });
-  }
-
-  getEndTime(startTime: string, duration: number): string {
-    const [hours, minutes] = startTime.split(':').map(Number);
-    const totalMinutes = hours * 60 + minutes + duration;
-    const endHours = Math.floor(totalMinutes / 60);
-    const endMinutes = totalMinutes % 60;
-    return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+  /**
+   * Ellenőrzi, hogy egy nap fókuszban van-e
+   */
+  isFocused(dayIndex: number): boolean {
+    return this.focusedDayIndex === dayIndex;
   }
 }
