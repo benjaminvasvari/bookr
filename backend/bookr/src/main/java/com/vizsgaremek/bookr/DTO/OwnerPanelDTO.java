@@ -7,6 +7,7 @@ package com.vizsgaremek.bookr.DTO;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Date;
+import java.util.List;
 
 /**
  *
@@ -67,9 +68,9 @@ public class OwnerPanelDTO {
         private String status;
         private String serviceName;
         private String clientName;
-        private LocalDate relativeDate;
+        private String relativeDate;
 
-        public UpcomingAppointmentsDTO(Integer appointmentId, LocalDateTime startTime, LocalDateTime endTime, String status, String serviceName, String clientName, LocalDate relativeDate) {
+        public UpcomingAppointmentsDTO(Integer appointmentId, LocalDateTime startTime, LocalDateTime endTime, String status, String serviceName, String clientName, String relativeDate) {
             this.appointmentId = appointmentId;
             this.startTime = startTime;
             this.endTime = endTime;
@@ -103,7 +104,7 @@ public class OwnerPanelDTO {
             return clientName;
         }
 
-        public LocalDate getRelativeDate() {
+        public String getRelativeDate() {
             return relativeDate;
         }
     }
@@ -238,5 +239,92 @@ public class OwnerPanelDTO {
             return createAt;
         }
 
+    }
+
+    public static class ClientsByCompaniesDTO {
+
+        private Integer clientId;
+        private String firstName;
+        private String lastName;
+        private String email;
+        private String phone;
+        private String imageUrl;
+        private Integer totalAppointments;
+        private Double totalSpending;
+        private String lastVisit;
+        private String internalNote;
+
+        public ClientsByCompaniesDTO(Integer clientId, String firstName, String lastName, String email, String phone, String imageUrl, Integer totalAppointments, Double totalSpending, String lastVisit, String internalNote) {
+            this.clientId = clientId;
+            this.firstName = firstName;
+            this.lastName = lastName;
+            this.email = email;
+            this.phone = phone;
+            this.imageUrl = imageUrl;
+            this.totalAppointments = totalAppointments;
+            this.totalSpending = totalSpending;
+            this.lastVisit = lastVisit;
+            this.internalNote = internalNote;
+        }
+
+        public Integer getClientId() {
+            return clientId;
+        }
+
+        public String getFirstName() {
+            return firstName;
+        }
+
+        public String getLastName() {
+            return lastName;
+        }
+
+        public String getEmail() {
+            return email;
+        }
+
+        public String getPhone() {
+            return phone;
+        }
+
+        public String getImageUrl() {
+            return imageUrl;
+        }
+
+        public Integer getTotalAppointments() {
+            return totalAppointments;
+        }
+
+        public Double getTotalSpending() {
+            return totalSpending;
+        }
+
+        public String getLastVisit() {
+            return lastVisit;
+        }
+
+        public String getInternalNote() {
+            return internalNote;
+        }
+
+    }
+
+    public static class ClientsByCompanyResultWrapper {
+
+        private List<ClientsByCompaniesDTO> clients;
+        private Integer totalClients;
+
+        public ClientsByCompanyResultWrapper(List<ClientsByCompaniesDTO> clients, Integer totalClients) {
+            this.clients = clients;
+            this.totalClients = totalClients;
+        }
+
+        public List<ClientsByCompaniesDTO> getClients() {
+            return clients;
+        }
+
+        public Integer getTotalClients() {
+            return totalClients;
+        }
     }
 }

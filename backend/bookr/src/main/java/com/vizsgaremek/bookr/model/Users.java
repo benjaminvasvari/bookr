@@ -4,6 +4,8 @@
  */
 package com.vizsgaremek.bookr.model;
 
+import com.vizsgaremek.bookr.DTO.OwnerPanelDTO.ClientsByCompaniesDTO;
+import com.vizsgaremek.bookr.DTO.OwnerPanelDTO.ClientsByCompanyResultWrapper;
 import java.io.Serializable;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -798,7 +800,7 @@ public class Users implements Serializable {
                     record[7] == null ? null : record[7].toString(), // avatarUrl
                     record[8] == null ? null : record[8].toString() // roles (GROUP_CONCAT string)
             );
-            
+
             return user;
 
         } catch (Exception ex) {
@@ -1143,6 +1145,59 @@ public class Users implements Serializable {
         } catch (Exception ex) {
             ex.printStackTrace();
             return false;
+        }
+    }
+
+    public static ClientsByCompanyResultWrapper getClientsByCompany(Integer companyId, Integer page, Integer pageSize) {
+        EntityManager em = emf.createEntityManager();
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getClientsByCompany");
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("pageIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("pageSizeIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("totalClientsOUT", Integer.class, ParameterMode.OUT);
+
+            spq.setParameter("companyIdIN", companyId);
+            spq.setParameter("pageIN", page);
+            spq.setParameter("pageSizeIN", pageSize);
+
+            spq.execute();
+
+            Integer totalClients = (Integer) spq.getOutputParameterValue("totalClientsOUT");
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return new ClientsByCompanyResultWrapper(new ArrayList<>(), totalClients != null ? totalClients : 0);
+            }
+
+            List<ClientsByCompaniesDTO> clients = new ArrayList<>();
+
+            for (Object[] record : resultList) {
+
+                ClientsByCompaniesDTO dto = new ClientsByCompaniesDTO(
+                        Integer.valueOf(record[0].toString()),
+                        record[1].toString(),
+                        record[2].toString(),
+                        record[3].toString(),
+                        record[4].toString(),
+                        record[5] != null ? record[5].toString() : null,
+                        Integer.valueOf(record[6].toString()),
+                        Double.parseDouble(record[7].toString()),
+                        record[8].toString(),
+                        record[9] != null ? record[9].toString() : null
+                );
+                clients.add(dto);
+            }
+
+            return new ClientsByCompanyResultWrapper(clients, totalClients != null ? totalClients : 0);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return new ClientsByCompanyResultWrapper(new ArrayList<>(), 0);
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
         }
     }
 }

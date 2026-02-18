@@ -90,7 +90,6 @@ public class DashboardsService {
 
             // Services By Categories
             JSONArray servicesByCategories = ServiceCategoryService.getServiceCategoriesWithServicesByCompanyId(companyId);
-            System.out.println("dolog" + servicesByCategories);
 
             result.put("servicesByCategories", servicesByCategories);
 

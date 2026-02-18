@@ -974,7 +974,7 @@ public class Appointments implements Serializable {
                         record[3].toString(),
                         record[4].toString(),
                         record[5].toString(),
-                        LocalDate.parse(record[6].toString(), dateOnlyFormatter)
+                        record[6].toString()
                 );
 
                 toReturn.add(a);

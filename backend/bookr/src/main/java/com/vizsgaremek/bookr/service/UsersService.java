@@ -1,12 +1,16 @@
 package com.vizsgaremek.bookr.service;
 
+import com.vizsgaremek.bookr.DTO.OwnerPanelDTO.ClientsByCompaniesDTO;
+import com.vizsgaremek.bookr.DTO.OwnerPanelDTO.ClientsByCompanyResultWrapper;
 import com.vizsgaremek.bookr.util.ValidationUtil;
 import com.vizsgaremek.bookr.model.AuditLogs;
 import com.vizsgaremek.bookr.model.Tokens;
 import com.vizsgaremek.bookr.model.Users;
 import com.vizsgaremek.bookr.security.JWT;
+import com.vizsgaremek.bookr.util.FileStorageUtil;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 /**
@@ -21,6 +25,8 @@ public class UsersService {
 
     @Inject
     private EmailService EmailService;
+
+    private Users layer = new Users();
 
     public JSONObject getUserProfile(String token) {
 
@@ -280,5 +286,64 @@ public class UsersService {
             e.printStackTrace();
             return null;
         }
+    }
+
+    public JSONObject getClientsByCompany(Integer companyId, Integer page, Integer pageSize) {
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        try {
+
+            // Adatbázis lekérdezés
+            ClientsByCompanyResultWrapper modelResult = layer.getClientsByCompany(companyId, page, pageSize);
+
+            // NULL ELLENŐRZÉS
+            if (modelResult == null) {
+                status = "NotFound";
+                statusCode = 404;
+                toReturn.put("status", status);
+                toReturn.put("statusCode", statusCode);
+                toReturn.put("message", "No company found");
+                return toReturn;
+            }
+
+            // Sikeres válasz összeállítása
+            JSONArray clientsJSONArray = new JSONArray();
+            JSONObject resultObj = new JSONObject();
+
+            for (ClientsByCompaniesDTO actualClient : modelResult.getClients()) {
+                JSONObject actualClientObject = new JSONObject();
+
+                actualClientObject.put("id", actualClient.getClientId());
+                actualClientObject.put("firstName", actualClient.getFirstName());
+                actualClientObject.put("lastName", actualClient.getLastName());
+                actualClientObject.put("email", actualClient.getEmail());
+                actualClientObject.put("phone", actualClient.getPhone());
+                actualClientObject.put("imageUrl", actualClient.getImageUrl() != null ? FileStorageUtil.buildFullUrl(actualClient.getImageUrl()) : JSONObject.NULL);
+                actualClientObject.put("totalAppointments", actualClient.getTotalAppointments());
+                actualClientObject.put("totalSpending", actualClient.getTotalSpending());
+                actualClientObject.put("lastVisit", actualClient.getLastVisit());
+                actualClientObject.put("internalNote", actualClient.getInternalNote());
+
+                clientsJSONArray.put(actualClientObject);
+            }
+            resultObj.put("result", clientsJSONArray);
+            resultObj.put("totalClients", modelResult.getTotalClients());
+
+            toReturn.put("result", resultObj);
+
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            status = "InternalServerError";
+            statusCode = 500;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+        }
+
+        return toReturn;
     }
 }
