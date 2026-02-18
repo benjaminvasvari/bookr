@@ -1,8 +1,7 @@
 .superadmin-sidebar {
   width: 68px;
   flex: 0 0 68px;
-  min-height: 100%;
-  height: auto;
+  height: 100vh;
   background: #1f2937;
   color: #f8fafc;
   padding: 18px 10px;

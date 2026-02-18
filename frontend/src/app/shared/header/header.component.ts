@@ -103,6 +103,10 @@ export class HeaderComponent implements OnInit, OnDestroy {
     }
   }
 
+  handleBusinessButtonClick(): void {
+    this.handleOwnerButtonClick();
+  }
+
   handleSuperadminButtonClick(): void {
     if (!this.currentUser) {
       this.router.navigate(['/login']);
@@ -127,6 +131,10 @@ export class HeaderComponent implements OnInit, OnDestroy {
     return 'Cég regisztrálása';
   }
 
+  getBusinessButtonText(): string {
+    return this.getOwnerButtonText();
+  }
+
   /**
    * Gomb ikonja (dinamikus)
    */
@@ -136,6 +144,10 @@ export class HeaderComponent implements OnInit, OnDestroy {
     }
 
     return '';
+  }
+
+  getBusinessButtonIcon(): string {
+    return this.getOwnerButtonIcon();
   }
 
   getSuperadminButtonIcon(): string {

@@ -1,12 +1,9 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component } from '@angular/core';
 import { RouterOutlet, Router, NavigationEnd, ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { HeaderComponent } from './shared/header/header.component';
 import { FooterComponent } from './shared/footer/footer.component';
 import { filter, map } from 'rxjs/operators';
-import { Subscription } from 'rxjs';
-import { FavoritesService } from './core/services/favorites.service';
-import { AuthService } from './core/services/auth.service';
 
 @Component({
   selector: 'app-root',
@@ -15,17 +12,14 @@ import { AuthService } from './core/services/auth.service';
   templateUrl: './app.component.html',
   styleUrl: './app.component.css',
 })
-export class AppComponent implements OnInit, OnDestroy {
+export class AppComponent {
   title = 'bookr-frontend';
   showFooter = true;
   showHeader = true;
-  private userSubscription?: Subscription;
 
   constructor(
     private router: Router,
-    private activatedRoute: ActivatedRoute,
-    private favoritesService: FavoritesService,
-    private authService: AuthService
+    private activatedRoute: ActivatedRoute
   ) {
     this.router.events
       .pipe(
@@ -53,15 +47,5 @@ export class AppComponent implements OnInit, OnDestroy {
         const showHeader = data['showHeader'];
         this.showHeader = showHeader !== false; // Ha nincs megadva, alapértelmezetten true
       });
-  }
-
-  ngOnInit(): void {
-    this.userSubscription = this.authService.currentUser$.subscribe(() => {
-      this.favoritesService.refreshFavorites();
-    });
-  }
-
-  ngOnDestroy(): void {
-    this.userSubscription?.unsubscribe();
   }
 }

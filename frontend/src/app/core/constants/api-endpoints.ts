@@ -67,11 +67,16 @@ export const API_ENDPOINTS = {
     UPLOAD_AVATAR: '/users/uploadAvatar',
     DELETE_AVATAR: '/users/deleteAvatar',
     UPDATE_NOTIFICATION_SETTINGS: '/notifsetting/update',
+    CLIENTS_BY_COMPANY: (companyId: number, page: number, pageSize: number) =>
+      `/users/getClientsByCompany?companyId=${companyId}&page=${page}&pageSize=${pageSize}`,
   },
 
   STAFF: {
     BY_COMPANY_AND_SERVICES: '/staff/by-company-and-services',
     DASHBOARD: (userId: number) => `/staff/dashboard/${userId}`,
+  },
+  DASHBOARDS: {
+    OWNER: '/dashboards/owner',
   },
   FAVORITES: {
     GETALL: (userId: number) => `/favorites/getFavorites?id=${userId}`,

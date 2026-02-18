@@ -120,8 +120,8 @@ export class CustomValidators {
 
       const errors: ValidationErrors = {};
 
-      // RFC 5322 standard email regex (egyszerűsített)
-      const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      // Kötelező: valami@valami.com vagy valami@valami.hu
+      const emailPattern = /^[^\s@]+@[^\s@]+\.(com|hu)$/i;
 
       if (!emailPattern.test(value)) {
         errors['invalidEmail'] = true;
@@ -183,7 +183,7 @@ export function getValidationErrorMessages(
   }
 
   if (errors['invalidEmail']) {
-    messages.push('Érvénytelen email cím formátum');
+    messages.push('Az email formátuma: valami@valami.com vagy valami@valami.hu');
   }
 
   if (errors['email']) {

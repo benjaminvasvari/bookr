@@ -5,136 +5,162 @@
 			<p class="subtitle">Árak, időtartamok és elérhetőségek kezelése.</p>
 		</div>
 		<div class="actions">
-			<button class="btn primary">Új szolgáltatás</button>
+			<button class="btn primary" (click)="openNewServiceModal()">Új szolgáltatás</button>
 		</div>
 	</header>
 
-	<div class="services-toolbar">
-		<label class="search-input">
-			<input type="text" placeholder="Keresés szolgáltatás név szerint" />
-		</label>
-		<select class="filter-select">
-			<option>Összes kategória</option>
-			<option>Fodrászat</option>
-			<option>Barber</option>
-			<option>Masszázs</option>
-			<option>Kozmetika</option>
-		</select>
+	<div class="service-tabs">
+		@for (category of categories; track category) {
+			<button
+				class="tab-button"
+				[class.active]="selectedCategory === category"
+				(click)="selectCategory(category)"
+			>
+				{{ category }}
+			</button>
+		}
 	</div>
 
+	@if (isLoading) {
+		<div class="services-state">Szolgáltatások betöltése...</div>
+	} @else if (errorMessage) {
+		<div class="services-state error">{{ errorMessage }}</div>
+	}
+
 	<section class="services-grid">
-		<article class="service-card">
-			<div class="service-header">
-				<div>
-					<h3>Hajvágás</h3>
-					<p class="muted">Fodrászat · 45 perc</p>
+		@for (service of filteredServices; track service.id) {
+			<article class="service-card">
+				<div class="service-header">
+					<div>
+						<h3>{{ service.name }}</h3>
+						<p class="muted">{{ service.category }} · {{ service.duration }} perc</p>
+					</div>
+					<span class="status-pill" [class.online]="service.status === 'active'" [class.busy]="service.status === 'inactive'">
+						{{ service.status === 'active' ? 'Aktív' : 'Szünetel' }}
+					</span>
 				</div>
-				<span class="status-pill online">Aktív</span>
-			</div>
-			<p class="service-desc">Klasszikus férfi/női hajvágás, mosással és formázással.</p>
-			<div class="service-meta">
-				<span class="price">8 500 Ft</span>
-				<span class="duration">45 perc</span>
-			</div>
-			<div class="service-actions">
-				<button class="btn ghost">Szerkesztés</button>
-				<button class="btn primary">Időpontok</button>
-			</div>
-		</article>
+				<p class="service-desc">{{ service.description }}</p>
+				<div class="service-meta">
+					<span class="price">{{ service.price | number:'1.0-0' }} {{ service.currency === 'HUF' ? 'Ft' : service.currency }}</span>
+					<span class="duration">{{ service.duration }}</span>
+				</div>
+				<div class="service-actions">
+					<button class="btn ghost" (click)="openEditServiceModal(service)">Szerkesztés</button>
+				</div>
+			</article>
+		}
 
-		<article class="service-card">
-			<div class="service-header">
-				<div>
-					<h3>Szakáll igazítás</h3>
-					<p class="muted">Barber · 30 perc</p>
-				</div>
-				<span class="status-pill online">Aktív</span>
+		@if (filteredServices.length === 0) {
+			<div class="empty-filter-state">
+				<p>Nincs szolgáltatás ebben a kategóriában.</p>
 			</div>
-			<p class="service-desc">Precíz kontúr, formázás és ápolás prémium termékekkel.</p>
-			<div class="service-meta">
-				<span class="price">6 500 Ft</span>
-				<span class="duration">30 perc</span>
-			</div>
-			<div class="service-actions">
-				<button class="btn ghost">Szerkesztés</button>
-				<button class="btn primary">Időpontok</button>
-			</div>
-		</article>
-
-		<article class="service-card">
-			<div class="service-header">
-				<div>
-					<h3>Festés</h3>
-					<p class="muted">Fodrászat · 90 perc</p>
-				</div>
-				<span class="status-pill busy">Szünetel</span>
-			</div>
-			<p class="service-desc">Teljes hajfestés személyre szabott árnyalattal és ápolással.</p>
-			<div class="service-meta">
-				<span class="price">18 000 Ft</span>
-				<span class="duration">90 perc</span>
-			</div>
-			<div class="service-actions">
-				<button class="btn ghost">Szerkesztés</button>
-				<button class="btn primary">Időpontok</button>
-			</div>
-		</article>
-
-		<article class="service-card">
-			<div class="service-header">
-				<div>
-					<h3>Relax masszázs</h3>
-					<p class="muted">Masszázs · 60 perc</p>
-				</div>
-				<span class="status-pill online">Aktív</span>
-			</div>
-			<p class="service-desc">Lazító, stresszoldó masszázs aromaterápiával.</p>
-			<div class="service-meta">
-				<span class="price">14 000 Ft</span>
-				<span class="duration">60 perc</span>
-			</div>
-			<div class="service-actions">
-				<button class="btn ghost">Szerkesztés</button>
-				<button class="btn primary">Időpontok</button>
-			</div>
-		</article>
-
-		<article class="service-card">
-			<div class="service-header">
-				<div>
-					<h3>Manikűr</h3>
-					<p class="muted">Kozmetika · 50 perc</p>
-				</div>
-				<span class="status-pill online">Aktív</span>
-			</div>
-			<p class="service-desc">Teljes körű kézápolás, lakkozással és hidratálással.</p>
-			<div class="service-meta">
-				<span class="price">9 500 Ft</span>
-				<span class="duration">50 perc</span>
-			</div>
-			<div class="service-actions">
-				<button class="btn ghost">Szerkesztés</button>
-				<button class="btn primary">Időpontok</button>
-			</div>
-		</article>
-
-		<article class="service-card">
-			<div class="service-header">
-				<div>
-					<h3>Hot towel</h3>
-					<p class="muted">Barber · 20 perc</p>
-				</div>
-				<span class="status-pill online">Aktív</span>
-			</div>
-			<p class="service-desc">Meleg törölközős kezelés borotválás előtt.</p>
-			<div class="service-meta">
-				<span class="price">3 500 Ft</span>
-				<span class="duration">20 perc</span>
-			</div>
-			<div class="service-actions">
-				<button class="btn ghost">Szerkesztés</button>
-				<button class="btn primary">Időpontok</button>
-			</div>
-		</article>
+		}
 	</section>
 </section>
+
+<!-- Új szolgáltatás modal -->
+@if (showNewServiceModal) {
+	<div class="modal-overlay" (click)="closeNewServiceModal()">
+		<div class="modal-content" (click)="$event.stopPropagation()">
+			<div class="modal-header">
+				<h2>Új szolgáltatás</h2>
+				<button class="close-btn" (click)="closeNewServiceModal()">&times;</button>
+			</div>
+			<div class="modal-body">
+				<div class="form-group">
+					<label>Szolgáltatás neve *</label>
+					<input type="text" [(ngModel)]="newService.name" placeholder="pl. Hajvágás" />
+				</div>
+				<div class="form-group">
+					<label>Kategória *</label>
+					<select [(ngModel)]="newService.category">
+						<option value="">Válassz kategóriát</option>
+						@for (category of categories; track category) {
+							@if (category !== 'Összes') {
+								<option [value]="category">{{ category }}</option>
+							}
+						}
+					</select>
+				</div>
+				<div class="form-row">
+					<div class="form-group">
+						<label>Időtartam *</label>
+						<input type="text" [(ngModel)]="newService.duration" placeholder="pl. 45 perc" />
+					</div>
+					<div class="form-group">
+						<label>Ár (Ft) *</label>
+						<input type="number" [(ngModel)]="newService.price" min="0" step="500" />
+					</div>
+				</div>
+				<div class="form-group">
+					<label>Leírás</label>
+					<textarea [(ngModel)]="newService.description" rows="3" placeholder="Rövid leírás a szolgáltatásról"></textarea>
+				</div>
+				<div class="form-group">
+					<label>Státusz</label>
+					<select [(ngModel)]="newService.status">
+						<option value="active">Aktív</option>
+						<option value="inactive">Szünetel</option>
+					</select>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button class="btn ghost" (click)="closeNewServiceModal()">Mégse</button>
+				<button class="btn primary" (click)="saveNewService()">Mentés</button>
+			</div>
+		</div>
+	</div>
+}
+
+<!-- Szerkesztés modal -->
+@if (showEditServiceModal && selectedService) {
+	<div class="modal-overlay" (click)="closeEditServiceModal()">
+		<div class="modal-content" (click)="$event.stopPropagation()">
+			<div class="modal-header">
+				<h2>Szolgáltatás szerkesztése</h2>
+				<button class="close-btn" (click)="closeEditServiceModal()">&times;</button>
+			</div>
+			<div class="modal-body">
+				<div class="form-group">
+					<label>Szolgáltatás neve *</label>
+					<input type="text" [(ngModel)]="selectedService.name" />
+				</div>
+				<div class="form-group">
+					<label>Kategória *</label>
+					<select [(ngModel)]="selectedService.category">
+						@for (category of categories; track category) {
+							@if (category !== 'Összes') {
+								<option [value]="category">{{ category }}</option>
+							}
+						}
+					</select>
+				</div>
+				<div class="form-row">
+					<div class="form-group">
+						<label>Időtartam *</label>
+						<input type="text" [(ngModel)]="selectedService.duration" />
+					</div>
+					<div class="form-group">
+						<label>Ár (Ft) *</label>
+						<input type="number" [(ngModel)]="selectedService.price" min="0" step="500" />
+					</div>
+				</div>
+				<div class="form-group">
+					<label>Leírás</label>
+					<textarea [(ngModel)]="selectedService.description" rows="3"></textarea>
+				</div>
+				<div class="form-group">
+					<label>Státusz</label>
+					<select [(ngModel)]="selectedService.status">
+						<option value="active">Aktív</option>
+						<option value="inactive">Szünetel</option>
+					</select>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button class="btn ghost" (click)="closeEditServiceModal()">Mégse</button>
+				<button class="btn primary" (click)="saveEditService()">Mentés</button>
+			</div>
+		</div>
+	</div>
+}

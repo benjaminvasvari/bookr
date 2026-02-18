@@ -100,7 +100,11 @@
               placeholder="pelda@email.com"
             />
             @if (profileForm.get('email')?.invalid && profileForm.get('email')?.touched) {
+            @if (profileForm.get('email')?.errors?.['pattern']) {
+            <div class="form-error">Az email formátuma: valami@valami.com vagy valami@valami.hu</div>
+            } @else {
             <div class="form-error">Érvényes email cím szükséges</div>
+            }
             }
           </div>
 

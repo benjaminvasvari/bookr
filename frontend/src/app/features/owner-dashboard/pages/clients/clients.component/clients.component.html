@@ -1,6 +1,7 @@
 <section class="clients-panel">
 	<header class="clients-topbar">
 		<h1>Ügyféllista</h1>
+		<p>Rendezett áttekintés az ügyfelekről és foglalásaikról.</p>
 	</header>
 
 	<div class="clients-toolbar">
@@ -10,38 +11,44 @@
 		</label>
 	</div>
 
-	<div class="clients-list">
-		<a class="client-card" [routerLink]="['/owner/clients', 1]">
-			<div class="avatar"></div>
-			<div class="client-info">
-				<h3>Kovács Anna</h3>
-				<p>anna.kovacs@email.com</p>
-			</div>
-			<span class="meta">15 foglalás</span>
-		</a>
-		<a class="client-card" [routerLink]="['/owner/clients', 2]">
-			<div class="avatar"></div>
-			<div class="client-info">
-				<h3>Nagy Péter</h3>
-				<p>peter.nagy@email.com</p>
-			</div>
-			<span class="meta">9 foglalás</span>
-		</a>
-		<a class="client-card" [routerLink]="['/owner/clients', 3]">
-			<div class="avatar"></div>
-			<div class="client-info">
-				<h3>Tóth László</h3>
-				<p>toth.laszlo@email.com</p>
-			</div>
-			<span class="meta">12 foglalás</span>
-		</a>
-		<a class="client-card" [routerLink]="['/owner/clients', 4]">
-			<div class="avatar"></div>
-			<div class="client-info">
-				<h3>Szabó Petra</h3>
-				<p>szabo.petra@email.com</p>
-			</div>
-			<span class="meta">7 foglalás</span>
-		</a>
+	<div class="clients-card">
+		<div class="clients-list-head">
+			<span>Ügyfél</span>
+			<span>Email</span>
+			<span>Foglalás</span>
+		</div>
+
+		@if (isLoading) {
+			<div class="state-message">Ügyfelek betöltése...</div>
+		} @else if (errorMessage) {
+			<div class="state-message error">{{ errorMessage }}</div>
+		} @else if (pagedClients.length === 0) {
+			<div class="state-message">Nincs még ügyfél ebben a listában.</div>
+		} @else {
+		<div class="clients-list">
+			@for (client of pagedClients; track client.id) {
+				<a class="client-row" [routerLink]="['/owner/clients', client.id]">
+					<div class="client-main">
+						<div class="avatar">{{ getInitials(client.name) }}</div>
+						<div class="client-info">
+							<h3>{{ client.name }}</h3>
+						</div>
+					</div>
+					<div class="client-email">{{ client.email }}</div>
+					<span class="meta">{{ client.bookings }} foglalás</span>
+				</a>
+			}
+		</div>
+		}
+
+		<footer class="clients-pagination">
+			<button type="button" class="page-arrow" (click)="goPrevPage()" [disabled]="!canGoPrev" aria-label="Előző oldal">
+				<i class="fas fa-chevron-left" aria-hidden="true"></i>
+			</button>
+			<span class="page-indicator">{{ currentPage }} / {{ totalPages }}</span>
+			<button type="button" class="page-arrow" (click)="goNextPage()" [disabled]="!canGoNext" aria-label="Következő oldal">
+				<i class="fas fa-chevron-right" aria-hidden="true"></i>
+			</button>
+		</footer>
 	</div>
 </section>

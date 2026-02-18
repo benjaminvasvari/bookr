@@ -1,101 +1,135 @@
-<div class="staff-layout">
-	<app-staff-sidebar></app-staff-sidebar>
-
-	<main class="staff-content">
-		<header class="staff-topbar">
-			<div>
-				<h1>Naptár</h1>
-				<p class="subtitle">Heti foglalások naptár nézetben.</p>
+<div class="calendar-container">
+	<!-- Header -->
+	<header class="calendar-header">
+		<div class="header-left">
+			<h1>Naptár</h1>
+		</div>
+		<div class="header-right">
+			<span class="week-info">{{ getWeekDateRange() }}</span>
+			<div class="week-nav">
+				<button class="nav-btn" (click)="previousWeek()">
+					<i class="fas fa-chevron-left"></i>
+				</button>
+				<button class="nav-btn nav-btn-today" (click)="goToToday()">Ma</button>
+				<button class="nav-btn" (click)="nextWeek()">
+					<i class="fas fa-chevron-right"></i>
+				</button>
 			</div>
-			<div class="week-actions">
-				<button class="btn ghost" type="button" (click)="prevWeek()">Előző hét</button>
-				<span class="week-range">{{ weekRangeLabel }}</span>
-				<button class="btn ghost" type="button" (click)="nextWeek()">Következő hét</button>
+		</div>
+	</header>
+
+	<!-- Calendar Grid -->
+	<div class="calendar-grid-container">
+		<div class="calendar-grid">
+			<!-- Time column -->
+			<div class="time-column">
+				<div class="time-header"></div>
+				@for (slot of timeSlots; track slot.hour) {
+					<div class="time-slot">{{ slot.time }}</div>
+				}
 			</div>
-		</header>
 
-		@if (editModel) {
-			<section class="editor-panel">
-				<div class="editor-header">
-					<h2>Időpont szerkesztése</h2>
-					<button type="button" class="ghost-btn" (click)="closeEditor()">Bezárás</button>
-				</div>
-				<div class="editor-grid">
-					<label>
-						<span>Szolgáltatás</span>
-						<input type="text" [(ngModel)]="editModel.serviceName" />
-					</label>
-					<label>
-						<span>Ügyfél</span>
-						<input type="text" [(ngModel)]="editModel.clientName" />
-					</label>
-					<label>
-						<span>Időpont</span>
-						<input type="time" [(ngModel)]="editModel.time" />
-					</label>
-					<label>
-						<span>Dátum</span>
-						<input type="date" [(ngModel)]="editModel.date" />
-					</label>
-					<label>
-						<span>Időtartam (perc)</span>
-						<input type="number" min="5" step="5" [(ngModel)]="editModel.durationMinutes" />
-					</label>
-				</div>
-				<div class="editor-actions">
-					<button type="button" class="primary-btn" (click)="saveAppointmentEdits()">Mentés</button>
-					<button type="button" class="danger-btn" (click)="confirmDeleteSelected()">Törlés</button>
-				</div>
-			</section>
-		}
+			<!-- Day columns -->
+			@for (day of weekDays; track day.name; let dayIndex = $index) {
+				<div 
+					class="day-column"
+					[class.day-closed]="day.isClosed"
+					[class.day-today]="day.isToday"
+					[class.day-focused]="isFocused(dayIndex)"
+					[class.day-unfocused]="!isFocused(dayIndex) && !day.isClosed"
+				>
+					<!-- Day header -->
+					<div 
+						class="day-header"
+						[class.header-closed]="day.isClosed"
+						[class.header-clickable]="!day.isClosed"
+						(click)="!day.isClosed && setFocusedDay(dayIndex)"
+					>
+						<div class="day-short-name">{{ day.shortName }}</div>
+						<div class="day-name">{{ day.name }}</div>
+						<div class="day-date">{{ day.dayNumber }}.</div>
+						@if (day.isClosed) {
+							<span class="closed-badge">Zárva</span>
+						} @else {
+							<div class="day-hours">{{ day.openingHours }}</div>
+						}
+					</div>
 
-		@if (isLoading) {
-			<div class="state-card">Betöltés...</div>
-		} @else if (errorMessage) {
-			<div class="state-card error">{{ errorMessage }}</div>
-		} @else if (dashboard) {
-			<section class="calendar-week">
-				<div class="calendar-header">
-					@for (column of weekColumns; track column.date) {
-						<div class="day-label">
-							<span class="day-name">{{ column.label }}</span>
-							<span class="day-date">{{ column.date }}</span>
+					<!-- Time grid -->
+					<div class="time-grid">
+						@for (slot of timeSlots; track slot.hour) {
+							<div class="grid-cell"></div>
+						}
+
+						@if (day.isToday && currentTimePosition > 0) {
+							<div class="current-time-line" [style.top.px]="currentTimePosition"></div>
+						}
+
+						<!-- Appointments overlay -->
+						<div class="appointments-layer">
+							@for (apt of getAppointmentsForDay(dayIndex); track apt.id) {
+								<div 
+									class="appointment-block"
+									[ngStyle]="getAppointmentStyleWithOverlap(apt, dayIndex)"
+									(click)="selectAppointment(apt)"
+									[class.selected]="selectedAppointment?.id === apt.id"
+								>
+									<div class="apt-time">{{ apt.startTime }}</div>
+									<div class="apt-title">{{ apt.title }}</div>
+								</div>
+							}
+						</div>
+					</div>
+				</div>
+			}
+		</div>
+
+		<!-- Appointment details sidebar -->
+		@if (selectedAppointment) {
+			<div class="details-sidebar">
+				<div class="sidebar-header">
+					<h3>{{ selectedAppointment.title }}</h3>
+					<button class="close-btn" (click)="closeDetails()">&times;</button>
+				</div>
+				<div class="sidebar-body">
+					<div class="detail-row">
+						<label>Szolgáltatás</label>
+						<div class="detail-value badge-primary">{{ selectedAppointment.service }}</div>
+					</div>
+					<div class="detail-row">
+						<label>Nap</label>
+						<div class="detail-value">{{ weekDays[selectedAppointment.dayIndex].name }}, {{ weekDays[selectedAppointment.dayIndex].date }}</div>
+					</div>
+					<div class="detail-row">
+						<label>Időpont</label>
+						<div class="detail-value">{{ selectedAppointment.startTime }} ({{ selectedAppointment.duration }} perc)</div>
+					</div>
+					<div class="detail-row">
+						<label>Ügyfél neve</label>
+						<div class="detail-value">{{ selectedAppointment.clientName }}</div>
+					</div>
+					<div class="detail-row">
+						<label>Státusz</label>
+						<div class="detail-value">
+							{{ getStatusLabel(selectedAppointment.status) }}
+						</div>
+					</div>
+					@if (selectedAppointment.phone) {
+						<div class="detail-row">
+							<label>Telefonszám</label>
+							<div class="detail-value">{{ selectedAppointment.phone }}</div>
 						</div>
 					}
+					<div class="detail-row">
+						<label>Ár</label>
+						<div class="detail-value price">{{ selectedAppointment.price || 0 }} Ft</div>
+					</div>
+					<div class="sidebar-actions">
+						<button class="btn btn-edit">Módosít</button>
+						<button class="btn btn-cancel">Lemondás</button>
+					</div>
 				</div>
-				<div class="calendar-body">
-					@for (column of weekColumns; track column.date) {
-						<div class="calendar-column" (dragover)="onDragOver($event)" (drop)="onDrop(column.date, column.items.length)">
-							<div class="day-meta">
-								<span class="panel-pill">{{ column.items.length }}</span>
-							</div>
-							<div class="day-list">
-								@if (column.items.length === 0) {
-									<div class="empty">Nincs időpont</div>
-								} @else {
-									@for (appt of column.items; track appt.id; let i = $index) {
-										<div
-											class="appointment-card"
-											draggable="true"
-											(dragstart)="onDragStart(column.date, appt.id)"
-											(dragover)="onDragOver($event)"
-											(drop)="onDrop(column.date, i)"
-											(click)="openEditor(appt)"
-										>
-											<div class="time">{{ appt.time }}</div>
-											<div class="details">
-												<strong>{{ appt.serviceName }}</strong>
-												<span>{{ appt.clientName }}</span>
-												<span class="muted">{{ appt.durationMinutes }} perc</span>
-											</div>
-										</div>
-									}
-								}
-							</div>
-						</div>
-					}
-				</div>
-			</section>
+			</div>
 		}
-	</main>
+	</div>
 </div>

@@ -1,28 +1,32 @@
 .owner-sidebar {
 	width: 68px;
-	flex: 0 0 68px;
-	min-height: 100%;
-	height: auto;
+	flex-grow: 0;
+	flex-shrink: 0;
+	flex-basis: 68px;
+	height: 100vh;
 	background: #2d3748;
 	color: #ebf4ff;
 	padding: 18px 10px;
 	display: flex;
 	flex-direction: column;
 	gap: 24px;
-	transition: width 0.2s ease;
+	transition: width 0.2s ease, flex-basis 0.2s ease, max-width 0.2s ease;
 	overflow: hidden;
 	box-sizing: border-box;
 	position: relative;
+	max-width: 68px;
 }
 
 .owner-sidebar:hover {
 	width: 220px;
 	flex-basis: 220px;
+	max-width: 220px;
 }
 
 .owner-sidebar.is-pinned {
 	width: 220px;
 	flex-basis: 220px;
+	max-width: 220px;
 }
 
 .sidebar-header {
@@ -62,7 +66,7 @@
 	color: #ebf4ff;
 	cursor: pointer;
 	font-size: 12px;
-	transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+	transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
 }
 
 .owner-sidebar:not(:hover):not(.is-pinned) .pin-btn {

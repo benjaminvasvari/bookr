@@ -1,8 +1,4 @@
-<div class="staff-layout">
-  <app-staff-sidebar></app-staff-sidebar>
-
-  <main class="staff-content">
-    <div class="profile-info-container">
+<div class="profile-info-container">
       <div class="section-header">
         <h1 class="section-title">Profil adatok</h1>
         <p class="section-subtitle">Saját adatok és elérhetőségek kezelése</p>
@@ -11,13 +7,13 @@
       <div class="card">
         <div class="card-header">
           <h2 class="card-title">Személyes adatok</h2>
-          <button class="btn-edit" type="button">
+          <button class="btn-edit" type="button" (click)="toggleEditMode()">
             <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
               <path
                 d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
               />
             </svg>
-            Szerkesztés
+            {{ isEditing ? 'Szerkesztés vége' : 'Szerkesztés' }}
           </button>
         </div>
 
@@ -29,8 +25,10 @@
                 <input
                   type="text"
                   class="form-input"
-                  [value]="currentUser?.lastName || ''"
-                  readonly
+                  [class.is-locked]="!isEditing"
+                  [(ngModel)]="profileDraft.lastName"
+                  [ngModelOptions]="{ standalone: true }"
+                  [readonly]="!isEditing"
                 />
               </div>
 
@@ -39,8 +37,10 @@
                 <input
                   type="text"
                   class="form-input"
-                  [value]="currentUser?.firstName || ''"
-                  readonly
+                  [class.is-locked]="!isEditing"
+                  [(ngModel)]="profileDraft.firstName"
+                  [ngModelOptions]="{ standalone: true }"
+                  [readonly]="!isEditing"
                 />
               </div>
 
@@ -49,9 +49,15 @@
                 <input
                   type="email"
                   class="form-input"
-                  [value]="currentUser?.email || ''"
-                  readonly
+                  [class.is-locked]="!isEditing"
+                  [(ngModel)]="profileDraft.email"
+                  [ngModelOptions]="{ standalone: true }"
+                  (blur)="onEmailBlur()"
+                  [readonly]="!isEditing"
                 />
+                @if (isEditing && emailTouched && !isValidEmailFormat) {
+                  <div class="form-error">Az email formátuma: valami@valami.com vagy valami@valami.hu</div>
+                }
               </div>
 
               <div class="form-group">
@@ -59,14 +65,16 @@
                 <input
                   type="tel"
                   class="form-input"
-                  [value]="currentUser?.phone || ''"
-                  readonly
+                  [class.is-locked]="!isEditing"
+                  [(ngModel)]="profileDraft.phone"
+                  [ngModelOptions]="{ standalone: true }"
+                  [readonly]="!isEditing"
                 />
               </div>
 
               <div class="form-actions">
-                <button type="button" class="btn btn-secondary">Mégse</button>
-                <button type="button" class="btn btn-primary">Mentés</button>
+                <button type="button" class="btn btn-secondary" (click)="cancelEdit()" [disabled]="!isEditing">Mégse</button>
+                <button type="button" class="btn btn-primary" (click)="saveProfile()" [disabled]="!isEditing || !isValidEmailFormat">Mentés</button>
               </div>
             </form>
           </div>
@@ -106,7 +114,5 @@
             <p class="avatar-info">Max 5MB • JPG, PNG, WEBP</p>
           </div>
         </div>
-      </div>
     </div>
-  </main>
-</div>
+  </div>
