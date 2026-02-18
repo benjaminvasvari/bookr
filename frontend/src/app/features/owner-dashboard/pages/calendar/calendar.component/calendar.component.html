@@ -82,8 +82,12 @@
 				<div class="day-column" 
 					[class.day-closed]="day.isClosed"
 					[class.day-today]="day.isToday">
-					<!-- Day header -->
-					<div class="day-header" [class.header-closed]="day.isClosed">
+					<!-- Day header - Clickable to open day panel -->
+					<div class="day-header" 
+						[class.header-closed]="day.isClosed"
+						[class.clickable]="!day.isClosed"
+						(click)="!day.isClosed && openDayPanel(dayIndex)"
+						[title]="!day.isClosed ? 'Kattints a napi részletes nézetért' : ''">
 						<div class="day-name">{{ day.name }}</div>
 						<div class="day-date">{{ day.dayNumber }}.</div>
 						@if (day.isClosed) {
@@ -196,4 +200,74 @@
 			</div>
 		}
 	</div>
+
+	<!-- Day Panel Overlay -->
+	@if (dayPanelOpen) {
+		<div class="day-panel-overlay" (click)="closeDayPanel()"></div>
+	}
+
+	<!-- Day Panel -->
+	@if (dayPanelOpen && selectedDayIndex !== null) {
+		<div class="day-panel" [class.open]="dayPanelOpen">
+			<!-- Panel Header -->
+			<div class="day-panel-header">
+				<div class="day-panel-title">
+					<h2>{{ getSelectedDay()?.name }}</h2>
+					<p class="day-panel-date">{{ getSelectedDay()?.date }}</p>
+				</div>
+				<button class="panel-close-btn" (click)="closeDayPanel()">
+					<i class="fas fa-times"></i>
+				</button>
+			</div>
+
+			<!-- Panel Body -->
+			<div class="day-panel-body">
+				@for (staff of staffMembers; track staff.id) {
+					@if (staff.id !== 0) {
+						<div class="staff-day-section">
+							<div class="staff-day-header">
+								<span class="staff-color-dot" [style.background]="staff.color"></span>
+								<h3>{{ staff.name }}</h3>
+							</div>
+
+							@let staffAppointments = getStaffAppointmentsForDay(staff.id, selectedDayIndex);
+							
+							@if (staffAppointments.length === 0) {
+								<div class="no-appointments">
+									<i class="fas fa-calendar-times"></i>
+									<span>Nincs foglalás</span>
+								</div>
+							} @else {
+								<div class="staff-appointments-list">
+									@for (apt of staffAppointments; track apt.id) {
+										<div class="day-appointment-card" 
+											[style.border-left-color]="apt.color"
+											(click)="selectAppointment(apt)">
+											<div class="apt-time-range">
+												<span class="apt-start">{{ apt.startTime }}</span>
+												<i class="fas fa-arrow-right"></i>
+												<span class="apt-end">{{ getEndTime(apt.startTime, apt.duration) }}</span>
+												<span class="apt-duration">({{ apt.duration }} perc)</span>
+											</div>
+											<div class="apt-client">
+												<i class="fas fa-user"></i>
+												{{ apt.clientName }}
+											</div>
+											<div class="apt-service-info">
+												<i class="fas fa-scissors"></i>
+												{{ apt.service }}
+											</div>
+											@if (apt.price) {
+												<div class="apt-price">{{ apt.price }} Ft</div>
+											}
+										</div>
+									}
+								</div>
+							}
+						</div>
+					}
+				}
+			</div>
+		</div>
+	}
 </div>

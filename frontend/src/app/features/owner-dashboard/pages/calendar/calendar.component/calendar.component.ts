@@ -78,9 +78,20 @@ export class CalendarComponent implements OnInit, OnDestroy {
   isMobileView: boolean = false;
   companyOpeningHours: OpeningHours | null = null;
 
+  // Day panel state
+  dayPanelOpen: boolean = false;
+  selectedDayIndex: number | null = null;
+
   @HostListener('window:resize')
   onResize() {
     this.isMobileView = window.innerWidth <= 480;
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscapeKey() {
+    if (this.dayPanelOpen) {
+      this.closeDayPanel();
+    }
   }
 
   // Staff color mapping
@@ -993,5 +1004,45 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
   shouldShowClientName(appointment: CalendarAppointment): boolean {
     return appointment.duration >= 45;
+  }
+
+  // ========== DAY PANEL METHODS ==========
+
+  openDayPanel(dayIndex: number): void {
+    if (this.weekDays[dayIndex]?.isClosed) {
+      return; // Ne nyissa meg zárt napokra
+    }
+    this.selectedDayIndex = dayIndex;
+    this.dayPanelOpen = true;
+  }
+
+  closeDayPanel(): void {
+    this.dayPanelOpen = false;
+    setTimeout(() => {
+      this.selectedDayIndex = null;
+    }, 300); // Wait for animation to finish
+  }
+
+  getSelectedDay(): WeekDay | null {
+    if (this.selectedDayIndex === null) return null;
+    return this.weekDays[this.selectedDayIndex] || null;
+  }
+
+  getStaffAppointmentsForDay(staffId: number, dayIndex: number): CalendarAppointment[] {
+    return this.allAppointments
+      .filter(apt => apt.staffId === staffId && apt.dayIndex === dayIndex)
+      .sort((a, b) => {
+        const [aH, aM] = a.startTime.split(':').map(Number);
+        const [bH, bM] = b.startTime.split(':').map(Number);
+        return (aH * 60 + aM) - (bH * 60 + bM);
+      });
+  }
+
+  getEndTime(startTime: string, duration: number): string {
+    const [hours, minutes] = startTime.split(':').map(Number);
+    const totalMinutes = hours * 60 + minutes + duration;
+    const endHours = Math.floor(totalMinutes / 60);
+    const endMinutes = totalMinutes % 60;
+    return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
   }
 }
