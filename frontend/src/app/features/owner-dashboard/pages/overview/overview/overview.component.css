@@ -28,6 +28,16 @@
 	flex-wrap: wrap;
 }
 
+.status-text {
+	margin: 12px 4px 0;
+	font-size: 14px;
+	color: #2d3748;
+}
+
+.status-text.error {
+	color: #dc2626;
+}
+
 .btn {
 	border: none;
 	border-radius: 10px;
@@ -199,6 +209,12 @@
 	justify-content: center;
 	color: #2d3748;
 	font-weight: 600;
+}
+
+.empty-state {
+	margin: 8px 0 0;
+	font-size: 14px;
+	color: #2d3748;
 }
 
 @media (max-width: 900px) {

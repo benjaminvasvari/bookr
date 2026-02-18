@@ -9,8 +9,26 @@
 		</div>
 	</header>
 
+	<div class="service-tabs">
+		@for (category of categories; track category) {
+			<button
+				class="tab-button"
+				[class.active]="selectedCategory === category"
+				(click)="selectCategory(category)"
+			>
+				{{ category }}
+			</button>
+		}
+	</div>
+
+	@if (isLoading) {
+		<div class="services-state">Szolgáltatások betöltése...</div>
+	} @else if (errorMessage) {
+		<div class="services-state error">{{ errorMessage }}</div>
+	}
+
 	<section class="services-grid">
-		@for (service of services; track service.id) {
+		@for (service of filteredServices; track service.id) {
 			<article class="service-card">
 				<div class="service-header">
 					<div>
@@ -23,14 +41,19 @@
 				</div>
 				<p class="service-desc">{{ service.description }}</p>
 				<div class="service-meta">
-					<span class="price">{{ service.price | number:'1.0-0' }} Ft</span>
-					<span class="duration">{{ service.duration }} perc</span>
+					<span class="price">{{ service.price | number:'1.0-0' }} {{ service.currency === 'HUF' ? 'Ft' : service.currency }}</span>
+					<span class="duration">{{ service.duration }}</span>
 				</div>
 				<div class="service-actions">
 					<button class="btn ghost" (click)="openEditServiceModal(service)">Szerkesztés</button>
-					<button class="btn primary" (click)="openAppointmentsModal(service)">Időpontok</button>
 				</div>
 			</article>
+		}
+
+		@if (filteredServices.length === 0) {
+			<div class="empty-filter-state">
+				<p>Nincs szolgáltatás ebben a kategóriában.</p>
+			</div>
 		}
 	</section>
 </section>
@@ -52,16 +75,17 @@
 					<label>Kategória *</label>
 					<select [(ngModel)]="newService.category">
 						<option value="">Válassz kategóriát</option>
-						<option value="Fodrászat">Fodrászat</option>
-						<option value="Barber">Barber</option>
-						<option value="Masszázs">Masszázs</option>
-						<option value="Kozmetika">Kozmetika</option>
+						@for (category of categories; track category) {
+							@if (category !== 'Összes') {
+								<option [value]="category">{{ category }}</option>
+							}
+						}
 					</select>
 				</div>
 				<div class="form-row">
 					<div class="form-group">
-						<label>Időtartam (perc) *</label>
-						<input type="number" [(ngModel)]="newService.duration" min="5" step="5" />
+						<label>Időtartam *</label>
+						<input type="text" [(ngModel)]="newService.duration" placeholder="pl. 45 perc" />
 					</div>
 					<div class="form-group">
 						<label>Ár (Ft) *</label>
@@ -104,16 +128,17 @@
 				<div class="form-group">
 					<label>Kategória *</label>
 					<select [(ngModel)]="selectedService.category">
-						<option value="Fodrászat">Fodrászat</option>
-						<option value="Barber">Barber</option>
-						<option value="Masszázs">Masszázs</option>
-						<option value="Kozmetika">Kozmetika</option>
+						@for (category of categories; track category) {
+							@if (category !== 'Összes') {
+								<option [value]="category">{{ category }}</option>
+							}
+						}
 					</select>
 				</div>
 				<div class="form-row">
 					<div class="form-group">
-						<label>Időtartam (perc) *</label>
-						<input type="number" [(ngModel)]="selectedService.duration" min="5" step="5" />
+						<label>Időtartam *</label>
+						<input type="text" [(ngModel)]="selectedService.duration" />
 					</div>
 					<div class="form-group">
 						<label>Ár (Ft) *</label>
@@ -135,27 +160,6 @@
 			<div class="modal-footer">
 				<button class="btn ghost" (click)="closeEditServiceModal()">Mégse</button>
 				<button class="btn primary" (click)="saveEditService()">Mentés</button>
-			</div>
-		</div>
-	</div>
-}
-
-<!-- Időpontok modal -->
-@if (showAppointmentsModal && selectedService) {
-	<div class="modal-overlay" (click)="closeAppointmentsModal()">
-		<div class="modal-content" (click)="$event.stopPropagation()">
-			<div class="modal-header">
-				<h2>Időpontok - {{ selectedService.name }}</h2>
-				<button class="close-btn" (click)="closeAppointmentsModal()">&times;</button>
-			</div>
-			<div class="modal-body">
-				<p class="info-text">Itt láthatók a szolgáltatáshoz tartozó foglalások.</p>
-				<div class="empty-state">
-					<p>Még nincsenek időpontok ehhez a szolgáltatáshoz.</p>
-				</div>
-			</div>
-			<div class="modal-footer">
-				<button class="btn ghost" (click)="closeAppointmentsModal()">Bezárás</button>
 			</div>
 		</div>
 	</div>

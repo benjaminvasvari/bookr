@@ -31,6 +31,55 @@
 	gap: 10px;
 }
 
+.service-tabs {
+	display: flex;
+	gap: 8px;
+	margin-bottom: 16px;
+	overflow-x: auto;
+	padding-bottom: 4px;
+}
+
+.services-state {
+	margin-bottom: 14px;
+	padding: 12px 14px;
+	border-radius: 10px;
+	background: #ffffff;
+	border: 1px solid var(--owner-border);
+	color: #64748b;
+	font-size: 14px;
+	font-weight: 500;
+}
+
+.services-state.error {
+	color: #b91c1c;
+	border-color: #fecaca;
+	background: #fff7f7;
+}
+
+.tab-button {
+	padding: 8px 14px;
+	border: 1px solid var(--owner-border);
+	background: #ffffff;
+	color: #6b7280;
+	border-radius: 999px;
+	cursor: pointer;
+	font-size: 13px;
+	font-weight: 600;
+	white-space: nowrap;
+	transition: all 0.2s ease;
+}
+
+.tab-button:hover {
+	border-color: var(--owner-border-strong);
+	color: #374151;
+}
+
+.tab-button.active {
+	background: #1f2937;
+	border-color: #1f2937;
+	color: #ffffff;
+}
+
 .btn {
 	border: 1px solid transparent;
 	border-radius: 10px;
@@ -129,6 +178,16 @@
 	display: flex;
 	gap: 10px;
 	flex-wrap: wrap;
+}
+
+.empty-filter-state {
+	grid-column: 1 / -1;
+	text-align: center;
+	padding: 24px;
+	background: #ffffff;
+	border: 1px dashed var(--owner-border);
+	border-radius: 12px;
+	color: #6b7280;
 }
 
 .status-pill {

@@ -1,0 +1,252 @@
+:host {
+  display: block;
+}
+
+.staff-chip {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  background: #ffffff;
+  border-radius: 20px;
+  border: 2px solid #e5e7eb;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  position: relative;
+}
+
+.staff-chip:hover {
+  border-color: #cbd5e1;
+  background: #f9fafb;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.staff-chip.chip-active {
+  border: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.staff-chip.chip-active:hover {
+  opacity: 0.9;
+}
+
+.chip-color {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.staff-chip.chip-active .chip-color {
+  transform: scale(1.1);
+  background: #ffffff;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
+}
+
+.chip-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4b5563;
+  transition: color 0.2s;
+}
+
+.staff-chip.chip-active .chip-name {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.chip-edit-trigger {
+  opacity: 1;
+  pointer-events: auto;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.75);
+  color: #374151;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-left: 2px;
+}
+
+.chip-edit-trigger:hover {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.staff-chip.chip-active .chip-edit-trigger {
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.color-popover {
+  position: fixed;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 13px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.24), 0 6px 14px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(6px);
+  z-index: 100;
+  animation: popoverFadeIn 0.16s ease-out, popoverDropIn 0.18s ease-out;
+}
+
+.color-popover-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.32);
+  z-index: 99;
+  animation: backdropFadeIn 0.16s ease-out;
+}
+
+.color-popover.mobile-sheet {
+  left: 8px !important;
+  right: 8px;
+  top: auto !important;
+  bottom: 8px;
+  width: auto !important;
+  border-radius: 20px;
+  max-height: 72vh;
+  overflow-y: auto;
+  box-shadow: 0 22px 44px rgba(15, 23, 42, 0.3), 0 8px 16px rgba(15, 23, 42, 0.16);
+  animation: popoverFadeIn 0.16s ease-out, sheetSlideUp 0.22s ease-out;
+}
+
+.sheet-handle {
+  width: 40px;
+  height: 5px;
+  border-radius: 999px;
+  background: #d1d5db;
+  margin: 0 auto 10px auto;
+}
+
+.popover-arrow {
+  position: absolute;
+  top: -7px;
+  left: 24px;
+  width: 12px;
+  height: 12px;
+  background: #ffffff;
+  border-top: 1px solid #e5e7eb;
+  border-left: 1px solid #e5e7eb;
+  transform: rotate(45deg);
+}
+
+.popover-section + .popover-section {
+  margin-top: 10px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 10px;
+}
+
+.section-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+  letter-spacing: 0.3px;
+}
+
+.preset-grid {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+.preset-color {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.preset-color:hover {
+  transform: scale(1.06);
+}
+
+.preset-color.preset-active {
+  border-color: #111827;
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 3px #111827;
+}
+
+.custom-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.custom-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.custom-input-wrap input[type='color'] {
+  width: 34px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+.hex-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  text-transform: uppercase;
+}
+
+@keyframes popoverFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes popoverDropIn {
+  from {
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes sheetSlideUp {
+  from {
+    transform: translateY(14px);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes backdropFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .color-popover,
+  .color-popover.mobile-sheet,
+  .color-popover-backdrop {
+    animation: none;
+  }
+}

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -8,6 +8,18 @@ import { StaffService } from '../../../core/services/staff.service';
 interface TimeSlot {
   time: string;
   hour: number;
+}
+
+interface WeekDay {
+  name: string;
+  shortName: string;
+  date: string;
+  dayIndex: number;
+  dayNumber: number;
+  fullDate: Date;
+  openingHours: string;
+  isClosed: boolean;
+  isToday: boolean;
 }
 
 interface CalendarAppointment {
@@ -22,6 +34,8 @@ interface CalendarAppointment {
   color: string;
   phone?: string;
   service?: string;
+  price?: number;
+  status?: string;
 }
 
 interface StaffMember {
@@ -36,8 +50,13 @@ interface StaffMember {
   templateUrl: './staff-calendar.component.html',
   styleUrl: './staff-calendar.component.css',
 })
-export class StaffCalendarComponent implements OnInit {
+export class StaffCalendarComponent implements OnInit, OnDestroy {
   isLoading = false;
+  private readonly appointmentBorderColor = '#4338ca';
+  currentTimePosition: number = 0;
+  currentTimeInterval: any;
+  currentWeekStart: Date = this.getMonday(new Date());
+  focusedDayIndex: number | null = null;
   
   selectedStaffId: number = 1;
   staffMembers: StaffMember[] = [
@@ -47,15 +66,7 @@ export class StaffCalendarComponent implements OnInit {
     { id: 4, name: 'Dóra Tóth' }
   ];
 
-  weekDays = [
-    { name: 'Hétfő', date: '2026. február 16.' },
-    { name: 'Kedd', date: '2026. február 17.' },
-    { name: 'Szerda', date: '2026. február 18.' },
-    { name: 'Csütörtök', date: '2026. február 19.' },
-    { name: 'Péntek', date: '2026. február 20.' },
-    { name: 'Szombat', date: '2026. február 21.' },
-    { name: 'Vasárnap', date: '2026. február 22.' }
-  ];
+  weekDays: WeekDay[] = [];
 
   timeSlots: TimeSlot[] = [
     { time: '08:00', hour: 8 },
@@ -182,18 +193,6 @@ export class StaffCalendarComponent implements OnInit {
       color: '#3b82f6',
       service: 'Festés+Vágás'
     },
-    {
-      id: 10,
-      staffId: 1,
-      staffName: 'Hunor Ujhelyi',
-      title: 'Ráhangolás',
-      clientName: 'Molnár Zoltán',
-      dayIndex: 5,
-      startTime: '08:30',
-      duration: 30,
-      color: '#ec4899',
-      service: 'Ráhangolás'
-    },
     // Staff 2 appointments
     {
       id: 11,
@@ -226,7 +225,17 @@ export class StaffCalendarComponent implements OnInit {
   constructor(private authService: AuthService, private staffService: StaffService) {}
 
   ngOnInit(): void {
-    // Initial load
+    this.updateWeekDays();
+    this.updateCurrentTimePosition();
+    this.currentTimeInterval = setInterval(() => {
+      this.updateCurrentTimePosition();
+    }, 60000);
+  }
+
+  ngOnDestroy(): void {
+    if (this.currentTimeInterval) {
+      clearInterval(this.currentTimeInterval);
+    }
   }
 
   get filteredAppointments(): CalendarAppointment[] {
@@ -235,26 +244,93 @@ export class StaffCalendarComponent implements OnInit {
 
   onStaffChange(): void {
     this.selectedAppointment = null;
+    this.updateWeekDays();
   }
 
   getAppointmentsForDay(dayIndex: number): CalendarAppointment[] {
     return this.filteredAppointments.filter(apt => apt.dayIndex === dayIndex);
   }
 
-  getAppointmentStyle(appointment: CalendarAppointment): any {
+  getAppointmentStyleWithOverlap(appointment: CalendarAppointment, dayIndex: number): any {
     const [hours, minutes] = appointment.startTime.split(':').map(Number);
-    const startMinutes = hours * 60 + minutes;
-    const startHour = 8; // Calendar starts at 8:00
-    const pixelsPerHour = 60; // Height of each hour slot in pixels
-    
-    const topPosition = ((startMinutes - (startHour * 60)) / 60) * pixelsPerHour;
-    const height = (appointment.duration / 60) * pixelsPerHour;
+    const startMinutes = (hours - 8) * 60 + minutes;
+    const endMinutes = startMinutes + appointment.duration;
+
+    const dayAppointments = this.getAppointmentsForDay(dayIndex);
+    const overlapping = dayAppointments.filter(apt => {
+      const [aptHours, aptMinutes] = apt.startTime.split(':').map(Number);
+      const aptStart = (aptHours - 8) * 60 + aptMinutes;
+      const aptEnd = aptStart + apt.duration;
+      return apt.id !== appointment.id && aptStart < endMinutes && aptEnd > startMinutes;
+    });
+
+    const isClosed = this.weekDays[dayIndex]?.isClosed || false;
+    const isUnfocused = !this.isFocused(dayIndex);
+
+    let width = 'calc(100% - 4px)';
+    let left = '2px';
+    let zIndex = 1;
+
+    if (isClosed && overlapping.length > 0) {
+      const columns = this.getOrderedOverlapColumns(appointment, overlapping);
+      const columnIndex = columns.findIndex(a => a.id === appointment.id);
+      const stripWidth = 18;
+      const spacing = 1;
+      const totalWidth = columns.length * stripWidth + (columns.length - 1) * spacing;
+      width = `${stripWidth}px`;
+      left = `calc(50% - ${totalWidth / 2}px + ${columnIndex * (stripWidth + spacing)}px)`;
+      zIndex = columnIndex + 1;
+    } else if (isClosed) {
+      width = '18px';
+      left = 'calc(50% - 9px)';
+    } else if (isUnfocused && overlapping.length > 0) {
+      const columns = this.getOrderedOverlapColumns(appointment, overlapping);
+      const columnIndex = columns.findIndex(a => a.id === appointment.id);
+      const stripWidth = 14;
+      const spacing = 1;
+      const totalWidth = columns.length * stripWidth + (columns.length - 1) * spacing;
+      width = `${stripWidth}px`;
+      left = `calc(50% - ${totalWidth / 2}px + ${columnIndex * (stripWidth + spacing)}px)`;
+      zIndex = columnIndex + 1;
+    } else if (overlapping.length > 0) {
+      const columns = this.getOrderedOverlapColumns(appointment, overlapping);
+      const columnIndex = columns.findIndex(a => a.id === appointment.id);
+      const columnWidth = 100 / columns.length;
+      width = `max(${columnWidth}%, 85px)`;
+      left = `calc(${columnWidth}% * ${columnIndex})`;
+      zIndex = columnIndex + 1;
+    } else if (isUnfocused) {
+      width = '14px';
+      left = 'calc(50% - 7px)';
+    }
 
     return {
-      'top.px': topPosition,
-      'height.px': height,
-      'background-color': appointment.color
+      top: `${startMinutes}px`,
+      height: `${appointment.duration}px`,
+      width,
+      left,
+      zIndex,
+      background: 'rgba(79, 70, 229, 0.12)',
+      borderLeft: `6px solid ${this.appointmentBorderColor}`,
+      '--hover-bg': 'rgba(79, 70, 229, 0.22)',
+      '--border-color': this.appointmentBorderColor
     };
+  }
+
+  private getOrderedOverlapColumns(
+    appointment: CalendarAppointment,
+    overlapping: CalendarAppointment[]
+  ): CalendarAppointment[] {
+    return [appointment, ...overlapping].sort((a, b) => {
+      const [aH, aM] = a.startTime.split(':').map(Number);
+      const [bH, bM] = b.startTime.split(':').map(Number);
+      const aStart = aH * 60 + aM;
+      const bStart = bH * 60 + bM;
+      if (aStart !== bStart) {
+        return aStart - bStart;
+      }
+      return a.id - b.id;
+    });
   }
 
   selectAppointment(appointment: CalendarAppointment): void {
@@ -263,6 +339,125 @@ export class StaffCalendarComponent implements OnInit {
 
   closeDetails(): void {
     this.selectedAppointment = null;
+  }
+
+  previousWeek(): void {
+    this.currentWeekStart.setDate(this.currentWeekStart.getDate() - 7);
+    this.updateWeekDays();
+  }
+
+  nextWeek(): void {
+    this.currentWeekStart.setDate(this.currentWeekStart.getDate() + 7);
+    this.updateWeekDays();
+  }
+
+  goToToday(): void {
+    this.currentWeekStart = this.getMonday(new Date());
+    this.updateWeekDays();
+  }
+
+  getWeekDateRange(): string {
+    const start = this.weekDays[0];
+    const end = this.weekDays[6];
+    if (!start || !end) return '';
+
+    const months = ['január', 'február', 'március', 'április', 'május', 'június',
+      'július', 'augusztus', 'szeptember', 'október', 'november', 'december'];
+    const startMonth = months[start.fullDate.getMonth()];
+
+    return `${start.fullDate.getFullYear()}. ${startMonth} ${start.dayNumber}–${end.dayNumber}.`;
+  }
+
+  setFocusedDay(dayIndex: number): void {
+    const day = this.weekDays[dayIndex];
+    if (!day || day.isClosed) {
+      return;
+    }
+    this.focusedDayIndex = dayIndex;
+  }
+
+  isFocused(dayIndex: number): boolean {
+    return this.focusedDayIndex === dayIndex;
+  }
+
+  private setDefaultFocusedDay(todayIndex: number | null): void {
+    if (todayIndex !== null && !this.weekDays[todayIndex]?.isClosed) {
+      this.focusedDayIndex = todayIndex;
+      return;
+    }
+
+    const firstOpenDay = this.weekDays.findIndex(day => !day.isClosed);
+    this.focusedDayIndex = firstOpenDay !== -1 ? firstOpenDay : null;
+  }
+
+  private updateWeekDays(): void {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const days = ['Hétfő', 'Kedd', 'Szerda', 'Csütörtök', 'Péntek', 'Szombat', 'Vasárnap'];
+    const dayShortNames = ['H', 'K', 'Sze', 'Cs', 'P', 'Szo', 'V'];
+    const months = ['január', 'február', 'március', 'április', 'május', 'június',
+      'július', 'augusztus', 'szeptember', 'október', 'november', 'december'];
+
+    this.weekDays = [];
+    let todayIndex: number | null = null;
+
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(this.currentWeekStart);
+      date.setDate(date.getDate() + i);
+      date.setHours(0, 0, 0, 0);
+
+      const isToday = date.getTime() === today.getTime();
+      if (isToday) {
+        todayIndex = i;
+      }
+
+      const isClosed = i === 5 || i === 6;
+      this.weekDays.push({
+        name: days[i],
+        shortName: dayShortNames[i],
+        date: `${date.getFullYear()}. ${months[date.getMonth()]} ${date.getDate()}.`,
+        dayIndex: i,
+        dayNumber: date.getDate(),
+        fullDate: date,
+        openingHours: isClosed ? '' : '09:00–17:00',
+        isClosed,
+        isToday,
+      });
+    }
+
+    this.setDefaultFocusedDay(todayIndex);
+  }
+
+  private updateCurrentTimePosition(): void {
+    const now = new Date();
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+
+    if (hours >= 8 && hours < 19) {
+      const totalMinutes = (hours - 8) * 60 + minutes;
+      this.currentTimePosition = totalMinutes;
+      return;
+    }
+
+    this.currentTimePosition = 0;
+  }
+
+  getStatusLabel(status?: string): string {
+    const labels: { [key: string]: string } = {
+      pending: 'Függőben',
+      confirmed: 'Megerősítve',
+      completed: 'Befejezve',
+      cancelled: 'Lemondva',
+    };
+    return labels[status || 'pending'] || status || '';
+  }
+
+  private getMonday(date: Date): Date {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    return new Date(d.setDate(diff));
   }
 
   getSelectedStaffName(): string {

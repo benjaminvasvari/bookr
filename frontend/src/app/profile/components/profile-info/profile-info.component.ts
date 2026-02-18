@@ -14,6 +14,7 @@ import { AuthService } from '../../../core/services/auth.service';
 })
 export class ProfileInfoComponent implements OnInit, OnDestroy {
   @Input() currentUser: User | null = null;
+  private readonly emailPattern = /^[^\s@]+@[^\s@]+\.(com|hu)$/i;
 
   profileForm!: FormGroup;
   passwordForm!: FormGroup;
@@ -71,7 +72,10 @@ export class ProfileInfoComponent implements OnInit, OnDestroy {
         [Validators.required, Validators.minLength(2)],
       ],
       lastName: [this.currentUser?.lastName || '', [Validators.required, Validators.minLength(2)]],
-      email: [this.currentUser?.email || '', [Validators.required, Validators.email]],
+      email: [
+        this.currentUser?.email || '',
+        [Validators.required, Validators.email, Validators.pattern(this.emailPattern)],
+      ],
       phone: [
         this.currentUser?.phone || '',
         [Validators.required, Validators.pattern(/^\+36[0-9]{9}$/)],

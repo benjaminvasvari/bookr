@@ -1,14 +1,18 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { AuthService } from '../../../../../core/services/auth.service';
+import { CompaniesService } from '../../../../../core/services/companies.service';
+import { ServiceCategory, Service as ApiService } from '../../../../../core/models/service.model';
 
-interface Service {
+interface DashboardServiceItem {
   id: number;
   name: string;
   category: string;
-  duration: number;
+  duration: string;
   price: number;
   description: string;
+  currency: string;
   status: 'active' | 'inactive';
 }
 
@@ -19,86 +23,61 @@ interface Service {
   templateUrl: './services.component.html',
   styleUrl: './services.component.css',
 })
-export class ServicesComponent {
+export class ServicesComponent implements OnInit {
   showNewServiceModal = false;
   showEditServiceModal = false;
-  showAppointmentsModal = false;
+  selectedCategory: string = 'Összes';
+  isLoading = false;
+  errorMessage = '';
   
-  selectedService: Service | null = null;
+  selectedService: DashboardServiceItem | null = null;
   
-  newService: Partial<Service> = {
+  newService: Partial<DashboardServiceItem> = {
     name: '',
     category: '',
-    duration: 30,
+    duration: '30 perc',
     price: 0,
     description: '',
+    currency: 'HUF',
     status: 'active'
   };
 
-  services: Service[] = [
-    {
-      id: 1,
-      name: 'Hajvágás',
-      category: 'Fodrászat',
-      duration: 45,
-      price: 8500,
-      description: 'Klasszikus férfi/női hajvágás, mosással és formázással.',
-      status: 'active'
-    },
-    {
-      id: 2,
-      name: 'Szakáll igazítás',
-      category: 'Barber',
-      duration: 30,
-      price: 6500,
-      description: 'Precíz kontúr, formázás és ápolás prémium termékekkel.',
-      status: 'active'
-    },
-    {
-      id: 3,
-      name: 'Festés',
-      category: 'Fodrászat',
-      duration: 90,
-      price: 18000,
-      description: 'Teljes hajfestés személyre szabott árnyalattal és ápolással.',
-      status: 'inactive'
-    },
-    {
-      id: 4,
-      name: 'Relax masszázs',
-      category: 'Masszázs',
-      duration: 60,
-      price: 14000,
-      description: 'Lazító, stresszoldó masszázs aromaterápiával.',
-      status: 'active'
-    },
-    {
-      id: 5,
-      name: 'Manikűr',
-      category: 'Kozmetika',
-      duration: 50,
-      price: 9500,
-      description: 'Teljes körű kézápolás, lakkozással és hidratálással.',
-      status: 'active'
-    },
-    {
-      id: 6,
-      name: 'Hot towel',
-      category: 'Barber',
-      duration: 20,
-      price: 3500,
-      description: 'Meleg törölközős kezelés borotválás előtt.',
-      status: 'active'
+  services: DashboardServiceItem[] = [];
+
+  constructor(
+    private authService: AuthService,
+    private companiesService: CompaniesService
+  ) {}
+
+  ngOnInit(): void {
+    this.loadServices();
+  }
+
+  get categories(): string[] {
+    const uniqueCategories = Array.from(new Set(this.services.map((service) => service.category)));
+    return ['Összes', ...uniqueCategories];
+  }
+
+  get filteredServices(): DashboardServiceItem[] {
+    if (this.selectedCategory === 'Összes') {
+      return this.services;
     }
-  ];
+
+    return this.services.filter((service) => service.category === this.selectedCategory);
+  }
+
+  selectCategory(category: string): void {
+    this.selectedCategory = category;
+  }
 
   openNewServiceModal(): void {
     this.newService = {
       name: '',
       category: '',
-      duration: 30,
+      duration: '30 perc',
       price: 0,
       description: '',
+      currency: 'HUF',
       status: 'active'
     };
     this.showNewServiceModal = true;
@@ -115,16 +94,17 @@ export class ServicesComponent {
         id: newId,
         name: this.newService.name,
         category: this.newService.category,
-        duration: this.newService.duration || 30,
+        duration: this.newService.duration || '30 perc',
         price: this.newService.price || 0,
         description: this.newService.description || '',
+        currency: this.newService.currency || 'HUF',
         status: this.newService.status || 'active'
       });
       this.closeNewServiceModal();
     }
   }
 
-  openEditServiceModal(service: Service): void {
+  openEditServiceModal(service: DashboardServiceItem): void {
     this.selectedService = { ...service };
     this.showEditServiceModal = true;
   }
@@ -144,13 +124,44 @@ export class ServicesComponent {
     }
   }
 
-  openAppointmentsModal(service: Service): void {
-    this.selectedService = service;
-    this.showAppointmentsModal = true;
+  private loadServices(): void {
+    const user = this.authService.getCurrentUser();
+
+    if (!user?.companyId) {
+      this.errorMessage = 'Nem található cégazonosító a szolgáltatások betöltéséhez.';
+      this.services = [];
+      return;
+    }
+
+    this.isLoading = true;
+    this.errorMessage = '';
+
+    this.companiesService.getServiceCategoriesWithServices(user.companyId).subscribe({
+      next: (categories: ServiceCategory[]) => {
+        this.services = categories.flatMap((category) =>
+          (category.services || []).map((service) => this.mapServiceFromApi(service, category))
+        );
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Services load error:', error);
+        this.errorMessage = 'Nem sikerült betölteni a szolgáltatásokat.';
+        this.services = [];
+        this.isLoading = false;
+      },
+    });
   }
 
-  closeAppointmentsModal(): void {
-    this.showAppointmentsModal = false;
-    this.selectedService = null;
+  private mapServiceFromApi(service: ApiService, category: ServiceCategory): DashboardServiceItem {
+    return {
+      id: service.id,
+      name: service.name,
+      category: category.name,
+      duration: service.duration,
+      price: service.price,
+      description: category.description || 'Szolgáltatás leírása hamarosan.',
+      currency: service.currency || 'HUF',
+      status: 'active',
+    };
   }
 }

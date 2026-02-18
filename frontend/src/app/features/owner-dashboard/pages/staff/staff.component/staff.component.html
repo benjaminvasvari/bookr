@@ -5,12 +5,12 @@
 			<p class="subtitle">Csapatod áttekintése, elérhetőségek és státuszok.</p>
 		</div>
 		<div class="actions">
-			<button class="btn primary">Új dolgozó</button>
+			<button class="btn primary" type="button" (click)="openInviteModal()">Új dolgozó</button>
 		</div>
 	</header>
 
 	<div class="staff-toolbar">
-		<div class="pill">Aktív: 8</div>
+		<div class="pill">Aktív: 8 · Pending: {{ pendingInvites.length }}</div>
 		<label class="search-input">
 			<input type="text" placeholder="Keresés név vagy szerepkör szerint" />
 		</label>
@@ -25,6 +25,61 @@
 
 	<div class="staff-scroll">
 		<div class="staff-board">
+			@for (invite of pendingInvites; track trackByPendingInvite($index, invite)) {
+				<article class="staff-table-card pending-card">
+					<header class="card-header">
+						<div class="avatar pending-avatar">{{ getInviteInitials(invite.email) }}</div>
+						<div>
+							<h3>{{ invite.role }} (meghívott)</h3>
+							<p>{{ invite.email }}</p>
+						</div>
+						<span class="status pending">Pending</span>
+					</header>
+
+					<div class="pending-meta">
+						<span>Meghívó elküldve: {{ invite.sentAtLabel }}</span>
+						<span class="pending-dot"></span>
+						<span>Hitelesítés folyamatban</span>
+					</div>
+
+					<div class="pending-loader" aria-hidden="true"></div>
+
+					<table class="staff-table pending-table">
+						<thead>
+							<tr>
+								<th>Státusz</th>
+								<th>Teendő</th>
+								<th>Állapot</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td>
+									<span class="skeleton-line short"></span>
+								</td>
+								<td>
+									<span class="skeleton-line medium"></span>
+								</td>
+								<td>
+									<span class="skeleton-line short"></span>
+								</td>
+							</tr>
+							<tr>
+								<td>
+									<span class="skeleton-line short"></span>
+								</td>
+								<td>
+									<span class="skeleton-line long"></span>
+								</td>
+								<td>
+									<span class="skeleton-line short"></span>
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</article>
+			}
+
 			<article class="staff-table-card">
 				<header class="card-header">
 					<div class="avatar">BK</div>
@@ -160,3 +215,76 @@
 		</div>
 	</div>
 </section>
+
+@if (showInviteModal) {
+	<div class="modal-overlay" (click)="closeInviteModal()">
+		<div class="modal-content invite-modal" (click)="$event.stopPropagation()">
+			@if (!inviteSent) {
+				<div class="modal-header">
+					<h2>Új dolgozó meghívása</h2>
+					<button class="close-btn" type="button" (click)="closeInviteModal()" [disabled]="isSendingInvite">&times;</button>
+				</div>
+
+				<div class="modal-body">
+					<p class="modal-description">Adj meg egy email címet és válassz szerepkört. A rendszer meghívó emailt küld az új kollégának.</p>
+
+					<div class="form-group">
+						<label for="staff-invite-email">Email cím</label>
+						<input
+							id="staff-invite-email"
+							type="email"
+							[(ngModel)]="inviteForm.email"
+							(blur)="onEmailBlur()"
+							placeholder="pelda@email.com"
+							[disabled]="isSendingInvite"
+							[class.invalid]="emailTouched && !isValidEmail"
+						/>
+						@if (emailTouched && !isValidEmail) {
+							<p class="field-error">Érvényes email kell: valami@valami.com vagy valami@valami.hu</p>
+						}
+					</div>
+
+					<div class="form-group">
+						<label for="staff-invite-role">Szerepkör</label>
+						<input
+							id="staff-invite-role"
+							type="text"
+							[(ngModel)]="inviteForm.role"
+							(blur)="onRoleBlur()"
+							placeholder="pl. Fodrász, Masszőr, Barber"
+							[disabled]="isSendingInvite"
+							[class.invalid]="roleTouched && !inviteForm.role.trim()"
+						/>
+						@if (roleTouched && !inviteForm.role.trim()) {
+							<p class="field-error">A szerepkör megadása kötelező.</p>
+						}
+					</div>
+				</div>
+
+				<div class="modal-footer invite-modal-footer">
+					@if (!isSendingInvite) {
+						<button class="btn ghost invite-btn-cancel" type="button" (click)="closeInviteModal()">Mégse</button>
+					}
+					<button class="btn primary invite-btn-submit" type="button" (click)="submitInvite()" [disabled]="!canSubmitInvite">
+						@if (isSendingInvite) {
+							<span class="btn-loader"></span>
+							Küldés...
+						} @else {
+							Meghívó küldése
+						}
+					</button>
+				</div>
+			} @else {
+				<div class="invite-success" aria-live="polite">
+					<div class="success-icon-wrap">
+						<div class="success-icon">✓</div>
+					</div>
+					<h3>Sikeres meghívás</h3>
+					<p>Az email elküldve erre: <strong>{{ inviteForm.email }}</strong></p>
+					<span class="success-hint">A dolgozó a levélben tudja hitelesíteni a fiókját.</span>
+					<div class="success-progress"></div>
+				</div>
+			}
+		</div>
+	</div>
+}

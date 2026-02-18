@@ -6,6 +6,7 @@ import { CompaniesService } from '../../../../../core/services/companies.service
 import { OpeningHours } from '../../../../../core/models/opening-hours.model';
 import { User } from '../../../../../core/models';
 import { Company } from '../../../../../core/models/company.model';
+import { StaffChipComponent } from './staff-chip.component';
 
 interface TimeSlot {
   time: string;
@@ -62,7 +63,7 @@ interface StaffAvailability {
 @Component({
   selector: 'app-calendar.component',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, StaffChipComponent],
   templateUrl: './calendar.component.html',
   styleUrl: './calendar.component.css',
 })
@@ -76,6 +77,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
   currentTimeInterval: any;
   currentWeekStart: Date = this.getMonday(new Date());
   currentMobileDayIndex: number = 1; // Start with today (Tuesday = index 1)
+  mobileSelectedStaffId: number = 0;
   isMobileView: boolean = false;
   companyOpeningHours: OpeningHours | null = null;
   
@@ -85,6 +87,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
   @HostListener('window:resize')
   onResize() {
     this.isMobileView = window.innerWidth <= 480;
+    this.syncMobileSelectedStaffSelection();
   }
 
   // Staff color mapping
@@ -756,6 +759,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     
     // Set default focused day
     this.setDefaultFocusedDay(todayIndex);
+    this.setDefaultMobileDay(todayIndex);
   }
 
   /**
@@ -771,6 +775,16 @@ export class CalendarComponent implements OnInit, OnDestroy {
       const firstOpenDay = this.weekDays.findIndex(day => !day.isClosed);
       this.focusedDayIndex = firstOpenDay !== -1 ? firstOpenDay : null;
     }
+  }
+
+  private setDefaultMobileDay(todayIndex: number | null): void {
+    if (todayIndex !== null && !this.weekDays[todayIndex]?.isClosed) {
+      this.currentMobileDayIndex = todayIndex;
+      return;
+    }
+
+    const firstOpenDay = this.weekDays.findIndex(day => !day.isClosed);
+    this.currentMobileDayIndex = firstOpenDay !== -1 ? firstOpenDay : 0;
   }
 
   /**
@@ -845,6 +859,10 @@ export class CalendarComponent implements OnInit, OnDestroy {
   }
 
   setMobileDay(index: number): void {
+    const day = this.weekDays[index];
+    if (!day || day.isClosed) {
+      return;
+    }
     this.currentMobileDayIndex = index;
   }
 
@@ -892,6 +910,58 @@ export class CalendarComponent implements OnInit, OnDestroy {
       this.selectedStaffIds.push(staffId);
     }
     this.selectedAppointment = null;
+    this.syncMobileSelectedStaffSelection();
+  }
+
+  onMobileStaffSelectionChange(event: Event): void {
+    const selectElement = event.target as HTMLSelectElement;
+    const staffId = Number(selectElement.value);
+
+    this.mobileSelectedStaffId = staffId;
+    this.selectedStaffIds = staffId === 0 ? [] : [staffId];
+    this.selectedAppointment = null;
+  }
+
+  getMobileSelectedStaffColor(): string {
+    if (this.mobileSelectedStaffId === 0) {
+      return '#64748b';
+    }
+
+    return this.staffMembers.find(staff => staff.id === this.mobileSelectedStaffId)?.color || '#64748b';
+  }
+
+  private syncMobileSelectedStaffSelection(): void {
+    this.mobileSelectedStaffId = this.selectedStaffIds.length === 1 ? this.selectedStaffIds[0] : 0;
+  }
+
+  onStaffColorChanged(event: { staffId: number; color: string }): void {
+    const { staffId, color } = event;
+
+    this.staffMembers = this.staffMembers.map(staff =>
+      staff.id === staffId ? { ...staff, color } : staff
+    );
+
+    this.staffColors = {
+      ...this.staffColors,
+      [staffId]: color
+    };
+
+    this.allAppointments = this.allAppointments.map(appointment =>
+      appointment.staffId === staffId ? { ...appointment, color } : appointment
+    );
+
+    if (this.selectedAppointment && this.selectedAppointment.staffId === staffId) {
+      this.selectedAppointment = {
+        ...this.selectedAppointment,
+        color
+      };
+    }
+
+    this.persistStaffColor(staffId, color);
+  }
+
+  private persistStaffColor(staffId: number, color: string): void {
+    console.info('Staff color saved locally', { staffId, color });
   }
 
   getShortName(fullName: string): string {

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 
@@ -10,9 +10,23 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
   styleUrls: ['./owner-sidebar.component.css'],
 })
 export class OwnerSidebar {
+  isMobileView = input<boolean>(false);
+  mobileOpen = input<boolean>(false);
+  requestClose = output<void>();
+
   isPinned = false;
 
   togglePin(): void {
     this.isPinned = !this.isPinned;
+  }
+
+  closeSidebar(): void {
+    this.requestClose.emit();
+  }
+
+  onNavClick(): void {
+    if (this.isMobileView()) {
+      this.closeSidebar();
+    }
   }
 }
