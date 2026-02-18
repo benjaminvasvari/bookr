@@ -180,8 +180,7 @@
 
 /* Main Calendar Grid - Fixed pixel heights */
 .calendar-grid {
-	display: grid;
-	grid-template-columns: 60px repeat(7, 1fr);
+	display: flex;
 	flex: 1;
 	background: #ffffff;
 	overflow: auto;
@@ -224,6 +223,8 @@
 	position: sticky;
 	left: 0;
 	z-index: 15;
+	flex: 0 0 60px;
+	min-width: 60px;
 }
 
 .time-header {
@@ -257,7 +258,7 @@
 	position: relative;
 	background: #ffffff;
 	min-width: 0;
-	flex: 1;
+	flex: 1 1 0;
 	overflow: visible;
 }
 
@@ -274,6 +275,7 @@
 	border-bottom-color: #c7d2fe;
 }
 
+/* Zárt napok - fix szűk szélesség, nem rugalmas */
 .day-column.day-closed {
 	background: repeating-linear-gradient(
 		-45deg,
@@ -283,6 +285,26 @@
 		#f3f4f6 16px
 	);
 	pointer-events: none;
+	flex: 0 0 80px;
+	min-width: 80px;
+	max-width: 80px;
+	border-right: 1px solid #e5e7eb;
+	border-left: none;
+}
+
+/* Első zárt nap bal bordere */
+.day-column:not(.day-closed) + .day-column.day-closed {
+	border-left: 1px solid #e5e7eb;
+}
+
+/* Zárt nap után következő nyitott nap elválasztása */
+.day-column.day-closed + .day-column:not(.day-closed) {
+	border-left: 1px solid #e5e7eb;
+}
+
+/* Két zárt nap közötti elválasztás (pl. szombat-vasárnap) */
+.day-column.day-closed + .day-column.day-closed {
+	border-left: 1px solid #e5e7eb;
 }
 
 /* Day Header - Sticky top with modern styling */
@@ -294,7 +316,7 @@
 	justify-content: center;
 	border-bottom: 2px solid #e5e7eb;
 	background: #ffffff;
-	padding: 6px;
+	padding: 6px 8px;
 	gap: 2px;
 	position: sticky;
 	top: 0;
@@ -304,7 +326,8 @@
 }
 
 .day-header.header-closed {
-	background: #f3f4f6;
+	background: #f9fafb;
+	border-bottom-color: #e5e7eb;
 }
 
 .day-name {
@@ -313,6 +336,11 @@
 	color: #6b7280;
 	text-transform: uppercase;
 	letter-spacing: 0.8px;
+}
+
+/* Zárt nap fejléc színei */
+.day-column.day-closed .day-name {
+	color: #ef4444;
 }
 
 .day-date {
@@ -337,16 +365,18 @@
 .closed-badge {
 	font-size: 9px;
 	font-weight: 700;
-	color: #ffaaaa;
+	color: #ef4444;
 	background: #fee2e2;
-	padding: 2px 6px;
-	border-radius: 8px;
+	padding: 3px 8px;
+	border-radius: 10px;
 	text-transform: uppercase;
 	letter-spacing: 0.3px;
+	white-space: nowrap;
 }
 
 .day-column.day-closed .day-date {
-	color: #ffaaaa;
+	color: #ef4444;
+	font-weight: 700;
 }
 
 /* Time Grid - Fixed height container */
@@ -698,7 +728,6 @@
 	}
 	
 	.calendar-grid {
-		grid-template-columns: 50px repeat(7, 1fr);
 		max-width: 100%;
 	}
 }
@@ -706,7 +735,6 @@
 @media (max-width: 1024px) {
 	/* Tablet: 5 days visible */
 	.calendar-grid {
-		grid-template-columns: 50px repeat(5, 1fr);
 		max-width: 100%;
 	}
 	
@@ -744,7 +772,6 @@
 	}
 	
 	.calendar-grid {
-		grid-template-columns: 45px repeat(3, 1fr);
 		max-width: 100%;
 	}
 	
@@ -884,7 +911,6 @@
 	
 	/* Mobile: 1 day at a time, full width */
 	.calendar-grid {
-		grid-template-columns: 40px 1fr;
 		min-width: 100%;
 	}
 	
@@ -895,6 +921,8 @@
 	
 	.time-column {
 		width: 40px;
+		flex: 0 0 40px;
+		min-width: 40px;
 	}
 	
 	.time-slot {

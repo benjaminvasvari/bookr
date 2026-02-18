@@ -1,6 +1,11 @@
-import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { AuthService } from '../../../../../core/services/auth.service';
+import { CompaniesService } from '../../../../../core/services/companies.service';
+import { OpeningHours } from '../../../../../core/models/opening-hours.model';
+import { User } from '../../../../../core/models';
+import { Company } from '../../../../../core/models/company.model';
 
 interface TimeSlot {
   time: string;
@@ -41,6 +46,18 @@ interface WeekDay {
   isToday: boolean;
 }
 
+interface StaffAvailability {
+  staffId: number;
+  staffName: string;
+  weeklyAvailability: {
+    [dayIndex: number]: {
+      isAvailable: boolean;
+      startTime?: string;
+      endTime?: string;
+    };
+  };
+}
+
 @Component({
   selector: 'app-calendar.component',
   standalone: true,
@@ -49,6 +66,9 @@ interface WeekDay {
   styleUrl: './calendar.component.css',
 })
 export class CalendarComponent implements OnInit, OnDestroy {
+  private authService = inject(AuthService);
+  private companiesService = inject(CompaniesService);
+  
   selectedStaffIds: number[] = []; // Empty = show all
   selectedAppointment: CalendarAppointment | null = null;
   currentTimePosition: number = 0;
@@ -56,6 +76,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
   currentWeekStart: Date = this.getMonday(new Date());
   currentMobileDayIndex: number = 1; // Start with today (Tuesday = index 1)
   isMobileView: boolean = false;
+  companyOpeningHours: OpeningHours | null = null;
 
   @HostListener('window:resize')
   onResize() {
@@ -100,6 +121,62 @@ export class CalendarComponent implements OnInit, OnDestroy {
     { id: 2, name: 'Bálint László', color: '#10b981' },
     { id: 3, name: 'Anna Kovács', color: '#ec4899' },
     { id: 4, name: 'Dóra Tóth', color: '#8b5cf6' }
+  ];
+
+  // Staff munkaidő adatok - a backend-től jövő adatok mockja
+  staffAvailabilityData: StaffAvailability[] = [
+    {
+      staffId: 1,
+      staffName: 'Barni Kiss',
+      weeklyAvailability: {
+        0: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
+        1: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
+        2: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
+        3: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
+        4: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
+        5: { isAvailable: false },
+        6: { isAvailable: false }
+      }
+    },
+    {
+      staffId: 2,
+      staffName: 'Bálint László',
+      weeklyAvailability: {
+        0: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
+        1: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
+        2: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
+        3: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
+        4: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
+        5: { isAvailable: false },
+        6: { isAvailable: false }
+      }
+    },
+    {
+      staffId: 3,
+      staffName: 'Anna Kovács',
+      weeklyAvailability: {
+        0: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
+        1: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
+        2: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
+        3: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
+        4: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
+        5: { isAvailable: false },
+        6: { isAvailable: false }
+      }
+    },
+    {
+      staffId: 4,
+      staffName: 'Dóra Tóth',
+      weeklyAvailability: {
+        0: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
+        1: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
+        2: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
+        3: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
+        4: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
+        5: { isAvailable: false },
+        6: { isAvailable: false }
+      }
+    }
   ];
 
   allAppointments: CalendarAppointment[] = [
@@ -590,11 +667,27 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.isMobileView = window.innerWidth <= 480;
+    this.loadCompanyData();
     this.updateWeekDays();
     this.updateCurrentTimePosition();
     this.currentTimeInterval = setInterval(() => {
       this.updateCurrentTimePosition();
     }, 60000); // Update every minute
+  }
+
+  loadCompanyData(): void {
+    const user: User | null = this.authService.getCurrentUser();
+    if (user && user.companyId) {
+      this.companiesService.getCompanyById(user.companyId).subscribe({
+        next: (company: Company) => {
+          this.companyOpeningHours = company.openingHours || null;
+          this.updateWeekDays(); // Refresh with new data
+        },
+        error: (err: any) => {
+          console.error('Failed to load company data:', err);
+        }
+      });
+    }
   }
 
   ngOnDestroy(): void {
@@ -615,6 +708,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     today.setHours(0, 0, 0, 0);
     
     const days = ['Hétfő', 'Kedd', 'Szerda', 'Csütörtök', 'Péntek', 'Szombat', 'Vasárnap'];
+    const dayKeys: (keyof OpeningHours)[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
     const months = ['január', 'február', 'március', 'április', 'május', 'június', 
                     'július', 'augusztus', 'szeptember', 'október', 'november', 'december'];
     
@@ -625,8 +719,17 @@ export class CalendarComponent implements OnInit, OnDestroy {
       date.setHours(0, 0, 0, 0);
       
       const isToday = date.getTime() === today.getTime();
-      const isSaturday = i === 5;
-      const isSunday = i === 6;
+      
+      // Dinamikus zárt/nyitott állapot számítása staff availability adatok alapján
+      const isDayClosed = this.isDayClosedForAllStaff(i);
+      
+      // Nyitvatartási idő meghatározása
+      let openingHours = '';
+      if (!isDayClosed) {
+        // Ha van elérhető staff, gyűjtsük össze a munkaidőket
+        const availableHours = this.getAvailableHoursForDay(i);
+        openingHours = availableHours.length > 0 ? availableHours[0] : '09:00–17:00';
+      }
       
       this.weekDays.push({
         name: days[i],
@@ -634,11 +737,46 @@ export class CalendarComponent implements OnInit, OnDestroy {
         dayIndex: i,
         dayNumber: date.getDate(),
         fullDate: date,
-        openingHours: (isSaturday || isSunday) ? '' : '09:00–17:00',
-        isClosed: isSaturday || isSunday,
+        openingHours: openingHours,
+        isClosed: isDayClosed,
         isToday: isToday
       });
     }
+  }
+
+  /**
+   * Ellenőrzi, hogy egy adott nap zárt-e (minden staff unavailable)
+   */
+  private isDayClosedForAllStaff(dayIndex: number): boolean {
+    // Ha nincs staff adat, fallback a hétvégékre
+    if (this.staffAvailabilityData.length === 0) {
+      return dayIndex === 5 || dayIndex === 6; // Szombat/Vasárnap
+    }
+
+    // Ha minden staff isAvailable = false, akkor zárt a nap
+    return this.staffAvailabilityData.every(staff => {
+      const dayData = staff.weeklyAvailability[dayIndex];
+      return !dayData || !dayData.isAvailable;
+    });
+  }
+
+  /**
+   * Visszaadja az elérhető munkaidőket egy adott napra
+   */
+  private getAvailableHoursForDay(dayIndex: number): string[] {
+    const hours: string[] = [];
+    
+    this.staffAvailabilityData.forEach(staff => {
+      const dayData = staff.weeklyAvailability[dayIndex];
+      if (dayData && dayData.isAvailable && dayData.startTime && dayData.endTime) {
+        const timeRange = `${dayData.startTime}–${dayData.endTime}`;
+        if (!hours.includes(timeRange)) {
+          hours.push(timeRange);
+        }
+      }
+    });
+    
+    return hours;
   }
 
   previousWeek(): void {
