@@ -81,8 +81,8 @@ export class CalendarComponent implements OnInit, OnDestroy {
   isMobileView: boolean = false;
   companyOpeningHours: OpeningHours | null = null;
   
-  // Focused day state
-  focusedDayIndex: number | null = null;
+  // Focused day state (max 2 open day columns)
+  focusedDayIndices: number[] = [];
 
   @HostListener('window:resize')
   onResize() {
@@ -769,11 +769,11 @@ export class CalendarComponent implements OnInit, OnDestroy {
    */
   private setDefaultFocusedDay(todayIndex: number | null): void {
     if (todayIndex !== null && !this.weekDays[todayIndex]?.isClosed) {
-      this.focusedDayIndex = todayIndex;
+      this.focusedDayIndices = [todayIndex];
     } else {
       // Keressük meg az első nyitott napot
       const firstOpenDay = this.weekDays.findIndex(day => !day.isClosed);
-      this.focusedDayIndex = firstOpenDay !== -1 ? firstOpenDay : null;
+      this.focusedDayIndices = firstOpenDay !== -1 ? [firstOpenDay] : [];
     }
   }
 
@@ -1024,7 +1024,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
       const columnIndex = allAppointments.findIndex(a => a.id === appointment.id);
       
       // Zárt napokon: 18px széles csíkok
-      const stripWidth = 18;
+      const stripWidth = 12;
       const spacing = 1; // Pixel távolság a csíkok között
       const totalWidth = totalColumns * stripWidth + (totalColumns - 1) * spacing;
       const startOffset = `calc(50% - ${totalWidth / 2}px)`;
@@ -1035,8 +1035,9 @@ export class CalendarComponent implements OnInit, OnDestroy {
     }
     // Zárt nap, nincs overlap - középre igazított egyetlen vastagabb csík
     else if (isClosed) {
-      width = '18px';
-      left = 'calc(50% - 9px)';
+    const stripWidth = 12;
+    width = `${stripWidth}px`;
+    left = `calc(50% - ${stripWidth / 2}px)`;
     }
     // Unfocused napok - vékony csíkok egymás mellett
     else if (isUnfocused && overlapping.length > 0) {
@@ -1053,7 +1054,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
       const columnIndex = allAppointments.findIndex(a => a.id === appointment.id);
       
       // Ha unfocused: 14px széles csíkok, egymás mellett
-      const stripWidth = 14;
+      const stripWidth = 10;
       const spacing = 1; // Pixel távolság a csíkok között
       const totalWidth = totalColumns * stripWidth + (totalColumns - 1) * spacing;
       const startOffset = `calc(50% - ${totalWidth / 2}px)`;
@@ -1084,8 +1085,8 @@ export class CalendarComponent implements OnInit, OnDestroy {
     }
     // Unfocused, nincs overlap - középre igazított egyetlen csík
     else if (isUnfocused) {
-      width = '14px';
-      left = 'calc(50% - 7px)';
+    width = '10px';
+    left = 'calc(50% - 5px)';
     }
 
     // Convert hex to RGBA
@@ -1164,13 +1165,27 @@ export class CalendarComponent implements OnInit, OnDestroy {
     if (!day || day.isClosed) {
       return; // Zárt napokra nem lehet fókuszálni
     }
-    this.focusedDayIndex = dayIndex;
+
+    const existingIndex = this.focusedDayIndices.indexOf(dayIndex);
+
+    if (existingIndex > -1) {
+      if (this.focusedDayIndices.length > 1) {
+        this.focusedDayIndices.splice(existingIndex, 1);
+      }
+      return;
+    }
+
+    if (this.focusedDayIndices.length >= 2) {
+      this.focusedDayIndices.shift();
+    }
+
+    this.focusedDayIndices.push(dayIndex);
   }
 
   /**
    * Ellenőrzi, hogy egy nap fókuszban van-e
    */
   isFocused(dayIndex: number): boolean {
-    return this.focusedDayIndex === dayIndex;
+    return this.focusedDayIndices.includes(dayIndex);
   }
 }

@@ -113,7 +113,7 @@
 				</div>
 
 				<!-- Time grid -->
-				<div class="time-grid">
+				<div class="time-grid" (click)="!day.isClosed && setFocusedDay(dayIndex)">
 					<!-- Grid cells for hour slots -->
 					@for (slot of timeSlots; track slot.hour) {
 						<div class="grid-cell"></div>

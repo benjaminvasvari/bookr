@@ -70,7 +70,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.75);
+  background: transparent;
   color: #374151;
   transition: opacity 0.15s ease, background-color 0.15s ease;
   cursor: pointer;
@@ -79,12 +79,12 @@
 }
 
 .chip-edit-trigger:hover {
-  background: rgba(255, 255, 255, 0.92);
+  background: transparent;
 }
 
 .staff-chip.chip-active .chip-edit-trigger {
   color: #ffffff;
-  background: rgba(0, 0, 0, 0.18);
+  background: transparent;
 }
 
 .color-popover {

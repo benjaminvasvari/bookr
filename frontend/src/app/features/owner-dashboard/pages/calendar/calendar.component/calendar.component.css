@@ -258,9 +258,11 @@
 	position: relative;
 	background: #ffffff;
 	min-width: 0;
-	flex: 1 1 0;
+	flex: 0 0 88px;
+	max-width: 88px;
 	overflow: visible;
-	transition: all 0.3s ease;
+	transition: flex 0.34s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.2s ease;
+	will-change: flex;
 }
 
 .day-column:last-child {
@@ -270,12 +272,14 @@
 /* Expanded nap - széles oszlop */
 .day-column.day-expanded,
 .day-column.day-focused {
-	flex: 4 1 0;
+	flex: 1 1 0;
+	max-width: none;
 }
 
 /* Nem fókuszált, de nyitott napok - normál oszlop */
 .day-column.day-unfocused {
-	flex: 1 1 0;
+	flex: 0 0 88px;
+	max-width: 88px;
 	cursor: pointer;
 	background: #f7f8fa;
 }
@@ -314,9 +318,9 @@
 		#f3f4f6 16px
 	);
 	pointer-events: none;
-	flex: 1 1 0;
-	min-width: 0;
-	max-width: none;
+	flex: 0 0 96px;
+	min-width: 96px;
+	max-width: 96px;
 	border-right: 1px solid #e5e7eb;
 	border-left: none;
 	transition: none;
@@ -343,17 +347,18 @@
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	justify-content: center;
+	justify-content: flex-start;
 	border-bottom: 2px solid #e5e7eb;
 	background: #ffffff;
-	padding: 6px 8px;
+	padding: 4px 8px 6px;
 	gap: 2px;
 	position: sticky;
 	top: 0;
 	z-index: 10;
 	flex-shrink: 0;
 	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-	transition: all 0.3s ease;
+	overflow: hidden;
+	transition: background 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease, padding 0.3s ease;
 }
 
 /* Kattintható fejléc */
@@ -376,29 +381,58 @@
 	border-bottom-color: #e5e7eb;
 }
 
+.day-column.day-closed .day-header {
+	padding-top: 6px;
+	padding-bottom: 6px;
+	gap: 2px;
+}
+
 .day-name {
 	font-size: 10px;
 	font-weight: 700;
 	color: #6b7280;
 	text-transform: uppercase;
 	letter-spacing: 0.8px;
-	transition: opacity 0.3s ease;
+	text-align: center;
+	margin-bottom: 2px;
+	width: 100%;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	opacity: 1;
+	max-height: 16px;
+	overflow: hidden;
+	transform: translateY(0);
+	transition: opacity 0.28s ease, max-height 0.34s ease, transform 0.34s ease;
 }
 
 /* Rövid napnév - csak unfocused állapotban látható */
 .day-short-name {
-	display: none;
+	display: block;
 	font-size: 11px;
 	font-weight: 700;
 	color: #6b7280;
 	text-transform: uppercase;
 	letter-spacing: 0.5px;
-	transition: opacity 0.3s ease;
+	text-align: center;
+	width: 100%;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	opacity: 0;
+	max-height: 0;
+	overflow: hidden;
+	transform: translateY(-2px);
+	transition: opacity 0.28s ease, max-height 0.34s ease, transform 0.34s ease;
 }
 
 /* Zárt nap fejléc színei */
-.day-column.day-closed .day-name {
-	color: #ef4444;
+.day-column.day-closed .day-name,
+.day-column.day-closed .day-short-name {
+	display: none;
+	opacity: 0;
+	max-height: 0;
+	transform: none;
 }
 
 .day-date {
@@ -418,23 +452,38 @@
 	font-size: 9px;
 	color: #9ca3af;
 	font-weight: 500;
-	transition: opacity 0.3s ease;
+	text-align: center;
+	width: 100%;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	opacity: 1;
+	max-height: 14px;
+	overflow: hidden;
+	transform: translateY(0);
+	transition: opacity 0.28s ease, max-height 0.34s ease, transform 0.34s ease;
 }
 
 /* Összeszűkült napokon a nevek és órák elrejtése, de dátumszám látható marad */
 .day-column.day-unfocused .day-name,
 .day-column.day-unfocused .day-hours {
-	display: none;
+	opacity: 0;
+	max-height: 0;
+	transform: translateY(-2px);
 }
 
 /* Rövid napnév megjelenítése unfocused állapotban */
 .day-column.day-unfocused .day-short-name {
-	display: block;
+	opacity: 1;
+	max-height: 16px;
+	transform: translateY(0);
 }
 
 /* Fókuszált napon elrejtjük a short name-et */
 .day-column.day-focused .day-short-name {
-	display: none;
+	opacity: 0;
+	max-height: 0;
+	transform: translateY(-2px);
 }
 
 /* Dátumszám kicsinyítése unfocused napokon */
@@ -444,7 +493,7 @@
 
 /* Unfocused fejléc kicsinyítése */
 .day-column.day-unfocused .day-header {
-	padding: 8px 4px;
+	padding: 4px 4px 6px;
 	min-height: 60px;
 }
 
@@ -459,16 +508,20 @@
 	font-weight: 700;
 	color: #ef4444;
 	background: #fee2e2;
-	padding: 3px 8px;
+	padding: 3px 9px;
 	border-radius: 10px;
 	text-transform: uppercase;
 	letter-spacing: 0.3px;
 	white-space: nowrap;
+	line-height: 1.1;
+	margin-top: 0;
+	margin-bottom: 2px;
 }
 
 .day-column.day-closed .day-date {
 	color: #ef4444;
 	font-weight: 700;
+	font-size: 17px;
 }
 
 /* Time Grid - Fixed height container */
@@ -547,12 +600,12 @@
 	cursor: pointer;
 	pointer-events: all;
 	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-	transition: all 0.3s ease;
-	padding: 6px 8px 6px 10px;
+	transition: all 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+	padding: 6px 10px 6px 12px;
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	gap: 6px;
+	gap: 10px;
 	container-type: inline-size;
 	overflow: hidden;
 	min-width: 85px;
@@ -567,13 +620,16 @@
 	overflow: hidden;
 	border-left-width: 14px !important; /* Teljes szélesség kitöltése */
 	background: transparent !important; /* Csak a border szín látszik */
-	transition: all 0.3s ease;
+	min-width: 14px;
+	transition: all 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* Összeszűkült napokon szövegek elrejtése a foglalásoknál */
 .day-column.day-unfocused .apt-time,
 .day-column.day-unfocused .apt-service {
-	display: none;
+	opacity: 0;
+	max-width: 0;
+	transform: translateX(-4px);
 }
 
 /* Unfocused blokkok hover effekt letiltása és kattinthatóság */
@@ -599,11 +655,14 @@
 	background: transparent !important;
 	pointer-events: none;
 	opacity: 0.85;
+	min-width: 18px;
 }
 
 .day-column.day-closed .apt-time,
 .day-column.day-closed .apt-service {
-	display: none;
+	opacity: 0;
+	max-width: 0;
+	transform: translateX(-4px);
 }
 
 /* Compact mode for narrow columns */
@@ -621,7 +680,9 @@
 /* Hide service text when too narrow - only show if it fits completely */
 @container (max-width: 95px) {
 	.apt-service {
-		display: none;
+		opacity: 0;
+		max-width: 0;
+		transform: translateX(-4px);
 	}
 }
 
@@ -652,6 +713,11 @@
 	line-height: 1.2;
 	white-space: nowrap;
 	flex-shrink: 0;
+	opacity: 1;
+	max-width: 70px;
+	transform: translateX(0);
+	transition: opacity 0.2s ease, max-width 0.26s ease, transform 0.26s ease;
+	padding-right: 2px;
 }
 
 .apt-service {
@@ -664,6 +730,11 @@
 	/* No ellipsis - if text doesn't fit, container query will hide it */
 	flex: 1;
 	min-width: 0;
+	opacity: 1;
+	max-width: 100%;
+	transform: translateX(0);
+	transition: opacity 0.2s ease, max-width 0.26s ease, transform 0.26s ease;
+	padding-left: 2px;
 }
 
 /* Empty day message - subtle and minimal */

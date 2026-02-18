@@ -126,9 +126,11 @@
 	position: relative;
 	background: #ffffff;
 	min-width: 0;
-	flex: 1 1 0;
+	flex: 0 0 88px;
+	max-width: 88px;
 	overflow: visible;
-	transition: all 0.3s ease;
+	transition: flex 0.34s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.2s ease;
+	will-change: flex;
 }
 
 .day-column:last-child {
@@ -136,11 +138,13 @@
 }
 
 .day-column.day-focused {
-	flex: 4 1 0;
+	flex: 1 1 0;
+	max-width: none;
 }
 
 .day-column.day-unfocused {
-	flex: 1 1 0;
+	flex: 0 0 88px;
+	max-width: 88px;
 	cursor: pointer;
 	background: #f7f8fa;
 }
@@ -180,27 +184,29 @@
 		#f3f4f6 16px
 	);
 	pointer-events: none;
-	flex: 0 0 124px;
-	min-width: 124px;
-	max-width: 124px;
+	flex: 0 0 96px;
+	min-width: 96px;
+	max-width: 96px;
 	transition: none;
 }
+
 
 .day-header {
 	height: 60px;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	justify-content: center;
+	justify-content: flex-start;
 	border-bottom: 2px solid #e5e7eb;
 	background: #ffffff;
-	padding: 6px 8px;
+	padding: 4px 8px 6px;
 	gap: 2px;
 	position: sticky;
 	top: 0;
 	z-index: 10;
+	overflow: hidden;
 	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-	transition: all 0.3s ease;
+	transition: background 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease, padding 0.3s ease;
 }
 
 .day-header.header-clickable {
@@ -216,13 +222,40 @@
 	background: #f9fafb;
 }
 
-.day-short-name {
+.day-column.day-closed .day-header {
+	padding-top: 6px;
+	padding-bottom: 6px;
+	gap: 2px;
+}
+
+.day-column.day-closed .day-name {
 	display: none;
+}
+
+.day-column.day-closed .day-short-name {
+	display: none;
+	opacity: 0;
+	max-height: 0;
+	transform: none;
+}
+
+.day-short-name {
+	display: block;
 	font-size: 11px;
 	font-weight: 700;
 	color: #6b7280;
 	text-transform: uppercase;
 	letter-spacing: 0.5px;
+	text-align: center;
+	width: 100%;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	opacity: 0;
+	max-height: 0;
+	overflow: hidden;
+	transform: translateY(-2px);
+	transition: opacity 0.28s ease, max-height 0.34s ease, transform 0.34s ease;
 }
 
 .day-name {
@@ -231,6 +264,17 @@
 	color: #6b7280;
 	text-transform: uppercase;
 	letter-spacing: 0.8px;
+	text-align: center;
+	margin-bottom: 2px;
+	width: 100%;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	opacity: 1;
+	max-height: 16px;
+	overflow: hidden;
+	transform: translateY(0);
+	transition: opacity 0.28s ease, max-height 0.34s ease, transform 0.34s ease;
 }
 
 .day-date {
@@ -244,15 +288,29 @@
 	font-size: 9px;
 	color: #9ca3af;
 	font-weight: 500;
+	text-align: center;
+	width: 100%;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	opacity: 1;
+	max-height: 14px;
+	overflow: hidden;
+	transform: translateY(0);
+	transition: opacity 0.28s ease, max-height 0.34s ease, transform 0.34s ease;
 }
 
 .day-column.day-unfocused .day-name,
 .day-column.day-unfocused .day-hours {
-	display: none;
+	opacity: 0;
+	max-height: 0;
+	transform: translateY(-2px);
 }
 
 .day-column.day-unfocused .day-short-name {
-	display: block;
+	opacity: 1;
+	max-height: 16px;
+	transform: translateY(0);
 }
 
 .day-column.day-unfocused .day-date {
@@ -264,11 +322,21 @@
 	font-weight: 700;
 	color: #ef4444;
 	background: #fee2e2;
-	padding: 3px 8px;
+	padding: 3px 9px;
 	border-radius: 10px;
 	text-transform: uppercase;
 	letter-spacing: 0.3px;
+	line-height: 1.1;
+	margin-top: 0;
+	margin-bottom: 2px;
 }
+
+.day-column.day-closed .day-date {
+	color: #ef4444;
+	font-weight: 700;
+	font-size: 17px;
+}
+
 
 .time-grid {
 	position: relative;
@@ -325,7 +393,7 @@
 	cursor: pointer;
 	pointer-events: all;
 	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-	transition: all 0.25s ease;
+	transition: all 0.32s cubic-bezier(0.22, 1, 0.36, 1);
 	padding: 6px 8px 6px 10px;
 	display: flex;
 	align-items: center;
@@ -342,6 +410,7 @@
 	background: transparent !important;
 	pointer-events: none;
 	cursor: default;
+	min-width: 14px;
 }
 
 .day-column.day-closed .appointment-block {
@@ -351,13 +420,16 @@
 	border-left-width: 18px !important;
 	background: transparent !important;
 	pointer-events: none;
+	min-width: 18px;
 }
 
 .day-column.day-unfocused .apt-time,
 .day-column.day-unfocused .apt-title,
 .day-column.day-closed .apt-time,
 .day-column.day-closed .apt-title {
-	display: none;
+	opacity: 0;
+	max-width: 0;
+	transform: translateX(-4px);
 }
 
 .appointment-block:hover {
@@ -378,6 +450,10 @@
 	color: #111827;
 	white-space: nowrap;
 	flex-shrink: 0;
+	opacity: 1;
+	max-width: 70px;
+	transform: translateX(0);
+	transition: opacity 0.2s ease, max-width 0.26s ease, transform 0.26s ease;
 }
 
 .apt-title {
@@ -388,6 +464,10 @@
 	white-space: nowrap;
 	text-overflow: ellipsis;
 	min-width: 0;
+	opacity: 1;
+	max-width: 100%;
+	transform: translateX(0);
+	transition: opacity 0.2s ease, max-width 0.26s ease, transform 0.26s ease;
 }
 
 .details-sidebar {

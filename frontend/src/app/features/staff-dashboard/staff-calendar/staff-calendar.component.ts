@@ -56,7 +56,7 @@ export class StaffCalendarComponent implements OnInit, OnDestroy {
   currentTimePosition: number = 0;
   currentTimeInterval: any;
   currentWeekStart: Date = this.getMonday(new Date());
-  focusedDayIndex: number | null = null;
+  focusedDayIndices: number[] = [];
   
   selectedStaffId: number = 1;
   staffMembers: StaffMember[] = [
@@ -274,19 +274,20 @@ export class StaffCalendarComponent implements OnInit, OnDestroy {
     if (isClosed && overlapping.length > 0) {
       const columns = this.getOrderedOverlapColumns(appointment, overlapping);
       const columnIndex = columns.findIndex(a => a.id === appointment.id);
-      const stripWidth = 18;
+      const stripWidth = this.weekDays[dayIndex]?.dayIndex >= 5 ? 10 : 12;
       const spacing = 1;
       const totalWidth = columns.length * stripWidth + (columns.length - 1) * spacing;
       width = `${stripWidth}px`;
       left = `calc(50% - ${totalWidth / 2}px + ${columnIndex * (stripWidth + spacing)}px)`;
       zIndex = columnIndex + 1;
     } else if (isClosed) {
-      width = '18px';
-      left = 'calc(50% - 9px)';
+      const stripWidth = this.weekDays[dayIndex]?.dayIndex >= 5 ? 10 : 12;
+      width = `${stripWidth}px`;
+      left = `calc(50% - ${stripWidth / 2}px)`;
     } else if (isUnfocused && overlapping.length > 0) {
       const columns = this.getOrderedOverlapColumns(appointment, overlapping);
       const columnIndex = columns.findIndex(a => a.id === appointment.id);
-      const stripWidth = 14;
+      const stripWidth = 10;
       const spacing = 1;
       const totalWidth = columns.length * stripWidth + (columns.length - 1) * spacing;
       width = `${stripWidth}px`;
@@ -300,8 +301,8 @@ export class StaffCalendarComponent implements OnInit, OnDestroy {
       left = `calc(${columnWidth}% * ${columnIndex})`;
       zIndex = columnIndex + 1;
     } else if (isUnfocused) {
-      width = '14px';
-      left = 'calc(50% - 7px)';
+      width = '10px';
+      left = 'calc(50% - 5px)';
     }
 
     return {
@@ -373,21 +374,35 @@ export class StaffCalendarComponent implements OnInit, OnDestroy {
     if (!day || day.isClosed) {
       return;
     }
-    this.focusedDayIndex = dayIndex;
+
+    const existingIndex = this.focusedDayIndices.indexOf(dayIndex);
+
+    if (existingIndex > -1) {
+      if (this.focusedDayIndices.length > 1) {
+        this.focusedDayIndices.splice(existingIndex, 1);
+      }
+      return;
+    }
+
+    if (this.focusedDayIndices.length >= 2) {
+      this.focusedDayIndices.shift();
+    }
+
+    this.focusedDayIndices.push(dayIndex);
   }
 
   isFocused(dayIndex: number): boolean {
-    return this.focusedDayIndex === dayIndex;
+    return this.focusedDayIndices.includes(dayIndex);
   }
 
   private setDefaultFocusedDay(todayIndex: number | null): void {
     if (todayIndex !== null && !this.weekDays[todayIndex]?.isClosed) {
-      this.focusedDayIndex = todayIndex;
+      this.focusedDayIndices = [todayIndex];
       return;
     }
 
     const firstOpenDay = this.weekDays.findIndex(day => !day.isClosed);
-    this.focusedDayIndex = firstOpenDay !== -1 ? firstOpenDay : null;
+    this.focusedDayIndices = firstOpenDay !== -1 ? [firstOpenDay] : [];
   }
 
   private updateWeekDays(): void {
