@@ -780,11 +780,17 @@ export class CalendarComponent implements OnInit, OnDestroy {
   private setDefaultMobileDay(todayIndex: number | null): void {
     if (todayIndex !== null && !this.weekDays[todayIndex]?.isClosed) {
       this.currentMobileDayIndex = todayIndex;
+      if (this.isMobileView) {
+        this.focusedDayIndices = [todayIndex];
+      }
       return;
     }
 
     const firstOpenDay = this.weekDays.findIndex(day => !day.isClosed);
     this.currentMobileDayIndex = firstOpenDay !== -1 ? firstOpenDay : 0;
+    if (this.isMobileView && this.weekDays[this.currentMobileDayIndex] && !this.weekDays[this.currentMobileDayIndex].isClosed) {
+      this.focusedDayIndices = [this.currentMobileDayIndex];
+    }
   }
 
   /**
@@ -841,12 +847,14 @@ export class CalendarComponent implements OnInit, OnDestroy {
   previousMobileDay(): void {
     if (this.currentMobileDayIndex > 0) {
       this.currentMobileDayIndex--;
+      this.ensureMobileDayFocused();
     }
   }
 
   nextMobileDay(): void {
     if (this.currentMobileDayIndex < 6) {
       this.currentMobileDayIndex++;
+      this.ensureMobileDayFocused();
     }
   }
 
@@ -864,6 +872,17 @@ export class CalendarComponent implements OnInit, OnDestroy {
       return;
     }
     this.currentMobileDayIndex = index;
+    this.ensureMobileDayFocused();
+  }
+
+  getMobileWeekDotLabel(day: WeekDay): string {
+    if (day.dayIndex === 2) {
+      return 'SZ';
+    }
+    if (day.dayIndex === 3) {
+      return 'CS';
+    }
+    return day.name.charAt(0).toUpperCase();
   }
 
   getWeekDateRange(): string {
@@ -1182,10 +1201,26 @@ export class CalendarComponent implements OnInit, OnDestroy {
     this.focusedDayIndices.push(dayIndex);
   }
 
+  private ensureMobileDayFocused(): void {
+    if (!this.isMobileView) {
+      return;
+    }
+
+    const day = this.weekDays[this.currentMobileDayIndex];
+    if (!day || day.isClosed) {
+      return;
+    }
+
+    this.focusedDayIndices = [this.currentMobileDayIndex];
+  }
+
   /**
    * Ellenőrzi, hogy egy nap fókuszban van-e
    */
   isFocused(dayIndex: number): boolean {
+    if (this.isMobileView) {
+      return dayIndex === this.currentMobileDayIndex;
+    }
     return this.focusedDayIndices.includes(dayIndex);
   }
 }
