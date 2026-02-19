@@ -1,0 +1,62 @@
+<div
+  class="staff-chip"
+  [class.chip-active]="selected()"
+  [class.picker-open]="pickerOpen()"
+  [style.border-color]="selected() ? staffColor() : '#e5e7eb'"
+  [style.background]="selected() ? staffColor() : '#ffffff'"
+  (click)="onChipClick()"
+>
+  <span class="chip-color" [style.background]="staffColor()"></span>
+  <span class="chip-name">{{ staffName() }}</span>
+
+  <button #editTrigger class="chip-edit-trigger" type="button" (click)="onPickerToggle($event, editTrigger)" aria-label="Szakember szín módosítása">
+    <i class="fas fa-palette"></i>
+  </button>
+
+  @if (pickerOpen()) {
+    @if (mobileSheet()) {
+      <div class="color-popover-backdrop" (click)="closePicker()"></div>
+    }
+
+    <div
+      class="color-popover"
+      [class.mobile-sheet]="mobileSheet()"
+      [style.width.px]="mobileSheet() ? null : popoverWidth()"
+      [style.top.px]="mobileSheet() ? null : popoverTop()"
+      [style.left.px]="mobileSheet() ? null : popoverLeft()"
+      (click)="onPopoverClick($event)"
+    >
+      @if (!mobileSheet()) {
+        <div class="popover-arrow" [style.left.px]="arrowLeft()"></div>
+      }
+
+      @if (mobileSheet()) {
+        <div class="sheet-handle"></div>
+      }
+
+      <div class="popover-section">
+        <div class="section-title">Gyors színek</div>
+        <div class="preset-grid">
+          @for (color of presetColors; track color) {
+            <button
+              type="button"
+              class="preset-color"
+              [style.background]="color"
+              [class.preset-active]="isActiveColor(color)"
+              (click)="onPresetColorClick(color, $event)"
+              [attr.aria-label]="'Szín: ' + color"
+            ></button>
+          }
+        </div>
+      </div>
+
+      <div class="popover-section custom-row">
+        <span class="section-title">Egyéni szín</span>
+        <div class="custom-input-wrap">
+          <input type="color" [value]="customColor()" (input)="onCustomColorInput($event)" />
+          <span class="hex-value">{{ customColor() }}</span>
+        </div>
+      </div>
+    </div>
+  }
+</div>

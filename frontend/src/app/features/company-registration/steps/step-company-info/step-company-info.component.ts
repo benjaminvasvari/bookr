@@ -1,6 +1,8 @@
 import { Component, EventEmitter, Output, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { CompaniesService } from '../../../../core/services/companies.service';
+import { BusinessCategory } from '../../../../core/models/business-category.model';
 
 @Component({
   selector: 'app-step-company-info',
@@ -16,28 +18,16 @@ export class StepCompanyInfoComponent implements OnInit {
 
   companyForm: FormGroup;
   
-  // ============================================
-  // MOCK BUSINESS CATEGORIES - ideiglenesen!
-  // ============================================
-  businessCategories = [
-    { id: 1, name: 'Szépségszalon', icon: '💅' },
-    { id: 2, name: 'Wellness és Spa', icon: '💆' },
-    { id: 3, name: 'Fodrászat', icon: '💇' },
-    { id: 4, name: 'Körömstúdió', icon: '💅' },
-    { id: 5, name: 'Fitness', icon: '💪' },
-    { id: 6, name: 'Egészségügy', icon: '🏥' },
-    { id: 7, name: 'Fogorvos', icon: '🦷' },
-    { id: 8, name: 'Állatorvos', icon: '🐕' },
-    { id: 9, name: 'Autószerviz', icon: '🚗' },
-    { id: 10, name: 'Oktatás', icon: '📚' }
-  ];
-
-  isCategoriesLoading = false; // Mock loading state
+  businessCategories: BusinessCategory[] = [];
+  isCategoriesLoading = false;
 
   descriptionCharCount = 0;
   maxDescriptionLength = 500;
 
-  constructor(private fb: FormBuilder) {
+  constructor(
+    private fb: FormBuilder,
+    private companiesService: CompaniesService
+  ) {
     this.companyForm = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
       description: ['', [Validators.required, Validators.minLength(20), Validators.maxLength(500)]],
@@ -61,6 +51,8 @@ export class StepCompanyInfoComponent implements OnInit {
   }
 
   ngOnInit() {
+    this.loadBusinessCategories();
+
     // Ha van initial data, töltsd be
     if (this.initialData) {
       this.companyForm.patchValue(this.initialData);
@@ -68,6 +60,21 @@ export class StepCompanyInfoComponent implements OnInit {
 
     // Kezdeti validitás kibocsátása
     this.emitFormStatus();
+  }
+
+  private loadBusinessCategories(): void {
+    this.isCategoriesLoading = true;
+
+    this.companiesService.getBusinessCategories().subscribe({
+      next: (categories) => {
+        this.businessCategories = categories;
+        this.isCategoriesLoading = false;
+      },
+      error: () => {
+        this.businessCategories = [];
+        this.isCategoriesLoading = false;
+      }
+    });
   }
 
   emitFormStatus() {

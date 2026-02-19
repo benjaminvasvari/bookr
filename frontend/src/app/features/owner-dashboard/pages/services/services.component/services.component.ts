@@ -58,16 +58,35 @@ export class ServicesComponent implements OnInit {
     return ['Összes', ...uniqueCategories];
   }
 
-  get filteredServices(): DashboardServiceItem[] {
+  get serviceGroups(): { category: string; services: DashboardServiceItem[] }[] {
+    const groups: { [key: string]: DashboardServiceItem[] } = {};
     if (this.selectedCategory === 'Összes') {
-      return this.services;
+      this.services.forEach((service) => {
+        if (!groups[service.category]) {
+          groups[service.category] = [];
+        }
+        groups[service.category].push(service);
+      });
+      return Object.keys(groups).map((category) => ({
+        category,
+        services: groups[category],
+      }));
+    } else {
+      return [{
+        category: this.selectedCategory,
+        services: this.services.filter((s) => s.category === this.selectedCategory)
+      }];
     }
-
-    return this.services.filter((service) => service.category === this.selectedCategory);
   }
 
   selectCategory(category: string): void {
     this.selectedCategory = category;
+  }
+
+  formatPrice(price: number, currency: string): string {
+    const symbol = currency === 'HUF' ? 'Ft' : currency;
+    const formatted = Math.round(price).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0');
+    return `${formatted} ${symbol}`;
   }
 
   openNewServiceModal(): void {

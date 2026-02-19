@@ -57,6 +57,16 @@ export class OverviewComponent implements OnInit {
     return this.dashboardData?.averageRating.totalReviews ?? 0;
   }
 
+  get starArray(): ('full' | 'half' | 'empty')[] {
+    const rating = this.averageRating;
+    return Array.from({ length: 5 }, (_, i) => {
+      const diff = rating - i;
+      if (diff >= 1) return 'full';
+      if (diff >= 0.5) return 'half';
+      return 'empty';
+    });
+  }
+
   get upcomingAppointments(): OwnerDashboardUpcomingAppointment[] {
     return this.dashboardData?.upcomingAppointmentsData ?? [];
   }
@@ -148,11 +158,13 @@ export class OverviewComponent implements OnInit {
 
   getAppointmentTime(appointment: OwnerDashboardUpcomingAppointment): string {
     if (appointment.time) {
-      return appointment.time;
+      const normalized = this.normalizeTime(appointment.time);
+      if (normalized) return normalized;
     }
 
     if (appointment.startTime) {
-      return appointment.startTime;
+      const normalized = this.normalizeTime(appointment.startTime);
+      if (normalized) return normalized;
     }
 
     if (!appointment.date) {
@@ -172,14 +184,19 @@ export class OverviewComponent implements OnInit {
       return appointment.dayLabel;
     }
 
-    const dateSource = appointment.date ?? null;
+    const dateSource = appointment.date ?? appointment.startTime ?? null;
     if (!dateSource) {
       return '';
     }
 
-    const appointmentDate = new Date(dateSource);
+    const trimmed = dateSource.trim().toLowerCase();
+    if (trimmed === 'ma' || trimmed === 'holnap') {
+      return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+    }
+
+    const appointmentDate = new Date(dateSource.replace(' ', 'T'));
     if (Number.isNaN(appointmentDate.getTime())) {
-      return '';
+      return dateSource;
     }
 
     const today = new Date();
@@ -244,6 +261,15 @@ export class OverviewComponent implements OnInit {
       dateA.getMonth() === dateB.getMonth() &&
       dateA.getDate() === dateB.getDate()
     );
+  }
+
+  private normalizeTime(value: string): string | null {
+    const match = value.trim().match(/(?:^|\s|T)(\d{1,2}):(\d{2})/);
+    if (!match) return null;
+    const hour = Number(match[1]);
+    const minute = Number(match[2]);
+    if (!Number.isFinite(hour) || !Number.isFinite(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+    return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
   }
 
 }

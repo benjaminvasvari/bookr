@@ -1,7 +1,21 @@
 <div class="owner-dashboard">
-	<app-owner-sidebar></app-owner-sidebar>
+	@if (isMobileView) {
+		@if (!isSidebarOpen) {
+			<div class="mobile-top-strip" [class.strip-hidden]="!showMobileTopStrip">
+				<button class="mobile-menu-toggle" type="button" (click)="toggleSidebar()" aria-label="Oldalsáv megnyitása">
+					<i class="fas fa-bars"></i>
+				</button>
+			</div>
+		}
+	}
 
-	<main class="owner-dashboard-content">
+	<app-owner-sidebar [isMobileView]="isMobileView" [mobileOpen]="isSidebarOpen" (requestClose)="closeSidebar()"></app-owner-sidebar>
+
+	@if (isMobileView && isSidebarOpen) {
+		<div class="mobile-sidebar-backdrop" (click)="closeSidebar()"></div>
+	}
+
+	<main class="owner-dashboard-content" (scroll)="onContentScroll($event)">
 		<router-outlet></router-outlet>
 	</main>
 </div>

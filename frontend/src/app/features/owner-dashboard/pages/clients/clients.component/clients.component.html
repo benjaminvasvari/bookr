@@ -11,11 +11,10 @@
 		</label>
 	</div>
 
+	<div class="clients-content" [class.blurred]="!!selectedClient">
 	<div class="clients-card">
 		<div class="clients-list-head">
-			<span>Ügyfél</span>
-			<span>Email</span>
-			<span>Foglalás</span>
+			<span>Ügyfelek</span>
 		</div>
 
 		@if (isLoading) {
@@ -25,18 +24,28 @@
 		} @else if (pagedClients.length === 0) {
 			<div class="state-message">Nincs még ügyfél ebben a listában.</div>
 		} @else {
-		<div class="clients-list">
-			@for (client of pagedClients; track client.id) {
-				<a class="client-row" [routerLink]="['/owner/clients', client.id]">
-					<div class="client-main">
-						<div class="avatar">{{ getInitials(client.name) }}</div>
-						<div class="client-info">
-							<h3>{{ client.name }}</h3>
+		<div
+			class="clients-list"
+			[class.page-next]="pageDirection === 'next'"
+			[class.page-prev]="pageDirection === 'prev'"
+		>
+			@for (client of pagedClients; track client.id; let i = $index) {
+				<div class="client-item" [style.--anim-delay]="(i * 40) + 'ms'">
+					<button
+						type="button"
+						class="client-row"
+						(click)="openClientPopup(client)"
+					>
+						<div class="client-main">
+							<div class="avatar">{{ getInitials(client.name) }}</div>
+							<div class="client-info">
+								<h3>{{ client.name }}</h3>
+							</div>
 						</div>
-					</div>
-					<div class="client-email">{{ client.email }}</div>
-					<span class="meta">{{ client.bookings }} foglalás</span>
-				</a>
+						<div class="client-email">{{ client.email }}</div>
+						<span class="meta">{{ client.bookings }} foglalás</span>
+					</button>
+				</div>
 			}
 		</div>
 		}
@@ -51,4 +60,38 @@
 			</button>
 		</footer>
 	</div>
+	</div>
+
+	@if (selectedClient; as client) {
+		<div class="client-popup-overlay" (click)="closeClientPopup()">
+			<div class="client-popup" (click)="$event.stopPropagation()">
+				<div class="popup-header">
+					<div class="avatar large">{{ getInitials(client.name) }}</div>
+					<div>
+						<h3>{{ client.name }}</h3>
+						<p>{{ client.email }}</p>
+					</div>
+				</div>
+
+				<div class="popup-grid">
+					<div class="popup-tile">
+						<span>Telefon</span>
+						<strong>{{ formatPhone(client.phone) }}</strong>
+					</div>
+					<div class="popup-tile">
+						<span>Utolsó látogatás</span>
+						<strong>{{ formatLastVisit(client.lastVisit) }}</strong>
+					</div>
+					<div class="popup-tile">
+						<span>Összes költés</span>
+						<strong>{{ formatSpending(client.totalSpending) }} Ft</strong>
+					</div>
+					<div class="popup-tile">
+						<span>Időpontok száma</span>
+						<strong>{{ client.bookings }}</strong>
+					</div>
+				</div>
+			</div>
+		</div>
+	}
 </section>

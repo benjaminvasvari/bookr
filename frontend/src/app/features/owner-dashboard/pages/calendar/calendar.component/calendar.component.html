@@ -7,16 +7,14 @@
 				<div class="staff-chips">
 					@for (staff of staffMembers; track staff.id) {
 						@if (staff.id !== 0) {
-							<div 
-								class="staff-chip" 
-								[class.chip-active]="isStaffSelected(staff.id)"
-								[style.border-color]="isStaffSelected(staff.id) ? staff.color : '#e5e7eb'"
-								[style.background]="isStaffSelected(staff.id) ? staff.color : '#ffffff'"
-								(click)="toggleStaff(staff.id)"
-							>
-								<span class="chip-color" [style.background]="staff.color"></span>
-								<span class="chip-name">{{ staff.name }}</span>
-							</div>
+							<app-staff-chip
+								[staffId]="staff.id"
+								[staffName]="staff.name"
+								[staffColor]="staff.color"
+								[selected]="isStaffSelected(staff.id)"
+								(chipToggled)="toggleStaff($event)"
+								(colorChanged)="onStaffColorChanged($event)"
+							></app-staff-chip>
 						}
 					}
 				</div>
@@ -47,7 +45,7 @@
 					(click)="setMobileDay(i)"
 					[title]="day.name"
 				>
-					{{ day.name.charAt(0) }}
+					{{ getMobileWeekDotLabel(day) }}
 				</div>
 			}
 		</div>
@@ -62,6 +60,20 @@
 			<button class="mobile-nav-btn" (click)="nextMobileDay()" [disabled]="currentMobileDayIndex === 6">
 				<i class="fas fa-chevron-right"></i>
 			</button>
+		</div>
+		<div class="mobile-staff-filter">
+			<label for="mobileStaffSelect">Szakember nézet</label>
+			<div class="mobile-staff-select-wrap">
+				<span class="mobile-staff-dot" [style.background]="getMobileSelectedStaffColor()"></span>
+				<select id="mobileStaffSelect" [value]="mobileSelectedStaffId" (change)="onMobileStaffSelectionChange($event)">
+					<option value="0">Összes szakember</option>
+					@for (staff of staffMembers; track staff.id) {
+						@if (staff.id !== 0) {
+							<option [value]="staff.id">{{ staff.name }}</option>
+						}
+					}
+				</select>
+			</div>
 		</div>
 	</header>
 
@@ -82,6 +94,7 @@
 				<div class="day-column" 
 					[class.day-closed]="day.isClosed"
 				[class.day-today]="day.isToday"
+				[class.day-expanded]="isFocused(dayIndex)"
 				[class.day-focused]="isFocused(dayIndex)"
 				[class.day-unfocused]="!isFocused(dayIndex) && !day.isClosed">
 				<!-- Day header - Clickable to focus day -->
@@ -100,7 +113,7 @@
 				</div>
 
 				<!-- Time grid -->
-				<div class="time-grid">
+				<div class="time-grid" (click)="!day.isClosed && setFocusedDay(dayIndex)">
 					<!-- Grid cells for hour slots -->
 					@for (slot of timeSlots; track slot.hour) {
 						<div class="grid-cell"></div>
@@ -123,7 +136,9 @@
 								[title]="apt.startTime + ' • ' + apt.title + ' • ' + apt.clientName"
 							>
 								<div class="apt-time">{{ apt.startTime }}</div>
-								<div class="apt-service">{{ apt.title }}</div>
+								@if (shouldShowService(apt, dayIndex)) {
+									<div class="apt-service">{{ apt.title }}</div>
+								}
 							</div>
 						}
 					</div>

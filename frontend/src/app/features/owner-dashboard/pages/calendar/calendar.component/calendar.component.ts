@@ -6,6 +6,7 @@ import { CompaniesService } from '../../../../../core/services/companies.service
 import { OpeningHours } from '../../../../../core/models/opening-hours.model';
 import { User } from '../../../../../core/models';
 import { Company } from '../../../../../core/models/company.model';
+import { StaffChipComponent } from './staff-chip.component';
 
 interface TimeSlot {
   time: string;
@@ -62,7 +63,7 @@ interface StaffAvailability {
 @Component({
   selector: 'app-calendar.component',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, StaffChipComponent],
   templateUrl: './calendar.component.html',
   styleUrl: './calendar.component.css',
 })
@@ -76,15 +77,17 @@ export class CalendarComponent implements OnInit, OnDestroy {
   currentTimeInterval: any;
   currentWeekStart: Date = this.getMonday(new Date());
   currentMobileDayIndex: number = 1; // Start with today (Tuesday = index 1)
+  mobileSelectedStaffId: number = 0;
   isMobileView: boolean = false;
   companyOpeningHours: OpeningHours | null = null;
   
-  // Focused day state
-  focusedDayIndex: number | null = null;
+  // Focused day state (max 2 open day columns)
+  focusedDayIndices: number[] = [];
 
   @HostListener('window:resize')
   onResize() {
     this.isMobileView = window.innerWidth <= 480;
+    this.syncMobileSelectedStaffSelection();
   }
 
   // Staff color mapping
@@ -756,6 +759,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     
     // Set default focused day
     this.setDefaultFocusedDay(todayIndex);
+    this.setDefaultMobileDay(todayIndex);
   }
 
   /**
@@ -765,11 +769,27 @@ export class CalendarComponent implements OnInit, OnDestroy {
    */
   private setDefaultFocusedDay(todayIndex: number | null): void {
     if (todayIndex !== null && !this.weekDays[todayIndex]?.isClosed) {
-      this.focusedDayIndex = todayIndex;
+      this.focusedDayIndices = [todayIndex];
     } else {
       // Keressük meg az első nyitott napot
       const firstOpenDay = this.weekDays.findIndex(day => !day.isClosed);
-      this.focusedDayIndex = firstOpenDay !== -1 ? firstOpenDay : null;
+      this.focusedDayIndices = firstOpenDay !== -1 ? [firstOpenDay] : [];
+    }
+  }
+
+  private setDefaultMobileDay(todayIndex: number | null): void {
+    if (todayIndex !== null && !this.weekDays[todayIndex]?.isClosed) {
+      this.currentMobileDayIndex = todayIndex;
+      if (this.isMobileView) {
+        this.focusedDayIndices = [todayIndex];
+      }
+      return;
+    }
+
+    const firstOpenDay = this.weekDays.findIndex(day => !day.isClosed);
+    this.currentMobileDayIndex = firstOpenDay !== -1 ? firstOpenDay : 0;
+    if (this.isMobileView && this.weekDays[this.currentMobileDayIndex] && !this.weekDays[this.currentMobileDayIndex].isClosed) {
+      this.focusedDayIndices = [this.currentMobileDayIndex];
     }
   }
 
@@ -827,12 +847,14 @@ export class CalendarComponent implements OnInit, OnDestroy {
   previousMobileDay(): void {
     if (this.currentMobileDayIndex > 0) {
       this.currentMobileDayIndex--;
+      this.ensureMobileDayFocused();
     }
   }
 
   nextMobileDay(): void {
     if (this.currentMobileDayIndex < 6) {
       this.currentMobileDayIndex++;
+      this.ensureMobileDayFocused();
     }
   }
 
@@ -845,7 +867,22 @@ export class CalendarComponent implements OnInit, OnDestroy {
   }
 
   setMobileDay(index: number): void {
+    const day = this.weekDays[index];
+    if (!day || day.isClosed) {
+      return;
+    }
     this.currentMobileDayIndex = index;
+    this.ensureMobileDayFocused();
+  }
+
+  getMobileWeekDotLabel(day: WeekDay): string {
+    if (day.dayIndex === 2) {
+      return 'SZ';
+    }
+    if (day.dayIndex === 3) {
+      return 'CS';
+    }
+    return day.name.charAt(0).toUpperCase();
   }
 
   getWeekDateRange(): string {
@@ -892,6 +929,58 @@ export class CalendarComponent implements OnInit, OnDestroy {
       this.selectedStaffIds.push(staffId);
     }
     this.selectedAppointment = null;
+    this.syncMobileSelectedStaffSelection();
+  }
+
+  onMobileStaffSelectionChange(event: Event): void {
+    const selectElement = event.target as HTMLSelectElement;
+    const staffId = Number(selectElement.value);
+
+    this.mobileSelectedStaffId = staffId;
+    this.selectedStaffIds = staffId === 0 ? [] : [staffId];
+    this.selectedAppointment = null;
+  }
+
+  getMobileSelectedStaffColor(): string {
+    if (this.mobileSelectedStaffId === 0) {
+      return '#64748b';
+    }
+
+    return this.staffMembers.find(staff => staff.id === this.mobileSelectedStaffId)?.color || '#64748b';
+  }
+
+  private syncMobileSelectedStaffSelection(): void {
+    this.mobileSelectedStaffId = this.selectedStaffIds.length === 1 ? this.selectedStaffIds[0] : 0;
+  }
+
+  onStaffColorChanged(event: { staffId: number; color: string }): void {
+    const { staffId, color } = event;
+
+    this.staffMembers = this.staffMembers.map(staff =>
+      staff.id === staffId ? { ...staff, color } : staff
+    );
+
+    this.staffColors = {
+      ...this.staffColors,
+      [staffId]: color
+    };
+
+    this.allAppointments = this.allAppointments.map(appointment =>
+      appointment.staffId === staffId ? { ...appointment, color } : appointment
+    );
+
+    if (this.selectedAppointment && this.selectedAppointment.staffId === staffId) {
+      this.selectedAppointment = {
+        ...this.selectedAppointment,
+        color
+      };
+    }
+
+    this.persistStaffColor(staffId, color);
+  }
+
+  private persistStaffColor(staffId: number, color: string): void {
+    console.info('Staff color saved locally', { staffId, color });
   }
 
   getShortName(fullName: string): string {
@@ -954,7 +1043,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
       const columnIndex = allAppointments.findIndex(a => a.id === appointment.id);
       
       // Zárt napokon: 18px széles csíkok
-      const stripWidth = 18;
+      const stripWidth = 12;
       const spacing = 1; // Pixel távolság a csíkok között
       const totalWidth = totalColumns * stripWidth + (totalColumns - 1) * spacing;
       const startOffset = `calc(50% - ${totalWidth / 2}px)`;
@@ -965,8 +1054,9 @@ export class CalendarComponent implements OnInit, OnDestroy {
     }
     // Zárt nap, nincs overlap - középre igazított egyetlen vastagabb csík
     else if (isClosed) {
-      width = '18px';
-      left = 'calc(50% - 9px)';
+    const stripWidth = 12;
+    width = `${stripWidth}px`;
+    left = `calc(50% - ${stripWidth / 2}px)`;
     }
     // Unfocused napok - vékony csíkok egymás mellett
     else if (isUnfocused && overlapping.length > 0) {
@@ -983,7 +1073,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
       const columnIndex = allAppointments.findIndex(a => a.id === appointment.id);
       
       // Ha unfocused: 14px széles csíkok, egymás mellett
-      const stripWidth = 14;
+      const stripWidth = 10;
       const spacing = 1; // Pixel távolság a csíkok között
       const totalWidth = totalColumns * stripWidth + (totalColumns - 1) * spacing;
       const startOffset = `calc(50% - ${totalWidth / 2}px)`;
@@ -1014,8 +1104,8 @@ export class CalendarComponent implements OnInit, OnDestroy {
     }
     // Unfocused, nincs overlap - középre igazított egyetlen csík
     else if (isUnfocused) {
-      width = '14px';
-      left = 'calc(50% - 7px)';
+    width = '10px';
+    left = 'calc(50% - 5px)';
     }
 
     // Convert hex to RGBA
@@ -1094,13 +1184,43 @@ export class CalendarComponent implements OnInit, OnDestroy {
     if (!day || day.isClosed) {
       return; // Zárt napokra nem lehet fókuszálni
     }
-    this.focusedDayIndex = dayIndex;
+
+    const existingIndex = this.focusedDayIndices.indexOf(dayIndex);
+
+    if (existingIndex > -1) {
+      if (this.focusedDayIndices.length > 1) {
+        this.focusedDayIndices.splice(existingIndex, 1);
+      }
+      return;
+    }
+
+    if (this.focusedDayIndices.length >= 2) {
+      this.focusedDayIndices.shift();
+    }
+
+    this.focusedDayIndices.push(dayIndex);
+  }
+
+  private ensureMobileDayFocused(): void {
+    if (!this.isMobileView) {
+      return;
+    }
+
+    const day = this.weekDays[this.currentMobileDayIndex];
+    if (!day || day.isClosed) {
+      return;
+    }
+
+    this.focusedDayIndices = [this.currentMobileDayIndex];
   }
 
   /**
    * Ellenőrzi, hogy egy nap fókuszban van-e
    */
   isFocused(dayIndex: number): boolean {
-    return this.focusedDayIndex === dayIndex;
+    if (this.isMobileView) {
+      return dayIndex === this.currentMobileDayIndex;
+    }
+    return this.focusedDayIndices.includes(dayIndex);
   }
 }

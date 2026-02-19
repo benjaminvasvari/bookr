@@ -4,53 +4,36 @@
 			<h1>Értékesítés</h1>
 			<p class="subtitle">Bevételek, tranzakciók és teljesítmény áttekintése.</p>
 		</div>
-		<div class="actions">
-			<button class="btn ghost">Szűrés</button>
-			<button class="btn primary">Riport letöltése</button>
-		</div>
 	</header>
 
 	<div class="sales-filters">
 		<div class="date-range">
-			<button class="range-btn active">Heti</button>
-			<button class="range-btn">Havi</button>
-			<button class="range-btn">Éves</button>
-		</div>
-		<div class="filter-group">
-			<select class="filter-select">
-				<option>Összes telephely</option>
-				<option>Belváros</option>
-				<option>Újbuda</option>
-			</select>
-			<select class="filter-select">
-				<option>Összes szolgáltatás</option>
-				<option>Fodrászat</option>
-				<option>Barber</option>
-				<option>Masszázs</option>
-			</select>
+			<button class="range-btn" [class.active]="selectedPeriod === 'weekly'" (click)="selectPeriod('weekly')">Heti</button>
+			<button class="range-btn" [class.active]="selectedPeriod === 'monthly'" (click)="selectPeriod('monthly')">Havi</button>
+			<button class="range-btn" [class.active]="selectedPeriod === 'yearly'" (click)="selectPeriod('yearly')">Éves</button>
 		</div>
 	</div>
 
 	<div class="sales-kpis">
 		<article class="kpi-card">
 			<p class="kpi-label">Összbevétel</p>
-			<p class="kpi-value">2 480 000 Ft</p>
-			<p class="kpi-trend positive">+12% az előző időszakhoz képest</p>
+			<p class="kpi-value">{{ current.kpi.totalRevenue }}</p>
+			<p class="kpi-trend" [class]="current.kpi.totalRevenueTrendClass">{{ current.kpi.totalRevenueTrend }}</p>
 		</article>
 		<article class="kpi-card">
 			<p class="kpi-label">Átlagos kosárérték</p>
-			<p class="kpi-value">12 400 Ft</p>
-			<p class="kpi-trend">Stabil</p>
+			<p class="kpi-value">{{ current.kpi.avgBasket }}</p>
+			<p class="kpi-trend" [class]="current.kpi.avgBasketTrendClass">{{ current.kpi.avgBasketTrend }}</p>
 		</article>
 		<article class="kpi-card">
-			<p class="kpi-label">Foglalások száma</p>
-			<p class="kpi-value">198</p>
-			<p class="kpi-trend positive">+8 új foglalás</p>
+			<p class="kpi-label">Leadott foglalások</p>
+			<p class="kpi-value">{{ current.kpi.bookings }}</p>
+			<p class="kpi-trend" [class]="current.kpi.bookingsTrendClass">{{ current.kpi.bookingsTrend }}</p>
 		</article>
 		<article class="kpi-card">
 			<p class="kpi-label">Visszatérő ügyfelek</p>
-			<p class="kpi-value">42%</p>
-			<p class="kpi-trend">+3% növekedés</p>
+			<p class="kpi-value">{{ current.kpi.returningClients }}</p>
+			<p class="kpi-trend" [class]="current.kpi.returningTrendClass">{{ current.kpi.returningTrend }}</p>
 		</article>
 	</div>
 
@@ -58,128 +41,35 @@
 		<article class="panel chart-panel">
 			<header class="panel-header">
 				<h2>Bevétel alakulása</h2>
-				<span class="panel-pill">Utolsó 7 nap</span>
+				<span class="panel-pill">{{ periodLabel }}</span>
 			</header>
 			<div class="chart-placeholder">
-				<div class="chart-bars">
-					<span style="height: 40%"></span>
-					<span style="height: 60%"></span>
-					<span style="height: 55%"></span>
-					<span style="height: 80%"></span>
-					<span style="height: 65%"></span>
-					<span style="height: 75%"></span>
-					<span style="height: 90%"></span>
+				<div class="chart-bars" [class]="'bars-' + current.bars.length">
+					<div class="bar-col" *ngFor="let bar of current.bars">
+						<span class="bar-fill" [style.height.%]="bar.height">
+							<span class="bar-value">{{ bar.value }}</span>
+						</span>
+						<span class="bar-label">{{ bar.label }}</span>
+					</div>
 				</div>
-				<p class="chart-caption">Összes bevétel a kiválasztott időszakban.</p>
+				<p class="chart-caption">{{ current.chartCaption }}</p>
 			</div>
 		</article>
 
 		<article class="panel summary-panel">
 			<header class="panel-header">
 				<h2>Kiemelt szolgáltatások</h2>
-				<button class="link-btn">Részletek</button>
 			</header>
 			<ul class="summary-list">
-				<li>
+				<li *ngFor="let svc of current.services">
 					<div>
-						<strong>Hajvágás</strong>
-						<span class="muted">32 foglalás</span>
+						<strong>{{ svc.name }}</strong>
+						<span class="muted">{{ svc.bookings }} foglalás</span>
 					</div>
-					<span class="badge">680 000 Ft</span>
-				</li>
-				<li>
-					<div>
-						<strong>Relax masszázs</strong>
-						<span class="muted">18 foglalás</span>
-					</div>
-					<span class="badge">420 000 Ft</span>
-				</li>
-				<li>
-					<div>
-						<strong>Szakáll igazítás</strong>
-						<span class="muted">24 foglalás</span>
-					</div>
-					<span class="badge">310 000 Ft</span>
+					<span class="badge">{{ svc.revenue }}</span>
 				</li>
 			</ul>
 		</article>
 
-		<article class="panel">
-			<header class="panel-header">
-				<h2>Napi bevétel bontás</h2>
-				<button class="link-btn">Részletek</button>
-			</header>
-			<div class="daily-breakdown">
-				<div class="breakdown-row">
-					<span>Hétfő</span>
-					<div class="progress">
-						<span style="width: 65%"></span>
-					</div>
-					<strong>320 000 Ft</strong>
-				</div>
-				<div class="breakdown-row">
-					<span>Kedd</span>
-					<div class="progress">
-						<span style="width: 48%"></span>
-					</div>
-					<strong>240 000 Ft</strong>
-				</div>
-				<div class="breakdown-row">
-					<span>Szerda</span>
-					<div class="progress">
-						<span style="width: 72%"></span>
-					</div>
-					<strong>380 000 Ft</strong>
-				</div>
-				<div class="breakdown-row">
-					<span>Csütörtök</span>
-					<div class="progress">
-						<span style="width: 58%"></span>
-					</div>
-					<strong>290 000 Ft</strong>
-				</div>
-			</div>
-		</article>
-
-		<article class="panel">
-			<header class="panel-header">
-				<h2>Legutóbbi tranzakciók</h2>
-				<button class="link-btn">Összes</button>
-			</header>
-			<table class="sales-table">
-				<thead>
-					<tr>
-						<th>Dátum</th>
-						<th>Ügyfél</th>
-						<th>Szolgáltatás</th>
-						<th>Összeg</th>
-						<th>Státusz</th>
-					</tr>
-				</thead>
-				<tbody>
-					<tr>
-						<td>2026.02.01</td>
-						<td>Kiss Anna</td>
-						<td>Hajvágás</td>
-						<td>8 500 Ft</td>
-						<td><span class="status-pill online">Sikeres</span></td>
-					</tr>
-					<tr>
-						<td>2026.01.31</td>
-						<td>Gábor Máté</td>
-						<td>Relax masszázs</td>
-						<td>14 000 Ft</td>
-						<td><span class="status-pill online">Sikeres</span></td>
-					</tr>
-					<tr>
-						<td>2026.01.31</td>
-						<td>Szabó Petra</td>
-						<td>Festés</td>
-						<td>18 000 Ft</td>
-						<td><span class="status-pill busy">Visszatérítés</span></td>
-					</tr>
-				</tbody>
-			</table>
-		</article>
 	</section>
 </section>
