@@ -328,7 +328,7 @@ public class UsersService {
 
                 clientsJSONArray.put(actualClientObject);
             }
-            resultObj.put("result", clientsJSONArray);
+            resultObj.put("clients", clientsJSONArray);
             resultObj.put("totalClients", modelResult.getTotalClients());
 
             toReturn.put("result", resultObj);

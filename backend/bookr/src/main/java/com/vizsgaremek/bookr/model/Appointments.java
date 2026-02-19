@@ -950,8 +950,6 @@ public class Appointments implements Serializable {
 
     public static ArrayList<UpcomingAppointmentsDTO> getDashboardUpcomingAppointments(Integer companyId, Integer limit) {
         EntityManager em = emf.createEntityManager();
-        DateTimeFormatter fullDateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        DateTimeFormatter dateOnlyFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
         try {
             StoredProcedureQuery spq = em.createStoredProcedureQuery("getDashboardUpcomingAppointments");
@@ -969,8 +967,8 @@ public class Appointments implements Serializable {
             for (Object[] record : resultList) {
                 UpcomingAppointmentsDTO a = new UpcomingAppointmentsDTO(
                         Integer.valueOf(record[0].toString()),
-                        LocalDateTime.parse(record[1].toString(), fullDateTimeFormatter),
-                        LocalDateTime.parse(record[2].toString(), fullDateTimeFormatter),
+                        record[1].toString(),
+                        record[2].toString(),
                         record[3].toString(),
                         record[4].toString(),
                         record[5].toString(),

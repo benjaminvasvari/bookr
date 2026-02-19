@@ -63,14 +63,14 @@ public class OwnerPanelDTO {
     public static class UpcomingAppointmentsDTO {
 
         private Integer appointmentId;
-        private LocalDateTime startTime;
-        private LocalDateTime endTime;
+        private String startTime;
+        private String endTime;
         private String status;
         private String serviceName;
         private String clientName;
         private String relativeDate;
 
-        public UpcomingAppointmentsDTO(Integer appointmentId, LocalDateTime startTime, LocalDateTime endTime, String status, String serviceName, String clientName, String relativeDate) {
+        public UpcomingAppointmentsDTO(Integer appointmentId, String startTime, String endTime, String status, String serviceName, String clientName, String relativeDate) {
             this.appointmentId = appointmentId;
             this.startTime = startTime;
             this.endTime = endTime;
@@ -84,11 +84,11 @@ public class OwnerPanelDTO {
             return appointmentId;
         }
 
-        public LocalDateTime getStartTime() {
+        public String getStartTime() {
             return startTime;
         }
 
-        public LocalDateTime getEndTime() {
+        public String getEndTime() {
             return endTime;
         }
 
