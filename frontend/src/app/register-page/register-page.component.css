@@ -36,6 +36,7 @@
 .register-title {
   font-size: 3rem;
   font-weight: 700;
+  margin-top: 0;
   margin-bottom: 1rem;
   color: white;
   letter-spacing: 2px;
@@ -399,12 +400,107 @@
   cursor: pointer;
   text-decoration: none;
   transition: color 0.3s ease;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+  padding: 0.45rem 0.95rem;
+  margin-top: 0.2rem;
 }
 
 .login-link:hover {
   color: var(--dark-green-color, #38a179);
-  text-decoration: underline;
+  border-color: var(--dark-green-color, #38a179);
+  background: rgba(56, 161, 121, 0.12);
+  text-decoration: none;
+}
+
+.wizard-header {
+  width: 100%;
+  max-width: 500px;
+  margin-bottom: 0.9rem;
+}
+
+.wizard-header .register-title {
+  margin-bottom: 0.72rem;
+}
+
+.wizard-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-bottom: 0.45rem;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.wizard-back-link {
+  border: none;
+  background: transparent;
+  color: #7fd8ad;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+
+.wizard-progress {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 0.15rem;
+  margin-bottom: 1rem;
+}
+
+.wizard-progress span {
+  display: block;
+  height: 100%;
+  background: #5ec89c;
+  border-radius: 999px;
+  transition: width 0.25s ease;
+}
+
+.wizard-form {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 0.96rem;
+  flex: 1;
+  min-height: 0;
+}
+
+.wizard-actions {
+  width: 100%;
+  margin-top: 0.45rem;
+}
+
+.wizard-step-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.74rem;
+}
+
+.wizard-bottom {
+  margin-top: auto;
+  width: 100%;
+  padding-top: 0.9rem;
+  padding-bottom: 0.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.48rem;
+}
+
+.wizard-bottom .wizard-actions {
+  margin-top: 0;
+}
+
+.wizard-bottom .btn-submit {
+  margin-top: 0;
 }
 
 /* IMAGE SECTION */
@@ -428,8 +524,25 @@
 
 /* RESPONSIVE DESIGN */
 @media (max-width: 992px) {
+  :host {
+    height: 100dvh;
+    min-height: 100dvh;
+  }
+
+  .register-container {
+    height: 100dvh;
+    min-height: 100dvh;
+    overflow: hidden;
+    align-items: flex-start;
+  }
+
   .register-content {
     grid-template-columns: 1fr;
+    height: 100dvh;
+    max-height: 100dvh;
+    padding-top: 102px;
+    box-sizing: border-box;
+    overflow: hidden;
   }
 
   .image-wrapper {
@@ -437,70 +550,342 @@
   }
 
   .register-form-wrapper {
-    padding: 2rem;
+    padding: 1.05rem 0.95rem 0.2rem;
+    justify-content: flex-start;
+    margin-top: 0;
+    min-height: calc(100dvh - 102px);
+    height: calc(100dvh - 102px);
+    overflow-y: hidden;
+    overflow-x: hidden;
   }
 
   .register-title {
-    font-size: 2.5rem;
-    margin-bottom: 1rem;
+    font-size: 1.9rem;
+    margin-bottom: 0.5rem;
+    letter-spacing: 1px;
+    text-align: center;
   }
 
   .register-subtitle {
-    margin-bottom: 2rem;
+    font-size: 0.88rem;
+    margin-bottom: 0.85rem;
+    text-align: center;
   }
 
   .register-form {
-    max-width: 400px;
-  }
-}
-
-@media (max-width: 576px) {
-  .register-form-wrapper {
-    padding: 1.5rem;
+    max-width: 500px;
+    width: 100%;
+    gap: 0.34rem;
+    margin-top: 0.45rem;
   }
 
-  .register-title {
-    font-size: 2rem;
-    margin-bottom: 1rem;
+  .register-form.wizard-form {
+    min-height: 0;
+    height: 100%;
+    gap: 0.9rem;
+    margin-top: 0;
   }
 
-  .register-subtitle {
-    font-size: 0.9rem;
-    margin-bottom: 1.5rem;
+  .wizard-shell {
+    width: 100%;
+    max-width: 500px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    margin: 0 auto;
   }
 
-  .register-form {
-    gap: 0.3rem;
+  .wizard-main {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow-y: auto;
+    padding-bottom: 6px;
+  }
+
+  .wizard-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 14px;
+  }
+
+  .wizard-header {
+    margin-bottom: 0.78rem;
+  }
+
+  .wizard-header .register-title {
+    margin-bottom: 0.62rem;
+  }
+
+  .wizard-meta {
+    font-size: 0.78rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .wizard-back-link {
+    font-size: 0.76rem;
+  }
+
+  .wizard-progress {
+    height: 6px;
+    margin-bottom: 0.92rem;
+  }
+
+  .wizard-bottom {
+    padding-top: 0.8rem;
+    gap: 0.42rem;
   }
 
   .input-group {
-    margin-bottom: 0.3rem;
+    margin-bottom: 0.26rem;
+  }
+
+  .wizard-form .input-group {
+    margin-bottom: 0;
+    width: 95%;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .wizard-step-group {
+    width: 95%;
+    margin-left: auto;
+    margin-right: auto;
   }
 
   .input-group input {
-    padding: 1.25rem 3rem 0.5rem 3rem;
-    font-size: 0.95rem;
+    padding: 1.02rem 2.85rem 0.62rem 2.85rem;
+    font-size: 0.9rem;
+    line-height: 1.25;
   }
 
   .input-group label {
-    font-size: 0.95rem;
+    left: 2.85rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.84rem;
   }
 
   .input-group input:focus + label,
   .input-group input:not(:placeholder-shown) + label {
-    font-size: 0.7rem;
+    left: 2.45rem;
+    top: 0.26rem;
+    transform: translateY(0);
+    font-size: 0.64rem;
+  }
+
+  .input-icon {
+    left: 0.92rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.92rem;
+  }
+
+  .toggle-password {
+    right: 0.72rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.9rem;
+    padding: 0.24rem;
+  }
+
+  .password-strength {
+    gap: 8px;
+    margin-top: 4px;
+    margin-bottom: 4px;
+    padding: 0 0.8rem;
+  }
+
+  .strength-label {
+    font-size: 0.68rem;
+    min-width: 78px;
+  }
+
+  .validation-error-message,
+  .success-message,
+  .backend-error-message {
+    font-size: 0.8rem;
+    padding: 0.68rem;
+    margin-bottom: 0.5rem;
+    gap: 0.45rem;
+  }
+
+  .validation-error-message .error-item {
+    font-size: 0.76rem;
   }
 
   .btn-submit {
-    padding: 0.875rem;
-    font-size: 1rem;
+    padding: 0.62rem;
+    font-size: 0.82rem;
+    letter-spacing: 1px;
+    margin-top: 0.35rem;
+  }
+
+  .divider {
+    width: 90%;
+    margin: 0.85rem auto 0.65rem;
+  }
+
+  .wizard-bottom .divider {
+    margin: 0.46rem auto 0.5rem;
+  }
+
+  .login-section {
+    text-align: center;
+    margin-bottom: 0;
+  }
+
+  .login-text,
+  .login-link {
+    font-size: 0.84rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .register-content {
+    padding-top: 106px;
+  }
+
+  .register-form-wrapper {
+    padding: 0.88rem 0.55rem 0.14rem;
+    min-height: calc(100dvh - 106px);
+    height: calc(100dvh - 106px);
+  }
+
+  .register-title {
+    font-size: 1.72rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .register-subtitle {
+    font-size: 0.82rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .wizard-header {
+    margin-bottom: 0.68rem;
+  }
+
+  .wizard-header .register-title {
+    margin-bottom: 0.56rem;
+  }
+
+  .wizard-meta {
+    font-size: 0.74rem;
+    margin-bottom: 0.42rem;
+  }
+  .wizard-progress {
+    height: 6px;
+    margin-bottom: 0.8rem;
+  }
+
+  .wizard-bottom {
+    padding-top: 0.72rem;
+    gap: 0.38rem;
+  }
+
+
+  .wizard-back-link {
+    font-size: 0.72rem;
+  }
+
+  .register-form {
+    gap: 0.3rem;
+    margin-top: 0.3rem;
+  }
+
+  .register-form.wizard-form {
+    min-height: 0;
+    height: 100%;
+    gap: 0.82rem;
+    margin-top: 0;
+  }
+
+  .input-group {
+    margin-bottom: 0.24rem;
+  }
+
+  .wizard-step-group {
+    gap: 0.66rem;
+    width: 93%;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .wizard-form .input-group {
+    width: 93%;
+  }
+
+  .input-group input {
+    padding: 0.96rem 2.55rem 0.56rem 2.55rem;
+    font-size: 0.84rem;
+    line-height: 1.25;
+  }
+
+  .input-group label {
+    font-size: 0.8rem;
+    left: 2.55rem;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .input-group input:focus + label,
+  .input-group input:not(:placeholder-shown) + label {
+    font-size: 0.6rem;
+    left: 2.24rem;
+    top: 0.24rem;
+    transform: translateY(0);
+  }
+
+  .input-icon {
+    left: 0.8rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.86rem;
+  }
+
+  .toggle-password {
+    right: 0.62rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.84rem;
+    padding: 0.2rem;
+  }
+
+  .btn-submit {
+    padding: 0.58rem;
+    font-size: 0.78rem;
+    margin-top: 0.4rem;
   }
 
   .success-message,
   .backend-error-message,
   .validation-error-message {
-    font-size: 0.85rem;
-    padding: 0.875rem;
+    font-size: 0.74rem;
+    padding: 0.58rem;
+    margin-bottom: 0.32rem;
+  }
+
+  .divider {
+    width: 88%;
+    margin: 0.86rem auto 0.6rem;
+  }
+
+  .wizard-bottom .divider {
+    margin: 0.4rem auto 0.42rem;
+  }
+
+  .login-text,
+  .login-link {
+    font-size: 0.78rem;
+  }
+
+  .login-link {
+    padding: 0.32rem 0.68rem;
+    margin-top: 0.16rem;
   }
 }
 

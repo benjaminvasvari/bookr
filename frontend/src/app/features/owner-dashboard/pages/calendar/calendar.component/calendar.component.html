@@ -136,7 +136,9 @@
 								[title]="apt.startTime + ' • ' + apt.title + ' • ' + apt.clientName"
 							>
 								<div class="apt-time">{{ apt.startTime }}</div>
-								<div class="apt-service">{{ apt.title }}</div>
+								@if (shouldShowService(apt, dayIndex)) {
+									<div class="apt-service">{{ apt.title }}</div>
+								}
 							</div>
 						}
 					</div>

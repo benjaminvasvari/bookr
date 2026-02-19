@@ -1,3 +1,4 @@
+
 <header class="dashboard-header">
 	<div>
 		<h1>Owner Dashboard</h1>
@@ -29,7 +30,14 @@
 	</div>
 	<div class="kpi-card">
 		<p class="kpi-label">Értékelések</p>
-		<p class="kpi-value">{{ averageRating }}</p>
+		<div class="rating-row">
+			<p class="kpi-value">{{ averageRating }}</p>
+			<div class="stars">
+				<span *ngFor="let star of starArray" class="star" [class.star-full]="star === 'full'" [class.star-half]="star === 'half'" [class.star-empty]="star === 'empty'">
+					<span class="star-icon">★</span>
+				</span>
+			</div>
+		</div>
 		<p class="kpi-trend">{{ totalReviews }} értékelés</p>
 	</div>
 </section>

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, HostListener, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormBuilder,
@@ -31,6 +31,9 @@ export class RegisterComponent implements OnInit, OnDestroy {
   isLoading = false;
   errorMessage = '';
   successMessage = '';
+  isMobileWizard = false;
+  currentStep = 0;
+  readonly totalSteps = 4;
 
   // Password visibility toggles
   showPassword = false;
@@ -63,10 +66,61 @@ export class RegisterComponent implements OnInit, OnDestroy {
       this.passwordStrengthLabel = getPasswordStrengthLabel(this.passwordStrength);
       this.passwordStrengthColor = getPasswordStrengthColor(this.passwordStrength);
     });
+
+    this.updateMobileWizardMode();
   }
 
   ngOnDestroy(): void {
     // Cleanup
+  }
+
+  @HostListener('window:resize')
+  onWindowResize(): void {
+    this.updateMobileWizardMode();
+  }
+
+  get stepProgress(): number {
+    return ((this.currentStep + 1) / this.totalSteps) * 100;
+  }
+
+  prevStep(): void {
+    if (this.currentStep > 0) {
+      this.currentStep--;
+    }
+  }
+
+  nextStep(): void {
+    if (!this.canProceedStep()) {
+      this.markCurrentStepTouched();
+      return;
+    }
+
+    if (this.currentStep < this.totalSteps - 1) {
+      this.currentStep++;
+      return;
+    }
+
+    this.onSubmit();
+  }
+
+  canProceedStep(): boolean {
+    const stepControlMap = [
+      ['lastName', 'firstName'],
+      ['email'],
+      ['phone'],
+    ] as const;
+
+    if (this.currentStep < stepControlMap.length) {
+      const controls = stepControlMap[this.currentStep];
+      return controls.every((controlName) => {
+        const control = this.registerForm.get(controlName);
+        return !!control && control.valid;
+      });
+    }
+
+    const passwordControl = this.registerForm.get('password');
+    const confirmControl = this.registerForm.get('confirmPassword');
+    return !!passwordControl && !!confirmControl && passwordControl.valid && confirmControl.valid && !this.registerForm.hasError('passwordMismatch');
   }
 
   togglePasswordVisibility(): void {
@@ -143,5 +197,32 @@ export class RegisterComponent implements OnInit, OnDestroy {
         console.error('Registration error:', error);
       },
     });
+  }
+
+  private markCurrentStepTouched(): void {
+    const stepControlMap = [
+      ['lastName', 'firstName'],
+      ['email'],
+      ['phone'],
+    ] as const;
+
+    if (this.currentStep < stepControlMap.length) {
+      stepControlMap[this.currentStep].forEach((controlName) => {
+        this.registerForm.get(controlName)?.markAsTouched();
+      });
+      return;
+    }
+
+    this.registerForm.get('password')?.markAsTouched();
+    this.registerForm.get('confirmPassword')?.markAsTouched();
+  }
+
+  private updateMobileWizardMode(): void {
+    if (typeof window === 'undefined') {
+      this.isMobileWizard = false;
+      return;
+    }
+
+    this.isMobileWizard = window.innerWidth <= 768;
   }
 }

@@ -221,16 +221,48 @@
 
 .chart-bars {
 	display: grid;
-	grid-template-columns: repeat(7, 1fr);
-	gap: 10px;
-	height: 160px;
+	grid-template-columns: repeat(var(--bar-count, 7), minmax(0, 1fr));
+	gap: 8px;
+	height: 200px;
 	align-items: end;
 }
 
-.chart-bars span {
-	display: block;
+.bar-col {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: flex-end;
+	height: 100%;
+	gap: 4px;
+}
+
+.bar-fill {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
 	background: linear-gradient(180deg, #38a179, #2f8d66);
-	border-radius: 8px 8px 4px 4px;
+	border-radius: 6px 6px 3px 3px;
+	min-height: 4px;
+	overflow: visible;
+	position: relative;
+}
+
+.bar-label {
+	font-size: 10px;
+	color: #6b7280;
+	white-space: nowrap;
+}
+
+.bar-value {
+	font-size: 22px;
+	font-weight: 700;
+	color: #ffffff;
+	text-shadow: 0 1px 4px rgba(0,0,0,0.45);
+	white-space: nowrap;
+	pointer-events: none;
+	position: relative;
+	z-index: 1;
 }
 
 .chart-caption {

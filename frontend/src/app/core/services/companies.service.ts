@@ -95,7 +95,16 @@ export class CompaniesService {
   getBusinessCategories(): Observable<BusinessCategory[]> {
     return this.http
       .get<any>(`${this.apiUrl}${API_ENDPOINTS.COMPANIES.BUSINESS_CATEGORIES}`)
-      .pipe(map((response: any) => response.data || []));
+      .pipe(
+        map((response: any) => response.result || []),
+        map((categories: any[]) =>
+          categories.map((category) => ({
+            id: category.categoryId,
+            name: category.name,
+            description: category.description,
+          }))
+        )
+      );
   }
 
   /**

@@ -228,7 +228,7 @@
 }
 
 .time-header {
-	height: 60px;
+	height: 78px;
 	border-bottom: 1px solid #e5e7eb;
 	flex-shrink: 0;
 	background: #fafbfc;
@@ -343,11 +343,12 @@
 
 /* Day Header - Sticky top with modern styling */
 .day-header {
-	height: 60px;
+	height: 78px;
+	min-height: 78px;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	justify-content: flex-start;
+	justify-content: center;
 	border-bottom: 2px solid #e5e7eb;
 	background: #ffffff;
 	padding: 4px 8px 6px;
@@ -390,6 +391,7 @@
 .day-name {
 	font-size: 10px;
 	font-weight: 700;
+	line-height: 1.1;
 	color: #6b7280;
 	text-transform: uppercase;
 	letter-spacing: 0.8px;
@@ -438,8 +440,8 @@
 .day-date {
 	font-size: 20px;
 	font-weight: 700;
+	line-height: 1.05;
 	color: #111827;
-	line-height: 1;
 }
 
 /* Today indicator - no special styling, just color change */
@@ -450,6 +452,7 @@
 
 .day-hours {
 	font-size: 9px;
+	line-height: 1.1;
 	color: #9ca3af;
 	font-weight: 500;
 	text-align: center;
@@ -494,7 +497,8 @@
 /* Unfocused fejléc kicsinyítése */
 .day-column.day-unfocused .day-header {
 	padding: 4px 4px 6px;
-	min-height: 60px;
+	height: 78px;
+	min-height: 78px;
 }
 
 /* A dátum szám kisebben marad látható */

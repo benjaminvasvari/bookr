@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -22,8 +22,11 @@ interface Review {
   templateUrl: './main-page.component.html',
   styleUrls: ['./main-page.component.css'],
 })
-export class MainPageComponent implements OnInit {
+export class MainPageComponent implements OnInit, AfterViewInit {
+  @ViewChild('reviewsCarousel') reviewsCarousel?: ElementRef<HTMLDivElement>;
+
   searchQuery: string = '';
+  activeReviewIndex = 0;
 
   // Company lists
   topRecommendations: Company[] = [];
@@ -83,6 +86,10 @@ export class MainPageComponent implements OnInit {
     this.loadFeaturedServices();
         this.title.setTitle(`Bookr`);
 
+  }
+
+  ngAfterViewInit(): void {
+    this.onReviewsScroll();
   }
 
   loadTopRecommendations(): void {
@@ -171,5 +178,47 @@ export class MainPageComponent implements OnInit {
 
   learnMore(): void {
     this.router.navigate(['/learnmore']);
+  }
+
+  scrollReviews(direction: 'left' | 'right'): void {
+    const carouselElement = this.reviewsCarousel?.nativeElement;
+    if (!carouselElement) {
+      return;
+    }
+
+    const scrollAmount = Math.max(280, carouselElement.clientWidth * 0.85);
+    carouselElement.scrollBy({
+      left: direction === 'left' ? -scrollAmount : scrollAmount,
+      behavior: 'smooth',
+    });
+  }
+
+  scrollToReview(index: number): void {
+    const carouselElement = this.reviewsCarousel?.nativeElement;
+    if (!carouselElement) {
+      return;
+    }
+
+    const reviewElement = carouselElement.children.item(index) as HTMLElement | null;
+    if (!reviewElement) {
+      return;
+    }
+
+    carouselElement.scrollTo({
+      left: reviewElement.offsetLeft,
+      behavior: 'smooth',
+    });
+    this.activeReviewIndex = index;
+  }
+
+  onReviewsScroll(): void {
+    const carouselElement = this.reviewsCarousel?.nativeElement;
+    if (!carouselElement || carouselElement.children.length === 0) {
+      return;
+    }
+
+    const cardWidth = (carouselElement.children.item(0) as HTMLElement).offsetWidth + 16;
+    const nextIndex = Math.round(carouselElement.scrollLeft / Math.max(cardWidth, 1));
+    this.activeReviewIndex = Math.max(0, Math.min(this.reviews.length - 1, nextIndex));
   }
 }

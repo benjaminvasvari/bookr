@@ -27,35 +27,41 @@
 		<div class="services-state error">{{ errorMessage }}</div>
 	}
 
-	<section class="services-grid">
-		@for (service of filteredServices; track service.id) {
-			<article class="service-card">
-				<div class="service-header">
-					<div>
-						<h3>{{ service.name }}</h3>
-						<p class="muted">{{ service.category }} · {{ service.duration }} perc</p>
-					</div>
-					<span class="status-pill" [class.online]="service.status === 'active'" [class.busy]="service.status === 'inactive'">
-						{{ service.status === 'active' ? 'Aktív' : 'Szünetel' }}
-					</span>
+	<div class="service-groups">
+		@for (group of serviceGroups; track group.category) {
+			<section class="category-section">
+				<h2 class="category-title">{{ group.category }}</h2>
+				<div class="services-grid">
+					@for (service of group.services; track service.id) {
+						<article class="service-card">
+							<div class="service-header">
+								<div>
+									<h3>{{ service.name }}</h3>
+									<p class="muted">{{ service.duration }}</p>
+								</div>
+								<span class="status-pill" [class.online]="service.status === 'active'" [class.busy]="service.status === 'inactive'">
+									{{ service.status === 'active' ? 'Aktív' : 'Szünetel' }}
+								</span>
+							</div>
+							<p class="service-desc">{{ service.description }}</p>
+							<div class="service-meta">
+								<span class="price">{{ formatPrice(service.price, service.currency) }}</span>
+							</div>
+							<div class="service-actions">
+								<button class="btn ghost" (click)="openEditServiceModal(service)">Szerkesztés</button>
+							</div>
+						</article>
+					}
 				</div>
-				<p class="service-desc">{{ service.description }}</p>
-				<div class="service-meta">
-					<span class="price">{{ service.price | number:'1.0-0' }} {{ service.currency === 'HUF' ? 'Ft' : service.currency }}</span>
-					<span class="duration">{{ service.duration }}</span>
-				</div>
-				<div class="service-actions">
-					<button class="btn ghost" (click)="openEditServiceModal(service)">Szerkesztés</button>
-				</div>
-			</article>
+			</section>
 		}
 
-		@if (filteredServices.length === 0) {
+		@if (serviceGroups.length === 0) {
 			<div class="empty-filter-state">
-				<p>Nincs szolgáltatás ebben a kategóriában.</p>
+				<p>Nincs elérhető szolgáltatás.</p>
 			</div>
 		}
-	</section>
+	</div>
 </section>
 
 <!-- Új szolgáltatás modal -->

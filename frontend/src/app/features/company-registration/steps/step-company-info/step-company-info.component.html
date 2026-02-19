@@ -73,7 +73,7 @@
               <option [value]="null" disabled selected>Válasszon kategóriát...</option>
               @for (category of businessCategories; track category.id) {
                 <option [value]="category.id">
-                  {{ category.icon }} {{ category.name }}
+                  {{ category.name }}
                 </option>
               }
             </select>
