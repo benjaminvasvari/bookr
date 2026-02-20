@@ -5,7 +5,6 @@
 package com.vizsgaremek.bookr.DTO;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 
@@ -149,7 +148,7 @@ public class OwnerPanelDTO {
 
     }
 
-    public static class getAllFutureAppointmentsByCompanyDTO {
+    public static class AllFutureAppointmentsByCompanyDTO {
 
         private Integer appoinmentId;
         private LocalDate appointmentDate;
@@ -166,7 +165,7 @@ public class OwnerPanelDTO {
         private String currency;
         private Date createAt;
 
-        public getAllFutureAppointmentsByCompanyDTO(Integer appoinmentId, LocalDate appointmentDate, Date startTime, Date endTime, String serviceName, String staffName, String staffImage, String clientName, String clientImage, Integer durationMinutes, String status, Double price, String currency, Date createAt) {
+        public AllFutureAppointmentsByCompanyDTO(Integer appoinmentId, LocalDate appointmentDate, Date startTime, Date endTime, String serviceName, String staffName, String staffImage, String clientName, String clientImage, Integer durationMinutes, String status, Double price, String currency, Date createAt) {
             this.appoinmentId = appoinmentId;
             this.appointmentDate = appointmentDate;
             this.startTime = startTime;
@@ -326,5 +325,179 @@ public class OwnerPanelDTO {
         public Integer getTotalClients() {
             return totalClients;
         }
+    }
+
+    public static class SalesOverviewRevenueDTO {
+
+        private Double currentRevenue;
+        private Double previousRevenue;
+        private String currency;
+
+        public SalesOverviewRevenueDTO(Double currentRevenue, Double previousRevenue, String currency) {
+            this.currentRevenue = currentRevenue;
+            this.previousRevenue = previousRevenue;
+            this.currency = currency;
+        }
+
+        public Double getCurrentRevenue() {
+            return currentRevenue;
+        }
+
+        public Double getPreviousRevenue() {
+            return previousRevenue;
+        }
+
+        public String getCurrency() {
+            return currency;
+        }
+
+    }
+
+    public static class SalesOverviewAvgBasketDTO {
+
+        private Integer currentAvg;
+        private Integer previousAvg;
+        private String currency;
+
+        public SalesOverviewAvgBasketDTO(Integer currentAvg, Integer previousAvg, String currency) {
+            this.currentAvg = currentAvg;
+            this.previousAvg = previousAvg;
+            this.currency = currency;
+        }
+
+        public Integer getCurrentAvg() {
+            return currentAvg;
+        }
+
+        public Integer getPreviousAvg() {
+            return previousAvg;
+        }
+
+        public String getCurrency() {
+            return currency;
+        }
+
+    }
+
+    public static class SalesOverviewBookingsCount {
+
+        private Integer currentCount;
+        private Integer previousCount;
+
+        public SalesOverviewBookingsCount(Integer currentCount, Integer previousCount) {
+            this.currentCount = currentCount;
+            this.previousCount = previousCount;
+        }
+
+        public Integer getCurrentCount() {
+            return currentCount;
+        }
+
+        public Integer getPreviousCount() {
+            return previousCount;
+        }
+
+    }
+
+    public static class SalesOverviewReturningClientsDTO {
+
+        private int currentTotalClients;
+        private int currentReturningClients;
+        private int previousTotalClients;
+        private int previousReturningClients;
+
+        public SalesOverviewReturningClientsDTO(int currentTotalClients, int currentReturningClients, int previousTotalClients, int previousReturningClients) {
+            this.currentTotalClients = currentTotalClients;
+            this.currentReturningClients = currentReturningClients;
+            this.previousTotalClients = previousTotalClients;
+            this.previousReturningClients = previousReturningClients;
+        }
+
+        public int getCurrentTotalClients() {
+            return currentTotalClients;
+        }
+
+        public int getCurrentReturningClients() {
+            return currentReturningClients;
+        }
+
+        public int getPreviousTotalClients() {
+            return previousTotalClients;
+        }
+
+        public int getPreviousReturningClients() {
+            return previousReturningClients;
+        }
+
+    }
+
+    public static class SalesRevenueChartDTO {
+
+        private String date;
+        private String dayName;
+        private Double revenue;
+        private String currency;
+
+        public SalesRevenueChartDTO(String date, String dayName, Double revenue, String currency) {
+            this.date = date;
+            this.dayName = dayName;
+            this.revenue = revenue;
+            this.currency = currency;
+        }
+
+        public String getDate() {
+            return date;
+        }
+
+        public String getDayName() {
+            return dayName;
+        }
+
+        public Double getRevenue() {
+            return revenue;
+        }
+
+        public String getCurrency() {
+            return currency;
+        }
+
+    }
+    
+    public static class SalesTopServicesDTO {
+        private int serviceId;
+        private String serviceName;
+        private int clientCount;
+        private Double totalRevenue;
+        private String currency;
+
+        public SalesTopServicesDTO(int serviceId, String serviceName, int clientCount, Double totalRevenue, String currency) {
+            this.serviceId = serviceId;
+            this.serviceName = serviceName;
+            this.clientCount = clientCount;
+            this.totalRevenue = totalRevenue;
+            this.currency = currency;
+        }
+
+        public int getServiceId() {
+            return serviceId;
+        }
+
+        public String getServiceName() {
+            return serviceName;
+        }
+
+        public int getClientCount() {
+            return clientCount;
+        }
+
+        public Double getTotalRevenue() {
+            return totalRevenue;
+        }
+
+        public String getCurrency() {
+            return currency;
+        }
+        
+        
     }
 }

@@ -4,9 +4,11 @@
  */
 package com.vizsgaremek.bookr.model;
 
+import com.vizsgaremek.bookr.DTO.OwnerPanelDTO;
 import static com.vizsgaremek.bookr.model.Users.emf;
 import java.io.Serializable;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
@@ -103,7 +105,7 @@ public class Services implements Serializable {
     private Collection<ServiceCategoryMap> serviceCategoryMapCollection;
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "serviceId")
     private Collection<StaffServices> staffServicesCollection;
-    
+
     @Transient
     private Integer companyIdInt;
 
@@ -252,12 +254,12 @@ public class Services implements Serializable {
     public void setStaffServicesCollection(Collection<StaffServices> staffServicesCollection) {
         this.staffServicesCollection = staffServicesCollection;
     }
-    
+
     // CUSTOM GET/SET
     public Integer getCompanyIdInt() {
         return companyIdInt;
     }
-    
+
     public void setCompanyIdInt(Integer companyIdInt) {
         this.companyIdInt = companyIdInt;
     }
@@ -316,6 +318,45 @@ public class Services implements Serializable {
             );
 
             return service;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static ArrayList<OwnerPanelDTO.SalesTopServicesDTO> getSalesTopServices(Integer companyId, String period) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getSalesTopServices");
+
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("periodIN", String.class, ParameterMode.IN);
+
+            spq.setParameter("companyIdIN", companyId);
+            spq.setParameter("periodIN", period);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+            ArrayList<OwnerPanelDTO.SalesTopServicesDTO> toReturn = new ArrayList<>();
+
+            for (Object[] record : resultList) {
+                OwnerPanelDTO.SalesTopServicesDTO s = new OwnerPanelDTO.SalesTopServicesDTO(
+                        Integer.valueOf(record[0].toString()),
+                        record[1].toString(),
+                        Integer.valueOf(record[0].toString()),
+                        Double.parseDouble(record[2].toString()),
+                        record[3].toString()
+                );
+                toReturn.add(s);
+            }
+            return toReturn;
 
         } catch (Exception ex) {
             ex.printStackTrace();

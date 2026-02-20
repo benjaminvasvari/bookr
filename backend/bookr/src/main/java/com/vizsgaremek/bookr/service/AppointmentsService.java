@@ -1,6 +1,6 @@
 package com.vizsgaremek.bookr.service;
 
-import com.vizsgaremek.bookr.DTO.OwnerPanelDTO.getAllFutureAppointmentsByCompanyDTO;
+import com.vizsgaremek.bookr.DTO.OwnerPanelDTO;
 import com.vizsgaremek.bookr.model.Appointments;
 import com.vizsgaremek.bookr.model.AuditLogs;
 import com.vizsgaremek.bookr.model.Companies;
@@ -28,6 +28,7 @@ public class AppointmentsService {
     private Companies Companies = new Companies();
     private Staff Staff = new Staff();
     private Services Services = new Services();
+    private CompaniesService CompaniesService = new CompaniesService();
     private Appointments layer = new Appointments();
 
     static SimpleDateFormat timeFormatter = new SimpleDateFormat("HH:mm");
@@ -399,7 +400,7 @@ public class AppointmentsService {
         Integer statusCode = 200;
 
         try {
-            List<getAllFutureAppointmentsByCompanyDTO> modelResult = layer.getAllFutureAppointmentsByCompany(companyId);
+            List<OwnerPanelDTO.AllFutureAppointmentsByCompanyDTO> modelResult = layer.getAllFutureAppointmentsByCompany(companyId);
 
             if (modelResult == null || modelResult.isEmpty()) {
                 toReturn.put("status", "success");
@@ -410,7 +411,7 @@ public class AppointmentsService {
 
             Map<LocalDate, JSONObject> appointmentsMap = new LinkedHashMap<>();
 
-            for (getAllFutureAppointmentsByCompanyDTO app : modelResult) {
+            for (OwnerPanelDTO.AllFutureAppointmentsByCompanyDTO app : modelResult) {
                 LocalDate appointmentDate = app.getAppointmentDate();
 
                 // date array create
@@ -464,5 +465,224 @@ public class AppointmentsService {
 
             return toReturn;
         }
+    }
+
+    public JSONObject getSalesOverviewRevenueByCompany(Integer companyId, String period) {
+
+        try {
+            JSONObject toReturn = new JSONObject();
+
+            Boolean companyExist = CompaniesService.validateCompanyExist(companyId);
+
+            if (!companyExist) {
+                JSONObject error = new JSONObject();
+                error.put("statusCode", 404);
+                error.put("message", "Company not found with ID: " + companyId);
+                return error;
+            }
+
+            OwnerPanelDTO.SalesOverviewRevenueDTO modelResult = layer.getSalesOverviewRevenueByCompany(companyId, period);
+
+            if (modelResult == null) {
+                toReturn.put("status", "InternalServerError");
+                toReturn.put("statusCode", 500);
+                return toReturn;
+            }
+
+            JSONObject result = new JSONObject();
+            result.put("currentRevenue", modelResult.getCurrentRevenue());
+            result.put("previousRevenue", modelResult.getPreviousRevenue());
+            result.put("currency", modelResult.getCurrency());
+
+            toReturn.put("result", result);
+
+            toReturn.put("status", "success");
+            toReturn.put("statusCode", 200);
+
+            return toReturn;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            JSONObject error = new JSONObject();
+            error.put("statusCode", 500);
+            error.put("message", "Internal server error: " + e.getMessage());
+            return error;
+        }
+    }
+
+    public JSONObject getSalesOverviewAvgBasket(Integer companyId, String period) {
+
+        try {
+            JSONObject toReturn = new JSONObject();
+
+            Boolean companyExist = CompaniesService.validateCompanyExist(companyId);
+
+            if (!companyExist) {
+                JSONObject error = new JSONObject();
+                error.put("statusCode", 404);
+                error.put("message", "Company not found with ID: " + companyId);
+                return error;
+            }
+
+            OwnerPanelDTO.SalesOverviewAvgBasketDTO modelResult = layer.getSalesOverviewAvgBasket(companyId, period);
+
+            if (modelResult == null) {
+                toReturn.put("status", "InternalServerError");
+                toReturn.put("statusCode", 500);
+                return toReturn;
+            }
+
+            JSONObject result = new JSONObject();
+            result.put("currentAvg", modelResult.getCurrentAvg());
+            result.put("previousAvg", modelResult.getPreviousAvg());
+            result.put("currency", modelResult.getCurrency());
+
+            toReturn.put("result", result);
+
+            toReturn.put("status", "success");
+            toReturn.put("statusCode", 200);
+
+            return toReturn;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            JSONObject error = new JSONObject();
+            error.put("statusCode", 500);
+            error.put("message", "Internal server error: " + e.getMessage());
+            return error;
+        }
+    }
+
+    public JSONObject getSalesOverviewBookingsCount(Integer companyId, String period) {
+
+        try {
+            JSONObject toReturn = new JSONObject();
+
+            Boolean companyExist = CompaniesService.validateCompanyExist(companyId);
+
+            if (!companyExist) {
+                JSONObject error = new JSONObject();
+                error.put("statusCode", 404);
+                error.put("message", "Company not found with ID: " + companyId);
+                return error;
+            }
+
+            OwnerPanelDTO.SalesOverviewBookingsCount modelResult = layer.getSalesOverviewBookingsCount(companyId, period);
+
+            if (modelResult == null) {
+                toReturn.put("status", "InternalServerError");
+                toReturn.put("statusCode", 500);
+                return toReturn;
+            }
+
+            JSONObject result = new JSONObject();
+            result.put("currentCount", modelResult.getCurrentCount());
+            result.put("previousCount", modelResult.getPreviousCount());
+
+            toReturn.put("result", result);
+
+            toReturn.put("status", "success");
+            toReturn.put("statusCode", 200);
+
+            return toReturn;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            JSONObject error = new JSONObject();
+            error.put("statusCode", 500);
+            error.put("message", "Internal server error: " + e.getMessage());
+            return error;
+        }
+    }
+
+    public JSONObject getSalesOverviewReturningClients(Integer companyId, String period) {
+
+        try {
+            JSONObject toReturn = new JSONObject();
+
+            Boolean companyExist = CompaniesService.validateCompanyExist(companyId);
+
+            if (!companyExist) {
+                JSONObject error = new JSONObject();
+                error.put("statusCode", 404);
+                error.put("status", "NotFound");
+                error.put("message", "Company not found with ID: " + companyId);
+                return error;
+            }
+
+            OwnerPanelDTO.SalesOverviewReturningClientsDTO modelResult = layer.getSalesOverviewReturningClients(companyId, period);
+
+            if (modelResult == null) {
+                toReturn.put("status", "InternalServerError");
+                toReturn.put("statusCode", 500);
+                return toReturn;
+            }
+
+            JSONObject result = new JSONObject();
+            result.put("currentTotalClients", modelResult.getCurrentTotalClients());
+            result.put("currentReturningClients", modelResult.getCurrentReturningClients());
+            result.put("previousTotalClients", modelResult.getPreviousTotalClients());
+            result.put("previousReturningClients", modelResult.getPreviousReturningClients());
+
+            toReturn.put("result", result);
+
+            toReturn.put("status", "success");
+            toReturn.put("statusCode", 200);
+
+            return toReturn;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            JSONObject error = new JSONObject();
+            error.put("statusCode", 500);
+            error.put("message", "Internal server error: " + e.getMessage());
+            return error;
+        }
+    }
+
+    public JSONObject getSalesRevenueChart(Integer companyId, String period) {
+
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        Boolean companyExist = CompaniesService.validateCompanyExist(companyId);
+
+        if (!companyExist) {
+            JSONObject error = new JSONObject();
+            error.put("statusCode", 404);
+            error.put("status", "NotFound");
+            error.put("message", "Company not found with ID: " + companyId);
+            return error;
+        }
+
+        // Model hívás
+        ArrayList<OwnerPanelDTO.SalesRevenueChartDTO> modelResult = layer.getSalesRevenueChart(companyId, period);
+
+        if (modelResult == null) {
+            statusCode = 500;
+            status = "ModelException";
+            toReturn.put("message", "Internal server error");
+
+        } else {
+            ArrayList resultList = new ArrayList();
+
+            for (OwnerPanelDTO.SalesRevenueChartDTO record : modelResult) {
+                JSONObject datObj = new JSONObject();
+                datObj.put("date", record.getDate());
+                datObj.put("dayName", record.getDayName());
+                datObj.put("revenue", record.getRevenue());
+                datObj.put("currency", record.getCurrency());
+
+                resultList.add(datObj);
+            }
+
+            toReturn.put("result", resultList);
+        }
+
+        toReturn.put("status", status);
+        toReturn.put("statusCode", statusCode);
+
+        return toReturn;
     }
 }

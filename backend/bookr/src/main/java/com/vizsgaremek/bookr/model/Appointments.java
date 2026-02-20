@@ -4,11 +4,7 @@
  */
 package com.vizsgaremek.bookr.model;
 
-import com.vizsgaremek.bookr.DTO.OwnerPanelDTO.ActiveClientsDTO;
-import com.vizsgaremek.bookr.DTO.OwnerPanelDTO.UpcomingAppointmentsDTO;
-import com.vizsgaremek.bookr.DTO.OwnerPanelDTO.TodayBookingsCountDTO;
-import com.vizsgaremek.bookr.DTO.OwnerPanelDTO.WeeklyRevenueDTO;
-import com.vizsgaremek.bookr.DTO.OwnerPanelDTO.getAllFutureAppointmentsByCompanyDTO;
+import com.vizsgaremek.bookr.DTO.OwnerPanelDTO;
 import static com.vizsgaremek.bookr.model.OpeningHours.timeFormatter;
 import static com.vizsgaremek.bookr.model.Users.emf;
 import static com.vizsgaremek.bookr.model.Users.formatter;
@@ -17,7 +13,6 @@ import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -873,7 +868,7 @@ public class Appointments implements Serializable {
         }
     }
 
-    public static WeeklyRevenueDTO getWeeklyRevenue(Integer companyId) {
+    public static OwnerPanelDTO.WeeklyRevenueDTO getWeeklyRevenue(Integer companyId) {
         EntityManager em = emf.createEntityManager();
 
         try {
@@ -893,7 +888,7 @@ public class Appointments implements Serializable {
 
             Object[] record = resultList.get(0);
 
-            WeeklyRevenueDTO weeklyRevenue = new WeeklyRevenueDTO(
+            OwnerPanelDTO.WeeklyRevenueDTO weeklyRevenue = new OwnerPanelDTO.WeeklyRevenueDTO(
                     record[0].toString(),
                     record[1].toString(),
                     record[2].toString()
@@ -911,7 +906,7 @@ public class Appointments implements Serializable {
         }
     }
 
-    public static ActiveClientsDTO getActiveClients(Integer companyId) {
+    public static OwnerPanelDTO.ActiveClientsDTO getActiveClients(Integer companyId) {
         EntityManager em = emf.createEntityManager();
 
         try {
@@ -931,7 +926,7 @@ public class Appointments implements Serializable {
 
             Object[] record = resultList.get(0);
 
-            ActiveClientsDTO activeClients = new ActiveClientsDTO(
+            OwnerPanelDTO.ActiveClientsDTO activeClients = new OwnerPanelDTO.ActiveClientsDTO(
                     Integer.valueOf(record[0].toString()),
                     Integer.valueOf(record[1].toString())
             );
@@ -948,7 +943,7 @@ public class Appointments implements Serializable {
         }
     }
 
-    public static ArrayList<UpcomingAppointmentsDTO> getDashboardUpcomingAppointments(Integer companyId, Integer limit) {
+    public static ArrayList<OwnerPanelDTO.UpcomingAppointmentsDTO> getDashboardUpcomingAppointments(Integer companyId, Integer limit) {
         EntityManager em = emf.createEntityManager();
 
         try {
@@ -962,10 +957,10 @@ public class Appointments implements Serializable {
             spq.execute();
 
             List<Object[]> resultList = spq.getResultList();
-            ArrayList<UpcomingAppointmentsDTO> toReturn = new ArrayList<>();
+            ArrayList<OwnerPanelDTO.UpcomingAppointmentsDTO> toReturn = new ArrayList<>();
 
             for (Object[] record : resultList) {
-                UpcomingAppointmentsDTO a = new UpcomingAppointmentsDTO(
+                OwnerPanelDTO.UpcomingAppointmentsDTO a = new OwnerPanelDTO.UpcomingAppointmentsDTO(
                         Integer.valueOf(record[0].toString()),
                         record[1].toString(),
                         record[2].toString(),
@@ -989,7 +984,7 @@ public class Appointments implements Serializable {
         }
     }
 
-    public static TodayBookingsCountDTO getTodayBookingsCount(Integer companyId) {
+    public static OwnerPanelDTO.TodayBookingsCountDTO getTodayBookingsCount(Integer companyId) {
         EntityManager em = emf.createEntityManager();
 
         try {
@@ -1009,7 +1004,7 @@ public class Appointments implements Serializable {
 
             Object[] record = resultList.get(0);
 
-            TodayBookingsCountDTO todayBookingsCOunt = new TodayBookingsCountDTO(
+            OwnerPanelDTO.TodayBookingsCountDTO todayBookingsCOunt = new OwnerPanelDTO.TodayBookingsCountDTO(
                     Integer.valueOf(record[0].toString()),
                     Integer.valueOf(record[1].toString())
             );
@@ -1026,7 +1021,7 @@ public class Appointments implements Serializable {
         }
     }
 
-    public static ArrayList<getAllFutureAppointmentsByCompanyDTO> getAllFutureAppointmentsByCompany(Integer companyId) {
+    public static ArrayList<OwnerPanelDTO.AllFutureAppointmentsByCompanyDTO> getAllFutureAppointmentsByCompany(Integer companyId) {
         EntityManager em = emf.createEntityManager();
         DateTimeFormatter dateOnlyFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         SimpleDateFormat timeParser = new SimpleDateFormat("HH:mm:ss");
@@ -1038,10 +1033,10 @@ public class Appointments implements Serializable {
             spq.execute();
 
             List<Object[]> resultList = spq.getResultList();
-            ArrayList<getAllFutureAppointmentsByCompanyDTO> toReturn = new ArrayList<>();
+            ArrayList<OwnerPanelDTO.AllFutureAppointmentsByCompanyDTO> toReturn = new ArrayList<>();
 
             for (Object[] record : resultList) {
-                getAllFutureAppointmentsByCompanyDTO a = new getAllFutureAppointmentsByCompanyDTO(
+                OwnerPanelDTO.AllFutureAppointmentsByCompanyDTO a = new OwnerPanelDTO.AllFutureAppointmentsByCompanyDTO(
                         Integer.valueOf(record[0].toString()),
                         LocalDate.parse(record[1].toString(), dateOnlyFormatter),
                         timeParser.parse(record[2].toString()), // "12:00:00"
@@ -1104,6 +1099,204 @@ public class Appointments implements Serializable {
             return null;
         } finally {
             em.close();
+        }
+    }
+
+    public static OwnerPanelDTO.SalesOverviewRevenueDTO getSalesOverviewRevenueByCompany(Integer companyId, String period) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getSalesOverviewRevenue");
+
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("periodIN", String.class, ParameterMode.IN);
+
+            spq.setParameter("companyIdIN", companyId);
+            spq.setParameter("periodIN", period);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            Object[] record = resultList.get(0);
+
+            OwnerPanelDTO.SalesOverviewRevenueDTO dolog = new OwnerPanelDTO.SalesOverviewRevenueDTO(
+                    Double.parseDouble(record[0].toString()),
+                    Double.parseDouble(record[1].toString()),
+                    record[2].toString()
+            );
+
+            return dolog;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static OwnerPanelDTO.SalesOverviewAvgBasketDTO getSalesOverviewAvgBasket(Integer companyId, String period) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getSalesOverviewAvgBasket");
+
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("periodIN", String.class, ParameterMode.IN);
+
+            spq.setParameter("companyIdIN", companyId);
+            spq.setParameter("periodIN", period);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            Object[] record = resultList.get(0);
+
+            OwnerPanelDTO.SalesOverviewAvgBasketDTO dolog = new OwnerPanelDTO.SalesOverviewAvgBasketDTO(
+                    Integer.valueOf(record[0].toString()),
+                    Integer.valueOf(record[1].toString()),
+                    record[2].toString()
+            );
+
+            return dolog;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static OwnerPanelDTO.SalesOverviewBookingsCount getSalesOverviewBookingsCount(Integer companyId, String period) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getSalesOverviewBookingsCount");
+
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("periodIN", String.class, ParameterMode.IN);
+
+            spq.setParameter("companyIdIN", companyId);
+            spq.setParameter("periodIN", period);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            Object[] record = resultList.get(0);
+
+            OwnerPanelDTO.SalesOverviewBookingsCount dolog = new OwnerPanelDTO.SalesOverviewBookingsCount(
+                    Integer.valueOf(record[0].toString()),
+                    Integer.valueOf(record[1].toString())
+            );
+
+            return dolog;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static OwnerPanelDTO.SalesOverviewReturningClientsDTO getSalesOverviewReturningClients(Integer companyId, String period) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getSalesOverviewReturningClients");
+
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("periodIN", String.class, ParameterMode.IN);
+
+            spq.setParameter("companyIdIN", companyId);
+            spq.setParameter("periodIN", period);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            Object[] record = resultList.get(0);
+
+            OwnerPanelDTO.SalesOverviewReturningClientsDTO dolog = new OwnerPanelDTO.SalesOverviewReturningClientsDTO(
+                    Integer.valueOf(record[0].toString()),
+                    Integer.valueOf(record[1].toString()),
+                    Integer.valueOf(record[2].toString()),
+                    Integer.valueOf(record[3].toString())
+            );
+
+            return dolog;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static ArrayList<OwnerPanelDTO.SalesRevenueChartDTO> getSalesRevenueChart(Integer companyId, String period) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getSalesRevenueChart");
+
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("periodIN", String.class, ParameterMode.IN);
+
+            spq.setParameter("companyIdIN", companyId);
+            spq.setParameter("periodIN", period);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+            ArrayList<OwnerPanelDTO.SalesRevenueChartDTO> toReturn = new ArrayList<>();
+
+            for (Object[] record : resultList) {
+                OwnerPanelDTO.SalesRevenueChartDTO s = new OwnerPanelDTO.SalesRevenueChartDTO(
+                        record[0].toString(),
+                        record[1].toString(),
+                        Double.parseDouble(record[2].toString()),
+                        record[3].toString()
+                );
+                toReturn.add(s);
+            }
+            return toReturn;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
         }
     }
 }
