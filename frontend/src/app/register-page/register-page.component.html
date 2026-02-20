@@ -1,185 +1,325 @@
 <div class="register-container">
   <div class="register-content">
     <div class="register-form-wrapper">
-      <h1 class="register-title">REGISZTRÁCIÓ</h1>
-      <p class="register-subtitle">Töltsd ki az adataidat a folytatáshoz</p>
-      
-      <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="register-form">
-        
-        <!-- Vezetéknév -->
-        <div class="input-group">
-          <input 
-            type="text" 
-            id="lastName" 
-            formControlName="lastName"
-            placeholder=" "
-            [class.invalid]="registerForm.get('lastName')?.invalid && registerForm.get('lastName')?.touched">
-          <label for="lastName">Vezetéknév</label>
-          <i class="fas fa-user input-icon"></i>
-        </div>
+      @if (!isMobileWizard) {
+        <h1 class="register-title">REGISZTRÁCIÓ</h1>
 
-        <!-- Keresztnév -->
-        <div class="input-group">
-          <input 
-            type="text" 
-            id="firstName" 
-            formControlName="firstName"
-            placeholder=" "
-            [class.invalid]="registerForm.get('firstName')?.invalid && registerForm.get('firstName')?.touched">
-          <label for="firstName">Keresztnév</label>
-          <i class="fas fa-user input-icon"></i>
-        </div>
+        <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="register-form">
+          <div class="input-group">
+            <input
+              type="text"
+              id="lastName"
+              formControlName="lastName"
+              placeholder=" "
+              [class.invalid]="registerForm.get('lastName')?.invalid && registerForm.get('lastName')?.touched">
+            <label for="lastName">Vezetéknév</label>
+            <i class="fas fa-user input-icon"></i>
+          </div>
 
-        <!-- Email cím -->
-        <div class="input-group">
-          <input 
-            type="email" 
-            id="email" 
-            formControlName="email"
-            placeholder=" "
-            [class.invalid]="registerForm.get('email')?.invalid && registerForm.get('email')?.touched">
-          <label for="email">Email cím</label>
-          <i class="fas fa-envelope input-icon"></i>
-        </div>
+          <div class="input-group">
+            <input
+              type="text"
+              id="firstName"
+              formControlName="firstName"
+              placeholder=" "
+              [class.invalid]="registerForm.get('firstName')?.invalid && registerForm.get('firstName')?.touched">
+            <label for="firstName">Keresztnév</label>
+            <i class="fas fa-user input-icon"></i>
+          </div>
 
-        <!-- Telefonszám -->
-        <div class="input-group">
-          <input 
-            type="tel" 
-            id="phone" 
-            formControlName="phone"
-            placeholder=" "
-            [class.invalid]="registerForm.get('phone')?.invalid && registerForm.get('phone')?.touched">
-          <label for="phone">Telefonszám</label>
-          <i class="fas fa-phone input-icon"></i>
-        </div>
+          <div class="input-group">
+            <input
+              type="email"
+              id="email"
+              formControlName="email"
+              placeholder=" "
+              [class.invalid]="registerForm.get('email')?.invalid && registerForm.get('email')?.touched">
+            <label for="email">Email cím</label>
+            <i class="fas fa-envelope input-icon"></i>
+          </div>
 
-        <!-- Jelszó -->
-        <div class="input-group">
-          <input 
-            [type]="showPassword ? 'text' : 'password'"
-            id="password" 
-            formControlName="password"
-            placeholder=" "
-            [class.invalid]="registerForm.get('password')?.invalid && registerForm.get('password')?.touched"
-            autocomplete="new-password">
-          <label for="password">Jelszó</label>
-          <i class="fas fa-lock input-icon"></i>
-          
-          <button 
-            type="button" 
-            class="toggle-password" 
-            (click)="togglePasswordVisibility()"
-            tabindex="-1"
-            [attr.aria-label]="showPassword ? 'Jelszó elrejtése' : 'Jelszó megjelenítése'">
-            <i [class]="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
-          </button>
-        </div>
+          <div class="input-group">
+            <input
+              type="tel"
+              id="phone"
+              formControlName="phone"
+              placeholder=" "
+              [class.invalid]="registerForm.get('phone')?.invalid && registerForm.get('phone')?.touched">
+            <label for="phone">Telefonszám</label>
+            <i class="fas fa-phone input-icon"></i>
+          </div>
 
-        <!-- Password Strength Indicator -->
-        @if (registerForm.get('password')?.value) {
-          <div class="password-strength">
-            <div class="strength-bar">
-              <div 
-                class="strength-fill"
-                [style.width.%]="(passwordStrength / 4) * 100"
-                [style.background-color]="passwordStrengthColor"
-              ></div>
+          <div class="input-group">
+            <input
+              [type]="showPassword ? 'text' : 'password'"
+              id="password"
+              formControlName="password"
+              placeholder=" "
+              [class.invalid]="registerForm.get('password')?.invalid && registerForm.get('password')?.touched"
+              autocomplete="new-password">
+            <label for="password">Jelszó</label>
+            <i class="fas fa-lock input-icon"></i>
+
+            <button
+              type="button"
+              class="toggle-password"
+              (click)="togglePasswordVisibility()"
+              tabindex="-1"
+              [attr.aria-label]="showPassword ? 'Jelszó elrejtése' : 'Jelszó megjelenítése'">
+              <i [class]="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+            </button>
+          </div>
+
+          @if (registerForm.get('password')?.value) {
+            <div class="password-strength">
+              <div class="strength-bar">
+                <div
+                  class="strength-fill"
+                  [style.width.%]="(passwordStrength / 4) * 100"
+                  [style.background-color]="passwordStrengthColor"
+                ></div>
+              </div>
+              <span
+                class="strength-label"
+                [style.color]="passwordStrengthColor"
+              >
+                {{ passwordStrengthLabel }}
+              </span>
             </div>
-            <span 
-              class="strength-label"
-              [style.color]="passwordStrengthColor"
-            >
-              {{ passwordStrengthLabel }}
-            </span>
-          </div>
-        }
-
-        <!-- Jelszó megerősítése -->
-        <div class="input-group">
-          <input 
-            [type]="showConfirmPassword ? 'text' : 'password'"
-            id="confirmPassword" 
-            formControlName="confirmPassword"
-            placeholder=" "
-            [class.invalid]="registerForm.get('confirmPassword')?.invalid && registerForm.get('confirmPassword')?.touched"
-            autocomplete="new-password">
-          <label for="confirmPassword">Jelszó megerősítése</label>
-          <i class="fas fa-lock input-icon"></i>
-          
-          <button 
-            type="button" 
-            class="toggle-password" 
-            (click)="toggleConfirmPasswordVisibility()"
-            tabindex="-1"
-            [attr.aria-label]="showConfirmPassword ? 'Jelszó elrejtése' : 'Jelszó megjelenítése'">
-            <i [class]="showConfirmPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
-          </button>
-        </div>
-
-        <!-- Validation Errors -->
-        @if (getPasswordErrors().length > 0 || getConfirmPasswordErrors().length > 0) {
-          <div class="validation-error-message">
-            <i class="fas fa-exclamation-triangle"></i>
-            <span>
-              @if (getPasswordErrors().length > 0) {
-                <div class="error-list">
-                  @for (error of getPasswordErrors(); track error) {
-                    <div class="error-item">{{ error }}</div>
-                  }
-                </div>
-              }
-              @if (getConfirmPasswordErrors().length > 0) {
-                <div class="error-list">
-                  @for (error of getConfirmPasswordErrors(); track error) {
-                    <div class="error-item">{{ error }}</div>
-                  }
-                </div>
-              }
-            </span>
-          </div>
-        }
-
-        <!-- Success message megjelenítése -->
-        @if (successMessage) {
-          <div class="success-message">
-            <i class="fas fa-check-circle"></i>
-            {{ successMessage }}
-          </div>
-        }
-
-        <!-- Backend hibaüzenet megjelenítése -->
-        @if (errorMessage) {
-          <div class="backend-error-message">
-            <i class="fas fa-exclamation-circle"></i>
-            {{ errorMessage }}
-          </div>
-        }
-
-        <!-- Submit gomb -->
-        <button 
-          type="submit" 
-          class="btn-submit"
-          [disabled]="isLoading">
-          
-          <!-- Loading spinner VAGY szöveg -->
-          @if (isLoading) {
-            <span>
-              <i class="fas fa-spinner fa-spin"></i> REGISZTRÁCIÓ...
-            </span>
-          } @else {
-            <span>FOLYTATÁS</span>
           }
-        </button>
 
-        <div class="divider"></div>
+          <div class="input-group">
+            <input
+              [type]="showConfirmPassword ? 'text' : 'password'"
+              id="confirmPassword"
+              formControlName="confirmPassword"
+              placeholder=" "
+              [class.invalid]="registerForm.get('confirmPassword')?.invalid && registerForm.get('confirmPassword')?.touched"
+              autocomplete="new-password">
+            <label for="confirmPassword">Jelszó megerősítése</label>
+            <i class="fas fa-lock input-icon"></i>
 
-        <!-- Login link -->
-        <div class="login-section">
-          <p class="login-text">Van már fiókod?</p>
-          <a routerLink="/login" class="login-link">Jelentkezz be!</a>
+            <button
+              type="button"
+              class="toggle-password"
+              (click)="toggleConfirmPasswordVisibility()"
+              tabindex="-1"
+              [attr.aria-label]="showConfirmPassword ? 'Jelszó elrejtése' : 'Jelszó megjelenítése'">
+              <i [class]="showConfirmPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+            </button>
+          </div>
+
+          @if (getPasswordErrors().length > 0 || getConfirmPasswordErrors().length > 0) {
+            <div class="validation-error-message">
+              <i class="fas fa-exclamation-triangle"></i>
+              <span>
+                @if (getPasswordErrors().length > 0) {
+                  <div class="error-list">
+                    @for (error of getPasswordErrors(); track error) {
+                      <div class="error-item">{{ error }}</div>
+                    }
+                  </div>
+                }
+                @if (getConfirmPasswordErrors().length > 0) {
+                  <div class="error-list">
+                    @for (error of getConfirmPasswordErrors(); track error) {
+                      <div class="error-item">{{ error }}</div>
+                    }
+                  </div>
+                }
+              </span>
+            </div>
+          }
+
+          @if (successMessage) {
+            <div class="success-message">
+              <i class="fas fa-check-circle"></i>
+              {{ successMessage }}
+            </div>
+          }
+
+          @if (errorMessage) {
+            <div class="backend-error-message">
+              <i class="fas fa-exclamation-circle"></i>
+              {{ errorMessage }}
+            </div>
+          }
+
+          <button
+            type="submit"
+            class="btn-submit"
+            [disabled]="isLoading">
+
+            @if (isLoading) {
+              <span>
+                <i class="fas fa-spinner fa-spin"></i> REGISZTRÁCIÓ...
+              </span>
+            } @else {
+              <span>FOLYTATÁS</span>
+            }
+          </button>
+
+          <div class="divider"></div>
+
+          <div class="login-section">
+            <p class="login-text">Van már fiókod?</p>
+            <a routerLink="/login" class="login-link">Jelentkezz be!</a>
+          </div>
+        </form>
+      } @else {
+        <div class="wizard-shell">
+          <div class="wizard-main">
+            <div class="wizard-header">
+              <h1 class="register-title">REGISZTRÁCIÓ</h1>
+
+              @if (currentStep > 0) {
+                <div class="wizard-meta">
+                  <button
+                    type="button"
+                    class="wizard-back-link"
+                    (click)="prevStep()"
+                    aria-label="Visszalépés"
+                    title="Visszalépés"
+                  >
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Vissza</span>
+                  </button>
+                </div>
+              }
+
+              <div class="wizard-progress" [style.--progress]="stepProgress" aria-label="Regisztráció lépések">
+                <span class="wizard-progress-fill"></span>
+                <span class="wizard-progress-thumb" aria-hidden="true">
+                  <i class="fas fa-bolt"></i>
+                </span>
+              </div>
+            </div>
+
+            <form [formGroup]="registerForm" class="register-form wizard-form" novalidate>
+              <div class="wizard-fields">
+                @if (currentStep === 0) {
+                  <div class="wizard-step-group">
+                    <div class="input-group">
+                      <input type="text" id="wizard-last-name" formControlName="lastName" placeholder=" " [class.invalid]="registerForm.get('lastName')?.invalid && registerForm.get('lastName')?.touched">
+                      <label for="wizard-last-name">Vezetéknév</label>
+                      <i class="fas fa-user input-icon"></i>
+                    </div>
+
+                    <div class="input-group">
+                      <input type="text" id="wizard-first-name" formControlName="firstName" placeholder=" " [class.invalid]="registerForm.get('firstName')?.invalid && registerForm.get('firstName')?.touched">
+                      <label for="wizard-first-name">Keresztnév</label>
+                      <i class="fas fa-user input-icon"></i>
+                    </div>
+                  </div>
+                }
+
+                @if (currentStep === 1) {
+                  <div class="input-group">
+                    <input type="email" id="wizard-email" formControlName="email" placeholder=" " [class.invalid]="registerForm.get('email')?.invalid && registerForm.get('email')?.touched">
+                    <label for="wizard-email">Email cím</label>
+                    <i class="fas fa-envelope input-icon"></i>
+                  </div>
+                }
+
+                @if (currentStep === 2) {
+                  <div class="input-group">
+                    <input type="tel" id="wizard-phone" formControlName="phone" placeholder=" " [class.invalid]="registerForm.get('phone')?.invalid && registerForm.get('phone')?.touched">
+                    <label for="wizard-phone">Telefonszám</label>
+                    <i class="fas fa-phone input-icon"></i>
+                  </div>
+                }
+
+                @if (currentStep === 3) {
+                  <div class="input-group">
+                    <input [type]="showPassword ? 'text' : 'password'" id="wizard-password" formControlName="password" placeholder=" " [class.invalid]="registerForm.get('password')?.invalid && registerForm.get('password')?.touched" autocomplete="new-password">
+                    <label for="wizard-password">Jelszó</label>
+                    <i class="fas fa-lock input-icon"></i>
+                    <button type="button" class="toggle-password" (click)="togglePasswordVisibility()" tabindex="-1" [attr.aria-label]="showPassword ? 'Jelszó elrejtése' : 'Jelszó megjelenítése'">
+                      <i [class]="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+                    </button>
+                  </div>
+
+                  @if (registerForm.get('password')?.value) {
+                    <div class="password-strength">
+                      <div class="strength-bar">
+                        <div class="strength-fill" [style.width.%]="(passwordStrength / 4) * 100" [style.background-color]="passwordStrengthColor"></div>
+                      </div>
+                      <span class="strength-label" [style.color]="passwordStrengthColor">{{ passwordStrengthLabel }}</span>
+                    </div>
+                  }
+
+                  <div class="input-group">
+                    <input [type]="showConfirmPassword ? 'text' : 'password'" id="wizard-confirm-password" formControlName="confirmPassword" placeholder=" " [class.invalid]="registerForm.get('confirmPassword')?.invalid && registerForm.get('confirmPassword')?.touched" autocomplete="new-password">
+                    <label for="wizard-confirm-password">Jelszó megerősítése</label>
+                    <i class="fas fa-lock input-icon"></i>
+                    <button type="button" class="toggle-password" (click)="toggleConfirmPasswordVisibility()" tabindex="-1" [attr.aria-label]="showConfirmPassword ? 'Jelszó elrejtése' : 'Jelszó megjelenítése'">
+                      <i [class]="showConfirmPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+                    </button>
+                  </div>
+                }
+
+                @if (getPasswordErrors().length > 0 || getConfirmPasswordErrors().length > 0) {
+                  <div class="validation-error-message">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>
+                      @if (getPasswordErrors().length > 0) {
+                        <div class="error-list">
+                          @for (error of getPasswordErrors(); track error) {
+                            <div class="error-item">{{ error }}</div>
+                          }
+                        </div>
+                      }
+                      @if (getConfirmPasswordErrors().length > 0) {
+                        <div class="error-list">
+                          @for (error of getConfirmPasswordErrors(); track error) {
+                            <div class="error-item">{{ error }}</div>
+                          }
+                        </div>
+                      }
+                    </span>
+                  </div>
+                }
+
+                @if (errorMessage) {
+                  <div class="backend-error-message">
+                    <i class="fas fa-exclamation-circle"></i>
+                    {{ errorMessage }}
+                  </div>
+                }
+
+                @if (successMessage) {
+                  <div class="success-message">
+                    <i class="fas fa-check-circle"></i>
+                    {{ successMessage }}
+                  </div>
+                }
+              </div>
+
+              <div class="wizard-actions">
+                <button
+                  type="button"
+                  class="btn-submit"
+                  (click)="nextStep()"
+                  [disabled]="isLoading || !canProceedStep()">
+                  @if (isLoading && currentStep === totalSteps - 1) {
+                    <span><i class="fas fa-spinner fa-spin"></i> REGISZTRÁCIÓ...</span>
+                  } @else {
+                    <span>{{ currentStep === totalSteps - 1 ? 'REGISZTRÁCIÓ' : 'TOVÁBB' }}</span>
+                  }
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div class="wizard-bottom">
+            <div class="divider"></div>
+            <div class="login-section">
+              <p class="login-text">Van már fiókod?</p>
+              <a routerLink="/login" class="login-link">Jelentkezz be!</a>
+            </div>
+          </div>
         </div>
-      </form>
+      }
     </div>
 
     <div class="image-wrapper">

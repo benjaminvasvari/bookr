@@ -26,11 +26,11 @@
               (click)="handleOwnerButtonClick()"
               class="btn btn-register-business"
               [class.has-company]="hasCompany"
+              [attr.aria-label]="getOwnerButtonText()"
             >
-              @if (hasCompany) {
-                <i [class]="getOwnerButtonIcon()"></i>
-              }
-              <span>{{ getOwnerButtonText() }}</span>
+              <i [class]="hasCompany ? getOwnerButtonIcon() : 'fas fa-plus'"></i>
+              <span class="btn-label-full">{{ getOwnerButtonText() }}</span>
+              <span class="btn-label-short">Cég</span>
             </button>
           }
         </div>
@@ -47,7 +47,11 @@
 
       <!-- Right side - NEM bejelentkezett -->
       <div *ngIf="!currentUser" class="col-auto d-flex align-items-center gap-3">
-        <button routerLink="/login" class="btn login-button">Jelentkezz be</button>
+        <button routerLink="/login" class="btn login-button" aria-label="Jelentkezés">
+          <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
+          <span class="btn-label-full">Jelentkezz be</span>
+          <span class="btn-label-short">Belépés</span>
+        </button>
         <div class="user-profile-icon" routerLink="/login">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
             <path

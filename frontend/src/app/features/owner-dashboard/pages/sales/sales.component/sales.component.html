@@ -1,7 +1,7 @@
 <section class="sales-panel">
 	<header class="sales-topbar">
 		<div>
-			<h1>Értékesítés</h1>
+			<h1>Pénzügyek</h1>
 			<p class="subtitle">Bevételek, tranzakciók és teljesítmény áttekintése.</p>
 		</div>
 	</header>
@@ -44,7 +44,7 @@
 				<span class="panel-pill">{{ periodLabel }}</span>
 			</header>
 			<div class="chart-placeholder">
-				<div class="chart-bars" [class]="'bars-' + current.bars.length">
+				<div class="chart-bars" [style.--bar-count]="current.bars.length">
 					<div class="bar-col" *ngFor="let bar of current.bars">
 						<span class="bar-fill" [style.height.%]="bar.height">
 							<span class="bar-value">{{ bar.value }}</span>

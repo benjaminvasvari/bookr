@@ -221,14 +221,10 @@
 
 .chart-bars {
 	display: grid;
-	grid-template-columns: repeat(7, 1fr);
+	grid-template-columns: repeat(var(--bar-count, 7), minmax(0, 1fr));
 	gap: 8px;
 	height: 200px;
 	align-items: end;
-}
-
-.chart-bars.bars-12 {
-	grid-template-columns: repeat(12, 1fr);
 }
 
 .bar-col {

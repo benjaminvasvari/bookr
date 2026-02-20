@@ -1218,6 +1218,12 @@
 		padding-left: 4px;
 		padding-right: 4px;
 	}
+
+	.appointment-block.selected {
+		visibility: hidden;
+		opacity: 0;
+		pointer-events: none;
+	}
 	
 	.details-sidebar {
 		width: 100%;

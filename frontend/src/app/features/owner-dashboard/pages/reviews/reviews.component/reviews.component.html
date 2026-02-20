@@ -13,19 +13,25 @@
 		<label class="search-input">
 			<input type="text" placeholder="Keresés ügyfél vagy szolgáltatás szerint" />
 		</label>
-		<select class="filter-select">
-			<option>Összes értékelés</option>
-			<option>5 csillag</option>
-			<option>4 csillag</option>
-			<option>3 csillag</option>
-			<option>2 csillag</option>
-			<option>1 csillag</option>
-		</select>
-		<select class="filter-select">
-			<option>Legfrissebb</option>
-			<option>Legmagasabb</option>
-			<option>Legalacsonyabb</option>
-		</select>
+		<div class="sort-options">
+			<button class="sort-option" [class.active]="selectedSort === 'latest'" (click)="selectSort('latest')">Legfrissebb</button>
+			<span class="separator">|</span>
+			<button class="sort-option" [class.active]="selectedSort === 'highest'" (click)="selectSort('highest')">Legmagasabb</button>
+			<span class="separator">|</span>
+			<button class="sort-option" [class.active]="selectedSort === 'lowest'" (click)="selectSort('lowest')">Legalacsonyabb</button>
+		</div>
+		<div class="toolbar-divider"></div>
+		<div class="star-filter" (mouseleave)="setHoveredRating(null)">
+			@for (star of stars; track star) {
+				<button
+					class="star-button"
+					[class.filled]="isStarFilled(star)"
+					(mouseenter)="setHoveredRating(star)"
+					(click)="selectRating(star)"
+					[attr.aria-label]="star + ' csillag szűrés'"
+				>★</button>
+			}
+		</div>
 	</div>
 
 	<section class="reviews-list">

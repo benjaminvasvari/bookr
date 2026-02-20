@@ -173,25 +173,11 @@
 	line-height: 1.5;
 }
 
-.service-meta {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 12px;
-	padding: 10px 12px;
-	background: #f8fafc;
-	border-radius: 12px;
-	border: 1px solid var(--owner-border);
-}
-
-.price {
+.service-price {
+	font-size: 22px;
 	font-weight: 700;
-	color: #111827;
-}
-
-.duration {
-	color: #6b7280;
-	font-size: 13px;
+	color: #38a179;
+	margin: 0;
 }
 
 .service-actions {

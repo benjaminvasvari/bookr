@@ -57,6 +57,9 @@
 
 /* Login Button */
 .login-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     background-color: var(--ice-white-color);
     color: var(--charcoal-color);
     border: none;
@@ -65,6 +68,10 @@
     font-weight: bold;
     font-size: 16px;
     transition: all 0.3s ease;
+}
+
+.btn-label-short {
+    display: none;
 }
 
 .login-button:hover {
@@ -334,19 +341,59 @@
   box-shadow: 0 6px 20px rgba(56, 161, 105, 0.4);
 }
 
+@media (hover: none) {
+    .btn-register-business:hover {
+        background: transparent;
+        color: #38a169;
+        box-shadow: none;
+        border-color: #38a169;
+    }
+
+    .btn-register-business:hover i {
+        transform: none;
+    }
+
+    .btn-register-business:active {
+        background: #38a169;
+        color: #ffffff;
+        box-shadow: 0 4px 15px rgba(52, 168, 155, 0.4);
+        border-color: #38a169;
+    }
+
+    .btn-register-business:active i {
+        transform: scale(1.06);
+    }
+
+    .btn-register-business.has-company:hover {
+        background: linear-gradient(135deg, #38a169 0%, #2d8659 100%);
+        box-shadow: none;
+    }
+
+    .btn-register-business.has-company:active {
+        background: linear-gradient(135deg, #2d8659 0%, #237a48 100%);
+        box-shadow: 0 6px 20px rgba(56, 161, 105, 0.4);
+    }
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .btn-register-business {
-    padding: 8px 16px;
-    font-size: 13px;
+        padding: 6px 15px;
+        font-size: 12px;
+      max-width: 120px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
   }
   
   .btn-register-business span {
-    display: none;
+        display: inline;
+        overflow: hidden;
+        text-overflow: ellipsis;
   }
   
   .btn-register-business i {
-    margin: 0;
+        margin-right: 4px;
   }
 
     .btn-superadmin {
@@ -367,6 +414,79 @@
 }
 
 @media (max-width: 480px) {
+    .header-container .row {
+        flex-wrap: nowrap;
+        min-height: 74px;
+        --bs-gutter-x: 0.35rem;
+    }
+
+    .header-container {
+        padding-left: 18px;
+        padding-right: 18px;
+    }
+
+    .bookr-img {
+        height: 44px;
+    }
+
+    .login-button {
+        padding: 6px 10px;
+        font-size: 12px;
+        white-space: nowrap;
+        gap: 6px;
+    }
+
+    .btn-label-full {
+        display: none;
+    }
+
+    .btn-label-short {
+        display: inline;
+    }
+
+    .business-actions {
+        gap: 5px;
+        transform: translateX(-9px);
+    }
+
+    .btn-register-business {
+        width: auto;
+        height: 32px;
+        min-width: 0;
+        max-width: none;
+        padding: 0 10px;
+        font-size: 11px;
+        border-width: 1px;
+        border-radius: 999px;
+        gap: 3px;
+        justify-content: center;
+        white-space: nowrap;
+    }
+
+    .btn-register-business span {
+        display: inline;
+        overflow: visible;
+        text-overflow: clip;
+    }
+
+    .btn-register-business .btn-label-full {
+        display: none;
+    }
+
+    .btn-register-business .btn-label-short {
+        display: inline;
+    }
+
+    .btn-register-business i {
+        margin-right: 0;
+        font-size: 10px;
+    }
+
+    .user-profile-icon {
+        width: 36px;
+        height: 36px;
+    }
+
     .welcome-text {
         display: none;
     }

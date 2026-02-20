@@ -53,6 +53,18 @@ interface Transaction {
 })
 export class SalesComponent {
   selectedPeriod: Period = 'weekly';
+  private readonly now = new Date();
+  private readonly rollingMonthDates = this.createRollingMonthDates();
+
+  private readonly monthlyDailyRevenue = [
+    32000, 35000, 30000, 41000, 36000, 38000, 44000,
+    34000, 37000, 39000, 42000, 40000, 45000, 47000,
+    36000, 38000, 41000, 43000, 45000, 46000, 49000,
+    37000, 39000, 42000, 44000, 43000, 47000, 50000,
+    52000, 54000,
+  ];
+
+  private readonly rollingMonthDailyRevenue = this.createRollingMonthDailyRevenue(this.rollingMonthDates.length);
 
   private readonly data: Record<Period, {
     kpi: KpiData;
@@ -78,8 +90,8 @@ export class SalesComponent {
         returningTrendClass: 'positive',
       },
       bars: [
-        { height: 40, label: 'H', value: '32 000' }, { height: 60, label: 'K', value: '48 000' }, { height: 55, label: 'Sz', value: '44 000' },
-        { height: 80, label: 'Cs', value: '64 000' }, { height: 65, label: 'P', value: '52 000' }, { height: 75, label: 'Sz', value: '60 000' }, { height: 90, label: 'V', value: '72 000' },
+        { height: 40, label: 'H', value: '32 000' }, { height: 60, label: 'K', value: '48 000' }, { height: 55, label: 'Sze', value: '44 000' },
+        { height: 80, label: 'Cs', value: '64 000' }, { height: 65, label: 'P', value: '52 000' }, { height: 75, label: 'Szo', value: '60 000' }, { height: 90, label: 'V', value: '72 000' },
       ],
       chartCaption: 'Napi bevétel az elmúlt 7 napban.',
       breakdown: [
@@ -116,17 +128,14 @@ export class SalesComponent {
         returningTrend: '+4% az előző hónaphoz képest',
         returningTrendClass: 'positive',
       },
-      bars: [
-        { height: 35, label: '1', value: '210 e' }, { height: 50, label: '2', value: '240 e' }, { height: 45, label: '3', value: '220 e' }, { height: 70, label: '4', value: '290 e' },
-        { height: 55, label: '5', value: '250 e' }, { height: 60, label: '6', value: '260 e' }, { height: 80, label: '7', value: '320 e' }, { height: 65, label: '8', value: '270 e' },
-        { height: 72, label: '9', value: '300 e' }, { height: 58, label: '10', value: '255 e' }, { height: 85, label: '11', value: '340 e' }, { height: 90, label: '12', value: '360 e' },
-      ],
-      chartCaption: 'Heti bevétel bontás az elmúlt hónapban.',
+      bars: this.createMonthlyBars(this.rollingMonthDailyRevenue, this.rollingMonthDates),
+      chartCaption: 'Fix 7 napos blokkokra aggregált bevétel az elmúlt 1 hónapból.',
       breakdown: [
-        { label: '1. hét', percent: 55, value: '210 000 Ft' },
-        { label: '2. hét', percent: 70, value: '290 000 Ft' },
-        { label: '3. hét', percent: 80, value: '320 000 Ft' },
-        { label: '4. hét', percent: 76, value: '300 000 Ft' },
+        { label: '1. hét (7 nap)', percent: 67, value: '256 000 Ft' },
+        { label: '2. hét (7 nap)', percent: 77, value: '284 000 Ft' },
+        { label: '3. hét (7 nap)', percent: 85, value: '298 000 Ft' },
+        { label: '4. hét (7 nap)', percent: 84, value: '302 000 Ft' },
+        { label: '5. blokk (2 nap)', percent: 30, value: '106 000 Ft' },
       ],
       services: [
         { name: 'Hajvágás', bookings: 32, revenue: '272 000 Ft' },
@@ -184,10 +193,79 @@ export class SalesComponent {
   }
 
   get periodLabel(): string {
-    return { weekly: 'Utolsó 7 nap', monthly: 'Utolsó 30 nap', yearly: 'Utolsó 12 hónap' }[this.selectedPeriod];
+    return { weekly: 'Utolsó 7 nap', monthly: 'Elmúlt 1 hónap', yearly: 'Utolsó 12 hónap' }[this.selectedPeriod];
   }
 
   selectPeriod(period: Period): void {
     this.selectedPeriod = period;
+  }
+
+  private createMonthlyBars(dailyRevenue: number[], dates: Date[]): BarData[] {
+    const buckets: Array<{ total: number; start: Date; end: Date }> = [];
+    const bucketSize = 7;
+
+    for (let index = 0; index < dailyRevenue.length; index += bucketSize) {
+      const total = dailyRevenue
+        .slice(index, index + bucketSize)
+        .reduce((sum, current) => sum + current, 0);
+      const start = dates[index];
+      const end = dates[Math.min(index + bucketSize - 1, dates.length - 1)];
+
+      buckets.push({ total, start, end });
+    }
+
+    const maxTotal = Math.max(...buckets.map((bucket) => bucket.total), 1);
+    const includeYear = dates[0].getFullYear() !== dates[dates.length - 1].getFullYear();
+
+    return buckets.map((bucket) => ({
+      height: Math.max(20, Math.round((bucket.total / maxTotal) * 90)),
+      label: `${this.formatDateLabel(bucket.start, includeYear)}-${this.formatDateLabel(bucket.end, includeYear)}`,
+      value: `${Math.round(bucket.total / 1000)} e`,
+    }));
+  }
+
+  private createRollingMonthDates(): Date[] {
+    const endDate = new Date(this.now);
+    endDate.setHours(0, 0, 0, 0);
+
+    const startDate = new Date(endDate);
+    startDate.setMonth(startDate.getMonth() - 1);
+
+    const dates: Date[] = [];
+    for (const current = new Date(startDate); current <= endDate; current.setDate(current.getDate() + 1)) {
+      dates.push(new Date(current));
+    }
+
+    return dates;
+  }
+
+  private createRollingMonthDailyRevenue(dayCount: number): number[] {
+    return Array.from({ length: dayCount }, (_, index) => {
+      return this.monthlyDailyRevenue[index % this.monthlyDailyRevenue.length];
+    });
+  }
+
+  private formatDateLabel(date: Date, includeYear: boolean): string {
+    const dd = String(date.getDate()).padStart(2, '0');
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+
+    if (includeYear) {
+      return `${date.getFullYear()}.${mm}.${dd}`;
+    }
+
+    return `${mm}.${dd}`;
+  }
+
+  private bucketByDays(values: number[], bucketSize: number): number[] {
+    const buckets: number[] = [];
+
+    for (let index = 0; index < values.length; index += bucketSize) {
+      const bucketTotal = values
+        .slice(index, index + bucketSize)
+        .reduce((sum, current) => sum + current, 0);
+      buckets.push(bucketTotal);
+    }
+
+    return buckets;
   }
 }
