@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3307
--- Generation Time: Feb 20, 2026 at 09:14 AM
+-- Generation Time: Feb 20, 2026 at 09:33 AM
 -- Server version: 5.7.24
 -- PHP Version: 8.3.1
 
@@ -1667,7 +1667,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getOpeningHours` (IN `companyIdIN` 
         FIELD(`day_of_week`, 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday');
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getOwnerDashboardReviews` (IN `companyIdIN` INT, IN `searchIN` VARCHAR(100), IN `ratingFilterIN` VARCHAR(2), IN `sortByIN` ENUM('newest','oldest','highest','lowest'), IN `limitIN` INT, IN `offsetIN` INT, OUT `totalCountOUT` INT)   BEGIN
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getOwnerReviews` (IN `companyIdIN` INT, IN `searchIN` VARCHAR(100), IN `ratingFilterIN` VARCHAR(2), IN `sortByIN` ENUM('newest','oldest','highest','lowest'), IN `limitIN` INT, IN `offsetIN` INT, OUT `totalCountOUT` INT)   BEGIN
     DECLARE ratingInt INT DEFAULT NULL;
 
     IF `ratingFilterIN` IS NOT NULL AND `ratingFilterIN` != '' THEN
@@ -1766,6 +1766,286 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getReviewsByCompanyLimited` (IN `co
       AND r.is_deleted = 0
     ORDER BY r.created_at DESC
     LIMIT limitIN;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getSalesOverviewAvgBasket` (IN `companyIdIN` INT, IN `periodIN` ENUM('week','month','year'))   BEGIN
+    DECLARE currentStart DATE;
+    DECLARE currentEnd DATE;
+    DECLARE previousStart DATE;
+    DECLARE previousEnd DATE;
+
+    IF periodIN = 'week' THEN
+        SET currentStart  = DATE_SUB(CURDATE(), INTERVAL 7 DAY);
+        SET currentEnd    = CURDATE();
+        SET previousStart = DATE_SUB(currentStart, INTERVAL 7 DAY);
+        SET previousEnd   = DATE_SUB(currentStart, INTERVAL 1 DAY);
+
+    ELSEIF periodIN = 'month' THEN
+        SET currentStart  = DATE_SUB(CURDATE(), INTERVAL 30 DAY);
+        SET currentEnd    = CURDATE();
+        SET previousStart = DATE_SUB(currentStart, INTERVAL 30 DAY);
+        SET previousEnd   = DATE_SUB(currentStart, INTERVAL 1 DAY);
+
+    ELSEIF periodIN = 'year' THEN
+        SET currentStart  = DATE_SUB(CURDATE(), INTERVAL 365 DAY);
+        SET currentEnd    = CURDATE();
+        SET previousStart = DATE_SUB(currentStart, INTERVAL 365 DAY);
+        SET previousEnd   = DATE_SUB(currentStart, INTERVAL 1 DAY);
+    END IF;
+
+    SELECT
+        COALESCE(ROUND(AVG(CASE
+            WHEN DATE(`start_time`) BETWEEN currentStart AND currentEnd
+            THEN `price` END), 0), 0) AS current_avg,
+
+        COALESCE(ROUND(AVG(CASE
+            WHEN DATE(`start_time`) BETWEEN previousStart AND previousEnd
+            THEN `price` END), 0), 0) AS previous_avg,
+
+        'HUF' AS currency
+
+    FROM `appointments`
+    WHERE `company_id` = companyIdIN
+      AND `status` IN ('completed', 'confirmed')
+      AND DATE(`start_time`) BETWEEN previousStart AND currentEnd;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getSalesOverviewBookingsCount` (IN `companyIdIN` INT, IN `periodIN` ENUM('week','month','year'))   BEGIN
+    DECLARE currentStart DATE;
+    DECLARE currentEnd DATE;
+    DECLARE previousStart DATE;
+    DECLARE previousEnd DATE;
+
+    IF periodIN = 'week' THEN
+        SET currentStart  = DATE_SUB(CURDATE(), INTERVAL 7 DAY);
+        SET currentEnd    = CURDATE();
+        SET previousStart = DATE_SUB(currentStart, INTERVAL 7 DAY);
+        SET previousEnd   = DATE_SUB(currentStart, INTERVAL 1 DAY);
+
+    ELSEIF periodIN = 'month' THEN
+        SET currentStart  = DATE_SUB(CURDATE(), INTERVAL 30 DAY);
+        SET currentEnd    = CURDATE();
+        SET previousStart = DATE_SUB(currentStart, INTERVAL 30 DAY);
+        SET previousEnd   = DATE_SUB(currentStart, INTERVAL 1 DAY);
+
+    ELSEIF periodIN = 'year' THEN
+        SET currentStart  = DATE_SUB(CURDATE(), INTERVAL 365 DAY);
+        SET currentEnd    = CURDATE();
+        SET previousStart = DATE_SUB(currentStart, INTERVAL 365 DAY);
+        SET previousEnd   = DATE_SUB(currentStart, INTERVAL 1 DAY);
+    END IF;
+
+    SELECT
+        COUNT(CASE
+            WHEN DATE(`created_at`) BETWEEN currentStart AND currentEnd
+            THEN 1 END) AS current_count,
+
+        COUNT(CASE
+            WHEN DATE(`created_at`) BETWEEN previousStart AND previousEnd
+            THEN 1 END) AS previous_count
+
+    FROM `appointments`
+    WHERE `company_id` = companyIdIN
+      AND `status` NOT IN ('cancelled')
+      AND DATE(`created_at`) BETWEEN previousStart AND currentEnd;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getSalesOverviewReturningClients` (IN `companyIdIN` INT, IN `periodIN` ENUM('week','month','year'))   BEGIN
+    DECLARE currentStart DATE;
+    DECLARE currentEnd DATE;
+    DECLARE previousStart DATE;
+    DECLARE previousEnd DATE;
+
+    IF periodIN = 'week' THEN
+        SET currentStart  = DATE_SUB(CURDATE(), INTERVAL 7 DAY);
+        SET currentEnd    = CURDATE();
+        SET previousStart = DATE_SUB(currentStart, INTERVAL 7 DAY);
+        SET previousEnd   = DATE_SUB(currentStart, INTERVAL 1 DAY);
+
+    ELSEIF periodIN = 'month' THEN
+        SET currentStart  = DATE_SUB(CURDATE(), INTERVAL 30 DAY);
+        SET currentEnd    = CURDATE();
+        SET previousStart = DATE_SUB(currentStart, INTERVAL 30 DAY);
+        SET previousEnd   = DATE_SUB(currentStart, INTERVAL 1 DAY);
+
+    ELSEIF periodIN = 'year' THEN
+        SET currentStart  = DATE_SUB(CURDATE(), INTERVAL 365 DAY);
+        SET currentEnd    = CURDATE();
+        SET previousStart = DATE_SUB(currentStart, INTERVAL 365 DAY);
+        SET previousEnd   = DATE_SUB(currentStart, INTERVAL 1 DAY);
+    END IF;
+
+    SELECT
+        COUNT(DISTINCT CASE
+            WHEN DATE(`a`.`created_at`) BETWEEN currentStart AND currentEnd
+            THEN `a`.`client_id` END) AS current_total_clients,
+
+        COUNT(DISTINCT CASE
+            WHEN DATE(`a`.`created_at`) BETWEEN currentStart AND currentEnd
+            AND EXISTS (
+                SELECT 1 FROM `appointments` `prev`
+                WHERE `prev`.`client_id` = `a`.`client_id`
+                  AND `prev`.`company_id` = companyIdIN
+                  AND DATE(`prev`.`created_at`) < currentStart
+                  AND `prev`.`status` NOT IN ('cancelled')
+            )
+            THEN `a`.`client_id` END) AS current_returning_clients,
+
+        COUNT(DISTINCT CASE
+            WHEN DATE(`a`.`created_at`) BETWEEN previousStart AND previousEnd
+            THEN `a`.`client_id` END) AS previous_total_clients,
+
+        COUNT(DISTINCT CASE
+            WHEN DATE(`a`.`created_at`) BETWEEN previousStart AND previousEnd
+            AND EXISTS (
+                SELECT 1 FROM `appointments` `prev`
+                WHERE `prev`.`client_id` = `a`.`client_id`
+                  AND `prev`.`company_id` = companyIdIN
+                  AND DATE(`prev`.`created_at`) < previousStart
+                  AND `prev`.`status` NOT IN ('cancelled')
+            )
+            THEN `a`.`client_id` END) AS previous_returning_clients
+
+    FROM `appointments` `a`
+    WHERE `a`.`company_id` = companyIdIN
+      AND `a`.`status` NOT IN ('cancelled')
+      AND DATE(`a`.`created_at`) BETWEEN previousStart AND currentEnd;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getSalesOverviewRevenue` (IN `companyIdIN` INT, IN `periodIN` ENUM('week','month','year'))   BEGIN
+    DECLARE currentStart DATE;
+    DECLARE currentEnd DATE;
+    DECLARE previousStart DATE;
+    DECLARE previousEnd DATE;
+
+    IF periodIN = 'week' THEN
+        SET currentStart  = DATE_SUB(CURDATE(), INTERVAL 7 DAY);
+        SET currentEnd    = CURDATE();
+        SET previousStart = DATE_SUB(currentStart, INTERVAL 7 DAY);
+        SET previousEnd   = DATE_SUB(currentStart, INTERVAL 1 DAY);
+
+    ELSEIF periodIN = 'month' THEN
+        SET currentStart  = DATE_SUB(CURDATE(), INTERVAL 30 DAY);
+        SET currentEnd    = CURDATE();
+        SET previousStart = DATE_SUB(currentStart, INTERVAL 30 DAY);
+        SET previousEnd   = DATE_SUB(currentStart, INTERVAL 1 DAY);
+
+    ELSEIF periodIN = 'year' THEN
+        SET currentStart  = DATE_SUB(CURDATE(), INTERVAL 365 DAY);
+        SET currentEnd    = CURDATE();
+        SET previousStart = DATE_SUB(currentStart, INTERVAL 365 DAY);
+        SET previousEnd   = DATE_SUB(currentStart, INTERVAL 1 DAY);
+    END IF;
+
+    SELECT
+        COALESCE(SUM(CASE
+            WHEN DATE(`start_time`) BETWEEN currentStart AND currentEnd
+            THEN `price` ELSE 0
+        END), 0) AS current_revenue,
+
+        COALESCE(SUM(CASE
+            WHEN DATE(`start_time`) BETWEEN previousStart AND previousEnd
+            THEN `price` ELSE 0
+        END), 0) AS previous_revenue,
+
+        'HUF' AS currency
+
+    FROM `appointments`
+    WHERE `company_id` = companyIdIN
+      AND `status` IN ('completed', 'confirmed')
+      AND DATE(`start_time`) BETWEEN previousStart AND currentEnd;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getSalesRevenueChart` (IN `companyIdIN` INT, IN `periodIN` ENUM('week','month','year'))   BEGIN
+    DECLARE dateFrom DATE;
+    DECLARE dateTo DATE;
+
+    IF periodIN = 'week' THEN
+        SET dateFrom = DATE_SUB(CURDATE(), INTERVAL 7 DAY);
+        SET dateTo   = CURDATE();
+
+    ELSEIF periodIN = 'month' THEN
+        SET dateFrom = DATE_SUB(CURDATE(), INTERVAL 30 DAY);
+        SET dateTo   = CURDATE();
+
+    ELSEIF periodIN = 'year' THEN
+        SET dateFrom = DATE_SUB(CURDATE(), INTERVAL 365 DAY);
+        SET dateTo   = CURDATE();
+    END IF;
+
+    IF periodIN IN ('week', 'month') THEN
+
+        SELECT
+            `d`.`day`                          AS `date`,
+            DAYNAME(`d`.`day`)                 AS `day_name`,
+
+            CASE
+                WHEN EXISTS (
+                    SELECT 1 FROM `temporary_closed_periods` `tcp`
+                    WHERE `tcp`.`company_id` = companyIdIN
+                      AND `d`.`day` BETWEEN `tcp`.`start_date` AND `tcp`.`end_date`
+                      AND `tcp`.`open_time` IS NULL
+                ) THEN NULL
+
+                WHEN (
+                    SELECT `oh`.`is_closed`
+                    FROM `opening_hours` `oh`
+                    WHERE `oh`.`company_id` = companyIdIN
+                      AND `oh`.`day_of_week` = LOWER(DAYNAME(`d`.`day`))
+                    LIMIT 1
+                ) = 1 THEN NULL
+
+                ELSE COALESCE((
+                    SELECT SUM(`a`.`price`)
+                    FROM `appointments` `a`
+                    WHERE `a`.`company_id` = companyIdIN
+                      AND DATE(`a`.`start_time`) = `d`.`day`
+                      AND `a`.`status` IN ('completed', 'confirmed')
+                ), 0)
+            END AS `revenue`,
+
+            'HUF' AS `currency`
+
+        FROM (
+            SELECT DATE_ADD(dateFrom, INTERVAL seq DAY) AS `day`
+            FROM (
+                SELECT 0 AS seq UNION SELECT 1 UNION SELECT 2 UNION SELECT 3
+                UNION SELECT 4 UNION SELECT 5 UNION SELECT 6 UNION SELECT 7
+                UNION SELECT 8 UNION SELECT 9 UNION SELECT 10 UNION SELECT 11
+                UNION SELECT 12 UNION SELECT 13 UNION SELECT 14 UNION SELECT 15
+                UNION SELECT 16 UNION SELECT 17 UNION SELECT 18 UNION SELECT 19
+                UNION SELECT 20 UNION SELECT 21 UNION SELECT 22 UNION SELECT 23
+                UNION SELECT 24 UNION SELECT 25 UNION SELECT 26 UNION SELECT 27
+                UNION SELECT 28 UNION SELECT 29 UNION SELECT 30
+            ) `seq`
+            WHERE DATE_ADD(dateFrom, INTERVAL seq DAY) <= dateTo
+        ) `d`
+        ORDER BY `d`.`day` ASC;
+
+    ELSE
+
+        SELECT
+            DATE_FORMAT(`d`.`month`, '%Y-%m') AS `month`,
+            COALESCE(SUM(`a`.`price`), 0)     AS `revenue`,
+            'HUF'                              AS `currency`
+
+        FROM (
+            SELECT DATE_ADD(dateFrom, INTERVAL seq MONTH) AS `month`
+            FROM (
+                SELECT 0 AS seq UNION SELECT 1 UNION SELECT 2 UNION SELECT 3
+                UNION SELECT 4 UNION SELECT 5 UNION SELECT 6 UNION SELECT 7
+                UNION SELECT 8 UNION SELECT 9 UNION SELECT 10 UNION SELECT 11
+            ) `seq`
+            WHERE DATE_ADD(dateFrom, INTERVAL seq MONTH) <= dateTo
+        ) `d`
+        LEFT JOIN `appointments` `a`
+            ON `a`.`company_id` = companyIdIN
+            AND DATE_FORMAT(`a`.`start_time`, '%Y-%m') = DATE_FORMAT(`d`.`month`, '%Y-%m')
+            AND `a`.`status` IN ('completed', 'confirmed')
+        GROUP BY `d`.`month`
+        ORDER BY `d`.`month` ASC;
+
+    END IF;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getSalesTopServices` (IN `companyIdIN` INT, IN `periodIN` ENUM('week','month','year'))   BEGIN
@@ -3992,27 +4272,28 @@ INSERT INTO `appointments` (`id`, `company_id`, `service_id`, `staff_id`, `clien
 (161, 2, 7, 3, 27, '2026-03-05 09:00:00', '2026-03-05 10:00:00', 'booked', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2026-01-30 10:42:01', NULL),
 (162, 2, 7, 4, 41, '2026-02-23 12:00:00', '2026-02-23 13:00:00', 'booked', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2026-02-03 13:54:36', NULL),
 (163, 2, 7, 4, 47, '2026-02-23 12:00:00', '2026-02-23 13:00:00', 'booked', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2026-02-17 09:46:05', NULL),
-(164, 2, 7, 4, 47, '2026-02-17 12:00:00', '2026-02-17 13:00:00', 'booked', '', NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2026-02-17 09:52:11', NULL),
-(165, 2, 7, 3, 27, '2026-01-05 10:00:00', '2026-01-05 11:00:00', 'completed', NULL, NULL, '12000.00', 'HUF', NULL, NULL, NULL, '2026-01-04 09:00:00', NULL),
-(166, 2, 7, 3, 43, '2026-01-08 11:00:00', '2026-01-08 12:00:00', 'completed', NULL, NULL, '12000.00', 'HUF', NULL, NULL, NULL, '2026-01-07 10:00:00', NULL),
-(167, 2, 7, 4, 47, '2026-01-12 09:00:00', '2026-01-12 10:00:00', 'completed', NULL, NULL, '12000.00', 'HUF', NULL, NULL, NULL, '2026-01-10 08:00:00', NULL),
-(168, 2, 8, 3, 27, '2026-01-15 13:00:00', '2026-01-15 14:00:00', 'completed', NULL, NULL, '15000.00', 'HUF', NULL, NULL, NULL, '2026-01-14 11:00:00', NULL),
-(169, 2, 8, 4, 14, '2026-01-20 10:00:00', '2026-01-20 11:00:00', 'completed', NULL, NULL, '15000.00', 'HUF', NULL, NULL, NULL, '2026-01-18 09:00:00', NULL),
-(170, 2, 9, 3, 43, '2026-01-22 14:00:00', '2026-01-22 15:30:00', 'completed', NULL, NULL, '18000.00', 'HUF', NULL, NULL, NULL, '2026-01-20 10:00:00', NULL),
-(171, 2, 10, 4, 47, '2026-01-25 09:00:00', '2026-01-25 10:00:00', 'completed', NULL, NULL, '9000.00', 'HUF', NULL, NULL, NULL, '2026-01-23 08:00:00', NULL),
-(172, 2, 7, 3, 14, '2026-02-03 10:00:00', '2026-02-03 11:00:00', 'completed', NULL, NULL, '12000.00', 'HUF', NULL, NULL, NULL, '2026-02-01 09:00:00', NULL),
-(173, 2, 7, 4, 15, '2026-02-05 11:00:00', '2026-02-05 12:00:00', 'completed', NULL, NULL, '12000.00', 'HUF', NULL, NULL, NULL, '2026-02-03 10:00:00', NULL),
-(174, 2, 8, 3, 43, '2026-02-07 13:00:00', '2026-02-07 14:00:00', 'completed', NULL, NULL, '15000.00', 'HUF', NULL, NULL, NULL, '2026-02-05 11:00:00', NULL),
-(175, 2, 9, 4, 27, '2026-02-10 09:00:00', '2026-02-10 10:30:00', 'completed', NULL, NULL, '18000.00', 'HUF', NULL, NULL, NULL, '2026-02-08 08:00:00', NULL),
-(176, 2, 11, 3, 47, '2026-02-12 14:00:00', '2026-02-12 16:00:00', 'completed', NULL, NULL, '25000.00', 'HUF', NULL, NULL, NULL, '2026-02-10 12:00:00', NULL),
-(177, 2, 7, 3, 43, '2026-02-14 10:00:00', '2026-02-14 11:00:00', 'completed', NULL, NULL, '12000.00', 'HUF', NULL, NULL, NULL, '2026-02-12 09:00:00', NULL),
-(178, 2, 10, 4, 14, '2026-02-15 11:00:00', '2026-02-15 12:00:00', 'completed', NULL, NULL, '9000.00', 'HUF', NULL, NULL, NULL, '2026-02-13 10:00:00', NULL),
-(179, 2, 12, 3, 15, '2026-02-17 13:00:00', '2026-02-17 14:00:00', 'completed', NULL, NULL, '20000.00', 'HUF', NULL, NULL, NULL, '2026-02-15 11:00:00', NULL),
-(180, 2, 8, 4, 47, '2026-02-18 09:00:00', '2026-02-18 10:00:00', 'completed', NULL, NULL, '15000.00', 'HUF', NULL, NULL, NULL, '2026-02-16 08:00:00', NULL),
-(181, 2, 7, 3, 27, '2026-02-19 10:00:00', '2026-02-19 11:00:00', 'completed', NULL, NULL, '12000.00', 'HUF', NULL, NULL, NULL, '2026-02-17 09:00:00', NULL),
-(182, 2, 9, 4, 43, '2026-02-20 14:00:00', '2026-02-20 15:30:00', 'confirmed', NULL, NULL, '18000.00', 'HUF', NULL, NULL, NULL, '2026-02-18 10:00:00', NULL),
-(183, 2, 11, 3, 14, '2026-02-20 09:00:00', '2026-02-20 11:00:00', 'confirmed', NULL, NULL, '25000.00', 'HUF', NULL, NULL, NULL, '2026-02-19 08:00:00', NULL),
-(184, 2, 12, 4, 15, '2026-02-20 13:00:00', '2026-02-20 14:00:00', 'confirmed', NULL, NULL, '20000.00', 'HUF', NULL, NULL, NULL, '2026-02-19 11:00:00', NULL);
+(164, 2, 7, 4, 47, '2026-02-17 12:00:00', '2026-02-17 13:00:00', 'completed', '', NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2026-02-17 09:52:11', NULL),
+(165, 2, 8, 3, 47, '2026-02-20 13:30:00', '2026-02-20 13:45:00', 'booked', '', NULL, '13900.00', 'HUF', NULL, NULL, NULL, '2026-02-19 12:55:52', NULL),
+(166, 2, 7, 3, 27, '2026-01-05 10:00:00', '2026-01-05 11:00:00', 'completed', NULL, NULL, '12000.00', 'HUF', NULL, NULL, NULL, '2026-01-04 09:00:00', NULL),
+(167, 2, 7, 3, 43, '2026-01-08 11:00:00', '2026-01-08 12:00:00', 'completed', NULL, NULL, '12000.00', 'HUF', NULL, NULL, NULL, '2026-01-07 10:00:00', NULL),
+(168, 2, 7, 4, 47, '2026-01-12 09:00:00', '2026-01-12 10:00:00', 'completed', NULL, NULL, '12000.00', 'HUF', NULL, NULL, NULL, '2026-01-10 08:00:00', NULL),
+(169, 2, 8, 3, 27, '2026-01-15 13:00:00', '2026-01-15 14:00:00', 'completed', NULL, NULL, '15000.00', 'HUF', NULL, NULL, NULL, '2026-01-14 11:00:00', NULL),
+(170, 2, 8, 4, 14, '2026-01-20 10:00:00', '2026-01-20 11:00:00', 'completed', NULL, NULL, '15000.00', 'HUF', NULL, NULL, NULL, '2026-01-18 09:00:00', NULL),
+(171, 2, 9, 3, 43, '2026-01-22 14:00:00', '2026-01-22 15:30:00', 'completed', NULL, NULL, '18000.00', 'HUF', NULL, NULL, NULL, '2026-01-20 10:00:00', NULL),
+(172, 2, 10, 4, 47, '2026-01-25 09:00:00', '2026-01-25 10:00:00', 'completed', NULL, NULL, '9000.00', 'HUF', NULL, NULL, NULL, '2026-01-23 08:00:00', NULL),
+(173, 2, 7, 3, 14, '2026-02-03 10:00:00', '2026-02-03 11:00:00', 'completed', NULL, NULL, '12000.00', 'HUF', NULL, NULL, NULL, '2026-02-01 09:00:00', NULL),
+(174, 2, 7, 4, 15, '2026-02-05 11:00:00', '2026-02-05 12:00:00', 'completed', NULL, NULL, '12000.00', 'HUF', NULL, NULL, NULL, '2026-02-03 10:00:00', NULL),
+(175, 2, 8, 3, 43, '2026-02-07 13:00:00', '2026-02-07 14:00:00', 'completed', NULL, NULL, '15000.00', 'HUF', NULL, NULL, NULL, '2026-02-05 11:00:00', NULL),
+(176, 2, 9, 4, 27, '2026-02-10 09:00:00', '2026-02-10 10:30:00', 'completed', NULL, NULL, '18000.00', 'HUF', NULL, NULL, NULL, '2026-02-08 08:00:00', NULL),
+(177, 2, 11, 3, 47, '2026-02-12 14:00:00', '2026-02-12 16:00:00', 'completed', NULL, NULL, '25000.00', 'HUF', NULL, NULL, NULL, '2026-02-10 12:00:00', NULL),
+(178, 2, 7, 3, 43, '2026-02-14 10:00:00', '2026-02-14 11:00:00', 'completed', NULL, NULL, '12000.00', 'HUF', NULL, NULL, NULL, '2026-02-12 09:00:00', NULL),
+(179, 2, 10, 4, 14, '2026-02-15 11:00:00', '2026-02-15 12:00:00', 'completed', NULL, NULL, '9000.00', 'HUF', NULL, NULL, NULL, '2026-02-13 10:00:00', NULL),
+(180, 2, 12, 3, 15, '2026-02-17 13:00:00', '2026-02-17 14:00:00', 'completed', NULL, NULL, '20000.00', 'HUF', NULL, NULL, NULL, '2026-02-15 11:00:00', NULL),
+(181, 2, 8, 4, 47, '2026-02-18 09:00:00', '2026-02-18 10:00:00', 'completed', NULL, NULL, '15000.00', 'HUF', NULL, NULL, NULL, '2026-02-16 08:00:00', NULL),
+(182, 2, 7, 3, 27, '2026-02-19 10:00:00', '2026-02-19 11:00:00', 'completed', NULL, NULL, '12000.00', 'HUF', NULL, NULL, NULL, '2026-02-17 09:00:00', NULL),
+(183, 2, 9, 4, 43, '2026-02-20 14:00:00', '2026-02-20 15:30:00', 'confirmed', NULL, NULL, '18000.00', 'HUF', NULL, NULL, NULL, '2026-02-18 10:00:00', NULL),
+(184, 2, 11, 3, 14, '2026-02-20 09:00:00', '2026-02-20 11:00:00', 'confirmed', NULL, NULL, '25000.00', 'HUF', NULL, NULL, NULL, '2026-02-19 08:00:00', NULL),
+(185, 2, 12, 4, 15, '2026-02-20 13:00:00', '2026-02-20 14:00:00', 'confirmed', NULL, NULL, '20000.00', 'HUF', NULL, NULL, NULL, '2026-02-19 11:00:00', NULL);
 
 -- --------------------------------------------------------
 
@@ -4177,10 +4458,17 @@ INSERT INTO `audit_logs` (`id`, `performed_by_user_id`, `performed_by_role`, `af
 (136, 45, 'staff', NULL, 1, 'uhunor41@gmail.com', 'user', 'login', NULL, NULL, '2026-02-17 18:27:46', 45),
 (137, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-17 18:28:56', 47),
 (138, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-18 21:02:12', 47),
-(139, 45, 'staff', NULL, 1, 'uhunor41@gmail.com', 'user', 'login', NULL, NULL, '2026-02-19 11:35:48', 45),
-(140, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-02-19 11:36:22', 43),
-(141, 48, 'client', NULL, NULL, 'newplace4x@gmail.com', 'user', 'register', NULL, '{\"role\": \"client\", \"email\": \"newplace4x@gmail.com\", \"user_id\": 48, \"last_name\": \"Hunor\", \"first_name\": \"Ujhelyi\"}', '2026-02-19 20:39:30', NULL),
-(142, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-20 08:38:46', 47);
+(139, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-19 09:30:24', 47),
+(140, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-19 09:58:27', 47),
+(141, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-19 10:12:48', 47),
+(142, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-19 10:40:01', 47),
+(143, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-19 11:23:37', 47),
+(144, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-19 11:41:21', 47),
+(145, 47, 'superadmin', NULL, NULL, 'vasvariben@gmail.com', 'user', 'bookAppointment', NULL, '{\"notes\": \"\", \"price\": 13900, \"endTime\": \"2026-02-20 13:45:00.0\", \"staffId\": 3, \"clientId\": 47, \"companyId\": 2, \"serviceId\": 8, \"startTime\": \"2026-02-20 13:30:00.0\"}', '2026-02-19 11:55:52', NULL),
+(146, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-19 16:54:06', 47),
+(147, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-19 20:52:23', 47),
+(148, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'logout', NULL, NULL, '2026-02-19 20:53:49', 47),
+(149, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-20 08:39:59', 47);
 
 -- --------------------------------------------------------
 
@@ -4414,8 +4702,7 @@ INSERT INTO `images` (`id`, `company_id`, `user_id`, `url`, `is_main`, `uploaded
 (60, NULL, 45, NULL, 0, '2026-02-02 09:59:27', NULL, 0),
 (61, NULL, 41, NULL, 0, '2026-02-09 17:25:03', NULL, 0),
 (62, NULL, 47, NULL, 0, '2026-02-09 17:30:58', NULL, 0),
-(65, 13, NULL, NULL, 1, '2026-02-10 23:27:11', NULL, 0),
-(66, NULL, 48, NULL, 0, '2026-02-19 20:39:30', NULL, 0);
+(65, 13, NULL, NULL, 1, '2026-02-10 23:27:11', NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -4481,8 +4768,7 @@ INSERT INTO `notification_settings` (`id`, `user_id`, `appointment_confirmation`
 (39, 39, 1, 1, 1, 0, NULL, '2024-01-25 09:00:00', NULL),
 (40, 40, 1, 1, 1, 0, NULL, '2024-01-25 09:00:00', NULL),
 (41, 43, 1, 0, 0, 0, '2026-02-03 09:00:40', '2026-02-03 08:42:59', NULL),
-(42, 47, 1, 1, 1, 0, NULL, '2026-02-09 17:30:58', NULL),
-(43, 48, 1, 1, 1, 0, NULL, '2026-02-19 20:39:30', NULL);
+(42, 47, 1, 1, 1, 0, NULL, '2026-02-09 17:30:58', NULL);
 
 -- --------------------------------------------------------
 
@@ -5416,13 +5702,6 @@ CREATE TABLE `tokens` (
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
 
---
--- Dumping data for table `tokens`
---
-
-INSERT INTO `tokens` (`id`, `user_id`, `token`, `type`, `expires_at`, `is_revoked`, `revoked_at`, `created_at`) VALUES
-(8, 48, '7d7dc39648ecf946b6df46acd356a9d2', 'email_verify', '2026-02-20 21:39:30', 0, NULL, '2026-02-19 21:39:30');
-
 -- --------------------------------------------------------
 
 --
@@ -5512,11 +5791,10 @@ INSERT INTO `users` (`id`, `guid`, `first_name`, `last_name`, `email`, `password
 (39, '39222bc4-f069-11f0-bb19-94e23c940cf4', 'Simon', 'Balázs', 'balazs.simon@yahoo.com', '$2y$10$client13', '+36203456713', NULL, '2024-04-01 12:00:00', NULL, NULL, 0, NULL, '2024-04-01 12:00:00', 1, 0, NULL, NULL, NULL),
 (40, '39222c81-f069-11f0-bb19-94e23c940cf4', 'Takács', 'Nikoletta', 'nikoletta.takacs@gmail.com', '$2y$10$client14', '+36203456714', NULL, '2024-04-02 13:00:00', NULL, NULL, 0, NULL, '2024-04-02 13:00:00', 1, 0, NULL, NULL, NULL),
 (41, 'b1f05ffe-f3c8-11f0-9e1f-41a67f8a3877', 'Admin', 'Admin', 'admin@admin.hu', '$argon2id$v=19$m=65536,t=3,p=1$Ovn1EvOxM0EzsPJHJ7inqA$nkFzFuikclUha8Jaz3itNGdPMHwGAhrPvDlXElQos/k', '+3670123252', NULL, '2026-01-17 18:19:35', '2026-01-27 10:58:29', NULL, 0, '2026-02-11 13:08:10', '2026-01-17 18:36:57', 1, 0, NULL, NULL, NULL),
-(43, '9be7f6aa-f840-11f0-89b9-b5e6602fcb6e', 'Admin', 'Admin', 'admin@admin.com', '$argon2id$v=19$m=65536,t=3,p=1$neSrpLHeChl9iqqk6FQH0A$/3zpvnj5TlX9YNwOF4j87qT7xszB9UcLDMOT3YLwEDY', '+367012344356', 2, '2026-01-23 10:48:02', '2026-01-23 20:10:10', NULL, 0, '2026-02-19 12:36:22', '2026-01-23 10:48:09', 1, 0, NULL, NULL, NULL),
+(43, '9be7f6aa-f840-11f0-89b9-b5e6602fcb6e', 'Admin', 'Admin', 'admin@admin.com', '$argon2id$v=19$m=65536,t=3,p=1$neSrpLHeChl9iqqk6FQH0A$/3zpvnj5TlX9YNwOF4j87qT7xszB9UcLDMOT3YLwEDY', '+367012344356', 2, '2026-01-23 10:48:02', '2026-01-23 20:10:10', NULL, 0, '2026-02-11 09:36:16', '2026-01-23 10:48:09', 1, 0, NULL, NULL, NULL),
 (44, '4a23ba5e-fe10-11f0-b291-2d2d5b3f2a16', 'Benjamin', 'Vasvári', 'vben@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$TRB9TpdpKZUGgk1f6UJx2Q$xf7/9r7En197Ae+nOOSe39voTcXtd/YHhurfOymEUH8', '+3670123252', NULL, '2026-01-30 20:17:16', '2026-01-30 20:17:54', NULL, 0, NULL, '2026-01-30 20:17:54', 1, 0, NULL, NULL, NULL),
-(45, 'dc156670-001d-11f1-b548-94e23c940cf4', 'Ujhelyi', 'Hunor', 'uhunor41@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$Vt6xKq2Pg5jG54y5qoWLig$sClVSYAUPPP+b1KldK9U5WB8Uhlbk8spOJDG5CezPyk', '+36703477754', 1, '2026-02-02 10:59:27', NULL, NULL, 0, '2026-02-19 12:35:48', NULL, 1, 0, NULL, NULL, NULL),
-(47, '185fbdd6-05dd-11f1-906a-ad4a6c3ef204', 'Benjamin', 'Vasvári', 'vasvariben@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$pH8GOc2tdYSG0DZDMBNDug$iXdhos2XjSQcAHrC6DfvQJ105G647p9ZpHjksBKS1po', '+3670123252', 2, '2026-02-09 18:30:58', '2026-02-11 00:27:11', NULL, 0, '2026-02-20 09:38:46', '2026-02-09 18:31:36', 1, 0, NULL, NULL, NULL),
-(48, '17030116-0dd3-11f1-85f1-94e23c940cf4', 'Ujhelyi', 'Hunor', 'newplace4x@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$SdQhCRSLHAA04zlHrj2XIQ$hdVEkg/1jShQHnpVV2UUCabFF+cUO08ts3M4qWltvG0', '+36703477754', NULL, '2026-02-19 21:39:30', NULL, NULL, 0, NULL, NULL, 0, 0, NULL, NULL, NULL);
+(45, 'dc156670-001d-11f1-b548-94e23c940cf4', 'Ujhelyi', 'Hunor', 'uhunor41@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$Vt6xKq2Pg5jG54y5qoWLig$sClVSYAUPPP+b1KldK9U5WB8Uhlbk8spOJDG5CezPyk', '+36703477754', 1, '2026-02-02 10:59:27', NULL, NULL, 0, '2026-02-17 19:27:46', NULL, 1, 0, NULL, NULL, NULL),
+(47, '185fbdd6-05dd-11f1-906a-ad4a6c3ef204', 'Benjamin', 'Vasvári', 'vasvariben@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$pH8GOc2tdYSG0DZDMBNDug$iXdhos2XjSQcAHrC6DfvQJ105G647p9ZpHjksBKS1po', '+3670123252', 2, '2026-02-09 18:30:58', '2026-02-11 00:27:11', NULL, 0, '2026-02-20 09:39:59', '2026-02-09 18:31:36', 1, 0, NULL, NULL, NULL);
 
 --
 -- Triggers `users`
@@ -5713,8 +5991,7 @@ INSERT INTO `user_x_role` (`id`, `user_id`, `role_id`, `assigned_at`, `un_assign
 (71, 45, 3, '2026-02-02 09:59:27', NULL, 0),
 (72, 47, 4, '2026-02-09 17:30:58', NULL, 0),
 (73, 47, 2, '2026-02-10 23:39:57', NULL, 0),
-(74, 47, 1, '2026-02-10 23:51:01', NULL, 0),
-(75, 48, 4, '2026-02-19 20:39:30', NULL, 0);
+(74, 47, 1, '2026-02-10 23:51:01', NULL, 0);
 
 --
 -- Indexes for dumped tables
@@ -5914,13 +6191,13 @@ ALTER TABLE `user_x_role`
 -- AUTO_INCREMENT for table `appointments`
 --
 ALTER TABLE `appointments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=185;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=186;
 
 --
 -- AUTO_INCREMENT for table `audit_logs`
 --
 ALTER TABLE `audit_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=143;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=150;
 
 --
 -- AUTO_INCREMENT for table `business_categories`
@@ -5944,13 +6221,13 @@ ALTER TABLE `favorites`
 -- AUTO_INCREMENT for table `images`
 --
 ALTER TABLE `images`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=67;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=66;
 
 --
 -- AUTO_INCREMENT for table `notification_settings`
 --
 ALTER TABLE `notification_settings`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=44;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=43;
 
 --
 -- AUTO_INCREMENT for table `opening_hours`
@@ -6028,7 +6305,7 @@ ALTER TABLE `temporary_closed_periods`
 -- AUTO_INCREMENT for table `tokens`
 --
 ALTER TABLE `tokens`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `two_factor_recovery_codes`
@@ -6040,13 +6317,13 @@ ALTER TABLE `two_factor_recovery_codes`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=49;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=48;
 
 --
 -- AUTO_INCREMENT for table `user_x_role`
 --
 ALTER TABLE `user_x_role`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=76;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=75;
 
 --
 -- Constraints for dumped tables
@@ -6198,6 +6475,35 @@ DELIMITER $$
 --
 -- Events
 --
+CREATE DEFINER=`root`@`localhost` EVENT `deactivateInactiveUsers` ON SCHEDULE EVERY 1 MONTH STARTS '2025-12-12 10:15:05' ON COMPLETION NOT PRESERVE DISABLE DO BEGIN
+    -- Userek akik 180 napja nem jelentkeztek be
+    UPDATE `users`
+    SET 
+        `is_active` = FALSE,
+        `updated_at` = NOW()
+    WHERE `last_login` < DATE_SUB(NOW(), INTERVAL 180 DAY)
+      AND `is_active` = TRUE
+      AND `is_deleted` = FALSE;
+END$$
+
+CREATE DEFINER=`root`@`localhost` EVENT `updateExpiredAppointments` ON SCHEDULE EVERY 1 HOUR STARTS '2025-12-12 10:16:13' ON COMPLETION NOT PRESERVE ENABLE DO BEGIN
+    -- Pending appointmentek amelyek már lejártak -> no_show
+    UPDATE `appointments`
+    SET 
+        `status` = 'no_show',
+        `updated_at` = NOW()
+    WHERE `status` = 'pending'
+      AND `start_time` < DATE_SUB(NOW(), INTERVAL 1 HOUR);
+    
+    -- Confirmed appointmentek amelyek véget értek -> completed
+    UPDATE `appointments`
+    SET 
+        `status` = 'completed',
+        `updated_at` = NOW()
+    WHERE `status` = 'confirmed'
+      AND `end_time` < NOW();
+END$$
+
 CREATE DEFINER=`root`@`localhost` EVENT `expire_pending_staff` ON SCHEDULE EVERY 1 DAY STARTS '2026-02-18 18:55:41' ON COMPLETION NOT PRESERVE ENABLE DO UPDATE `pending_staff`
     SET `status` = 'lejart'
     WHERE `status` = 'pending'
@@ -6228,35 +6534,6 @@ CREATE DEFINER=`root`@`localhost` EVENT `cleanupExpiredTokens` ON SCHEDULE EVERY
         JSON_OBJECT('deleted_count', ROW_COUNT()),
         NOW()
     );
-END$$
-
-CREATE DEFINER=`root`@`localhost` EVENT `deactivateInactiveUsers` ON SCHEDULE EVERY 1 MONTH STARTS '2025-12-12 10:15:05' ON COMPLETION NOT PRESERVE DISABLE DO BEGIN
-    -- Userek akik 180 napja nem jelentkeztek be
-    UPDATE `users`
-    SET 
-        `is_active` = FALSE,
-        `updated_at` = NOW()
-    WHERE `last_login` < DATE_SUB(NOW(), INTERVAL 180 DAY)
-      AND `is_active` = TRUE
-      AND `is_deleted` = FALSE;
-END$$
-
-CREATE DEFINER=`root`@`localhost` EVENT `updateExpiredAppointments` ON SCHEDULE EVERY 1 HOUR STARTS '2025-12-12 10:16:13' ON COMPLETION NOT PRESERVE ENABLE DO BEGIN
-    -- Pending appointmentek amelyek már lejártak -> no_show
-    UPDATE `appointments`
-    SET 
-        `status` = 'no_show',
-        `updated_at` = NOW()
-    WHERE `status` = 'pending'
-      AND `start_time` < DATE_SUB(NOW(), INTERVAL 1 HOUR);
-    
-    -- Confirmed appointmentek amelyek véget értek -> completed
-    UPDATE `appointments`
-    SET 
-        `status` = 'completed',
-        `updated_at` = NOW()
-    WHERE `status` = 'confirmed'
-      AND `end_time` < NOW();
 END$$
 
 CREATE DEFINER=`root`@`localhost` EVENT `cleanOldAuditLogs` ON SCHEDULE EVERY 1 WEEK STARTS '2025-12-12 10:13:56' ON COMPLETION NOT PRESERVE ENABLE DO BEGIN
