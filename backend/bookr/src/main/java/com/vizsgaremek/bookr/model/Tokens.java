@@ -89,7 +89,7 @@ public class Tokens implements Serializable {
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "tokenId")
     private Collection<PendingStaff> pendingStaffCollection;
     @JoinColumn(name = "user_id", referencedColumnName = "id")
-    @ManyToOne(optional = false)
+    @ManyToOne
     private Users userId;
 
     @Transient

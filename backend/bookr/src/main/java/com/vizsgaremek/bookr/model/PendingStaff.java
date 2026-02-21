@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.vizsgaremek.bookr.model;
 
 import static com.vizsgaremek.bookr.model.Users.emf;
@@ -77,6 +73,9 @@ public class PendingStaff implements Serializable {
     @JoinColumn(name = "token_id", referencedColumnName = "id")
     @ManyToOne(optional = false)
     private Tokens tokenId;
+    @JoinColumn(name = "user_id", referencedColumnName = "id")
+    @ManyToOne
+    private Users userId;
 
     public PendingStaff() {
     }
@@ -146,6 +145,14 @@ public class PendingStaff implements Serializable {
 
     public void setTokenId(Tokens tokenId) {
         this.tokenId = tokenId;
+    }
+
+    public Users getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Users userId) {
+        this.userId = userId;
     }
 
     @Override

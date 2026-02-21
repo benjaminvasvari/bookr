@@ -141,35 +141,15 @@ public class Users implements Serializable {
     @Size(max = 2147483647)
     @Column(name = "two_factor_recovery_codes")
     private String twoFactorRecoveryCodes;
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "userId")
-    private Collection<Favorites> favoritesCollection;
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "clientId")
-    private Collection<Appointments> appointmentsCollection;
-    @OneToMany(mappedBy = "cancelledBy")
-    private Collection<Appointments> appointmentsCollection1;
     @OneToMany(mappedBy = "userId")
-    private Collection<Images> imagesCollection;
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "userId1")
-    private Collection<NotificationSettings> notificationSettingsCollection;
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "userId")
-    private Collection<Staff> staffCollection;
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "performedByUserId")
-    private Collection<AuditLogs> auditLogsCollection;
-    @OneToMany(mappedBy = "affectedEntityId")
-    private Collection<AuditLogs> auditLogsCollection1;
+    private Collection<PendingStaff> pendingStaffCollection;
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "ownerId")
+    private Collection<Companies> companiesCollection;
+    @OneToMany(mappedBy = "userId")
+    private Collection<Tokens> tokensCollection;
     @JoinColumn(name = "company_id", referencedColumnName = "id")
     @ManyToOne
     private Companies companyId;
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "ownerId")
-    private Collection<Companies> companiesCollection;
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "clientId")
-    private Collection<Reviews> reviewsCollection;
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "userId")
-    private Collection<TwoFactorRecoveryCodes> twoFactorRecoveryCodesCollection;
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "userId")
-    private Collection<Tokens> tokensCollection;
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "userId")
-    private Collection<UserXRole> userXRoleCollection;
 
     @Transient
     private ArrayList<Roles> roles;
@@ -453,83 +433,12 @@ public class Users implements Serializable {
     }
 
     @XmlTransient
-    public Collection<Favorites> getFavoritesCollection() {
-        return favoritesCollection;
+    public Collection<PendingStaff> getPendingStaffCollection() {
+        return pendingStaffCollection;
     }
 
-    public void setFavoritesCollection(Collection<Favorites> favoritesCollection) {
-        this.favoritesCollection = favoritesCollection;
-    }
-
-    @XmlTransient
-    public Collection<Appointments> getAppointmentsCollection() {
-        return appointmentsCollection;
-    }
-
-    public void setAppointmentsCollection(Collection<Appointments> appointmentsCollection) {
-        this.appointmentsCollection = appointmentsCollection;
-    }
-
-    @XmlTransient
-    public Collection<Appointments> getAppointmentsCollection1() {
-        return appointmentsCollection1;
-    }
-
-    public void setAppointmentsCollection1(Collection<Appointments> appointmentsCollection1) {
-        this.appointmentsCollection1 = appointmentsCollection1;
-    }
-
-    @XmlTransient
-    public Collection<Images> getImagesCollection() {
-        return imagesCollection;
-    }
-
-    public void setImagesCollection(Collection<Images> imagesCollection) {
-        this.imagesCollection = imagesCollection;
-    }
-
-    @XmlTransient
-    public Collection<NotificationSettings> getNotificationSettingsCollection() {
-        return notificationSettingsCollection;
-    }
-
-    public void setNotificationSettingsCollection(Collection<NotificationSettings> notificationSettingsCollection) {
-        this.notificationSettingsCollection = notificationSettingsCollection;
-    }
-
-    @XmlTransient
-    public Collection<Staff> getStaffCollection() {
-        return staffCollection;
-    }
-
-    public void setStaffCollection(Collection<Staff> staffCollection) {
-        this.staffCollection = staffCollection;
-    }
-
-    @XmlTransient
-    public Collection<AuditLogs> getAuditLogsCollection() {
-        return auditLogsCollection;
-    }
-
-    public void setAuditLogsCollection(Collection<AuditLogs> auditLogsCollection) {
-        this.auditLogsCollection = auditLogsCollection;
-    }
-
-    @XmlTransient
-    public Collection<AuditLogs> getAuditLogsCollection1() {
-        return auditLogsCollection1;
-    }
-
-    public void setAuditLogsCollection1(Collection<AuditLogs> auditLogsCollection1) {
-        this.auditLogsCollection1 = auditLogsCollection1;
-    }
-
-    public Companies getCompanyId() {
-        return companyId;
-    }
-
-    public void setCompanyId(Companies companyId) {
-        this.companyId = companyId;
+    public void setPendingStaffCollection(Collection<PendingStaff> pendingStaffCollection) {
+        this.pendingStaffCollection = pendingStaffCollection;
     }
 
     @XmlTransient
@@ -542,24 +451,6 @@ public class Users implements Serializable {
     }
 
     @XmlTransient
-    public Collection<Reviews> getReviewsCollection() {
-        return reviewsCollection;
-    }
-
-    public void setReviewsCollection(Collection<Reviews> reviewsCollection) {
-        this.reviewsCollection = reviewsCollection;
-    }
-
-    @XmlTransient
-    public Collection<TwoFactorRecoveryCodes> getTwoFactorRecoveryCodesCollection() {
-        return twoFactorRecoveryCodesCollection;
-    }
-
-    public void setTwoFactorRecoveryCodesCollection(Collection<TwoFactorRecoveryCodes> twoFactorRecoveryCodesCollection) {
-        this.twoFactorRecoveryCodesCollection = twoFactorRecoveryCodesCollection;
-    }
-
-    @XmlTransient
     public Collection<Tokens> getTokensCollection() {
         return tokensCollection;
     }
@@ -568,13 +459,12 @@ public class Users implements Serializable {
         this.tokensCollection = tokensCollection;
     }
 
-    @XmlTransient
-    public Collection<UserXRole> getUserXRoleCollection() {
-        return userXRoleCollection;
+    public Companies getCompanyId() {
+        return companyId;
     }
 
-    public void setUserXRoleCollection(Collection<UserXRole> userXRoleCollection) {
-        this.userXRoleCollection = userXRoleCollection;
+    public void setCompanyId(Companies companyId) {
+        this.companyId = companyId;
     }
 
     // CUSTOM GET/SET

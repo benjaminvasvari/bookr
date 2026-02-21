@@ -129,35 +129,15 @@ public class Companies implements Serializable {
     @Column(name = "minimum_booking_hours_ahead")
     private Integer minimumBookingHoursAhead;
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "companyId")
-    private Collection<Favorites> favoritesCollection;
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "companyId")
     private Collection<PendingStaff> pendingStaffCollection;
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "companyId")
-    private Collection<Appointments> appointmentsCollection;
-    @OneToMany(mappedBy = "companyId")
-    private Collection<Images> imagesCollection;
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "companyId")
-    private Collection<ServiceCategories> serviceCategoriesCollection;
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "companyId")
-    private Collection<Staff> staffCollection;
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "companyId")
-    private Collection<Services> servicesCollection;
-    @OneToMany(mappedBy = "companyId")
-    private Collection<AuditLogs> auditLogsCollection;
-    @OneToMany(mappedBy = "companyId")
-    private Collection<Users> usersCollection;
     @JoinColumn(name = "business_category_id", referencedColumnName = "id")
     @ManyToOne
     private BusinessCategories businessCategoryId;
     @JoinColumn(name = "owner_id", referencedColumnName = "id")
     @ManyToOne(optional = false)
     private Users ownerId;
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "companyId")
-    private Collection<Reviews> reviewsCollection;
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "companyId")
-    private Collection<OpeningHours> openingHoursCollection;
-    @OneToMany(cascade = CascadeType.ALL, mappedBy = "companyId")
-    private Collection<TemporaryClosedPeriods> temporaryClosedPeriodsCollection;
+    @OneToMany(mappedBy = "companyId")
+    private Collection<Users> usersCollection;
 
     @Transient
     private String categoryName;
@@ -434,84 +414,12 @@ public class Companies implements Serializable {
     }
 
     @XmlTransient
-    public Collection<Favorites> getFavoritesCollection() {
-        return favoritesCollection;
-    }
-
-    public void setFavoritesCollection(Collection<Favorites> favoritesCollection) {
-        this.favoritesCollection = favoritesCollection;
-    }
-
-    @XmlTransient
     public Collection<PendingStaff> getPendingStaffCollection() {
         return pendingStaffCollection;
     }
 
     public void setPendingStaffCollection(Collection<PendingStaff> pendingStaffCollection) {
         this.pendingStaffCollection = pendingStaffCollection;
-    }
-
-    @XmlTransient
-    public Collection<Appointments> getAppointmentsCollection() {
-        return appointmentsCollection;
-    }
-
-    public void setAppointmentsCollection(Collection<Appointments> appointmentsCollection) {
-        this.appointmentsCollection = appointmentsCollection;
-    }
-
-    @XmlTransient
-    public Collection<Images> getImagesCollection() {
-        return imagesCollection;
-    }
-
-    public void setImagesCollection(Collection<Images> imagesCollection) {
-        this.imagesCollection = imagesCollection;
-    }
-
-    @XmlTransient
-    public Collection<ServiceCategories> getServiceCategoriesCollection() {
-        return serviceCategoriesCollection;
-    }
-
-    public void setServiceCategoriesCollection(Collection<ServiceCategories> serviceCategoriesCollection) {
-        this.serviceCategoriesCollection = serviceCategoriesCollection;
-    }
-
-    @XmlTransient
-    public Collection<Staff> getStaffCollection() {
-        return staffCollection;
-    }
-
-    public void setStaffCollection(Collection<Staff> staffCollection) {
-        this.staffCollection = staffCollection;
-    }
-
-    @XmlTransient
-    public Collection<Services> getServicesCollection() {
-        return servicesCollection;
-    }
-
-    public void setServicesCollection(Collection<Services> servicesCollection) {
-        this.servicesCollection = servicesCollection;
-    }
-
-    @XmlTransient
-    public Collection<AuditLogs> getAuditLogsCollection() {
-        return auditLogsCollection;
-    }
-
-    public void setAuditLogsCollection(Collection<AuditLogs> auditLogsCollection) {
-        this.auditLogsCollection = auditLogsCollection;
-    }
-
-    @XmlTransient
-    public Collection<Users> getUsersCollection() {
-        return usersCollection;
-    }
-
-    public void setUsersCollection(Collection<Users> usersCollection) {
-        this.usersCollection = usersCollection;
     }
 
     public BusinessCategories getBusinessCategoryId() {
@@ -531,30 +439,12 @@ public class Companies implements Serializable {
     }
 
     @XmlTransient
-    public Collection<Reviews> getReviewsCollection() {
-        return reviewsCollection;
+    public Collection<Users> getUsersCollection() {
+        return usersCollection;
     }
 
-    public void setReviewsCollection(Collection<Reviews> reviewsCollection) {
-        this.reviewsCollection = reviewsCollection;
-    }
-
-    @XmlTransient
-    public Collection<OpeningHours> getOpeningHoursCollection() {
-        return openingHoursCollection;
-    }
-
-    public void setOpeningHoursCollection(Collection<OpeningHours> openingHoursCollection) {
-        this.openingHoursCollection = openingHoursCollection;
-    }
-
-    @XmlTransient
-    public Collection<TemporaryClosedPeriods> getTemporaryClosedPeriodsCollection() {
-        return temporaryClosedPeriodsCollection;
-    }
-
-    public void setTemporaryClosedPeriodsCollection(Collection<TemporaryClosedPeriods> temporaryClosedPeriodsCollection) {
-        this.temporaryClosedPeriodsCollection = temporaryClosedPeriodsCollection;
+    public void setUsersCollection(Collection<Users> usersCollection) {
+        this.usersCollection = usersCollection;
     }
 
     // Getters and setters for transient fields
