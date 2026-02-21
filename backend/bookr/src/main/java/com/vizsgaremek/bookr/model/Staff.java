@@ -461,8 +461,8 @@ public class Staff implements Serializable {
 
                 Staff s = new Staff(
                         Integer.valueOf(record[0].toString()),
-                        Integer.valueOf(record[1].toString()), 
-                       record[2].toString(),
+                        Integer.valueOf(record[1].toString()),
+                        record[2].toString(),
                         record[3] != null ? record[3].toString() : null,
                         record[4] != null ? record[4].toString() : null,
                         formatter.parse(record[5].toString()),
