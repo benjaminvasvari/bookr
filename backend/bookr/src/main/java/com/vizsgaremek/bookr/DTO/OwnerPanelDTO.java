@@ -462,8 +462,9 @@ public class OwnerPanelDTO {
         }
 
     }
-    
+
     public static class SalesTopServicesDTO {
+
         private int serviceId;
         private String serviceName;
         private int clientCount;
@@ -497,7 +498,120 @@ public class OwnerPanelDTO {
         public String getCurrency() {
             return currency;
         }
-        
-        
+
+    }
+
+    public static class OwnerReviewsDTO {
+
+        private int reviewId;
+        private int rating;
+        private String comment;
+        private String createdAt;
+        private String clientName;
+        private String imageUrl;
+        private String serviceName;
+        private String appointmentDate;
+
+        public OwnerReviewsDTO(int reviewId, int rating, String comment, String createdAt, String clientName, String imageUrl, String serviceName, String appointmentDate) {
+            this.reviewId = reviewId;
+            this.rating = rating;
+            this.comment = comment;
+            this.createdAt = createdAt;
+            this.clientName = clientName;
+            this.imageUrl = imageUrl;
+            this.serviceName = serviceName;
+            this.appointmentDate = appointmentDate;
+        }
+
+        public int getReviewId() {
+            return reviewId;
+        }
+
+        public int getRating() {
+            return rating;
+        }
+
+        public String getComment() {
+            return comment;
+        }
+
+        public String getCreatedAt() {
+            return createdAt;
+        }
+
+        public String getClientName() {
+            return clientName;
+        }
+
+        public String getImageUrl() {
+            return imageUrl;
+        }
+
+        public String getServiceName() {
+            return serviceName;
+        }
+
+        public String getAppointmentDate() {
+            return appointmentDate;
+        }
+
+    }
+
+    public static class ReviewsForOwnerResultWrapper {
+
+        private List<OwnerReviewsDTO> reviews;
+        private Integer totalCount;
+
+        public ReviewsForOwnerResultWrapper(List<OwnerReviewsDTO> reviews, Integer totalCount) {
+            this.reviews = reviews;
+            this.totalCount = totalCount;
+        }
+
+        public List<OwnerReviewsDTO> getReviews() {
+            return reviews;
+        }
+
+        public Integer getTotalCount() {
+            return totalCount;
+        }
+
+    }
+
+    public static class OwnerReviewsRequest {
+
+        private String search;
+        private String ratingFilter;
+        private String sortBy;
+        private Integer page;
+        private Integer pageSize;
+
+        public OwnerReviewsRequest(String search, String ratingFilter, String sortBy, Integer page, Integer pageSize) {
+            this.search = search;
+            this.ratingFilter = ratingFilter;
+            this.sortBy = sortBy;
+            this.page = page;
+            this.pageSize = pageSize;
+        }
+
+        public String getSearch() {
+            return search;
+        }
+
+        public String getRatingFilter() {
+            return ratingFilter;
+        }
+
+        public String getSortBy() {
+            return sortBy;
+        }
+
+        public Integer getPage() {
+            return page;
+        }
+
+        public Integer getPageSize() {
+            return pageSize;
+        }
+
     }
 }

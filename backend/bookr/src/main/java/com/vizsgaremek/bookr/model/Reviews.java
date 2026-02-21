@@ -4,9 +4,11 @@
  */
 package com.vizsgaremek.bookr.model;
 
+import com.vizsgaremek.bookr.DTO.OwnerPanelDTO;
 import com.vizsgaremek.bookr.DTO.OwnerPanelDTO.AverageRatingDTO;
 import static com.vizsgaremek.bookr.model.Users.emf;
 import static com.vizsgaremek.bookr.model.Users.formatter;
+import com.vizsgaremek.bookr.util.StoredProcedureUtil;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
@@ -246,7 +248,7 @@ public class Reviews implements Serializable {
             StoredProcedureQuery spq = em.createStoredProcedureQuery("getReviewsByCompanyLimited");
             spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("limitIN", Integer.class, ParameterMode.IN);
-            
+
             spq.setParameter("companyIdIN", companyId);
             spq.setParameter("limitIN", limit);
 
@@ -313,6 +315,66 @@ public class Reviews implements Serializable {
             );
 
             return rating;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public OwnerPanelDTO.ReviewsForOwnerResultWrapper getOwnerReviews(Integer companyId, OwnerPanelDTO.OwnerReviewsRequest request) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getOwnerReviews");
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("searchIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("ratingFilterIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("sortByIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("pageIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("pageSizeIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("totalCountOUT", Integer.class, ParameterMode.OUT);
+
+            spq.setParameter("companyIdIN", companyId);
+
+            StoredProcedureUtil.setNullableParameter(spq, "searchIN", (request.getSearch() != null && !request.getSearch().isEmpty()) ? request.getSearch() : null);
+            StoredProcedureUtil.setNullableParameter(spq, "ratingFilterIN", (request.getRatingFilter() != null && !request.getRatingFilter().isEmpty()) ? request.getRatingFilter() : null);
+
+            spq.setParameter("sortByIN", request.getSortBy());
+            spq.setParameter("pageIN", request.getPage());
+            spq.setParameter("pageSizeIN", request.getPageSize());
+
+            spq.execute();
+
+            Integer totalCount = (Integer) spq.getOutputParameterValue("totalCountOUT");
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return new OwnerPanelDTO.ReviewsForOwnerResultWrapper(new ArrayList<>(), totalCount != null ? totalCount : 0);
+            }
+
+            List<OwnerPanelDTO.OwnerReviewsDTO> clients = new ArrayList<>();
+
+            for (Object[] record : resultList) {
+
+                OwnerPanelDTO.OwnerReviewsDTO dto = new OwnerPanelDTO.OwnerReviewsDTO(
+                        Integer.valueOf(record[0].toString()),
+                        Integer.valueOf(record[1].toString()),
+                        record[2].toString(),
+                        record[3].toString(),
+                        record[4].toString(),
+                        record[5] != null ? record[5].toString() : null,
+                        record[6].toString(),
+                        record[7].toString()
+                );
+                clients.add(dto);
+            }
+
+            return new OwnerPanelDTO.ReviewsForOwnerResultWrapper(clients, totalCount != null ? totalCount : 0);
 
         } catch (Exception ex) {
             ex.printStackTrace();
