@@ -149,12 +149,14 @@ public class Staff implements Serializable {
         this.imageUrl = imageUrl;
     }
 
-    public Staff(Integer id, Integer userIdInt, String displayName, String specialties, String bio, Date createdAt, Date updatedAt, String firstName, String lastName, String imageUrl) {
+    // getAllActiveStaffByCompany
+    public Staff(Integer id, Integer userIdInt, String displayName, String specialties, String bio, String color, Date createdAt, Date updatedAt, String firstName, String lastName, String imageUrl) {
         this.id = id;
         this.userIdInt = userIdInt;
         this.displayName = displayName;
         this.specialties = specialties;
         this.bio = bio;
+        this.color = color;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         this.firstName = firstName;
@@ -477,11 +479,12 @@ public class Staff implements Serializable {
                         record[2].toString(),
                         record[3] != null ? record[3].toString() : null,
                         record[4] != null ? record[4].toString() : null,
-                        formatter.parse(record[5].toString()),
-                        record[6] != null ? formatter.parse(record[6].toString()) : null,
-                        record[7].toString(),
+                        record[5] != null ? record[5].toString() : null,
+                        formatter.parse(record[6].toString()),
+                        record[7] != null ? formatter.parse(record[7].toString()) : null,
                         record[8].toString(),
-                        record[9] != null ? record[9].toString() : null
+                        record[9].toString(),
+                        record[10] != null ? record[10].toString() : null
                 );
 
                 toReturn.add(s);

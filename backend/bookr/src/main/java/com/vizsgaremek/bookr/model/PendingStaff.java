@@ -4,11 +4,15 @@
  */
 package com.vizsgaremek.bookr.model;
 
+import static com.vizsgaremek.bookr.model.Users.emf;
+import static com.vizsgaremek.bookr.model.Users.formatter;
 import java.io.Serializable;
 import java.util.Date;
+import java.util.List;
 import javax.persistence.Basic;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EntityManager;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -17,6 +21,8 @@ import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
+import javax.persistence.ParameterMode;
+import javax.persistence.StoredProcedureQuery;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
@@ -166,5 +172,47 @@ public class PendingStaff implements Serializable {
     public String toString() {
         return "com.vizsgaremek.bookr.model.PendingStaff[ id=" + id + " ]";
     }
-    
+
+    public static PendingStaff createPendingStaff(Integer userId, Integer companyId, String email, Integer tokenId, String position) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("createPendingStaff");
+            spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("emailIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("tokenIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("positionIN", String.class, ParameterMode.IN);
+
+            spq.setParameter("userIdIN", userId);
+            spq.setParameter("emailIN", email);
+            spq.setParameter("companyIdIN", companyId);
+            spq.setParameter("tokenIdIN", tokenId);
+            spq.setParameter("positionIN", position);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            Object[] record = resultList.get(0);
+
+            PendingStaff token = new PendingStaff(
+                    Integer.valueOf(record[0].toString())
+            );
+
+            return token;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
 }

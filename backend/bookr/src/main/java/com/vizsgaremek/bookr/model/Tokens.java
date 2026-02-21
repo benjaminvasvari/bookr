@@ -135,6 +135,13 @@ public class Tokens implements Serializable {
         this.createdAt = createdAt;
     }
 
+    // Generate inviteStaffToken
+    public Tokens(Integer id, String token, Date expiresAt) {
+        this.id = id;
+        this.token = token;
+        this.expiresAt = expiresAt;
+    }
+
     public Integer getId() {
         return id;
     }
@@ -385,6 +392,47 @@ public class Tokens implements Serializable {
                     record[5] != null ? Boolean.parseBoolean(record[5].toString()) : null,
                     formatter.parse(record[6].toString()),
                     formatter.parse(record[7].toString())
+            );
+
+            return token;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static Tokens generateStaffInviteToken(Integer userId, Integer companyId, String email) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("generateStaffInviteToken");
+            spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("emailIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("userIdIN", userId);
+            spq.setParameter("emailIN", email);
+            spq.setParameter("companyIdIN", companyId);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            Object[] record = resultList.get(0);
+
+            Tokens token = new Tokens(
+                    Integer.valueOf(record[0].toString()),
+                    record[1].toString(),
+                    formatter.parse(record[2].toString())
             );
 
             return token;

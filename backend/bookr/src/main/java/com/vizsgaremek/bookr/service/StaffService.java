@@ -73,7 +73,6 @@ public class StaffService {
         return toReturn;
     }
 
-
     public JSONObject getStaffByCompanyAndAppointments(Integer companyId) {
         JSONObject toReturn = new JSONObject();
         String status = "success";
@@ -96,6 +95,13 @@ public class StaffService {
                 staffObject.put("displayName", actualStaff.getDisplayName());
                 staffObject.put("specialties", actualStaff.getSpecialties());
                 staffObject.put("bio", actualStaff.getBio());
+
+                if (actualStaff.getColor() == null || actualStaff.getColor().isEmpty()) {
+                    staffObject.put("color", JSONObject.NULL);
+                } else {
+                    staffObject.put("color", actualStaff.getColor());
+                }
+
                 staffObject.put("isActive", actualStaff.getIsActive());
                 staffObject.put("companyId", actualStaff.getCompanyIdInt());
                 staffObject.put("firstName", actualStaff.getFirstName());
