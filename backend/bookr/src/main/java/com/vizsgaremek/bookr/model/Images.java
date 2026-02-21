@@ -80,10 +80,10 @@ public class Images implements Serializable {
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     @ManyToOne
     private Users userId;
-    
+
     @Transient
     private Integer companyIdInt;
-    
+
     @Transient
     private Integer userIdInt;
 
@@ -173,7 +173,7 @@ public class Images implements Serializable {
     public void setUserId(Users userId) {
         this.userId = userId;
     }
-    
+
     // CUSTOM SET/GET
     public Integer getCompanyIdInt() {
         return companyIdInt;
@@ -182,7 +182,7 @@ public class Images implements Serializable {
     public void setCompanyIdInt(Integer companyIdInt) {
         this.companyIdInt = companyIdInt;
     }
-    
+
     public Integer getUserIdInt() {
         return userIdInt;
     }

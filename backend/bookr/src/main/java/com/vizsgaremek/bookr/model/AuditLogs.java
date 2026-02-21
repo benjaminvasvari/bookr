@@ -61,7 +61,7 @@ public class AuditLogs implements Serializable {
     @Column(name = "performed_by_role")
     private String performedByRole;
     // @Pattern(regexp="[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?", message="Invalid email")//if the field contains email address consider using this annotation to enforce field validation
-    @Size(max = 200)
+    @Size(max = 100)
     @Column(name = "email")
     private String email;
     @Size(max = 50)
@@ -235,6 +235,7 @@ public class AuditLogs implements Serializable {
         this.affectedEntityId = affectedEntityId;
     }
 
+    // CUSTOMS
     public void setOldValuesMap(Map<String, Object> oldValuesMap) {
         this.oldValuesMap = oldValuesMap;
     }

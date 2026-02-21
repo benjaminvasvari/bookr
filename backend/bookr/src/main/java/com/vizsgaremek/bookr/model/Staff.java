@@ -46,6 +46,7 @@ import javax.xml.bind.annotation.XmlTransient;
     @NamedQuery(name = "Staff.findAll", query = "SELECT s FROM Staff s"),
     @NamedQuery(name = "Staff.findById", query = "SELECT s FROM Staff s WHERE s.id = :id"),
     @NamedQuery(name = "Staff.findByDisplayName", query = "SELECT s FROM Staff s WHERE s.displayName = :displayName"),
+    @NamedQuery(name = "Staff.findByColor", query = "SELECT s FROM Staff s WHERE s.color = :color"),
     @NamedQuery(name = "Staff.findByIsActive", query = "SELECT s FROM Staff s WHERE s.isActive = :isActive"),
     @NamedQuery(name = "Staff.findByIsDeleted", query = "SELECT s FROM Staff s WHERE s.isDeleted = :isDeleted"),
     @NamedQuery(name = "Staff.findByCreatedAt", query = "SELECT s FROM Staff s WHERE s.createdAt = :createdAt"),
@@ -69,6 +70,9 @@ public class Staff implements Serializable {
     @Size(max = 65535)
     @Column(name = "bio")
     private String bio;
+    @Size(max = 7)
+    @Column(name = "color")
+    private String color;
     @Column(name = "is_active")
     private Boolean isActive;
     @Column(name = "is_deleted")
@@ -191,6 +195,14 @@ public class Staff implements Serializable {
         this.bio = bio;
     }
 
+    public String getColor() {
+        return color;
+    }
+
+    public void setColor(String color) {
+        this.color = color;
+    }
+
     public Boolean getIsActive() {
         return isActive;
     }
@@ -257,24 +269,6 @@ public class Staff implements Serializable {
         this.userId = userId;
     }
 
-    @XmlTransient
-    public Collection<StaffServices> getStaffServicesCollection() {
-        return staffServicesCollection;
-    }
-
-    public void setStaffServicesCollection(Collection<StaffServices> staffServicesCollection) {
-        this.staffServicesCollection = staffServicesCollection;
-    }
-
-    @XmlTransient
-    public Collection<StaffWorkingHours> getStaffWorkingHoursCollection() {
-        return staffWorkingHoursCollection;
-    }
-
-    public void setStaffWorkingHoursCollection(Collection<StaffWorkingHours> staffWorkingHoursCollection) {
-        this.staffWorkingHoursCollection = staffWorkingHoursCollection;
-    }
-
     // CUSTOM GET/SET
     public Integer getUserIdInt() {
         return userIdInt;
@@ -322,6 +316,24 @@ public class Staff implements Serializable {
 
     public void setLastName(String lastName) {
         this.lastName = lastName;
+    }
+
+    @XmlTransient
+    public Collection<StaffServices> getStaffServicesCollection() {
+        return staffServicesCollection;
+    }
+
+    public void setStaffServicesCollection(Collection<StaffServices> staffServicesCollection) {
+        this.staffServicesCollection = staffServicesCollection;
+    }
+
+    @XmlTransient
+    public Collection<StaffWorkingHours> getStaffWorkingHoursCollection() {
+        return staffWorkingHoursCollection;
+    }
+
+    public void setStaffWorkingHoursCollection(Collection<StaffWorkingHours> staffWorkingHoursCollection) {
+        this.staffWorkingHoursCollection = staffWorkingHoursCollection;
     }
 
     @Override

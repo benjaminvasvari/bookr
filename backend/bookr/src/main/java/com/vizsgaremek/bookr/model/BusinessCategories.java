@@ -43,10 +43,10 @@ import javax.xml.bind.annotation.XmlTransient;
     @NamedQuery(name = "BusinessCategories.findAll", query = "SELECT b FROM BusinessCategories b"),
     @NamedQuery(name = "BusinessCategories.findById", query = "SELECT b FROM BusinessCategories b WHERE b.id = :id"),
     @NamedQuery(name = "BusinessCategories.findByName", query = "SELECT b FROM BusinessCategories b WHERE b.name = :name"),
-    @NamedQuery(name = "BusinessCategories.findByIcon", query = "SELECT b FROM BusinessCategories b WHERE b.icon = :icon"),
     @NamedQuery(name = "BusinessCategories.findByIsActive", query = "SELECT b FROM BusinessCategories b WHERE b.isActive = :isActive"),
     @NamedQuery(name = "BusinessCategories.findByCreatedAt", query = "SELECT b FROM BusinessCategories b WHERE b.createdAt = :createdAt"),
-    @NamedQuery(name = "BusinessCategories.findByUpdatedAt", query = "SELECT b FROM BusinessCategories b WHERE b.updatedAt = :updatedAt")})
+    @NamedQuery(name = "BusinessCategories.findByUpdatedAt", query = "SELECT b FROM BusinessCategories b WHERE b.updatedAt = :updatedAt"),
+    @NamedQuery(name = "BusinessCategories.findByIcon", query = "SELECT b FROM BusinessCategories b WHERE b.icon = :icon")})
 public class BusinessCategories implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -64,9 +64,6 @@ public class BusinessCategories implements Serializable {
     @Size(max = 65535)
     @Column(name = "description")
     private String description;
-    @Size(max = 50)
-    @Column(name = "icon")
-    private String icon;
     @Basic(optional = false)
     @NotNull
     @Column(name = "is_active")
@@ -79,6 +76,9 @@ public class BusinessCategories implements Serializable {
     @Column(name = "updated_at")
     @Temporal(TemporalType.TIMESTAMP)
     private Date updatedAt;
+    @Size(max = 50)
+    @Column(name = "icon")
+    private String icon;
     @OneToMany(mappedBy = "businessCategoryId")
     private Collection<Companies> companiesCollection;
 
@@ -141,14 +141,6 @@ public class BusinessCategories implements Serializable {
         this.description = description;
     }
 
-    public String getIcon() {
-        return icon;
-    }
-
-    public void setIcon(String icon) {
-        this.icon = icon;
-    }
-
     public boolean getIsActive() {
         return isActive;
     }
@@ -171,6 +163,14 @@ public class BusinessCategories implements Serializable {
 
     public void setUpdatedAt(Date updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getIcon() {
+        return icon;
+    }
+
+    public void setIcon(String icon) {
+        this.icon = icon;
     }
 
     @XmlTransient

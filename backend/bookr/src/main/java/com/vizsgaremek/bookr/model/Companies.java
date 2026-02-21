@@ -131,6 +131,8 @@ public class Companies implements Serializable {
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "companyId")
     private Collection<Favorites> favoritesCollection;
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "companyId")
+    private Collection<PendingStaff> pendingStaffCollection;
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "companyId")
     private Collection<Appointments> appointmentsCollection;
     @OneToMany(mappedBy = "companyId")
     private Collection<Images> imagesCollection;
@@ -438,6 +440,15 @@ public class Companies implements Serializable {
 
     public void setFavoritesCollection(Collection<Favorites> favoritesCollection) {
         this.favoritesCollection = favoritesCollection;
+    }
+
+    @XmlTransient
+    public Collection<PendingStaff> getPendingStaffCollection() {
+        return pendingStaffCollection;
+    }
+
+    public void setPendingStaffCollection(Collection<PendingStaff> pendingStaffCollection) {
+        this.pendingStaffCollection = pendingStaffCollection;
     }
 
     @XmlTransient
@@ -1038,7 +1049,7 @@ public class Companies implements Serializable {
             }
         }
     }
-    
+
     public static Integer getCompanyIdByOwnerId(Integer userId) {
         EntityManager em = emf.createEntityManager();
 
@@ -1057,7 +1068,7 @@ public class Companies implements Serializable {
             }
 
             Integer companyId = Integer.valueOf(singleResult.toString());
-            
+
             return companyId;
 
         } catch (Exception ex) {

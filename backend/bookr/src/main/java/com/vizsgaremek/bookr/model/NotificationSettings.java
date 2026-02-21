@@ -85,6 +85,15 @@ public class NotificationSettings implements Serializable {
     @ManyToOne(optional = false)
     private Users userId1;
 
+    //CUSTOM
+    public Integer getUserIdInt() {
+        return userIdInt;
+    }
+
+    public void setUserIdInt(Integer userIdInt) {
+        this.userIdInt = userIdInt;
+    }
+
     @Transient
     private Integer userIdInt;
 
@@ -189,14 +198,6 @@ public class NotificationSettings implements Serializable {
 
     public void setUserId1(Users userId1) {
         this.userId1 = userId1;
-    }
-
-    public Integer getUserIdInt() {
-        return userIdInt;
-    }
-
-    public void setUserIdInt(Integer userIdInt) {
-        this.userIdInt = userIdInt;
     }
 
     @Override

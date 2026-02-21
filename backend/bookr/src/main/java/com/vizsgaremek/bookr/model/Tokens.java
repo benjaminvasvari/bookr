@@ -8,9 +8,11 @@ import static com.vizsgaremek.bookr.model.Users.emf;
 import static com.vizsgaremek.bookr.model.Users.formatter;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import javax.persistence.Basic;
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EntityManager;
@@ -21,6 +23,7 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
+import javax.persistence.OneToMany;
 import javax.persistence.ParameterMode;
 import javax.persistence.StoredProcedureQuery;
 import javax.persistence.Table;
@@ -30,6 +33,7 @@ import javax.persistence.Transient;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlTransient;
 
 /**
  *
@@ -82,10 +86,12 @@ public class Tokens implements Serializable {
     @Column(name = "created_at")
     @Temporal(TemporalType.TIMESTAMP)
     private Date createdAt;
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "tokenId")
+    private Collection<PendingStaff> pendingStaffCollection;
     @JoinColumn(name = "user_id", referencedColumnName = "id")
     @ManyToOne(optional = false)
     private Users userId;
-    
+
     @Transient
     private Integer userIdInt;
 
@@ -128,8 +134,6 @@ public class Tokens implements Serializable {
         this.revokedAt = revokedAt;
         this.createdAt = createdAt;
     }
-    
-    
 
     public Integer getId() {
         return id;
@@ -187,6 +191,15 @@ public class Tokens implements Serializable {
         this.createdAt = createdAt;
     }
 
+    @XmlTransient
+    public Collection<PendingStaff> getPendingStaffCollection() {
+        return pendingStaffCollection;
+    }
+
+    public void setPendingStaffCollection(Collection<PendingStaff> pendingStaffCollection) {
+        this.pendingStaffCollection = pendingStaffCollection;
+    }
+
     public Users getUserId() {
         return userId;
     }
@@ -194,7 +207,8 @@ public class Tokens implements Serializable {
     public void setUserId(Users userId) {
         this.userId = userId;
     }
-    
+
+    //CUSTOMS
     public Integer getUserIdInt() {
         return userIdInt;
     }
@@ -368,7 +382,7 @@ public class Tokens implements Serializable {
                     record[2].toString(),
                     record[3].toString(),
                     formatter.parse(record[4].toString()),
-                    record[5] != null ? Boolean.parseBoolean(record[5].toString()): null,
+                    record[5] != null ? Boolean.parseBoolean(record[5].toString()) : null,
                     formatter.parse(record[6].toString()),
                     formatter.parse(record[7].toString())
             );
