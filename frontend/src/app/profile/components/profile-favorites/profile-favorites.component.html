@@ -1,0 +1,116 @@
+<!-- profile-favorites.component.html -->
+<div class="favorites-container">
+  <!-- Page Header -->
+  <div class="section-header">
+    <h1 class="section-title">Kedvenceim</h1>
+    <p class="section-subtitle">Itt találod a kedvenc cégeidet ({{ favorites.length }})</p>
+  </div>
+
+  <!-- Loading State -->
+  @if (isLoading) {
+    <div class="loading">
+      <p>Kedvencek betöltése...</p>
+    </div>
+  }
+
+  <!-- Error State -->
+  @if (error && !isLoading) {
+    <div class="error-state">
+      <p>{{ error }}</p>
+      <button class="btn btn-primary" (click)="loadFavorites()">Újrapróbálás</button>
+    </div>
+  }
+
+  <!-- Favorites List -->
+  @if (!isLoading && !error) {
+    <div class="favorites-list">
+      <!-- Empty State -->
+      @if (favorites.length === 0) {
+        <div class="empty-state">
+          <svg class="empty-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path
+              d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+            />
+          </svg>
+          <h3 class="empty-title">Még nincs kedvenc céged</h3>
+          <p class="empty-text">
+            Kezdj el böngészni a szolgáltatások között és jelöld meg kedvencnek a számodra fontos
+            cégeket!
+          </p>
+        </div>
+      }
+
+      <!-- Favorite Cards -->
+      @for (favorite of favorites; track favorite.favoriteId) {
+        <div class="favorite-card" (click)="goToCompany(favorite.company.companyId)">
+          <div class="favorite-main">
+            <!-- Company Image -->
+            <div class="favorite-image">
+              <img [src]="favorite.company.imageUrl" [alt]="favorite.company.name" />
+              <button
+                class="favorite-button active"
+                (click)="removeFavorite(favorite.favoriteId, $event)"
+                title="Eltávolítás kedvencekből"
+              >
+                <svg class="heart-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                  <path
+                    d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <!-- Company Info -->
+            <div class="favorite-info">
+              <div class="favorite-header">
+                <h3 class="company-name">{{ favorite.company.name }}</h3>
+              </div>
+
+              @if (favorite.company.category) {
+                <p class="company-category">{{ favorite.company.category }}</p>
+              }
+
+              <div class="rating-section">
+                <span class="rating-value">{{ favorite.company.rating }}</span>
+                <div class="rating-stars">
+                  @for (star of getRatingStars(favorite.company.rating); track $index) {
+                    <span class="star">★</span>
+                  }
+                </div>
+                <span class="review-count">({{ favorite.company.reviewCount }})</span>
+              </div>
+
+              @if (favorite.company.address) {
+                <div class="company-details">
+                  <div class="detail-item">
+                    <svg class="detail-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                    </svg>
+                    <span>{{ favorite.company.address }}</span>
+                  </div>
+                </div>
+              }
+
+              <p class="added-date">Hozzáadva: {{ formatDate(favorite.addedAt) }}</p>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="favorite-actions">
+            <button class="btn btn-secondary" (click)="goToCompany(favorite.company.companyId); $event.stopPropagation()">
+              Részletek
+            </button>
+            <button class="btn btn-primary" (click)="bookCompany(favorite.company.companyId, $event)">
+              <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path
+                  d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"
+                />
+              </svg>
+              Foglalás
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

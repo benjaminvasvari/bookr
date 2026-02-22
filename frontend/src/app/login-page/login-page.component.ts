@@ -2,25 +2,25 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { AuthService } from '../core/services/auth.service';
 
 @Component({
   selector: 'app-login',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './login-page.component.html',
-  styleUrls: ['./login-page.component.css']
+  styleUrls: ['./login-page.component.css'],
 })
 export class LoginPageComponent {
   loginForm: FormGroup;
   hidePassword = true;
+  isLoading = false;
+  errorMessage = '';
 
-  constructor(
-    private fb: FormBuilder,
-    private router: Router
-  ) {
+  constructor(private fb: FormBuilder, private router: Router, private authService: AuthService) {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(6)]]
+      password: ['', [Validators.required, Validators.minLength(8)]],
     });
   }
 
@@ -33,38 +33,64 @@ export class LoginPageComponent {
     return this.loginForm.get('password')!;
   }
 
-  // Dinamikus error message getter-ek
+  // Új flag, ami jelzi hogy volt-e submit kísérlet
+  isSubmitted = false;
+
   get emailErrorMessage(): string {
-    if (this.email.hasError('required') && this.email.touched) {
+    if (!this.isSubmitted) return '';
+
+    if (this.email.hasError('required')) {
       return 'Az email cím megadása kötelező';
     }
-    if (this.email.hasError('email') && this.email.touched) {
+    if (this.email.hasError('email')) {
       return 'Érvénytelen email formátum';
     }
     return '';
   }
 
   get passwordErrorMessage(): string {
-    if (this.password.hasError('required') && this.password.touched) {
+    if (!this.isSubmitted) return '';
+
+    if (this.password.hasError('required')) {
       return 'A jelszó megadása kötelező';
     }
-    if (this.password.hasError('minlength') && this.password.touched) {
+    if (this.password.hasError('minlength')) {
       return 'A jelszónak legalább 8 karakter hosszúnak kell lennie';
     }
     return '';
   }
 
   onSubmit(): void {
-    if (this.loginForm.valid) {
-      const { email, password } = this.loginForm.value;
-      // TODO: Implement authentication logic
-      console.log('Login attempt:', { email, password });
-      // Navigate to dashboard after successful login
-      // this.router.navigate(['/dashboard']);
-    } else {
-      // Mark all fields as touched to show validation errors
-      this.loginForm.markAllAsTouched();
+    // Submit megjelölése
+    this.isSubmitted = true;
+
+    // Ha invalid form, return (NEM küldi el)
+    if (this.loginForm.invalid) {
+      return; 
     }
+
+    // Loading state bekapcsolása
+    this.isLoading = true;
+    this.errorMessage = '';
+
+    const { email, password } = this.loginForm.value;
+
+    // Backend hívás
+    this.authService.login(email, password).subscribe({
+      next: (response) => {
+        this.isLoading = false;
+        if (response.status === 'success') {
+          this.router.navigate(['/']);
+        } else {
+          this.errorMessage = 'Rossz email cím vagy jelszó.';
+        }
+      },
+      error: (error) => {
+        this.isLoading = false;
+        this.errorMessage = 'Rossz email cím vagy jelszó.';
+        console.error('Login error:', error);
+      },
+    });
   }
 
   navigateToRegister(): void {

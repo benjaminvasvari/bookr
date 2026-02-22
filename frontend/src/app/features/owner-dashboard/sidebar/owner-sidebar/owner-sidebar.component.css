@@ -1,0 +1,210 @@
+.owner-sidebar {
+	width: 68px;
+	flex-grow: 0;
+	flex-shrink: 0;
+	flex-basis: 68px;
+	height: 100vh;
+	background: #2d3748;
+	color: #ebf4ff;
+	padding: 18px 10px;
+	display: flex;
+	flex-direction: column;
+	gap: 24px;
+	transition: width 0.2s ease, flex-basis 0.2s ease, max-width 0.2s ease;
+	overflow: hidden;
+	box-sizing: border-box;
+	position: relative;
+	max-width: 68px;
+}
+
+.owner-sidebar:hover {
+	width: 220px;
+	flex-basis: 220px;
+	max-width: 220px;
+}
+
+.owner-sidebar.is-pinned {
+	width: 220px;
+	flex-basis: 220px;
+	max-width: 220px;
+}
+
+.sidebar-header {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 4px 6px;
+	height: 48px;
+}
+
+.mobile-close-btn {
+	display: none;
+	margin-left: auto;
+	width: 32px;
+	height: 32px;
+	border: 1px solid rgba(124, 156, 191, 0.35);
+	border-radius: 10px;
+	background: rgba(124, 156, 191, 0.2);
+	color: #ebf4ff;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+}
+
+.brand-icon {
+	width: 40px;
+	height: 40px;
+	border-radius: 12px;
+	/* background: #f7fafc; */
+	border: none;
+	padding: 1px;
+	display: block;
+	object-fit: contain;
+	flex-shrink: 0;
+	z-index: 1;
+	line-height: 1;
+}
+
+.pin-btn {
+	position: absolute;
+	top: 14px;
+	right: 12px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0;
+	padding: 8px;
+	border-radius: 10px;
+	border: 1px solid rgba(124, 156, 191, 0.35);
+	background: rgba(124, 156, 191, 0.18);
+	color: #ebf4ff;
+	cursor: pointer;
+	font-size: 12px;
+	transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
+}
+
+.owner-sidebar:not(:hover):not(.is-pinned) .pin-btn {
+	opacity: 0;
+	pointer-events: none;
+}
+
+.pin-btn:hover {
+	background: rgba(124, 156, 191, 0.28);
+	border-color: rgba(124, 156, 191, 0.55);
+}
+
+.owner-sidebar.is-pinned .pin-btn {
+	background: rgba(124, 156, 191, 0.4);
+	border-color: rgba(124, 156, 191, 0.7);
+}
+
+.pin-icon {
+	font-size: 14px;
+	line-height: 1;
+	color: #ebf4ff;
+	transform: rotate(25deg) translateY(1px);
+}
+
+.sidebar-nav {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.sidebar-nav a {
+	color: #ebf4ff;
+	text-decoration: none;
+	padding: 6px 12px;
+	border-radius: 8px;
+	font-weight: 600;
+	transition: background 0.2s ease, color 0.2s ease;
+	display: grid;
+	grid-template-columns: 20px 1fr;
+	align-items: center;
+	column-gap: 12px;
+}
+
+.sidebar-nav .home-link {
+	margin-bottom: 6px;
+	background: rgba(235, 244, 255, 0.2);
+	color: #ebf4ff;
+}
+
+.sidebar-nav .home-link.active {
+	background: #7c9cbf;
+	color: #ebf4ff;
+}
+
+.nav-divider {
+	height: 1px;
+	background: rgba(124, 156, 191, 0.35);
+	margin: 6px 4px 10px;
+}
+
+.sidebar-nav a i {
+	width: 20px;
+	text-align: center;
+	font-size: 15px;
+	justify-self: center;
+	flex-shrink: 0;
+	margin-left: 3px;
+}
+
+.nav-label {
+	opacity: 0;
+	transition: opacity 0.2s ease;
+	white-space: nowrap;
+}
+
+.owner-sidebar:hover .nav-label {
+	opacity: 1;
+}
+
+.owner-sidebar.is-pinned .nav-label {
+	opacity: 1;
+}
+
+.sidebar-nav a:hover {
+	background: rgba(124, 156, 191, 0.22);
+	color: #ebf4ff;
+}
+
+.sidebar-nav a.active {
+	background: #7c9cbf;
+	color: #ebf4ff;
+}
+
+@media (max-width: 820px) {
+	.owner-sidebar,
+	.owner-sidebar:hover,
+	.owner-sidebar.is-pinned {
+		position: fixed;
+		top: 0;
+		left: 0;
+		height: 100vh;
+		width: 232px;
+		max-width: 232px;
+		flex-basis: 232px;
+		transform: translateX(-104%);
+		transition: transform 0.22s ease;
+		z-index: 130;
+	}
+
+	.owner-sidebar.mobile-open {
+		transform: translateX(0);
+	}
+
+	.owner-sidebar .nav-label,
+	.owner-sidebar:hover .nav-label,
+	.owner-sidebar.is-pinned .nav-label {
+		opacity: 1;
+	}
+
+	.pin-btn {
+		display: none;
+	}
+
+	.mobile-close-btn {
+		display: inline-flex;
+	}
+}

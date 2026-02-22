@@ -1,0 +1,172 @@
+<section class="services-panel">
+	<header class="services-topbar">
+		<div>
+			<h1>Szolgáltatások</h1>
+			<p class="subtitle">Árak, időtartamok és elérhetőségek kezelése.</p>
+		</div>
+		<div class="actions">
+			<button class="btn primary" (click)="openNewServiceModal()">Új szolgáltatás</button>
+		</div>
+	</header>
+
+	<div class="service-tabs">
+		@for (category of categories; track category) {
+			<button
+				class="tab-button"
+				[class.active]="selectedCategory === category"
+				(click)="selectCategory(category)"
+			>
+				{{ category }}
+			</button>
+		}
+	</div>
+
+	@if (isLoading) {
+		<div class="services-state">Szolgáltatások betöltése...</div>
+	} @else if (errorMessage) {
+		<div class="services-state error">{{ errorMessage }}</div>
+	}
+
+	<div class="service-groups">
+		@for (group of serviceGroups; track group.category) {
+			<section class="category-section">
+				<h2 class="category-title">{{ group.category }}</h2>
+				<div class="services-grid">
+					@for (service of group.services; track service.id) {
+						<article class="service-card">
+							<div class="service-header">
+								<div>
+									<h3>{{ service.name }}</h3>
+									<p class="muted">{{ service.duration }}</p>
+								</div>
+								<span class="status-pill" [class.online]="service.status === 'active'" [class.busy]="service.status === 'inactive'">
+									{{ service.status === 'active' ? 'Aktív' : 'Szünetel' }}
+								</span>
+							</div>
+							<p class="service-desc">{{ service.description }}</p>
+							<div class="service-meta">
+								<span class="price">{{ formatPrice(service.price, service.currency) }}</span>
+							</div>
+							<div class="service-actions">
+								<button class="btn ghost" (click)="openEditServiceModal(service)">Szerkesztés</button>
+							</div>
+						</article>
+					}
+				</div>
+			</section>
+		}
+
+		@if (serviceGroups.length === 0) {
+			<div class="empty-filter-state">
+				<p>Nincs elérhető szolgáltatás.</p>
+			</div>
+		}
+	</div>
+</section>
+
+<!-- Új szolgáltatás modal -->
+@if (showNewServiceModal) {
+	<div class="modal-overlay" (click)="closeNewServiceModal()">
+		<div class="modal-content" (click)="$event.stopPropagation()">
+			<div class="modal-header">
+				<h2>Új szolgáltatás</h2>
+				<button class="close-btn" (click)="closeNewServiceModal()">&times;</button>
+			</div>
+			<div class="modal-body">
+				<div class="form-group">
+					<label>Szolgáltatás neve *</label>
+					<input type="text" [(ngModel)]="newService.name" placeholder="pl. Hajvágás" />
+				</div>
+				<div class="form-group">
+					<label>Kategória *</label>
+					<select [(ngModel)]="newService.category">
+						<option value="">Válassz kategóriát</option>
+						@for (category of categories; track category) {
+							@if (category !== 'Összes') {
+								<option [value]="category">{{ category }}</option>
+							}
+						}
+					</select>
+				</div>
+				<div class="form-row">
+					<div class="form-group">
+						<label>Időtartam *</label>
+						<input type="text" [(ngModel)]="newService.duration" placeholder="pl. 45 perc" />
+					</div>
+					<div class="form-group">
+						<label>Ár (Ft) *</label>
+						<input type="number" [(ngModel)]="newService.price" min="0" step="500" />
+					</div>
+				</div>
+				<div class="form-group">
+					<label>Leírás</label>
+					<textarea [(ngModel)]="newService.description" rows="3" placeholder="Rövid leírás a szolgáltatásról"></textarea>
+				</div>
+				<div class="form-group">
+					<label>Státusz</label>
+					<select [(ngModel)]="newService.status">
+						<option value="active">Aktív</option>
+						<option value="inactive">Szünetel</option>
+					</select>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button class="btn ghost" (click)="closeNewServiceModal()">Mégse</button>
+				<button class="btn primary" (click)="saveNewService()">Mentés</button>
+			</div>
+		</div>
+	</div>
+}
+
+<!-- Szerkesztés modal -->
+@if (showEditServiceModal && selectedService) {
+	<div class="modal-overlay" (click)="closeEditServiceModal()">
+		<div class="modal-content" (click)="$event.stopPropagation()">
+			<div class="modal-header">
+				<h2>Szolgáltatás szerkesztése</h2>
+				<button class="close-btn" (click)="closeEditServiceModal()">&times;</button>
+			</div>
+			<div class="modal-body">
+				<div class="form-group">
+					<label>Szolgáltatás neve *</label>
+					<input type="text" [(ngModel)]="selectedService.name" />
+				</div>
+				<div class="form-group">
+					<label>Kategória *</label>
+					<select [(ngModel)]="selectedService.category">
+						@for (category of categories; track category) {
+							@if (category !== 'Összes') {
+								<option [value]="category">{{ category }}</option>
+							}
+						}
+					</select>
+				</div>
+				<div class="form-row">
+					<div class="form-group">
+						<label>Időtartam *</label>
+						<input type="text" [(ngModel)]="selectedService.duration" />
+					</div>
+					<div class="form-group">
+						<label>Ár (Ft) *</label>
+						<input type="number" [(ngModel)]="selectedService.price" min="0" step="500" />
+					</div>
+				</div>
+				<div class="form-group">
+					<label>Leírás</label>
+					<textarea [(ngModel)]="selectedService.description" rows="3"></textarea>
+				</div>
+				<div class="form-group">
+					<label>Státusz</label>
+					<select [(ngModel)]="selectedService.status">
+						<option value="active">Aktív</option>
+						<option value="inactive">Szünetel</option>
+					</select>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button class="btn ghost" (click)="closeEditServiceModal()">Mégse</button>
+				<button class="btn primary" (click)="saveEditService()">Mentés</button>
+			</div>
+		</div>
+	</div>
+}

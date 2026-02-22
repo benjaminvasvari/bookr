@@ -1,0 +1,32 @@
+<aside class="staff-sidebar" [class.is-pinned]="isPinned">
+	<div class="sidebar-header">
+		<img src="assets/images/logo.png" alt="Bookr" class="brand-icon" />
+	</div>
+
+	<button class="pin-btn" type="button" (click)="togglePin()">
+		<i class="fas fa-thumbtack pin-icon"></i>
+	</button>
+
+	<nav class="sidebar-nav">
+		<a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="home-link">
+			<i class="fas fa-home"></i>
+			<span class="nav-label">Kezdőlap</span>
+		</a>
+		<a routerLink="/staff/panel" routerLinkActive="active">
+			<i class="fas fa-chart-line"></i>
+			<span class="nav-label">Vezérlőpult</span>
+		</a>
+		<a routerLink="/staff/calendar" routerLinkActive="active">
+			<i class="fas fa-calendar-alt"></i>
+			<span class="nav-label">Naptár</span>
+		</a>
+		<a routerLink="/staff/bookings" routerLinkActive="active">
+			<i class="fas fa-clipboard-list"></i>
+			<span class="nav-label">Foglalások</span>
+		</a>
+		<a routerLink="/staff/profile" routerLinkActive="active">
+			<i class="fas fa-user-circle"></i>
+			<span class="nav-label">Profil</span>
+		</a>
+	</nav>
+</aside>

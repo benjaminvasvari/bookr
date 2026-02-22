@@ -1,0 +1,57 @@
+<section class="page">
+  <header class="page-header">
+    <div>
+      <h1>Cégek</h1>
+      <p>Teljes céglista, státuszok és admin műveletek.</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-primary" type="button" (click)="onCreateCompany()">Új cég</button>
+      <button class="btn btn-secondary" type="button" (click)="onExportCompanies()">Tömeges export</button>
+    </div>
+  </header>
+
+  <div class="filters">
+    <div class="filter-chip">Aktív</div>
+    <div class="filter-chip">Felfüggesztett</div>
+    <div class="filter-chip">Új</div>
+    <div class="filter-chip">Váltás eszköz</div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-head">
+      <span>Cég</span>
+      <span>Tulajdonos</span>
+      <span>Staff</span>
+      <span>Státusz</span>
+      <span>Műveletek</span>
+    </div>
+    <div class="table-row">
+      <div>
+        <strong>Példa cég 01</strong>
+        <span class="sub">Budapest</span>
+      </div>
+      <div>Tulajdonos 01</div>
+      <div>12</div>
+      <div><span class="status-pill active">Aktív</span></div>
+      <div class="actions">
+        <button class="btn btn-ghost" type="button" (click)="onChangeOwner('Példa cég 01')">Tulajdonos csere</button>
+        <button class="btn btn-outline" type="button" (click)="onViewStaff('Példa cég 01')">Staff lista</button>
+        <button class="btn btn-danger" type="button" (click)="onSuspendCompany('Példa cég 01')">Tiltás</button>
+      </div>
+    </div>
+    <div class="table-row">
+      <div>
+        <strong>Példa cég 02</strong>
+        <span class="sub">Szeged</span>
+      </div>
+      <div>Tulajdonos 02</div>
+      <div>6</div>
+      <div><span class="status-pill warn">Vizsgálat</span></div>
+      <div class="actions">
+        <button class="btn btn-ghost" type="button" (click)="onOverrideRole('Példa cég 02')">Szerep felülírás</button>
+        <button class="btn btn-outline" type="button" (click)="onViewBookings('Példa cég 02')">Foglalások</button>
+        <button class="btn btn-danger" type="button" (click)="onLockCompany('Példa cég 02')">Zárolás</button>
+      </div>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,1231 @@
+/* Calendar Container - Main wrapper with fixed structure */
+.calendar-container {
+	display: flex;
+	flex-direction: column;
+	height: 100vh;
+	background: #f9fafb;
+	overflow: hidden;
+	max-width: 100vw;
+	width: 100%;
+}
+
+/* Header Section - Sticky at top */
+.calendar-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	background: #ffffff;
+	padding: 16px 24px;
+	border-bottom: 1px solid #e5e7eb;
+	flex-shrink: 0;
+	z-index: 20;
+	max-width: 100%;
+	overflow-x: hidden;
+}
+
+.header-left {
+	display: flex;
+	align-items: center;
+	gap: 24px;
+	max-width: 60%;
+	overflow-x: hidden;
+	flex-shrink: 1;
+}
+
+.calendar-header h1 {
+	margin: 0;
+	font-size: 20px;
+	font-weight: 700;
+	color: #111827;
+}
+
+.staff-controls {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+/* Staff chips container - multi-select buttons */
+.staff-chips {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+	max-width: 100%;
+	overflow-x: hidden;
+}
+
+/* Staff chip - multi-select button */
+.staff-chip {
+	display: flex;
+	align-items: center;
+	gap: 7px;
+	padding: 6px 12px;
+	background: #ffffff;
+	border-radius: 20px;
+	border: 2px solid #e5e7eb;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	user-select: none;
+	position: relative;
+}
+
+.staff-chip:hover {
+	border-color: #cbd5e1;
+	background: #f9fafb;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.staff-chip.chip-active {
+	border: none;
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.staff-chip.chip-active:hover {
+	opacity: 0.9;
+}
+
+.chip-color {
+	width: 11px;
+	height: 11px;
+	border-radius: 50%;
+	border: 2px solid white;
+	box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
+	flex-shrink: 0;
+	transition: all 0.2s;
+}
+
+.staff-chip.chip-active .chip-color {
+	transform: scale(1.1);
+	background: #ffffff;
+	border: 2px solid #ffffff;
+	box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
+}
+
+.chip-name {
+	font-size: 13px;
+	font-weight: 600;
+	color: #4b5563;
+	transition: color 0.2s;
+}
+
+.staff-chip.chip-active .chip-name {
+	color: #ffffff;
+	font-weight: 700;
+}
+
+.header-right {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	flex-shrink: 0;
+	max-width: 40%;
+	overflow-x: hidden;
+}
+
+.week-info {
+	font-size: 13px;
+	font-weight: 600;
+	color: #6b7280;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 200px;
+}
+
+.week-nav {
+	display: flex;
+	gap: 6px;
+	flex-shrink: 0;
+}
+
+.nav-btn {
+	background: #ffffff;
+	border: 1px solid #d1d5db;
+	border-radius: 6px;
+	padding: 5px 10px;
+	cursor: pointer;
+	font-size: 13px;
+	color: #6b7280;
+	transition: all 0.2s;
+	font-weight: 500;
+}
+
+.nav-btn:hover {
+	background: #f9fafb;
+	border-color: #9ca3af;
+}
+
+.nav-btn-today {
+	background: var(--dark-green-color);
+	color: #ffffff;
+	border-color: var(--dark-green-color);
+	font-weight: 600;
+}
+
+.nav-btn-today:hover {
+	background: var(--light-green-color);
+	border-color: var(--light-green-color);
+}
+
+/* Calendar Grid Container - Scrollable area */
+.calendar-grid-container {
+	display: flex;
+	flex: 1;
+	overflow: hidden;
+	position: relative;
+	max-width: 100%;
+	width: 100%;
+}
+
+/* Main Calendar Grid - Fixed pixel heights */
+.calendar-grid {
+	display: flex;
+	flex: 1;
+	background: #ffffff;
+	overflow: auto;
+	border-right: 1px solid #e5e7eb;
+	max-width: 100%;
+}
+
+/* Custom styled scrollbar - thin and modern */
+.calendar-grid::-webkit-scrollbar {
+	width: 10px;
+	height: 10px;
+}
+
+.calendar-grid::-webkit-scrollbar-track {
+	background: #f3f4f6;
+	border-radius: 5px;
+}
+
+.calendar-grid::-webkit-scrollbar-thumb {
+	background: #cbd5e1;
+	border-radius: 5px;
+	border: 2px solid #f3f4f6;
+	transition: background 0.2s;
+}
+
+.calendar-grid::-webkit-scrollbar-thumb:hover {
+	background: #94a3b8;
+}
+
+.calendar-grid::-webkit-scrollbar-corner {
+	background: #f3f4f6;
+}
+
+/* Time Column - Sticky left */
+.time-column {
+	display: flex;
+	flex-direction: column;
+	background: #fafbfc;
+	border-right: 1px solid #e5e7eb;
+	position: sticky;
+	left: 0;
+	z-index: 15;
+	flex: 0 0 60px;
+	min-width: 60px;
+}
+
+.time-header {
+	height: 78px;
+	border-bottom: 1px solid #e5e7eb;
+	flex-shrink: 0;
+	background: #fafbfc;
+	position: sticky;
+	top: 0;
+	z-index: 16;
+}
+
+.time-slot {
+	height: 60px; /* Fixed: 1 hour = 60px, 1 minute = 1px */
+	display: flex;
+	align-items: flex-start;
+	justify-content: center;
+	border-bottom: 1px solid #f3f4f6;
+	font-size: 11px;
+	font-weight: 600;
+	color: #9ca3af;
+	padding-top: 4px;
+	flex-shrink: 0;
+}
+
+/* Day Columns */
+.day-column {
+	display: flex;
+	flex-direction: column;
+	border-right: 1px solid #e5e7eb;
+	position: relative;
+	background: #ffffff;
+	min-width: 0;
+	flex: 0 0 88px;
+	max-width: 88px;
+	overflow: visible;
+	transition: flex 0.34s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.2s ease;
+	will-change: flex;
+}
+
+.day-column:last-child {
+	border-right: none;
+}
+
+/* Expanded nap - széles oszlop */
+.day-column.day-expanded,
+.day-column.day-focused {
+	flex: 1 1 0;
+	max-width: none;
+}
+
+/* Nem fókuszált, de nyitott napok - normál oszlop */
+.day-column.day-unfocused {
+	flex: 0 0 88px;
+	max-width: 88px;
+	cursor: pointer;
+	background: #f7f8fa;
+}
+
+/* Hover effekt az összeszűkült napokon */
+.day-column.day-unfocused:hover {
+	background: #e8ebf0;
+	transition: background 0.2s ease;
+}
+
+.day-column.day-today {
+	background: rgba(56, 161, 121, 0.06);
+}
+
+/* Today oszlop unfocused állapotban megtartja az unfocused hátteret */
+.day-column.day-today.day-unfocused {
+	background: #f7f8fa;
+}
+
+.day-column.day-today:hover.day-unfocused {
+	background: #e8ebf0;
+}
+
+.day-column.day-today .day-header {
+	background: linear-gradient(to bottom, #ffffff 0%, #f2fbf7 100%);
+	border-bottom-color: var(--ethereal-blue-color);
+}
+
+/* Zárt napok - flex alapú szélesség, nem marad üres terület */
+.day-column.day-closed {
+	background: repeating-linear-gradient(
+		-45deg,
+		#f9fafb,
+		#f9fafb 8px,
+		#f3f4f6 8px,
+		#f3f4f6 16px
+	);
+	pointer-events: none;
+	flex: 0 0 96px;
+	min-width: 96px;
+	max-width: 96px;
+	border-right: 1px solid #e5e7eb;
+	border-left: none;
+	transition: none;
+}
+
+/* Első zárt nap bal bordere */
+.day-column:not(.day-closed) + .day-column.day-closed {
+	border-left: 1px solid #e5e7eb;
+}
+
+/* Zárt nap után következő nyitott nap elválasztása */
+.day-column.day-closed + .day-column:not(.day-closed) {
+	border-left: 1px solid #e5e7eb;
+}
+
+/* Két zárt nap közötti elválasztás (pl. szombat-vasárnap) */
+.day-column.day-closed + .day-column.day-closed {
+	border-left: 1px solid #e5e7eb;
+}
+
+/* Day Header - Sticky top with modern styling */
+.day-header {
+	height: 78px;
+	min-height: 78px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	border-bottom: 2px solid #e5e7eb;
+	background: #ffffff;
+	padding: 4px 8px 6px;
+	gap: 2px;
+	position: sticky;
+	top: 0;
+	z-index: 10;
+	flex-shrink: 0;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+	overflow: hidden;
+	transition: background 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease, padding 0.3s ease;
+}
+
+/* Kattintható fejléc */
+.day-header.header-clickable {
+	cursor: pointer;
+}
+
+.day-header.header-clickable:hover {
+	background: linear-gradient(to bottom, #f9fafb 0%, #f3f4f6 100%);
+	transform: translateY(-1px);
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.day-header.header-clickable:active {
+	transform: translateY(0);
+}
+
+.day-header.header-closed {
+	background: #f9fafb;
+	border-bottom-color: #e5e7eb;
+}
+
+.day-column.day-closed .day-header {
+	padding-top: 6px;
+	padding-bottom: 6px;
+	gap: 2px;
+}
+
+.day-name {
+	font-size: 10px;
+	font-weight: 700;
+	line-height: 1.1;
+	color: #6b7280;
+	text-transform: uppercase;
+	letter-spacing: 0.8px;
+	text-align: center;
+	margin-bottom: 2px;
+	width: 100%;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	opacity: 1;
+	max-height: 16px;
+	overflow: hidden;
+	transform: translateY(0);
+	transition: opacity 0.28s ease, max-height 0.34s ease, transform 0.34s ease;
+}
+
+/* Rövid napnév - csak unfocused állapotban látható */
+.day-short-name {
+	display: block;
+	font-size: 11px;
+	font-weight: 700;
+	color: #6b7280;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	text-align: center;
+	width: 100%;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	opacity: 0;
+	max-height: 0;
+	overflow: hidden;
+	transform: translateY(-2px);
+	transition: opacity 0.28s ease, max-height 0.34s ease, transform 0.34s ease;
+}
+
+/* Zárt nap fejléc színei */
+.day-column.day-closed .day-name,
+.day-column.day-closed .day-short-name {
+	display: none;
+	opacity: 0;
+	max-height: 0;
+	transform: none;
+}
+
+.day-date {
+	font-size: 20px;
+	font-weight: 700;
+	line-height: 1.05;
+	color: #111827;
+}
+
+/* Today indicator - no special styling, just color change */
+.day-column.day-today .day-date {
+	color: var(--dark-green-color);
+	font-weight: 800;
+}
+
+.day-hours {
+	font-size: 9px;
+	line-height: 1.1;
+	color: #9ca3af;
+	font-weight: 500;
+	text-align: center;
+	width: 100%;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	opacity: 1;
+	max-height: 14px;
+	overflow: hidden;
+	transform: translateY(0);
+	transition: opacity 0.28s ease, max-height 0.34s ease, transform 0.34s ease;
+}
+
+/* Összeszűkült napokon a nevek és órák elrejtése, de dátumszám látható marad */
+.day-column.day-unfocused .day-name,
+.day-column.day-unfocused .day-hours {
+	opacity: 0;
+	max-height: 0;
+	transform: translateY(-2px);
+}
+
+/* Rövid napnév megjelenítése unfocused állapotban */
+.day-column.day-unfocused .day-short-name {
+	opacity: 1;
+	max-height: 16px;
+	transform: translateY(0);
+}
+
+/* Fókuszált napon elrejtjük a short name-et */
+.day-column.day-focused .day-short-name {
+	opacity: 0;
+	max-height: 0;
+	transform: translateY(-2px);
+}
+
+/* Dátumszám kicsinyítése unfocused napokon */
+.day-column.day-unfocused .day-date {
+	font-size: 16px;
+}
+
+/* Unfocused fejléc kicsinyítése */
+.day-column.day-unfocused .day-header {
+	padding: 4px 4px 6px;
+	height: 78px;
+	min-height: 78px;
+}
+
+/* A dátum szám kisebben marad látható */
+.day-column.day-unfocused .day-date {
+	font-size: 14px;
+	transition: font-size 0.3s ease;
+}
+
+.closed-badge {
+	font-size: 9px;
+	font-weight: 700;
+	color: #ef4444;
+	background: #fee2e2;
+	padding: 3px 9px;
+	border-radius: 10px;
+	text-transform: uppercase;
+	letter-spacing: 0.3px;
+	white-space: nowrap;
+	line-height: 1.1;
+	margin-top: 0;
+	margin-bottom: 2px;
+}
+
+.day-column.day-closed .day-date {
+	color: #ef4444;
+	font-weight: 700;
+	font-size: 17px;
+}
+
+/* Time Grid - Fixed height container */
+.time-grid {
+	position: relative;
+	height: 660px; /* 11 hours × 60px = 660px */
+	flex-shrink: 0;
+	overflow: visible;
+}
+
+.grid-cell {
+	height: 60px; /* Fixed: 1 hour = 60px */
+	border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+	position: relative;
+	flex-shrink: 0;
+}
+
+/* Unfocused napokon tiszta háttér a grid-cellekben */
+.day-column.day-unfocused .grid-cell {
+	border-bottom-color: transparent;
+	background: transparent;
+}
+
+/* 30-minute helper line - subtle divider */
+.half-hour-line {
+	position: absolute;
+	top: 50%;
+	left: 0;
+	right: 0;
+	height: 1px;
+	background: rgba(0, 0, 0, 0.02);
+	pointer-events: none;
+}
+
+/* Current time indicator - continuous line with bullet */
+.current-time-line {
+	position: absolute;
+	left: 0;
+	right: 0;
+	height: 2px;
+	background: #ef4444;
+	z-index: 10;
+	pointer-events: none;
+	width: 100%;
+}
+
+.current-time-line::before {
+	content: '';
+	position: absolute;
+	left: -4px;
+	top: -3px;
+	width: 8px;
+	height: 8px;
+	background: #ef4444;
+	border-radius: 50%;
+	border: 2px solid #ffffff;
+	box-shadow: 0 0 0 1px #ef4444;
+}
+
+/* Appointments Layer */
+.appointments-layer {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	pointer-events: none;
+	container-type: inline-size;
+	overflow: visible;
+}
+
+/* Appointment Blocks - Column layout with min-width */
+.appointment-block {
+	position: absolute;
+	border-radius: 6px;
+	cursor: pointer;
+	pointer-events: all;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+	transition: all 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+	padding: 6px 10px 6px 12px;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 10px;
+	container-type: inline-size;
+	overflow: hidden;
+	min-width: 85px;
+}
+
+/* Összeszűkült napokon a foglalási blokkok csak mint vékony csíkok */
+.day-column.day-unfocused .appointment-block {
+	padding: 0;
+	margin: 0;
+	border-radius: 7px;
+	box-shadow: none;
+	overflow: hidden;
+	border-left-width: 14px !important; /* Teljes szélesség kitöltése */
+	background: transparent !important; /* Csak a border szín látszik */
+	min-width: 14px;
+	transition: all 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Összeszűkült napokon szövegek elrejtése a foglalásoknál */
+.day-column.day-unfocused .apt-time,
+.day-column.day-unfocused .apt-service {
+	opacity: 0;
+	max-width: 0;
+	transform: translateX(-4px);
+}
+
+/* Unfocused blokkok hover effekt letiltása és kattinthatóság */
+.day-column.day-unfocused .appointment-block {
+	pointer-events: none;
+	cursor: default;
+}
+
+.day-column.day-unfocused .appointment-block:hover {
+	box-shadow: none;
+	transform: none;
+	z-index: 1;
+}
+
+/* Zárt napokon vastagabb csíkok a teljes felület kitöltésére */
+.day-column.day-closed .appointment-block {
+	padding: 0;
+	margin: 0;
+	border-radius: 7px;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+	overflow: hidden;
+	border-left-width: 18px !important;
+	background: transparent !important;
+	pointer-events: none;
+	opacity: 0.85;
+	min-width: 18px;
+}
+
+.day-column.day-closed .apt-time,
+.day-column.day-closed .apt-service {
+	opacity: 0;
+	max-width: 0;
+	transform: translateX(-4px);
+}
+
+/* Compact mode for narrow columns */
+@container (max-width: 90px) {
+	.appointment-block {
+		padding: 4px 6px;
+		gap: 4px;
+	}
+	
+	.apt-time {
+		font-size: 10px;
+	}
+}
+
+/* Hide service text when too narrow - only show if it fits completely */
+@container (max-width: 95px) {
+	.apt-service {
+		opacity: 0;
+		max-width: 0;
+		transform: translateX(-4px);
+	}
+}
+
+.appointment-block:hover {
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	transform: translateY(-1px);
+	z-index: 100 !important;
+	background: var(--hover-bg) !important;
+	cursor: pointer;
+}
+
+.appointment-block.selected {
+	box-shadow: 0 0 0 2px #ffffff, 0 0 0 3px var(--border-color);
+	z-index: 101 !important;
+	transform: scale(1.01);
+}
+
+.appointment-block.block-small {
+	padding: 4px 6px;
+	gap: 2px;
+}
+
+/* Text styling */
+.apt-time {
+	font-size: 11px;
+	font-weight: 700;
+	color: #111827;
+	line-height: 1.2;
+	white-space: nowrap;
+	flex-shrink: 0;
+	opacity: 1;
+	max-width: 70px;
+	transform: translateX(0);
+	transition: opacity 0.2s ease, max-width 0.26s ease, transform 0.26s ease;
+	padding-right: 2px;
+}
+
+.apt-service {
+	font-size: 10px;
+	font-weight: 500;
+	color: #4b5563;
+	line-height: 1.2;
+	overflow: hidden;
+	white-space: nowrap;
+	/* No ellipsis - if text doesn't fit, container query will hide it */
+	flex: 1;
+	min-width: 0;
+	opacity: 1;
+	max-width: 100%;
+	transform: translateX(0);
+	transition: opacity 0.2s ease, max-width 0.26s ease, transform 0.26s ease;
+	padding-left: 2px;
+}
+
+/* Empty day message - subtle and minimal */
+.empty-day-message {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	color: #9ca3af;
+	font-size: 11px;
+	font-weight: 500;
+	pointer-events: none;
+	text-align: center;
+	letter-spacing: 0.3px;
+}
+
+/* Details Sidebar - Slide-in panel */
+.details-sidebar {
+	width: 320px;
+	background: #ffffff;
+	border-left: 1px solid #e5e7eb;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	flex-shrink: 0;
+	box-shadow: -2px 0 8px rgba(0, 0, 0, 0.05);
+}
+
+.sidebar-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 16px 20px;
+	border-bottom: 1px solid #e5e7eb;
+	background: #fafbfc;
+}
+
+.sidebar-header h3 {
+	margin: 0;
+	font-size: 16px;
+	font-weight: 700;
+	color: #111827;
+}
+
+.close-btn {
+	background: none;
+	border: none;
+	font-size: 22px;
+	color: #9ca3af;
+	cursor: pointer;
+	padding: 0;
+	width: 28px;
+	height: 28px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 6px;
+	transition: all 0.2s;
+}
+
+.close-btn:hover {
+	background: #f3f4f6;
+	color: #374151;
+}
+
+.sidebar-body {
+	padding: 20px;
+	overflow-y: auto;
+	flex: 1;
+}
+
+.detail-row {
+	margin-bottom: 14px;
+}
+
+.detail-row label {
+	display: block;
+	font-size: 10px;
+	font-weight: 700;
+	color: #6b7280;
+	text-transform: uppercase;
+	margin-bottom: 6px;
+	letter-spacing: 0.6px;
+}
+
+.detail-value {
+	font-size: 13px;
+	color: #111827;
+	padding: 8px 10px;
+	background: #f9fafb;
+	border-radius: 6px;
+	border: 1px solid #e5e7eb;
+}
+
+.staff-indicator {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	border: 2px solid white;
+	box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
+	display: inline-block;
+	margin-right: 6px;
+}
+
+.detail-value.badge-primary {
+	background: #eef2ff;
+	color: #4338ca;
+	border-color: #c7d2fe;
+	font-weight: 600;
+}
+
+.detail-value.price {
+	font-weight: 700;
+	color: #059669;
+	background: #d1fae5;
+	border-color: #a7f3d0;
+	font-size: 15px;
+}
+
+.detail-value.status-pending {
+	background: #fef3c7;
+	color: #92400e;
+	border-color: #fde68a;
+	font-weight: 600;
+}
+
+.detail-value.status-confirmed {
+	background: #d1fae5;
+	color: #065f46;
+	border-color: #a7f3d0;
+	font-weight: 600;
+}
+
+.detail-value.status-completed {
+	background: #e0e7ff;
+	color: #3730a3;
+	border-color: #c7d2fe;
+	font-weight: 600;
+}
+
+.detail-value a {
+	color: #4f46e5;
+	text-decoration: none;
+	font-weight: 600;
+}
+
+.detail-value a:hover {
+	text-decoration: underline;
+}
+
+.sidebar-actions {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-top: 20px;
+	padding-top: 16px;
+	border-top: 1px solid #e5e7eb;
+}
+
+.btn {
+	width: 100%;
+	padding: 9px 14px;
+	border-radius: 6px;
+	font-size: 13px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.2s;
+	border: none;
+	text-align: center;
+}
+
+.btn-edit {
+	background: #6366f1;
+	color: #ffffff;
+	border: 1px solid #6366f1;
+}
+
+.btn-edit:hover {
+	background: #4f46e5;
+	border-color: #4f46e5;
+}
+
+.btn-status {
+	background: #ffffff;
+	color: #6366f1;
+	border: 1px solid #6366f1;
+}
+
+.btn-status:hover {
+	background: #eef2ff;
+}
+
+.btn-cancel {
+	background: #ffffff;
+	color: #dc2626;
+	border: 1px solid #dc2626;
+}
+
+.btn-cancel:hover {
+	background: #fef2f2;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+	.details-sidebar {
+		width: 280px;
+		max-width: 100%;
+	}
+	
+	.calendar-grid {
+		max-width: 100%;
+	}
+}
+
+@media (max-width: 1024px) {
+	/* Tablet: 5 days visible */
+	.calendar-grid {
+		max-width: 100%;
+	}
+	
+	.day-column:nth-child(n+7) {
+		display: none;
+	}
+	
+	.details-sidebar {
+		position: absolute;
+		right: 0;
+		top: 0;
+		bottom: 0;
+		z-index: 30;
+		max-width: 100%;
+	}
+}
+
+@media (max-width: 768px) {
+	.calendar-header {
+		padding: 12px 16px;
+		max-width: 100vw;
+		overflow-x: hidden;
+	}
+	
+	.header-left {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 8px;
+		max-width: 100%;
+	}
+	
+	.staff-dropdown {
+		min-width: 150px;
+		max-width: 100%;
+	}
+	
+	.calendar-grid {
+		max-width: 100%;
+	}
+	
+	.day-column:nth-child(n+5) {
+		display: none;
+	}
+}
+
+/* Hide mobile header by default */
+.mobile-header {
+	display: none;
+	max-width: 100vw;
+	width: 100%;
+	overflow: visible;
+	box-sizing: border-box;
+}
+
+/* Show desktop header by default */
+.desktop-header {
+	display: flex;
+}
+
+/* Mobile Week Dots Navigation */
+.mobile-week-dots {
+	display: flex;
+	justify-content: center;
+	gap: 6px;
+	margin-bottom: 12px;
+	max-width: 100%;
+	overflow: visible;
+	padding: 4px 2px;
+	flex-wrap: wrap;
+}
+
+.week-dot {
+	width: 30px;
+	height: 30px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 10px;
+	font-weight: 700;
+	color: #6b7280;
+	background: #f3f4f6;
+	border: 2px solid transparent;
+	cursor: pointer;
+	transition: all 0.2s;
+	flex-shrink: 0;
+}
+
+.week-dot:hover {
+	background: #e5e7eb;
+}
+
+.week-dot.dot-active {
+	background: #6366f1;
+	color: #ffffff;
+	border-color: #6366f1;
+	box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.26);
+}
+
+.week-dot.dot-closed {
+	background: #e5e7eb;
+	color: #9ca3af;
+	cursor: not-allowed;
+}
+
+/* Mobile Day Navigation */
+.mobile-day-nav {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	max-width: 100%;
+	overflow-x: hidden;
+}
+
+.mobile-nav-btn {
+	background: #6366f1;
+	color: #ffffff;
+	border: none;
+	border-radius: 8px;
+	width: 40px;
+	height: 40px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	transition: all 0.2s;
+	font-size: 16px;
+}
+
+.mobile-nav-btn:hover:not(:disabled) {
+	background: #4f46e5;
+	transform: scale(1.05);
+}
+
+.mobile-nav-btn:disabled {
+	background: #e5e7eb;
+	color: #9ca3af;
+	cursor: not-allowed;
+}
+
+.mobile-day-title {
+	flex: 1;
+	text-align: center;
+}
+
+.mobile-day-name {
+	font-size: 12px;
+	font-weight: 600;
+	color: #6b7280;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.mobile-day-date {
+	font-size: 24px;
+	font-weight: 800;
+	color: #111827;
+}
+
+.mobile-staff-filter {
+	margin-top: 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.mobile-staff-filter label {
+	font-size: 11px;
+	font-weight: 700;
+	color: #6b7280;
+	text-transform: uppercase;
+	letter-spacing: 0.4px;
+}
+
+.mobile-staff-select-wrap {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 0 10px;
+	height: 38px;
+	border: 1px solid #d1d5db;
+	border-radius: 12px;
+	background: #ffffff;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.mobile-staff-dot {
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	flex-shrink: 0;
+	box-shadow: 0 0 0 2px #ffffff, 0 0 0 3px rgba(0, 0, 0, 0.08);
+}
+
+.mobile-staff-select-wrap select {
+	appearance: none;
+	border: none;
+	outline: none;
+	background: transparent;
+	width: 100%;
+	font-size: 13px;
+	font-weight: 600;
+	color: #374151;
+	cursor: pointer;
+}
+
+@media (max-width: 480px) {
+	/* Hide desktop header, show mobile header */
+	.desktop-header {
+		display: none;
+	}
+	
+	.mobile-header {
+		display: block;
+		padding: 20px 12px 10px;
+		max-width: 100vw;
+		width: 100%;
+		overflow: visible;
+		box-sizing: border-box;
+	}
+
+	.mobile-week-dots {
+		margin-top: 2px;
+	}
+
+	/* Mobilon a dátum csak egyszer jelenjen meg (felső mobil fejlécben) */
+	.day-header,
+	.time-header {
+		display: none;
+	}
+
+	.calendar-grid-container {
+		overflow-x: hidden;
+	}
+	
+	/* Mobile: 1 day at a time, full width */
+	.calendar-grid {
+		width: 100%;
+		min-width: 0;
+		overflow-x: hidden;
+		overflow-y: auto;
+	}
+	
+	.day-column {
+		flex: 1 1 auto;
+		min-width: 0;
+		width: auto;
+		max-width: none;
+	}
+	
+	.time-column {
+		width: 46px;
+		flex: 0 0 46px;
+		min-width: 46px;
+	}
+	
+	.time-slot {
+		font-size: 10px;
+		padding-left: 4px;
+		padding-right: 4px;
+	}
+	
+	.details-sidebar {
+		width: 100%;
+		position: absolute;
+		left: 0;
+		right: 0;
+		top: 0;
+		bottom: 0;
+		z-index: 40;
+	}
+}

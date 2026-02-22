@@ -1,0 +1,141 @@
+<div class="business-details-form">
+  <!-- Banner leírás -->
+  <div class="form-description">
+    <p>Állítsa be vállalkozása működésével kapcsolatos szabályokat és beállításokat.</p>
+  </div>
+
+  <form [formGroup]="businessForm" class="form-container">
+    
+    <!-- FOGLALÁSI SZABÁLYOK SECTION -->
+    <div class="form-section">
+      <h3 class="section-title">
+        <i class="fas fa-calendar-check"></i>
+        Foglalási szabályok
+      </h3>
+
+      <div class="form-grid">
+        <!-- Maximális előre foglalás -->
+        <div class="form-group">
+          <label for="maxAdvanceBookingDays">
+            Maximum előre foglalás <span class="required">*</span>
+            <span class="info-icon" title="Maximum hány nappal előre lehet időpontot foglalni">
+              <i class="fas fa-info-circle"></i>
+            </span>
+          </label>
+          <select
+            id="maxAdvanceBookingDays"
+            formControlName="maxAdvanceBookingDays"
+            class="form-control"
+            [class.error]="isFieldInvalid('maxAdvanceBookingDays')"
+          >
+            @for (option of bookingAdvanceOptions; track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+          @if (isFieldInvalid('maxAdvanceBookingDays')) {
+            <span class="error-message">
+              A maximális foglalási időszak megadása kötelező
+            </span>
+          }
+        </div>
+
+        <!-- Lemondási határidő (órákban) -->
+        <div class="form-group">
+          <label for="cancellationHours">
+            Lemondási határidő <span class="required">*</span>
+            <span class="info-icon" title="Hány órával az időpont előtt lehet lemondani díjmentesen">
+              <i class="fas fa-info-circle"></i>
+            </span>
+          </label>
+          <select
+            id="cancellationHours"
+            formControlName="cancellationHours"
+            class="form-control"
+            [class.error]="isFieldInvalid('cancellationHours')"
+          >
+            @for (option of cancellationHoursOptions; track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+          @if (isFieldInvalid('cancellationHours')) {
+            <span class="error-message">
+              A lemondási határidő megadása kötelező
+            </span>
+          }
+        </div>
+
+        <!-- Minimum előzetes foglalás (ugyanazon a napon) -->
+        <div class="form-group">
+          <label for="minBookingHoursSameDay">
+            Minimum előzetes foglalás (ugyanazon a napon) <span class="required">*</span>
+            <span class="info-icon" title="Hány órával előre kell foglalni ugyanazon a napon (pl. 02:00 = 2 óra)">
+              <i class="fas fa-info-circle"></i>
+            </span>
+          </label>
+          <div class="input-row">
+            <input
+              type="time"
+              id="minBookingHoursSameDay"
+              formControlName="minBookingHoursSameDay"
+              class="form-control"
+              max="12:00"
+              [disabled]="businessForm.get('minBookingSameDayNone')?.value"
+              [class.error]="isFieldInvalid('minBookingHoursSameDay')"
+            />
+            <label class="checkbox-inline">
+              <input type="checkbox" formControlName="minBookingSameDayNone" />
+              Nincs
+            </label>
+          </div>
+          @if (isFieldInvalid('minBookingHoursSameDay')) {
+            <span class="error-message">
+              @if (businessForm.get('minBookingHoursSameDay')?.hasError('maxSameDayHours')) {
+                Legfeljebb 12 óra adható meg
+              } @else {
+                A minimum foglalási idő megadása kötelező
+              }
+            </span>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- FIZETÉSI BEÁLLÍTÁSOK SECTION -->
+    <div class="form-section">
+      <h3 class="section-title">
+        <i class="fas fa-money-bill-wave"></i>
+        Fizetési mód
+      </h3>
+
+      <div class="payment-info-box">
+        <div class="payment-icon">
+          <i class="fas fa-cash-register"></i>
+        </div>
+        <div class="payment-content">
+          <h4>Helyszíni fizetés</h4>
+          <p>
+            Az ügyfelek a szolgáltatás után közvetlenül a helyszínen fizetnek 
+            <strong>készpénzzel vagy kártyával</strong>.
+          </p>
+          <div class="payment-badge">
+            <i class="fas fa-check-circle"></i>
+            <span>Pénznem: <strong>HUF (Magyar forint)</strong></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="payment-hint">
+        <i class="fas fa-info-circle"></i>
+        <span>
+          Jelenleg csak helyszíni fizetést támogatunk. Online fizetési lehetőség 
+          később kerül bevezetésre.
+        </span>
+      </div>
+    </div>
+
+    <!-- INFO BANNER -->
+    <div class="info-banner">
+      <i class="fas fa-lightbulb"></i>
+      <div>
+        <strong>Tipp:</strong> Ezek a beállítások később is módosíthatók a céges profilban. 
+        Kezdésnek válassza a legtöbb vállalkozáshoz illő alapértelmezett értékeket.

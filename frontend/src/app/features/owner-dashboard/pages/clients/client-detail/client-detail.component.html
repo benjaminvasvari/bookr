@@ -1,0 +1,44 @@
+<section class="client-detail">
+	<a class="back-link" routerLink="/owner/clients">← Vissza az ügyfelekhez</a>
+
+	<div class="profile-card" *ngIf="client; else notFound">
+		<div class="profile-header">
+			<div class="avatar">{{ client.name[0] }}</div>
+			<div>
+				<h1>{{ client.name }}</h1>
+				<p>{{ client.email }}</p>
+			</div>
+		</div>
+
+		<div class="info-grid">
+			<div>
+				<span class="label">Telefonszám</span>
+				<span class="value">{{ client.phone }}</span>
+			</div>
+			<div>
+				<span class="label">Utolsó látogatás</span>
+				<span class="value">{{ client.lastVisit }}</span>
+			</div>
+			<div>
+				<span class="label">Összes foglalás</span>
+				<span class="value">{{ client.totalBookings }}</span>
+			</div>
+			<div>
+				<span class="label">Összes költés</span>
+				<span class="value">{{ client.totalSpent }}</span>
+			</div>
+		</div>
+
+		<div class="notes">
+			<span class="label">Megjegyzés</span>
+			<p>{{ client.notes }}</p>
+		</div>
+	</div>
+
+	<ng-template #notFound>
+		<div class="empty-state">
+			<h2>Ügyfél nem található</h2>
+			<p>Nem létezik ilyen ügyfél az aktuális listában.</p>
+		</div>
+	</ng-template>
+</section>

@@ -1,0 +1,35 @@
+<div class="stepper-container">
+  <div class="stepper-wrapper">
+    @for (step of steps; track step.number) {
+      <div class="step-item-wrapper">
+        <button
+          type="button"
+          class="step-item"
+          [class.active]="step.active"
+          [class.completed]="step.completed"
+          [class.clickable]="step.completed || step.number <= currentStep"
+          (click)="onStepClick(step.number)"
+          [disabled]="!step.completed && step.number > currentStep"
+        >
+          <div class="step-circle">
+            <div class="step-number">
+              @if (step.completed) {
+                <i class="fas fa-check"></i>
+              } @else {
+                {{ step.number }}
+              }
+            </div>
+          </div>
+          <div class="step-title">{{ step.title }}</div>
+        </button>
+        @if (step.number < steps.length) {
+          <div class="step-connector" [class.completed]="step.completed"></div>
+        }
+      </div>
+    }
+  </div>
+
+  <div class="progress-bar-container">
+    <div class="progress-bar" [style.width.%]="progressPercentage"></div>
+  </div>
+</div>

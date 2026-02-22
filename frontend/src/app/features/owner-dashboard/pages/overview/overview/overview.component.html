@@ -1,0 +1,112 @@
+
+<header class="dashboard-header">
+	<div>
+		<h1>Owner Dashboard</h1>
+		<p class="subtitle">Áttekintés a vállalkozásodról egy helyen.</p>
+	</div>
+	<div class="header-actions">
+		<button class="btn btn-secondary" type="button" routerLink="/owner/calendar">Naptár megnyitása</button>
+	</div>
+</header>
+
+<p *ngIf="isLoading" class="status-text">Dashboard adatok betöltése...</p>
+<p *ngIf="errorMessage" class="status-text error">{{ errorMessage }}</p>
+
+<section class="kpi-grid">
+	<div class="kpi-card">
+		<p class="kpi-label">Mai foglalások</p>
+		<p class="kpi-value">{{ todayBookings }}</p>
+		<p class="kpi-trend" [ngClass]="bookingsTrendClass">{{ bookingsTrendText }}</p>
+	</div>
+	<div class="kpi-card">
+		<p class="kpi-label">Aktív ügyfelek</p>
+		<p class="kpi-value">{{ activeClients }}</p>
+		<p class="kpi-trend positive">+{{ newClientsThisWeek }} új ezen a héten</p>
+	</div>
+	<div class="kpi-card">
+		<p class="kpi-label">Heti bevétel</p>
+		<p class="kpi-value">{{ formatCurrency(weeklyRevenueThisWeek, revenueCurrency) }}</p>
+		<p class="kpi-trend" [ngClass]="revenueTrendClass">{{ revenueTrendText }}</p>
+	</div>
+	<div class="kpi-card">
+		<p class="kpi-label">Értékelések</p>
+		<div class="rating-row">
+			<p class="kpi-value">{{ averageRating }}</p>
+			<div class="stars">
+				<span *ngFor="let star of starArray" class="star" [class.star-full]="star === 'full'" [class.star-half]="star === 'half'" [class.star-empty]="star === 'empty'">
+					<span class="star-icon">★</span>
+				</span>
+			</div>
+		</div>
+		<p class="kpi-trend">{{ totalReviews }} értékelés</p>
+	</div>
+</section>
+
+<section class="dashboard-grid">
+	<div class="panel">
+		<div class="panel-header">
+			<h2>Következő időpontok</h2>
+			<button class="link-btn">Összes</button>
+		</div>
+		<ul class="list" *ngIf="upcomingAppointments.length > 0; else noUpcomingAppointments">
+			<li *ngFor="let appointment of upcomingAppointments | slice: 0 : 3; trackBy: trackByAppointment">
+				<div>
+					<strong>{{ getAppointmentTime(appointment) }} - {{ getAppointmentTitle(appointment) }}</strong>
+					<span class="muted">{{ getAppointmentClient(appointment) }}</span>
+				</div>
+				<span class="badge">{{ getAppointmentDayLabel(appointment) }}</span>
+			</li>
+		</ul>
+		<ng-template #noUpcomingAppointments>
+			<p class="empty-state">Nincs közelgő időpont.</p>
+		</ng-template>
+	</div>
+
+	<div class="panel">
+		<div class="panel-header">
+			<h2>Bevétel (heti)</h2>
+			<button class="link-btn">Részletek</button>
+		</div>
+		<div class="chart-placeholder">
+			<span>Grafikon helye</span>
+		</div>
+	</div>
+
+	<div class="panel">
+		<div class="panel-header">
+			<h2>Szolgáltatások</h2>
+			<button class="link-btn">Szerkesztés</button>
+		</div>
+		<ul class="list" *ngIf="servicesPreview.length > 0; else noServices">
+			<li *ngFor="let service of servicesPreview | slice: 0 : 4; trackBy: trackByService">
+				<div>
+					<strong>{{ service.name }}</strong>
+					<span class="muted">{{ service.duration }}</span>
+				</div>
+				<span class="badge">{{ formatCurrency(service.price, service.currency) }}</span>
+			</li>
+		</ul>
+		<ng-template #noServices>
+			<p class="empty-state">Nincs elérhető szolgáltatás.</p>
+		</ng-template>
+	</div>
+
+	<div class="panel">
+		<div class="panel-header">
+			<h2>Legutóbbi értékelések</h2>
+			<button class="link-btn">Összes</button>
+		</div>
+		<ul class="list" *ngIf="latestReviews.length > 0; else noReviews">
+			<li *ngFor="let review of latestReviews | slice: 0 : 3; trackBy: trackByReview">
+				<div>
+					<strong>{{ review.userName }}</strong>
+					<span class="muted">"{{ review.comment }}"</span>
+				</div>
+				<span class="badge">{{ review.rating }}★</span>
+			</li>
+		</ul>
+		<ng-template #noReviews>
+			<p class="empty-state">Még nincs értékelés.</p>
+		</ng-template>
+	</div>
+</section>

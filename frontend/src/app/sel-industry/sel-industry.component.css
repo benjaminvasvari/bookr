@@ -8,15 +8,18 @@
 /* Képgaléria szekció */
 .gallery-section {
   margin-bottom: 2rem;
+  margin-top: 5rem;
+  width: 575px;
+  display: inline-block;
+  vertical-align: top;
 }
 
 .main-image {
-  width: 600px;
-  height: 300px;
+  width: 575px;
+  height: 350px;
   border-radius: 16px;
   overflow: hidden;
   margin-bottom: 1rem;
-  margin-top: 5rem;
 }
 
 .main-image img {
@@ -27,7 +30,7 @@
 
 .thumbnail-gallery {
   display: grid;
-  grid-template-columns: repeat(3, 190px);
+  grid-template-columns: repeat(3, 180px);
   gap: 1rem;
 }
 
@@ -57,13 +60,12 @@
   border-radius: 16px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   margin-bottom: 2rem;
-  width: 100%;
-  max-width: 400px;
-  min-height: 25px;
-  height: auto;
-  position: sticky;
-  top: 100px;
-  justify-self: end;
+  margin-top: 5rem;
+  width: calc(100% - 575px - 2rem);
+  display: inline-block;
+  vertical-align: top;
+  margin-left: 2rem;
+  height: fit-content;
 }
 
 .company-header {
@@ -128,7 +130,7 @@
 }
 
 .icon-button:hover {
-  border-color: #3498db;
+  border-color: #38a179;
   transform: scale(1.05);
 }
 
@@ -139,8 +141,8 @@
 }
 
 .icon-button.share:hover {
-  background-color: #3498db;
-  border-color: #3498db;
+  background-color: #38a179;
+  border-color: #38a179;
   color: #ffffff;
 }
 
@@ -158,6 +160,7 @@
   color: #ffffff;
   border: none;
   border-radius: 12px;
+  margin-top: 200px;
   font-size: 1.1rem;
   font-weight: 600;
   cursor: pointer;
@@ -177,6 +180,8 @@
   padding: 2rem;
   border-radius: 16px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  margin-bottom: 3rem;
+  clear: both;
 }
 
 .section-title {
@@ -209,8 +214,8 @@
 }
 
 .tab-button:hover {
-  border-color: #3498db;
-  color: #3498db;
+  border-color: #38a179;
+  color: #38a179;
 }
 
 .tab-button.active {
@@ -236,7 +241,7 @@
 }
 
 .service-card:hover {
-  border-color: #3498db;
+  border-color: #38a179;
   box-shadow: 0 4px 12px rgba(52, 152, 219, 0.15);
 }
 
@@ -293,6 +298,298 @@
   font-size: 1.1rem;
 }
 
+.about-container {
+  min-height: auto;
+  padding: 0;
+  margin-bottom: 3rem;
+}
+
+.content-wrapper {
+  max-width: 100%;
+  margin: 0;
+}
+
+.about-content {
+  display: flex;
+  gap: 3rem;
+  align-items: flex-start;
+  background-color: #ffffff;
+  padding: 2rem;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Térkép szekció - bal oldal */
+.map-section {
+  margin-top: 70px;
+  margin-left: -170px;
+  flex: 0 0 450px;
+}
+
+.map-container {
+  width: 450px;
+  height: 450px;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  border: 3px solid #38a179;
+}
+
+.map-container iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Szöveges tartalom - jobb oldal */
+.text-section {
+  margin-top: 70px;
+  flex: 1;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.about-text {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 1.125rem;
+  line-height: 1.8;
+  color: #2c3e50;
+  margin: 0;
+  font-weight: 500;
+}
+
+.open-hours-reviews-section {
+  margin-top: 3rem;
+  display: flex;
+  gap: 3rem;
+  justify-content: space-between;
+  align-items: stretch; /* ← Ez az egyetlen fontos sor! */
+}
+
+/* Opening hours section */
+.opening-hours-card {
+  background-color: #ffffff;
+  border-radius: 16px;
+  padding: 2rem;
+  width: 50%;
+  height: 689px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  margin-bottom: 3rem;
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0 0 1.5rem 0;
+  color: #2c3e50;
+  font-family: 'Montserrat', sans-serif;
+}
+
+.hours-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.hours-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.hours-item:hover {
+  border-color: #38a179;
+  box-shadow: 0 4px 12px rgba(56, 161, 121, 0.1);
+}
+
+/* MAI NAP KIEMELÉS */
+.hours-item.today {
+  background: linear-gradient(135deg, #f0f8ff 0%, #e7f3ff 100%);
+  border-left: 5px solid #38a179;
+  border-color: #38a179;
+  box-shadow: 0 6px 16px rgba(56, 161, 121, 0.2);
+  transform: translateX(4px);
+}
+
+.hours-item.today .day {
+  color: #38a179;
+  font-weight: 700;
+}
+
+.hours-item.today .time {
+  color: #2c3e50;
+  font-weight: 700;
+}
+
+/* Ha ma zárva van */
+.hours-item.today.closed .time {
+  color: #e74c3c;
+  font-weight: 700;
+}
+
+.day {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2c3e50;
+  font-family: 'Montserrat', sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.time {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #2c3e50;
+  font-family: 'Montserrat', sans-serif;
+}
+
+/* Zárva státusz */
+.hours-item.closed {
+  opacity: 0.85;
+}
+
+.hours-item.closed .time {
+  color: #e74c3c;
+  font-weight: 600;
+}
+
+/* Hover animáció a mai napnál */
+.hours-item.today:hover {
+  transform: translateX(8px);
+  box-shadow: 0 8px 20px rgba(56, 161, 121, 0.3);
+}
+
+/* Értékelések Szekció */
+.reviews-container {
+  background-color: #ffffff;
+  border-radius: 16px;
+  padding: 0;
+  width: 50%;
+  max-height: 689px; /* ← FIX maximum magasság, nem nő tovább */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  overflow-y: auto; /* ← Scrollozható */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Sticky header az értékelések blokkban */
+.reviews-container .title {
+  position: sticky;
+  top: 0;
+  background-color: #ffffff;
+  padding: 2rem 2rem 1rem 2rem;
+  margin: 0;
+  z-index: 10;
+  border-bottom: 2px solid #ffff;
+  flex-shrink: 0;
+}
+
+.reviews-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1rem 2rem 2rem 2rem;
+  overflow-y: auto; /* ← Ez lesz scrollozható */
+  flex: 1;
+}
+
+.review-card {
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  height: auto;
+  min-height: 140px;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.review-card:hover {
+  border-color: #38a179;
+  box-shadow: 0 4px 12px rgba(56, 161, 121, 0.15);
+}
+
+.review-header {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  align-items: flex-start;
+}
+
+.user-avatar {
+  flex-shrink: 0;
+}
+
+.user-avatar img {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.avatar-placeholder {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #7f8c8d;
+  font-family: 'Montserrat', sans-serif;
+}
+
+.user-info {
+  flex: 1;
+}
+
+.user-name {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem 0;
+  color: #2c3e50;
+  font-family: 'Montserrat', sans-serif;
+}
+
+.review-rating {
+  display: flex;
+  gap: 0.2rem;
+  margin-bottom: 0.25rem;
+}
+
+.review-rating .star {
+  color: #ffd700;
+  font-size: 0.95rem;
+}
+
+.review-date {
+  font-size: 0.8rem;
+  color: #95a5a6;
+  margin: 0;
+  font-family: 'Montserrat', sans-serif;
+}
+
+.review-comment {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #34495e;
+  margin: 0;
+  font-family: 'Montserrat', sans-serif;
+  display: -webkit-box;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* Betöltés */
 .loading {
   display: flex;
@@ -303,14 +600,118 @@
   color: #7f8c8d;
 }
 
-/* Reszponzív dizájn */
+
+/* Hiba üzenet stílusok */
+.error-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 200px); /* Teljes viewport magasság mínusz header */
+  padding: 2rem;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.error-message {
+  text-align: center;
+  background-color: #ffffff;
+  padding: 3rem;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  max-width: 500px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.error-message h2 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #e74c3c;
+  margin: 0 0 1rem 0;
+  font-family: 'Montserrat', sans-serif;
+}
+
+.error-message p {
+  font-size: 1.1rem;
+  color: #7f8c8d;
+  margin: 0 0 0 0;
+  line-height: 1.6;
+  font-family: 'Montserrat', sans-serif;
+}
+
+
+/*Responzív dizájn - 371px optimalizálva */
+
+/* Tablet méret */
+@media (max-width: 992px) {
+  .gallery-section,
+  .company-info-section {
+    display: block;
+    width: 100%;
+    margin-left: 0;
+    margin-bottom: 2rem;
+  }
+
+  .main-image {
+    width: 100%;
+  }
+
+  .thumbnail-gallery {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .about-content {
+    flex-direction: column;
+  }
+
+  .map-section {
+    flex: 0 0 auto;
+    margin-left: 0;
+    margin-top: 0;
+  }
+
+  .map-container {
+    width: 100%;
+    max-width: 450px;
+    height: 350px;
+  }
+
+  .text-section {
+    margin-top: 0;
+  }
+
+  .open-hours-reviews-section {
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .opening-hours-card {
+    width: 100%;
+    height: auto;
+  }
+
+  .reviews-container {
+    width: 100%;
+    max-height: 500px;
+  }
+}
+
+/* Mobil méret - 768px */
 @media (max-width: 768px) {
   .company-details-container {
     padding: 1rem;
   }
 
+  .gallery-section {
+    margin-top: 2rem;
+  }
+
+  .company-info-section {
+    margin-top: 1rem;
+  }
+
   .main-image {
-    height: 300px;
+    height: 250px;
   }
 
   .thumbnail-gallery {
@@ -318,7 +719,7 @@
   }
 
   .thumbnail {
-    height: 120px;
+    height: 100px;
   }
 
   .company-header {
@@ -328,11 +729,15 @@
 
   .header-actions {
     width: 100%;
-    justify-content: flex-end;
+    justify-content: flex-start;
   }
 
   .company-name {
-    font-size: 2rem;
+    font-size: 1.75rem;
+  }
+
+  .book-now-button {
+    margin-top: 1.5rem;
   }
 
   .section-title {
@@ -343,6 +748,7 @@
     flex-direction: column;
     gap: 1rem;
     align-items: flex-start;
+    padding: 1rem;
   }
 
   .book-button {
@@ -353,23 +759,314 @@
     flex-wrap: nowrap;
     -webkit-overflow-scrolling: touch;
   }
+
+  .map-container {
+    width: 100%;
+    height: 280px;
+    border-radius: 15px;
+  }
+
+  .about-text {
+    font-size: 0.95rem;
+    line-height: 1.6;
+  }
+
+  .title {
+    font-size: 1.5rem;
+  }
+
+  .hours-item {
+    padding: 1rem;
+  }
+
+  .day {
+    font-size: 1rem;
+  }
+
+  .time {
+    font-size: 0.9rem;
+  }
+
+  .review-card {
+    padding: 1rem;
+    min-height: 120px;
+  }
+
+  .user-avatar img,
+  .avatar-placeholder {
+    width: 45px;
+    height: 45px;
+  }
+
+  .avatar-placeholder {
+    font-size: 1.1rem;
+  }
+
+  .user-name {
+    font-size: 0.95rem;
+  }
+
+  .review-rating .star {
+    font-size: 0.85rem;
+  }
+
+  .review-date {
+    font-size: 0.75rem;
+  }
+
+  .review-comment {
+    font-size: 0.9rem;
+  }
 }
 
+/* Extra kis mobil - 371px OPTIMALIZÁLVA */
 @media (max-width: 480px) {
+  .company-details-container {
+    padding: 0.75rem;
+  }
+
+  .gallery-section {
+    margin-top: 1.5rem;
+    width: 100%;
+  }
+
+  .main-image {
+    width: 100%;
+    height: 220px;
+    border-radius: 12px;
+  }
+
   .thumbnail-gallery {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
+
+  .thumbnail {
+    height: 90px;
+    border-radius: 8px;
+  }
+
+  .company-info-section {
+    margin-top: 1rem;
+    padding: 1.25rem;
   }
 
   .company-name {
-    font-size: 1.75rem;
+    font-size: 1.5rem;
+  }
+
+  .rating-section {
+    font-size: 0.9rem;
+  }
+
+  .stars fa-icon {
+    font-size: 1rem;
+  }
+
+  .company-category {
+    font-size: 0.9rem;
+  }
+
+  .icon-button {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
+
+  .company-description {
+    font-size: 0.9rem;
+  }
+
+  .book-now-button {
+    padding: 0.875rem;
+    font-size: 1rem;
+    margin-top: 1rem;
+  }
+
+  /* Szolgáltatások */
+  .services-section {
+    padding: 1.25rem;
+    margin-bottom: 2rem;
+  }
+
+  .section-title {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
   }
 
   .service-tabs {
-    gap: 0.25rem;
+    gap: 0.35rem;
+    margin-bottom: 1.5rem;
   }
 
   .tab-button {
     padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+  }
+
+  .service-card {
+    padding: 1rem;
+  }
+
+  .service-name {
+    font-size: 1rem;
+  }
+
+  .service-duration {
     font-size: 0.85rem;
+  }
+
+  .service-price {
+    font-size: 0.95rem;
+  }
+
+  .book-button {
+    padding: 0.65rem 1.5rem;
+    font-size: 0.95rem;
+  }
+
+  /* Rólunk szekció */
+  .about-container {
+    margin-bottom: 2rem;
+  }
+
+  .about-content {
+    padding: 1.25rem;
+    gap: 1.5rem;
+  }
+
+  .map-section {
+    margin-top: 0;
+    margin-left: 0;
+  }
+
+  .map-container {
+    height: 250px;
+    border-radius: 12px;
+    border-width: 2px;
+  }
+
+  .text-section {
+    margin-top: 0;
+  }
+
+  .about-text {
+    font-size: 0.9rem;
+    line-height: 1.6;
+  }
+
+  /* Nyitvatartás és Értékelések */
+  .open-hours-reviews-section {
+    margin-top: 2rem;
+    gap: 1.5rem;
+  }
+
+  .opening-hours-card {
+    padding: 1.25rem;
+    height: auto;
+    margin-bottom: 0;
+  }
+
+  .reviews-container {
+    padding: 0;
+    max-height: 450px;
+  }
+
+  .reviews-container .title {
+    padding: 1.25rem 1.25rem 1rem 1.25rem;
+    font-size: 1.25rem;
+    border-bottom: 2px solid #f0f0f0;
+  }
+
+  .title {
+    font-size: 1.25rem;
+  }
+
+  .hours-list {
+    gap: 0.5rem;
+  }
+
+  .hours-item {
+    padding: 0.875rem 1rem;
+    border-radius: 10px;
+  }
+
+  .day {
+    font-size: 0.95rem;
+  }
+
+  .time {
+    font-size: 0.85rem;
+  }
+
+  /* Értékelések */
+  .reviews-list {
+    gap: 1rem;
+    padding: 0.75rem 1.25rem 1.25rem 1.25rem;
+  }
+
+  .review-card {
+    padding: 1rem;
+    min-height: 110px;
+    overflow: hidden; /* ← Biztosítja hogy semmi ne lógjon ki */
+  }
+
+  .review-header {
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .user-avatar img,
+  .avatar-placeholder {
+    width: 40px;
+    height: 40px;
+  }
+
+  .avatar-placeholder {
+    font-size: 1rem;
+  }
+
+  .user-name {
+    font-size: 0.9rem;
+  }
+
+  .review-rating {
+    gap: 0.15rem;
+  }
+
+  .review-rating .star {
+    font-size: 0.8rem;
+  }
+
+  .review-date {
+    font-size: 0.7rem;
+  }
+
+  .review-comment {
+    font-size: 0.85rem;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2; /* ← 3 helyett 2 sor maximum */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-break: break-word; /* ← Hosszú szavak tördelése */
+  }
+
+  /* Hiba üzenet */
+  .error-container {
+    padding: 1rem;
+  }
+
+  .error-message {
+    padding: 2rem 1.5rem;
+  }
+
+  .error-message h2 {
+    font-size: 1.5rem;
+  }
+
+  .error-message p {
+    font-size: 0.95rem;
   }
 }

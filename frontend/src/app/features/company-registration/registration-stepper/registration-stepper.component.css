@@ -1,0 +1,175 @@
+.stepper-container {
+  width: 100%;
+  max-width: 850px;
+  margin: 0 auto 48px;
+  padding: 0 16px;
+  box-sizing: border-box;
+}
+
+.stepper-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  position: relative;
+  margin-bottom: 24px;
+}
+
+.step-item-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  position: relative;
+}
+
+.step-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: default;
+  padding: 0;
+}
+
+.step-item.clickable {
+  cursor: pointer;
+}
+
+.step-item:disabled {
+  cursor: not-allowed;
+}
+
+.step-circle {
+  margin-bottom: 16px;
+  position: relative;
+  z-index: 2;
+}
+
+.step-number {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #d4d4d4;
+  color: #666666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 22px;
+  transition: all 0.3s ease;
+  border: 4px solid #d4d4d4;
+  position: relative;
+}
+
+.step-item.active .step-number {
+  background: #38a179;
+  color: #ffffff;
+  border-color: #38a179;
+  box-shadow: 0 6px 20px rgba(56, 161, 121, 0.4);
+  transform: scale(1.15);
+}
+
+.step-item.completed .step-number {
+  background: #38a179;
+  color: #ffffff;
+  border-color: #38a179;
+  transform: scale(1.05);
+}
+
+.step-number i {
+  font-size: 24px;
+  color: #ffffff;
+}
+
+.step-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #888;
+  text-align: center;
+  transition: all 0.3s ease;
+  max-width: 140px;
+  line-height: 1.4;
+}
+
+.step-item.active .step-title {
+  color: var(--secondary-green);
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.step-item.completed .step-title {
+  color: var(--dark-color);
+  font-weight: 600;
+}
+
+.step-connector {
+  position: absolute;
+  top: 28px;
+  left: calc(50% + 28px);
+  right: -50%;
+  height: 4px;
+  background: #e0e0e0;
+  z-index: 1;
+  transition: all 0.4s ease;
+}
+
+.step-connector.completed {
+  background: #38a179;
+}
+
+.step-item-wrapper:last-child .step-connector {
+  display: none;
+}
+
+.progress-bar-container {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .step-title {
+    font-size: 12px;
+    max-width: 100px;
+  }
+
+  .step-number {
+    width: 48px;
+    height: 48px;
+    font-size: 18px;
+    border-width: 3px;
+  }
+
+  .step-number i {
+    font-size: 20px;
+  }
+
+  .step-connector {
+    top: 24px;
+    height: 3px;
+  }
+
+  .step-item.active .step-number {
+    transform: scale(1.1);
+  }
+}
+
+@media (max-width: 576px) {
+  .step-title {
+    font-size: 11px;
+    max-width: 80px;
+  }
+
+  .step-number {
+    width: 42px;
+    height: 42px;
+    font-size: 16px;
+  }
+
+  .step-number i {
+    font-size: 18px;
+  }
+
+  .step-connector {
+    top: 21px;
+  }
+}

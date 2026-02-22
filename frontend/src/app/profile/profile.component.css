@@ -1,0 +1,172 @@
+.profile-container {
+    display: flex;
+    min-height: calc(100vh - 60px);
+    margin-top: 60px;
+    background-color: #f8f9fa;
+}
+
+/* Sidebar */
+.profile-sidebar {
+    width: 280px;
+    background: white;
+    border-right: 1px solid #e9ecef;
+    position: fixed;
+    left: 0;
+    top: 60px;
+    bottom: 0;
+    overflow-y: auto;
+    z-index: 100;
+}
+
+/* Sidebar Header */
+.sidebar-header {
+    padding: 32px 24px;
+    text-align: center;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.user-avatar-large {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #38a179 0%, #2d8a62 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+    overflow: hidden;
+    position: relative;
+}
+
+.user-avatar-large svg {
+    width: 48px;
+    height: 48px;
+    fill: white;
+}
+
+/* Avatar Image */
+.user-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+.user-name {
+    font-size: 20px;
+    font-weight: 700;
+    color: #2c3e50;
+    margin: 0 0 8px 0;
+}
+
+.user-email {
+    font-size: 14px;
+    color: #6c757d;
+    margin: 0;
+    word-break: break-word;
+}
+
+/* Sidebar Navigation */
+.sidebar-nav {
+    padding: 16px 0;
+}
+
+.nav-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 24px;
+    background: transparent;
+    border: none;
+    border-left: 3px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 15px;
+    font-weight: 500;
+    color: #2c3e50;
+    text-align: left;
+}
+
+.nav-item:hover {
+    background-color: #f8f9fa;
+}
+
+.nav-item.active {
+    background-color: rgba(56, 161, 121, 0.1);
+    border-left-color: #38a179;
+    color: #38a179;
+}
+
+.nav-icon {
+    width: 22px;
+    height: 22px;
+    fill: #6c757d;
+    flex-shrink: 0;
+}
+
+.nav-item.active .nav-icon {
+    fill: #38a179;
+}
+
+/* Divider */
+.nav-divider {
+    height: 1px;
+    background-color: #e9ecef;
+    margin: 12px 24px;
+}
+
+/* Logout Button */
+.nav-item-logout {
+    color: #dc3545;
+}
+
+.nav-item-logout:hover {
+    background-color: rgba(220, 53, 69, 0.05);
+}
+
+.nav-item-logout .nav-icon {
+    fill: #dc3545;
+}
+
+/* Main Content */
+.profile-content {
+    flex: 1;
+    margin-left: 280px;
+    padding: 40px;
+}
+
+.content-wrapper {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+/* Responsive (később) */
+@media (max-width: 968px) {
+    .profile-sidebar {
+        width: 240px;
+    }
+    
+    .profile-content {
+        margin-left: 240px;
+        padding: 24px;
+    }
+}
+
+@media (max-width: 768px) {
+    .profile-container {
+        flex-direction: column;
+    }
+    
+    .profile-sidebar {
+        position: static;
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .profile-content {
+        margin-left: 0;
+        padding: 20px;
+    }
+}

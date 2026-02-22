@@ -1,16 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router'; 
+import { Router } from '@angular/router';
+import { Company } from '../core/models';
+import { CompaniesService } from '../core/services/companies.service';
+import { Title } from '@angular/platform-browser';
 
-interface Service {
-  id: number;
-  name: string;
-  rating: number;
-  reviewCount: number;
-  address: string;
-  imageUrl: string;
-}
 
 interface Review {
   author: string;
@@ -25,168 +20,205 @@ interface Review {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './main-page.component.html',
-  styleUrls: ['./main-page.component.css']
+  styleUrls: ['./main-page.component.css'],
 })
-export class MainPageComponent implements OnInit {
+export class MainPageComponent implements OnInit, AfterViewInit {
+  @ViewChild('reviewsCarousel') reviewsCarousel?: ElementRef<HTMLDivElement>;
+
   searchQuery: string = '';
+  activeReviewIndex = 0;
 
-  topRecommendations: Service[] = [
-    {
-      id: 1,
-      name: 'Forost',
-      rating: 5.0,
-      reviewCount: 21,
-      address: 'Pécs, Király utca 26-28',
-      imageUrl: 'assets/images/first.png'
-    },
-    {
-      id: 2,
-      name: 'Tonsur',
-      rating: 5.0,
-      reviewCount: 23,
-      address: 'Pécs, Király utca 26-28',
-      imageUrl: 'assets/images/second.png'
-    },
-    {
-      id: 3,
-      name: 'Hijeny',
-      rating: 5.0,
-      reviewCount: 17,
-      address: 'Pécs, Király utca 26-28',
-      imageUrl: 'assets/images/third.png'
-    },
-    {
-      id: 4,
-      name: 'Fukره',
-      rating: 5.0,
-      reviewCount: 19,
-      address: 'Pécs, Király utca 26-28',
-      imageUrl: 'assets/images/fourth.png'
-    }
-  ];
+  // Company lists
+  topRecommendations: Company[] = [];
+  newServices: Company[] = [];
+  featuredServices: Company[] = [];
 
-  newServices: Service[] = [
-    {
-      id: 5,
-      name: 'Fukره',
-      rating: 5.0,
-      reviewCount: 19,
-      address: 'Pécs, Király utca 26-28',
-      imageUrl: 'assets/images/fukre.jpg'
-    },
-    {
-      id: 6,
-      name: 'Hijeny',
-      rating: 5.0,
-      reviewCount: 17,
-      address: 'Pécs, Király utca 26-28',
-      imageUrl: 'assets/images/hijeny.jpg'
-    },
-    {
-      id: 7,
-      name: 'Forost',
-      rating: 5.0,
-      reviewCount: 21,
-      address: 'Pécs, Király utca 26-28',
-      imageUrl: 'assets/images/forost.jpg'
-    },
-    {
-      id: 8,
-      name: 'Tonsur',
-      rating: 5.0,
-      reviewCount: 23,
-      address: 'Pécs, Király utca 26-28',
-      imageUrl: 'assets/images/tonsur.jpg'
-    }
-  ];
+  // Loading states
+  isLoadingTop: boolean = false;
+  isLoadingNew: boolean = false;
+  isLoadingFeatured: boolean = false;
 
-  featuredServices: Service[] = [
-    {
-      id: 9,
-      name: 'Tonsur',
-      rating: 5.0,
-      reviewCount: 23,
-      address: 'Pécs, Király utca 26-28',
-      imageUrl: 'assets/images/tonsur.jpg'
-    },
-    {
-      id: 10,
-      name: 'Forost',
-      rating: 5.0,
-      reviewCount: 21,
-      address: 'Pécs, Király utca 26-28',
-      imageUrl: 'assets/images/forost.jpg'
-    },
-    {
-      id: 11,
-      name: 'Fukره',
-      rating: 5.0,
-      reviewCount: 19,
-      address: 'Pécs, Király utca 26-28',
-      imageUrl: 'assets/images/fukre.jpg'
-    },
-    {
-      id: 12,
-      name: 'Hijeny',
-      rating: 5.0,
-      reviewCount: 17,
-      address: 'Pécs, Király utca 26-28',
-      imageUrl: 'assets/images/hijeny.jpg'
-    }
-  ];
+  // Error states
+  errorTop: string = '';
+  errorNew: string = '';
+  errorFeatured: string = '';
 
   reviews: Review[] = [
     {
       author: 'Kovács Klára',
       authorImage: 'assets/images/user1.jpg',
       title: 'Legjobb oldal amit használhatok',
-      content: 'Nagyon jó az oldal, egyszerű és gyors foglalásokat csinálni. Az oldal átlátható és könnyen kezelhető. Mindenkinek ajánlom, aki szeretne foglalni.',
-      rating: 5
+      content:
+        'Nagyon jó az oldal, egyszerű és gyors foglalásokat csinálni. Az oldal átlátható és könnyen kezelhető. Mindenkinek ajánlom, aki szeretne foglalni.',
+      rating: 5,
     },
     {
       author: 'Nagy Gábor',
       authorImage: 'assets/images/user2.jpg',
       title: 'Könnyű használhatóság és felfedezhetőség',
-      content: 'Szép dizájnnal rendelkezik az oldal, könnyen találtam meg amit kerestem. Gyors foglalási folyamat és segítőkész ügyfélszolgálat.',
-      rating: 5
+      content:
+        'Szép dizájnnal rendelkezik az oldal, könnyen találtam meg amit kerestem. Gyors foglalási folyamat és segítőkész ügyfélszolgálat.',
+      rating: 5,
     },
     {
       author: 'Tóth Bence',
       authorImage: 'assets/images/user3.jpg',
       title: 'Gyors és egyszerű keresés rendszere',
-      content: 'Jól áttekinthető, minden fogalomhoz könnyű eljutni, nagyon szeretem. Nagyon tetszik a design és a felhasználói élmény.',
-      rating: 5
+      content:
+        'Jól áttekinthető, minden fogalomhoz könnyű eljutni, nagyon szeretem. Nagyon tetszik a design és a felhasználói élmény.',
+      rating: 5,
     },
     {
       author: 'Szabó Márton',
       authorImage: 'assets/images/user4.jpg',
       title: 'Saját cégem promóciója használattal időmegtakarítás',
-      content: 'A bookr-t megszoktam az időpontfoglalásra, egyszerű az online rendszer, ami segíti a vállalkozásomat. Könnyen kezelhető és hatékony.',
-      rating: 5
-    }
+      content:
+        'A bookr-t megszoktam az időpontfoglalásra, egyszerű az online rendszer, ami segíti a vállalkozásomat. Könnyen kezelhető és hatékony.',
+      rating: 5,
+    },
   ];
 
-  constructor(private router: Router) {}
+  constructor(private router: Router, private companiesService: CompaniesService, private title: Title) {}
 
   ngOnInit(): void {
-    // Initialize component
+    this.loadTopRecommendations();
+    this.loadNewServices();
+    this.loadFeaturedServices();
+        this.title.setTitle(`Bookr`);
+
+  }
+
+  ngAfterViewInit(): void {
+    this.onReviewsScroll();
+  }
+
+  loadTopRecommendations(): void {
+    this.isLoadingTop = true;
+    this.errorTop = '';
+
+    this.companiesService.getTopRecommendations(4).subscribe({
+      next: (data: Company[]) => {
+        this.topRecommendations = data;
+        this.isLoadingTop = false;
+        console.log('New services loaded:', data);
+
+      },
+      error: (error) => {
+        this.errorTop = 'Nem sikerült betölteni az ajánlatokat. Kérjük próbálja újra később.';
+        this.isLoadingTop = false;
+      },
+    });
+  }
+
+  loadNewServices(): void {
+    this.isLoadingNew = true;
+    this.errorNew = '';
+
+    this.companiesService.getNewCompanies(4).subscribe({
+      next: (data: Company[]) => {
+        this.newServices = data;
+        this.isLoadingNew = false;
+        console.log('New services loaded:', data);
+      },
+      error: (error) => {
+        console.error('Error loading new services:', error);
+        this.errorNew =
+          'Nem sikerült betölteni az új szolgáltatásokat. Kérjük próbálja újra később.';
+        this.isLoadingNew = false;
+      },
+    });
+  }
+
+  loadFeaturedServices(): void {
+    this.isLoadingFeatured = true;
+    this.errorFeatured = '';
+
+    this.companiesService.getFeaturedCompanies(4).subscribe({
+      next: (data: Company[]) => {
+        this.featuredServices = data;
+        this.isLoadingFeatured = false;
+        console.log('Featured services loaded:', data);
+      },
+      error: (error) => {
+        console.error('Error loading featured services:', error);
+        this.errorFeatured =
+          'Nem sikerült betölteni a felkapott szolgáltatásokat. Kérjük próbálja újra később.';
+        this.isLoadingFeatured = false;
+      },
+    });
+  }
+
+  retryLoadTop(): void {
+    this.loadTopRecommendations();
+  }
+
+  retryLoadNew(): void {
+    this.loadNewServices();
+  }
+
+  retryLoadFeatured(): void {
+    this.loadFeaturedServices();
   }
 
   onSearch(): void {
-    console.log('Searching for:', this.searchQuery);
-    // Implement search logic
+    if (this.searchQuery.trim()) {
+      console.log('Searching for:', this.searchQuery);
+      // TODO: Navigate to search results page
+      // this.router.navigate(['/search'], { queryParams: { q: this.searchQuery } });
+    }
   }
 
   goToService(serviceId: number): void {
-  this.router.navigate(['/sel-industry', serviceId]);
-}
+    this.router.navigate(['/sel-industry', serviceId]);
+  }
 
   getRatingStars(rating: number): number[] {
     return Array(Math.floor(rating)).fill(0);
   }
 
   learnMore(): void {
-    console.log('Learn more clicked');
-    // Navigate to business info page
+    this.router.navigate(['/learnmore']);
+  }
+
+  scrollReviews(direction: 'left' | 'right'): void {
+    const carouselElement = this.reviewsCarousel?.nativeElement;
+    if (!carouselElement) {
+      return;
+    }
+
+    const scrollAmount = Math.max(280, carouselElement.clientWidth * 0.85);
+    carouselElement.scrollBy({
+      left: direction === 'left' ? -scrollAmount : scrollAmount,
+      behavior: 'smooth',
+    });
+  }
+
+  scrollToReview(index: number): void {
+    const carouselElement = this.reviewsCarousel?.nativeElement;
+    if (!carouselElement) {
+      return;
+    }
+
+    const reviewElement = carouselElement.children.item(index) as HTMLElement | null;
+    if (!reviewElement) {
+      return;
+    }
+
+    carouselElement.scrollTo({
+      left: reviewElement.offsetLeft,
+      behavior: 'smooth',
+    });
+    this.activeReviewIndex = index;
+  }
+
+  onReviewsScroll(): void {
+    const carouselElement = this.reviewsCarousel?.nativeElement;
+    if (!carouselElement || carouselElement.children.length === 0) {
+      return;
+    }
+
+    const cardWidth = (carouselElement.children.item(0) as HTMLElement).offsetWidth + 16;
+    const nextIndex = Math.round(carouselElement.scrollLeft / Math.max(cardWidth, 1));
+    this.activeReviewIndex = Math.max(0, Math.min(this.reviews.length - 1, nextIndex));
   }
 }

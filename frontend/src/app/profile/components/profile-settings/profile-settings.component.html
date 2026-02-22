@@ -1,0 +1,262 @@
+<div class="favorites-container">
+  <!-- Page Header -->
+  <div class="section-header">
+    <h1 class="section-title">Beállítások</h1>
+    <p class="section-subtitle">Itt kezelheted a fiók beállításaidat</p>
+  </div>
+
+  <!-- Notification Settings Card -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Értesítési beállítások</h2>
+    </div>
+    <div class="card-body">
+      <div class="notification-settings">
+        <!-- Appointment Confirmation -->
+        <div class="setting-item">
+          <div class="setting-info">
+            <h3 class="setting-title">Időpont megerősítés</h3>
+            <p class="setting-description">Értesítés amikor az időpontod megerősítésre kerül</p>
+          </div>
+          <label class="toggle-switch">
+            <input 
+              type="checkbox" 
+              [(ngModel)]="notificationSettings.appointmentConfirmation"
+              (change)="onNotificationChange()"
+            />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <!-- Appointment Reminder -->
+        <div class="setting-item">
+          <div class="setting-info">
+            <h3 class="setting-title">Időpont emlékeztető</h3>
+            <p class="setting-description">Emlékeztető az időpont előtt 24 órával</p>
+          </div>
+          <label class="toggle-switch">
+            <input 
+              type="checkbox" 
+              [(ngModel)]="notificationSettings.appointmentReminder"
+              (change)="onNotificationChange()"
+            />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <!-- Appointment Cancellation -->
+        <div class="setting-item">
+          <div class="setting-info">
+            <h3 class="setting-title">Időpont törlés</h3>
+            <p class="setting-description">Értesítés amikor az időpontod törlésre kerül</p>
+          </div>
+          <label class="toggle-switch">
+            <input 
+              type="checkbox" 
+              [(ngModel)]="notificationSettings.appointmentCancellation"
+              (change)="onNotificationChange()"
+            />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <!-- Marketing Emails -->
+        <div class="setting-item">
+          <div class="setting-info">
+            <h3 class="setting-title">Marketing emailek</h3>
+            <p class="setting-description">Akciókról és újdonságokról szóló hírlevelek</p>
+          </div>
+          <label class="toggle-switch">
+            <input 
+              type="checkbox" 
+              [(ngModel)]="notificationSettings.marketingEmails"
+              (change)="onNotificationChange()"
+            />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Password Change Card -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Jelszó megváltoztatása</h2>
+      <button class="btn-toggle" (click)="openPasswordModal()">Jelszó változtatás</button>
+    </div>
+  </div>
+
+  <!-- Account Deletion Card -->
+  <div class="card card-danger">
+    <div class="card-header">
+      <h2 class="card-title">Fiók törlése</h2>
+    </div>
+    <div class="card-body">
+      <p class="danger-text">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+          <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+        </svg>
+        <strong>Figyelem!</strong> Ez a művelet véglegesen törli a fiókodat és minden hozzá kapcsolódó adatot. 
+        Ez a folyamat nem visszafordítható!
+      </p>
+      <button class="btn-danger" (click)="openDeleteAccountModal()">
+        Fiók végleges törlése
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Password Reset Modal -->
+@if (showPasswordModal) {
+  <div class="modal-backdrop" (click)="closePasswordModal()"></div>
+  <div class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Jelszó változtatás</h3>
+        <button class="modal-close" (click)="closePasswordModal()">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+            <path
+              d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+            />
+          </svg>
+        </button>
+      </div>
+
+      <form [formGroup]="passwordForm" class="modal-body">
+        @if (passwordResetSuccess) {
+          <div class="alert alert-success">
+            <svg class="alert-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+            </svg>
+            <span>Email elküldve! Kérjük, ellenőrizd a postaládádat.</span>
+          </div>
+        }
+        @if (passwordResetError) {
+          <div class="alert alert-error">
+            <span>{{ passwordResetError }}</span>
+          </div>
+        }
+        @if (!passwordResetSuccess) {
+          <p class="modal-description">
+            Add meg a jelenlegi jelszavadat. Ha helyes, emailben küldjük el a jelszó változtatási
+            linket.
+          </p>
+
+          <div class="form-group">
+            <label class="form-label">Jelenlegi jelszó</label>
+            <input
+              type="password"
+              class="form-input"
+              formControlName="currentPassword"
+              placeholder="••••••••"
+            />
+          </div>
+        }
+      </form>
+
+      @if (!passwordResetSuccess) {
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            (click)="closePasswordModal()"
+            [disabled]="isRequestingReset"
+          >
+            Mégse
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            (click)="requestPasswordReset()"
+            [disabled]="passwordForm.invalid || isRequestingReset"
+          >
+            @if (isRequestingReset) {
+              <span>Küldés...</span>
+            } @else {
+              <span>Email küldése</span>
+            }
+          </button>
+        </div>
+      }
+    </div>
+  </div>
+}
+
+<!-- Delete Account Modal -->
+@if (showDeleteAccountModal) {
+  <div class="modal-backdrop" (click)="closeDeleteAccountModal()"></div>
+  <div class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Fiók törlése</h3>
+        <button class="modal-close" (click)="closeDeleteAccountModal()">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+            <path
+              d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+            />
+          </svg>
+        </button>
+      </div>
+
+      <form [formGroup]="deleteAccountForm" class="modal-body">
+        @if (deleteAccountError) {
+          <div class="alert alert-error">
+            <span>{{ deleteAccountError }}</span>
+          </div>
+        }
+
+        <div class="alert alert-error">
+          <svg class="alert-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+          </svg>
+          <div>
+            <strong>Ez a művelet végleges és nem visszafordítható!</strong>
+            <ul style="margin: 8px 0 0 0; padding-left: 20px;">
+              <li>Minden időpontod törlődik</li>
+              <li>Kedvenc helyeid elvesznek</li>
+              <li>Fiókod véglegesen megszűnik</li>
+            </ul>
+          </div>
+        </div>
+
+        <p class="modal-description">A folytatáshoz add meg a jelszavadat.</p>
+
+        <div class="form-group">
+          <label class="form-label">Jelenlegi jelszó</label>
+          <input
+            type="password"
+            class="form-input"
+            formControlName="password"
+            placeholder="••••••••"
+          />
+        </div>
+
+      </form>
+
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn btn-secondary"
+          (click)="closeDeleteAccountModal()"
+          [disabled]="isDeletingAccount"
+        >
+          Mégse
+        </button>
+        <button
+          type="button"
+          class="btn btn-danger-full"
+          (click)="deleteAccount()"
+          [disabled]="deleteAccountForm.invalid || isDeletingAccount"
+        >
+          @if (isDeletingAccount) {
+            <span>Törlés...</span>
+          } @else {
+            <span>Fiók végleges törlése</span>
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+}

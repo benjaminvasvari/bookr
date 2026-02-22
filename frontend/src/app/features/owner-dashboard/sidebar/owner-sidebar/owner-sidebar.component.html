@@ -1,0 +1,51 @@
+<aside class="owner-sidebar" [class.is-pinned]="isPinned" [class.mobile-view]="isMobileView()" [class.mobile-open]="mobileOpen()">
+	<div class="sidebar-header">
+		<img class="brand-icon" src="../../../../../assets/images/logo.png" alt="Bookr logo" />
+		<button class="mobile-close-btn" type="button" (click)="closeSidebar()" aria-label="Oldalsáv bezárása">
+			<i class="fas fa-times" aria-hidden="true"></i>
+		</button>
+		<button class="pin-btn" type="button" (click)="togglePin()" [attr.aria-pressed]="isPinned" aria-label="Rögzítés">
+			<i class="fas fa-thumbtack pin-icon" aria-hidden="true"></i>
+		</button>
+	</div>
+
+	<nav class="sidebar-nav">
+		<a class="home-link" routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavClick()">
+			<i class="fas fa-home"></i>
+			<span class="nav-label">Home</span>
+		</a>
+		<div class="nav-divider"></div>
+		<a routerLink="/owner/overview" routerLinkActive="active" (click)="onNavClick()">
+			<i class="fas fa-chart-pie"></i>
+			<span class="nav-label">Áttekintés</span>
+		</a>
+		<a routerLink="/owner/calendar" routerLinkActive="active" (click)="onNavClick()">
+			<i class="fas fa-calendar-alt"></i>
+			<span class="nav-label">Naptár</span>
+		</a>
+		<a routerLink="/owner/staff" routerLinkActive="active" (click)="onNavClick()">
+			<i class="fas fa-user-friends"></i>
+			<span class="nav-label">Dolgozók</span>
+		</a>
+		<a routerLink="/owner/clients" routerLinkActive="active" (click)="onNavClick()">
+			<i class="fas fa-users"></i>
+			<span class="nav-label">Ügyfelek</span>
+		</a>
+		<a routerLink="/owner/services" routerLinkActive="active" (click)="onNavClick()">
+			<i class="fas fa-concierge-bell"></i>
+			<span class="nav-label">Szolgáltatások</span>
+		</a>
+		<a routerLink="/owner/sales" routerLinkActive="active" (click)="onNavClick()">
+			<i class="fas fa-coins"></i>
+			<span class="nav-label">Pénzügyek</span>
+		</a>
+		<a routerLink="/owner/reviews" routerLinkActive="active" (click)="onNavClick()">
+			<i class="fas fa-star"></i>
+			<span class="nav-label">Értékelések</span>
+		</a>
+		<a routerLink="/owner/settings" routerLinkActive="active" (click)="onNavClick()">
+			<i class="fas fa-cog"></i>
+			<span class="nav-label">Beállítások</span>
+		</a>
+	</nav>
+</aside>

@@ -1,0 +1,163 @@
+<header class="main-header fixed-top">
+  <div class="container-fluid header-container">
+    <div class="row align-items-center">
+      <!-- Logo -->
+      <div class="col-auto brand-logo-container">
+        <a routerLink="/" class="brand-logo">
+          <span class="bookr-text"> B<span class="logo-highlight">oo</span>kr </span>
+          <img src="../../assets/images/logo.png" alt="Bookr logo" class="bookr-img" />
+        </a>
+      </div>
+
+      <!-- Spacer -->
+      <div class="col"></div>
+
+      @if (!isStaff) {
+        <div class="col-auto business-actions">
+          @if (showSuperadminButton) {
+            <button (click)="handleSuperadminButtonClick()" class="btn btn-superadmin">
+              <i [class]="getSuperadminButtonIcon()"></i>
+              <span>Superadmin</span>
+            </button>
+          }
+
+          @if (showOwnerButton) {
+            <button
+              (click)="handleOwnerButtonClick()"
+              class="btn btn-register-business"
+              [class.has-company]="hasCompany"
+              [attr.aria-label]="getOwnerButtonText()"
+            >
+              <i [class]="hasCompany ? getOwnerButtonIcon() : 'fas fa-plus'"></i>
+              <span class="btn-label-full">{{ getOwnerButtonText() }}</span>
+              <span class="btn-label-short">Cég</span>
+            </button>
+          }
+        </div>
+      }
+
+      @if (currentUser && isStaff) {
+        <div class="col-auto">
+          <button routerLink="/staff/panel" class="btn btn-staff-panel">
+            <i class="fas fa-chart-line"></i>
+            <span>Vezérlőpult</span>
+          </button>
+        </div>
+      }
+
+      <!-- Right side - NEM bejelentkezett -->
+      <div *ngIf="!currentUser" class="col-auto d-flex align-items-center gap-3">
+        <button routerLink="/login" class="btn login-button" aria-label="Jelentkezés">
+          <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
+          <span class="btn-label-full">Jelentkezz be</span>
+          <span class="btn-label-short">Belépés</span>
+        </button>
+        <div class="user-profile-icon" routerLink="/login">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path
+              d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+            />
+          </svg>
+        </div>
+      </div>
+
+      <!-- Right side - BEJELENTKEZETT -->
+      <div *ngIf="currentUser" class="col-auto d-flex align-items-center gap-3">
+        <span class="welcome-text">Üdv, {{ currentUser.firstName }}!</span>
+
+        <div
+          class="user-dropdown-container"
+          (mouseenter)="showDropdown = true"
+          (mouseleave)="showDropdown = false"
+        >
+          <!-- Profile Icon Button -->
+          <div class="user-profile-icon" (click)="goToProfile()">
+            <img
+              *ngIf="currentUser.avatarUrl"
+              [src]="currentUser.avatarUrl"
+              [alt]="currentUser.firstName"
+              class="user-avatar-img"
+            />
+            <svg
+              *ngIf="!currentUser.avatarUrl"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+            >
+              <path
+                d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+              />
+            </svg>
+          </div>
+
+          <!-- Dropdown Overlay (backdrop) -->
+          <div *ngIf="showDropdown" class="dropdown-backdrop"></div>
+
+          <!-- Dropdown Menu -->
+          <div
+            class="user-dropdown-menu"
+            [class.show]="showDropdown"
+            (mouseenter)="showDropdown = true"
+            (mouseleave)="showDropdown = false"
+          >
+            <!-- User Info Header -->
+            <div class="dropdown-header">
+              <p class="user-name">{{ currentUser.firstName }} {{ currentUser.lastName }}</p>
+              <p class="user-email">{{ currentUser.email }}</p>
+            </div>
+
+            <div class="dropdown-divider"></div>
+
+            <!-- Menu Items -->
+            <button class="dropdown-item" (click)="goToProfile()">
+              <svg class="item-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path
+                  d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+                />
+              </svg>
+              Profil
+            </button>
+
+            <button class="dropdown-item" (click)="goToBookings()">
+              <svg class="item-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path
+                  d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"
+                />
+              </svg>
+              Foglalásaim
+            </button>
+
+            <button class="dropdown-item" (click)="goToFavorites()">
+              <svg class="item-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path
+                  d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+                />
+              </svg>
+              Kedvencek
+            </button>
+
+            <button class="dropdown-item" (click)="goToSettings()">
+              <svg class="item-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path
+                  d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94L14.4 2.81c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"
+                />
+              </svg>
+              Beállítások
+            </button>
+
+            <div class="dropdown-divider"></div>
+
+            <!-- Logout -->
+            <button class="dropdown-item logout" (click)="logout()">
+              <svg class="item-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path
+                  d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"
+                />
+              </svg>
+              Kijelentkezés
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>

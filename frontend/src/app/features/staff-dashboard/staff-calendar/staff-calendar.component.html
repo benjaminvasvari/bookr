@@ -1,0 +1,135 @@
+<div class="calendar-container">
+	<!-- Header -->
+	<header class="calendar-header">
+		<div class="header-left">
+			<h1>Naptár</h1>
+		</div>
+		<div class="header-right">
+			<span class="week-info">{{ getWeekDateRange() }}</span>
+			<div class="week-nav">
+				<button class="nav-btn" (click)="previousWeek()">
+					<i class="fas fa-chevron-left"></i>
+				</button>
+				<button class="nav-btn nav-btn-today" (click)="goToToday()">Ma</button>
+				<button class="nav-btn" (click)="nextWeek()">
+					<i class="fas fa-chevron-right"></i>
+				</button>
+			</div>
+		</div>
+	</header>
+
+	<!-- Calendar Grid -->
+	<div class="calendar-grid-container">
+		<div class="calendar-grid">
+			<!-- Time column -->
+			<div class="time-column">
+				<div class="time-header"></div>
+				@for (slot of timeSlots; track slot.hour) {
+					<div class="time-slot">{{ slot.time }}</div>
+				}
+			</div>
+
+			<!-- Day columns -->
+			@for (day of weekDays; track day.name; let dayIndex = $index) {
+				<div 
+					class="day-column"
+					[class.day-closed]="day.isClosed"
+					[class.day-today]="day.isToday"
+					[class.day-focused]="isFocused(dayIndex)"
+					[class.day-unfocused]="!isFocused(dayIndex) && !day.isClosed"
+				>
+					<!-- Day header -->
+					<div 
+						class="day-header"
+						[class.header-closed]="day.isClosed"
+						[class.header-clickable]="!day.isClosed"
+						(click)="!day.isClosed && setFocusedDay(dayIndex)"
+					>
+						<div class="day-short-name">{{ day.shortName }}</div>
+						<div class="day-name">{{ day.name }}</div>
+						<div class="day-date">{{ day.dayNumber }}.</div>
+						@if (day.isClosed) {
+							<span class="closed-badge">Zárva</span>
+						} @else {
+							<div class="day-hours">{{ day.openingHours }}</div>
+						}
+					</div>
+
+					<!-- Time grid -->
+					<div class="time-grid" (click)="!day.isClosed && setFocusedDay(dayIndex)">
+						@for (slot of timeSlots; track slot.hour) {
+							<div class="grid-cell"></div>
+						}
+
+						@if (day.isToday && currentTimePosition > 0) {
+							<div class="current-time-line" [style.top.px]="currentTimePosition"></div>
+						}
+
+						<!-- Appointments overlay -->
+						<div class="appointments-layer">
+							@for (apt of getAppointmentsForDay(dayIndex); track apt.id) {
+								<div 
+									class="appointment-block"
+									[ngStyle]="getAppointmentStyleWithOverlap(apt, dayIndex)"
+									(click)="selectAppointment(apt)"
+									[class.selected]="selectedAppointment?.id === apt.id"
+								>
+									<div class="apt-time">{{ apt.startTime }}</div>
+									<div class="apt-title">{{ apt.title }}</div>
+								</div>
+							}
+						</div>
+					</div>
+				</div>
+			}
+		</div>
+
+		<!-- Appointment details sidebar -->
+		@if (selectedAppointment) {
+			<div class="details-sidebar">
+				<div class="sidebar-header">
+					<h3>{{ selectedAppointment.title }}</h3>
+					<button class="close-btn" (click)="closeDetails()">&times;</button>
+				</div>
+				<div class="sidebar-body">
+					<div class="detail-row">
+						<label>Szolgáltatás</label>
+						<div class="detail-value badge-primary">{{ selectedAppointment.service }}</div>
+					</div>
+					<div class="detail-row">
+						<label>Nap</label>
+						<div class="detail-value">{{ weekDays[selectedAppointment.dayIndex].name }}, {{ weekDays[selectedAppointment.dayIndex].date }}</div>
+					</div>
+					<div class="detail-row">
+						<label>Időpont</label>
+						<div class="detail-value">{{ selectedAppointment.startTime }} ({{ selectedAppointment.duration }} perc)</div>
+					</div>
+					<div class="detail-row">
+						<label>Ügyfél neve</label>
+						<div class="detail-value">{{ selectedAppointment.clientName }}</div>
+					</div>
+					<div class="detail-row">
+						<label>Státusz</label>
+						<div class="detail-value">
+							{{ getStatusLabel(selectedAppointment.status) }}
+						</div>
+					</div>
+					@if (selectedAppointment.phone) {
+						<div class="detail-row">
+							<label>Telefonszám</label>
+							<div class="detail-value">{{ selectedAppointment.phone }}</div>
+						</div>
+					}
+					<div class="detail-row">
+						<label>Ár</label>
+						<div class="detail-value price">{{ selectedAppointment.price || 0 }} Ft</div>
+					</div>
+					<div class="sidebar-actions">
+						<button class="btn btn-edit">Módosít</button>
+						<button class="btn btn-cancel">Lemondás</button>
+					</div>
+				</div>
+			</div>
+		}
+	</div>
+</div>

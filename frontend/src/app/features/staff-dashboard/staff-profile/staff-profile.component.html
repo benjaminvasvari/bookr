@@ -1,0 +1,118 @@
+<div class="profile-info-container">
+      <div class="section-header">
+        <h1 class="section-title">Profil adatok</h1>
+        <p class="section-subtitle">Saját adatok és elérhetőségek kezelése</p>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Személyes adatok</h2>
+          <button class="btn-edit" type="button" (click)="toggleEditMode()">
+            <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <path
+                d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
+              />
+            </svg>
+            {{ isEditing ? 'Szerkesztés vége' : 'Szerkesztés' }}
+          </button>
+        </div>
+
+        <div class="card-body profile-grid">
+          <div class="profile-form-column">
+            <form>
+              <div class="form-group">
+                <label class="form-label">Vezetéknév</label>
+                <input
+                  type="text"
+                  class="form-input"
+                  [class.is-locked]="!isEditing"
+                  [(ngModel)]="profileDraft.lastName"
+                  [ngModelOptions]="{ standalone: true }"
+                  [readonly]="!isEditing"
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Keresztnév</label>
+                <input
+                  type="text"
+                  class="form-input"
+                  [class.is-locked]="!isEditing"
+                  [(ngModel)]="profileDraft.firstName"
+                  [ngModelOptions]="{ standalone: true }"
+                  [readonly]="!isEditing"
+                />
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Email cím</label>
+                <input
+                  type="email"
+                  class="form-input"
+                  [class.is-locked]="!isEditing"
+                  [(ngModel)]="profileDraft.email"
+                  [ngModelOptions]="{ standalone: true }"
+                  (blur)="onEmailBlur()"
+                  [readonly]="!isEditing"
+                />
+                @if (isEditing && emailTouched && !isValidEmailFormat) {
+                  <div class="form-error">Érvénytelen Email cím</div>
+                }
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Telefonszám</label>
+                <input
+                  type="tel"
+                  class="form-input"
+                  [class.is-locked]="!isEditing"
+                  [(ngModel)]="profileDraft.phone"
+                  [ngModelOptions]="{ standalone: true }"
+                  [readonly]="!isEditing"
+                />
+              </div>
+
+              <div class="form-actions">
+                <button type="button" class="btn btn-secondary" (click)="cancelEdit()" [disabled]="!isEditing">Mégse</button>
+                <button type="button" class="btn btn-primary" (click)="saveProfile()" [disabled]="!isEditing || !isValidEmailFormat">Mentés</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="profile-avatar-column">
+            <div class="avatar-display">
+              <div class="avatar-large">
+                @if (currentUser?.avatarUrl) {
+                  <img [src]="currentUser!.avatarUrl" [alt]="currentUser!.firstName" class="avatar-img" />
+                } @else {
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path
+                      d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+                    />
+                  </svg>
+                }
+              </div>
+            </div>
+
+            <div class="avatar-actions">
+              <button type="button" class="btn btn-primary btn-block">
+                <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                  <path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z" />
+                </svg>
+                Kép feltöltése
+              </button>
+              <button type="button" class="btn btn-danger btn-block">
+                <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                  <path
+                    d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
+                  />
+                </svg>
+                Kép törlése
+              </button>
+            </div>
+
+            <p class="avatar-info">Max 5MB • JPG, PNG, WEBP</p>
+          </div>
+        </div>
+    </div>
+  </div>
