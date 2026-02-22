@@ -4,6 +4,7 @@
  */
 package com.vizsgaremek.bookr.service;
 
+import com.vizsgaremek.bookr.DTO.checkStaffInviteTokenDTO;
 import com.vizsgaremek.bookr.model.AuditLogs;
 import com.vizsgaremek.bookr.model.Companies;
 import com.vizsgaremek.bookr.model.PendingStaff;
@@ -213,6 +214,63 @@ public class PendingStaffService {
                 em.close();
             }
         }
+        return toReturn;
+    }
+
+    public JSONObject checkInvite(String token) {
+
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        try {
+
+            // Adatbázis lekérdezés
+            checkStaffInviteTokenDTO tokenCheckMResult = Tokens.checkStaffInviteToken(token);
+
+            // NULL ELLENŐRZÉS
+            if (tokenCheckMResult == null) {
+                status = "NotFound";
+                statusCode = 404;
+                toReturn.put("status", status);
+                toReturn.put("statusCode", statusCode);
+                toReturn.put("message", "No company found");
+                return toReturn;
+            }
+
+            Boolean companyExist = CompaniesService.validateCompanyExist(tokenCheckMResult.getCompanyId());
+
+            if (!companyExist) {
+                JSONObject error = new JSONObject();
+                error.put("statusCode", 404);
+                error.put("status", "NotFound");
+                error.put("message", "Company not found with ID: " + tokenCheckMResult.getCompanyId());
+                return error;
+            }
+
+            // Sikeres válasz összeállítása
+            JSONObject result = new JSONObject();
+
+            result.put("checkStatus", tokenCheckMResult.getResult());
+            result.put("userId", tokenCheckMResult.getUserId() != null ? tokenCheckMResult.getUserId() : JSONObject.NULL);
+            result.put("expiresAt", tokenCheckMResult.getExpiresAt() != null ? tokenCheckMResult.getExpiresAt() : JSONObject.NULL);
+            result.put("email", tokenCheckMResult.getEmail() != null ? tokenCheckMResult.getEmail(): JSONObject.NULL);
+            result.put("companyId", tokenCheckMResult.getCompanyId() != null ? tokenCheckMResult.getCompanyId() : JSONObject.NULL);
+            result.put("position", tokenCheckMResult.getPosition() != null ? tokenCheckMResult.getPosition() : JSONObject.NULL);
+
+            toReturn.put("result", result);
+
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            status = "InternalServerError";
+            statusCode = 500;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+        }
+
         return toReturn;
     }
 }

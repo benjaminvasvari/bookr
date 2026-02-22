@@ -118,4 +118,22 @@ public class PendingStaffController {
         }
 
     }
+
+    @GET
+    @Path("checkInvite")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response checkInvite(String token) {
+
+        if (token == null) {
+            return buildErrorResponse(400, "InvalidParam");
+        } else {
+
+            JSONObject toReturn = layer.checkInvite(token);
+            return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                    .entity(toReturn.toString())
+                    .type(MediaType.APPLICATION_JSON)
+                    .build();
+        }
+
+    }
 }

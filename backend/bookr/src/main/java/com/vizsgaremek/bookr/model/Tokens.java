@@ -4,6 +4,7 @@
  */
 package com.vizsgaremek.bookr.model;
 
+import com.vizsgaremek.bookr.DTO.checkStaffInviteTokenDTO;
 import static com.vizsgaremek.bookr.model.Users.emf;
 import static com.vizsgaremek.bookr.model.Users.formatter;
 import com.vizsgaremek.bookr.util.StoredProcedureUtil;
@@ -438,6 +439,46 @@ public class Tokens implements Serializable {
             );
 
             return token;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static checkStaffInviteTokenDTO checkStaffInviteToken(String token) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("checkStaffInviteToken");
+            spq.registerStoredProcedureParameter("tokenIN", String.class, ParameterMode.IN);
+
+            spq.setParameter("tokenIN", token);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            Object[] record = resultList.get(0);
+
+            checkStaffInviteTokenDTO data = new checkStaffInviteTokenDTO(
+                    record[0].toString(),
+                    record[1] != null ? Integer.valueOf(record[1].toString()) : null,
+                    record[2] != null ? record[2].toString() : null,
+                    record[3] != null ? record[3].toString() : null,
+                    record[4] != null ? Integer.valueOf(record[4].toString()) : null,
+                    record[5] != null ? record[5].toString() : null
+            );
+
+            return data;
 
         } catch (Exception ex) {
             ex.printStackTrace();

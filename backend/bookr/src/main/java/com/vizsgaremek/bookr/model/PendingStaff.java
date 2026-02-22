@@ -1,5 +1,6 @@
 package com.vizsgaremek.bookr.model;
 
+import com.vizsgaremek.bookr.DTO.checkStaffInviteTokenDTO;
 import static com.vizsgaremek.bookr.model.Users.emf;
 import static com.vizsgaremek.bookr.model.Users.formatter;
 import com.vizsgaremek.bookr.util.StoredProcedureUtil;
@@ -250,4 +251,32 @@ public class PendingStaff implements Serializable {
             }
         }
     }
+
+    public static String acceptInvite(Integer userId, String token) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("acceptStaffInvite");
+            spq.registerStoredProcedureParameter("tokenIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("tokenIN", token);
+            spq.setParameter("userIdIN", userId);
+
+            spq.execute();
+
+            String result = spq.getSingleResult().toString();
+
+            return result;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
 }
