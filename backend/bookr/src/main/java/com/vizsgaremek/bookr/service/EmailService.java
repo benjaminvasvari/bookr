@@ -1,5 +1,6 @@
 package com.vizsgaremek.bookr.service;
 
+import com.sun.mail.smtp.SMTPSendFailedException;
 import com.vizsgaremek.bookr.config.EmailConfig;
 import com.vizsgaremek.bookr.util.EmailHtmlTemplates;
 import java.io.UnsupportedEncodingException;
@@ -130,7 +131,7 @@ public class EmailService {
         });
     }
 
-    public void sendStaffInviteEmail(String toEmail, String invitedName, String companyName, String companyCity, String ownerName, String positonName, String invToken, LocalDate expiresAt) throws MessagingException, UnsupportedEncodingException {
+    public void sendStaffInviteEmail(String toEmail, String invitedName, String companyName, String companyCity, String ownerName, String positonName, String invToken, LocalDate expiresAt) throws MessagingException, UnsupportedEncodingException, SMTPSendFailedException {
         if (!EmailConfig.isEmailEnabled()) {
             System.out.println("Email sending is disabled. Would send staff invite email to: " + toEmail);
             return;

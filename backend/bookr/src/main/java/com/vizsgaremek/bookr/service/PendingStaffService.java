@@ -60,6 +60,33 @@ public class PendingStaffService {
                 return error;
             }
 
+            String StaffInviteEligibility = layer.checkStaffInviteEligibility(companyId, request.getEmail());
+
+            if (StaffInviteEligibility == null) {
+                toReturn.put("status", "InternalServerError");
+                toReturn.put("statusCode", 500);
+                em.getTransaction().rollback();
+
+                return toReturn;
+            }
+
+            switch (StaffInviteEligibility) {
+                case "already_staff":
+                    toReturn.put("status", "Conflict");
+                    toReturn.put("statusCode", 409);
+                    toReturn.put("message", "Ez a felhasználó már tagja egy cégnek.");
+                    em.getTransaction().rollback();
+
+                    return toReturn;
+                case "invite_exists":
+                    toReturn.put("status", "Conflict");
+                    toReturn.put("statusCode", 409);
+                    toReturn.put("message", "A felhasználó már megvan hívva ehhez a céghez.");
+                    em.getTransaction().rollback();
+
+                    return toReturn;
+            }
+
             // Check user
             Boolean isUserExist = UsersService.validateUserExistByEmail(request.getEmail());
             Users userModelResult = null;
@@ -75,14 +102,6 @@ public class PendingStaffService {
                     return toReturn;
                 }
 
-                if (userModelResult.getCompanyIdInt() != null) {
-                    toReturn.put("status", "Conflict");
-                    toReturn.put("statusCode", 409);
-                    toReturn.put("message", "Ez a felhasználó már tagja egy cégnek.");
-                    em.getTransaction().rollback();
-
-                    return toReturn;
-                }
             }
 
             Tokens tokenData = Tokens.generateStaffInviteToken(isUserExist ? userModelResult.getId() : null, companyId, request.getEmail());
@@ -172,12 +191,12 @@ public class PendingStaffService {
             em.getTransaction().commit();
 
             JSONObject result = new JSONObject();
-            
+
             result.put("firstName", isUserExist ? userModelResult.getFirstName() : JSONObject.NULL);
             result.put("lastName", isUserExist ? userModelResult.getLastName() : JSONObject.NULL);
             result.put("email", request.getEmail());
             result.put("position", request.getPosition());
-            
+
             toReturn.put("result", result);
             toReturn.put("status", status);
             toReturn.put("statusCode", statusCode);

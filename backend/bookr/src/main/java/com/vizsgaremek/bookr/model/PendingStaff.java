@@ -208,12 +208,38 @@ public class PendingStaff implements Serializable {
 
             Integer pendingStaffId = Integer.valueOf(spq.getSingleResult().toString());
 
-
             PendingStaff p = new PendingStaff(
                     pendingStaffId
             );
 
             return p;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static String checkStaffInviteEligibility(Integer companyId, String email) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("checkStaffInviteEligibility");
+            spq.registerStoredProcedureParameter("emailIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("emailIN", email);
+            spq.setParameter("companyIdIN", companyId);
+
+            spq.execute();
+
+            String result = spq.getSingleResult().toString();
+
+            return result;
 
         } catch (Exception ex) {
             ex.printStackTrace();
