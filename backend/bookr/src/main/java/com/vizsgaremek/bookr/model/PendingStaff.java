@@ -2,6 +2,7 @@ package com.vizsgaremek.bookr.model;
 
 import static com.vizsgaremek.bookr.model.Users.emf;
 import static com.vizsgaremek.bookr.model.Users.formatter;
+import com.vizsgaremek.bookr.util.StoredProcedureUtil;
 import java.io.Serializable;
 import java.util.Date;
 import java.util.List;
@@ -89,6 +90,12 @@ public class PendingStaff implements Serializable {
         this.email = email;
         this.position = position;
         this.createdAt = createdAt;
+    }
+
+    // invite request
+    public PendingStaff(String email, String position) {
+        this.email = email;
+        this.position = position;
     }
 
     public Integer getId() {
@@ -185,33 +192,28 @@ public class PendingStaff implements Serializable {
 
         try {
             StoredProcedureQuery spq = em.createStoredProcedureQuery("createPendingStaff");
-            spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("emailIN", String.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("tokenIdIN", Integer.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("positionIN", String.class, ParameterMode.IN);
 
-            spq.setParameter("userIdIN", userId);
             spq.setParameter("emailIN", email);
             spq.setParameter("companyIdIN", companyId);
+            StoredProcedureUtil.setNullableParameter(spq, "userIdIN", userId);
             spq.setParameter("tokenIdIN", tokenId);
             spq.setParameter("positionIN", position);
 
             spq.execute();
 
-            List<Object[]> resultList = spq.getResultList();
+            Integer pendingStaffId = Integer.valueOf(spq.getSingleResult().toString());
 
-            if (resultList.isEmpty()) {
-                return null;
-            }
 
-            Object[] record = resultList.get(0);
-
-            PendingStaff token = new PendingStaff(
-                    Integer.valueOf(record[0].toString())
+            PendingStaff p = new PendingStaff(
+                    pendingStaffId
             );
 
-            return token;
+            return p;
 
         } catch (Exception ex) {
             ex.printStackTrace();

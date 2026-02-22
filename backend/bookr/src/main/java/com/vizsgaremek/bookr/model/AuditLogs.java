@@ -47,8 +47,8 @@ import org.json.JSONObject;
     @NamedQuery(name = "AuditLogs.findByEmail", query = "SELECT a FROM AuditLogs a WHERE a.email = :email"),
     @NamedQuery(name = "AuditLogs.findByEntityType", query = "SELECT a FROM AuditLogs a WHERE a.entityType = :entityType"),
     @NamedQuery(name = "AuditLogs.findByAction", query = "SELECT a FROM AuditLogs a WHERE a.action = :action"),
-    @NamedQuery(name = "AuditLogs.findByCreatedAt", query = "SELECT a FROM AuditLogs a WHERE a.createdAt = :createdAt"),
-    @NamedQuery(name = "AuditLogs.findByAffectedUserId", query = "SELECT a FROM AuditLogs a WHERE a.affectedUserId = :affectedUserId")})
+    @NamedQuery(name = "AuditLogs.findByCreatedAt", query = "SELECT a FROM AuditLogs a WHERE a.createdAt = :createdAt")})
+
 public class AuditLogs implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -85,8 +85,6 @@ public class AuditLogs implements Serializable {
     @Column(name = "created_at")
     @Temporal(TemporalType.TIMESTAMP)
     private Date createdAt;
-    @Column(name = "affected_user_id")
-    private Integer affectedUserId;
     @JoinColumn(name = "company_id", referencedColumnName = "id")
     @ManyToOne
     private Companies companyId;
@@ -130,7 +128,7 @@ public class AuditLogs implements Serializable {
         this.action = action;
     }
 
-    public AuditLogs(Integer performedByUserIdInt, String performedByRole, Integer affectedEntityId, String email, String entityType, String action) {
+    public AuditLogs(Integer performedByUserIdInt, String performedByRole, Integer affectedEntityIdInt, String email, String entityType, String action) {
         this.performedByUserIdInt = performedByUserIdInt;
         this.performedByRole = performedByRole;
         this.affectedEntityIdInt = affectedEntityIdInt;
@@ -138,6 +136,18 @@ public class AuditLogs implements Serializable {
         this.entityType = entityType;
         this.action = action;
     }
+    
+    public AuditLogs(Integer performedByUserIdInt, String performedByRole, Integer affectedEntityIdInt, Integer companyIdInt, String email, String entityType, String action) {
+        this.performedByUserIdInt = performedByUserIdInt;
+        this.performedByRole = performedByRole;
+        this.affectedEntityIdInt = affectedEntityIdInt;
+        this.companyIdInt = companyIdInt;
+        this.email = email;
+        this.entityType = entityType;
+        this.action = action;
+    }
+    
+    
 
     public Integer getId() {
         return id;
@@ -201,14 +211,6 @@ public class AuditLogs implements Serializable {
 
     public void setCreatedAt(Date createdAt) {
         this.createdAt = createdAt;
-    }
-
-    public Integer getAffectedUserId() {
-        return affectedUserId;
-    }
-
-    public void setAffectedUserId(Integer affectedUserId) {
-        this.affectedUserId = affectedUserId;
     }
 
     public Companies getCompanyId() {
@@ -348,7 +350,7 @@ public class AuditLogs implements Serializable {
             // Register parameters according to the new stored procedure signature
             spq.registerStoredProcedureParameter("performedByUserIdIN", Integer.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("performedByRoleIN", String.class, ParameterMode.IN);
-            spq.registerStoredProcedureParameter("affectedUserIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("affectedEntityIdIN", Integer.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("emailIN", String.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("entityTypeIN", String.class, ParameterMode.IN);
@@ -363,7 +365,7 @@ public class AuditLogs implements Serializable {
             // Az összes nullable paraméter - HELPER METÓDUSSAL
             StoredProcedureUtil.setNullableParameter(spq, "performedByRoleIN", (this.performedByRole != null && !this.performedByRole.isEmpty()) ? this.performedByRole : null);
 
-            StoredProcedureUtil.setNullableParameter(spq, "affectedUserIdIN", this.affectedEntityIdInt);
+            StoredProcedureUtil.setNullableParameter(spq, "affectedEntityIdIN", this.affectedEntityIdInt);
 
             StoredProcedureUtil.setNullableParameter(spq, "companyIdIN", this.companyIdInt);
 

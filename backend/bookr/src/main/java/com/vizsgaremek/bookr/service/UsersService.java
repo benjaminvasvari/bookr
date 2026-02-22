@@ -346,4 +346,29 @@ public class UsersService {
 
         return toReturn;
     }
+
+    public JSONObject getUserProfileByEmail(String email) {
+
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        //code
+        Users modelResult = Users.getUserProfileByEmail(email);
+
+        JSONObject result = new JSONObject();
+        result.put("id", modelResult.getId());
+        result.put("firstName", modelResult.getFirstName());
+        result.put("lastName", modelResult.getLastName());
+        result.put("email", modelResult.getEmail());
+        result.put("phone", modelResult.getPhone());
+        result.put("imageUrl", modelResult.getImageUrl());
+        result.put("createdAt", modelResult.getCreatedAt());
+
+        toReturn.put("result", result);
+
+        toReturn.put("status", status);
+        toReturn.put("statusCode", statusCode);
+        return toReturn;
+    }
 }

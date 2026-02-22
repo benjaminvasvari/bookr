@@ -265,6 +265,18 @@ public class Users implements Serializable {
         this.createdAt = createdAt;
     }
 
+    // getUserProfileByEmail
+    public Users(Integer id, String firstName, String lastName, Integer companyIdInt, String email, String phone, String imageUrl, Date createdAt) {
+        this.id = id;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.companyIdInt = companyIdInt;
+        this.email = email;
+        this.phone = phone;
+        this.imageUrl = imageUrl;
+        this.createdAt = createdAt;
+    }
+
     // logout
     public Users(Integer id, String email, Integer companyId) {
         this.id = id;
@@ -1084,6 +1096,49 @@ public class Users implements Serializable {
         } catch (Exception ex) {
             ex.printStackTrace();
             return new ClientsByCompanyResultWrapper(new ArrayList<>(), 0);
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static Users getUserProfileByEmail(String email) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getUserProfileByEmail");
+            spq.registerStoredProcedureParameter("emailIN", String.class, ParameterMode.IN);
+
+            spq.setParameter("emailIN", email);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            // Csak az első rekord kell (LIMIT 1 a stored procedure-ben)
+            Object[] record = resultList.get(0);
+
+            Users user = new Users(
+                    Integer.valueOf(record[0].toString()), // id
+                    record[1].toString(), // first_name
+                    record[2].toString(), // last_name
+                    record[3] == null ? null : Integer.valueOf(record[3].toString()), // companyId
+                    record[4].toString(), // email
+                    record[5].toString(), // phone
+                    record[6] == null ? null : record[6].toString(), // imageUrl
+                    formatter.parse(record[7].toString())
+            );
+
+            return user;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
         } finally {
             if (em != null && em.isOpen()) {
                 em.close();

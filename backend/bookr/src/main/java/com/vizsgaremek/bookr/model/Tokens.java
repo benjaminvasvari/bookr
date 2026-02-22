@@ -6,6 +6,7 @@ package com.vizsgaremek.bookr.model;
 
 import static com.vizsgaremek.bookr.model.Users.emf;
 import static com.vizsgaremek.bookr.model.Users.formatter;
+import com.vizsgaremek.bookr.util.StoredProcedureUtil;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -406,7 +407,7 @@ public class Tokens implements Serializable {
         }
     }
 
-    public static Tokens generateStaffInviteToken(Integer userId, Integer companyId, String email) {
+    public Tokens generateStaffInviteToken(Integer userId, Integer companyId, String email) {
         EntityManager em = emf.createEntityManager();
 
         try {
@@ -415,7 +416,8 @@ public class Tokens implements Serializable {
             spq.registerStoredProcedureParameter("emailIN", String.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
 
-            spq.setParameter("userIdIN", userId);
+            StoredProcedureUtil.setNullableParameter(spq, "userIdIN", userId);
+
             spq.setParameter("emailIN", email);
             spq.setParameter("companyIdIN", companyId);
 
