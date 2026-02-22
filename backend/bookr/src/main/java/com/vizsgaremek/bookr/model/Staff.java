@@ -124,7 +124,7 @@ public class Staff implements Serializable {
     }
 
     // getFilteredStaffByServices
-    public Staff(Integer id, Integer userIdInt, String displayName, String specialties, String bio, Boolean isActive, Integer companyIdInt, String imageUrl, String firstName, String lastName, Integer servicesCount) {
+    public Staff(Integer id, Integer userIdInt, String displayName, String specialties, String bio, Boolean isActive, Integer companyIdInt, String firstName, String lastName, String imageUrl, Integer servicesCount) {
         this.id = id;
         this.userIdInt = userIdInt;
         this.displayName = displayName;

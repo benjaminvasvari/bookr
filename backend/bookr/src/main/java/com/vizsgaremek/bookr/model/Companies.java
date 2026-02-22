@@ -6,6 +6,7 @@ package com.vizsgaremek.bookr.model;
 
 import static com.vizsgaremek.bookr.model.Users.emf;
 import static com.vizsgaremek.bookr.model.Users.formatter;
+import com.vizsgaremek.bookr.util.StoredProcedureUtil;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -904,7 +905,7 @@ public class Companies implements Serializable {
             spq.setParameter("emailIN", company.getEmail());
             spq.setParameter("ownerIdIN", company.getOwnerIdInt());
             spq.setParameter("allowSameDayBookingIN", company.getAllowSameDayBooking());
-            spq.setParameter("minimumBookingHoursAheadIN", company.getMinimumBookingHoursAhead());
+            StoredProcedureUtil.setNullableParameter(spq, "minimumBookingHoursAheadIN", company.getMinimumBookingHoursAhead());
             spq.setParameter("bookingAdvanceDaysIN", company.getBookingAdvanceDays());
             spq.setParameter("cancellationHoursIN", company.getCancellationHours());
             spq.setParameter("businessCategoryIdIN", company.getBusinessCategoryIdInt());

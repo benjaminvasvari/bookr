@@ -53,12 +53,7 @@ public class StaffService {
                 actualStaffObject.put("companyId", actualStaff.getCompanyIdInt());
                 actualStaffObject.put("firstName", actualStaff.getFirstName());
                 actualStaffObject.put("lastName", actualStaff.getLastName());
-
-                if (actualStaff.getImageUrl() == null || actualStaff.getImageUrl().isEmpty()) {
-                    actualStaffObject.put("imageUrl", JSONObject.NULL);
-                } else {
-                    actualStaffObject.put("imageUrl", FileStorageUtil.buildFullUrl(actualStaff.getImageUrl()));
-                }
+                actualStaffObject.put("imageUrl", actualStaff.getImageUrl() != null ? FileStorageUtil.buildFullUrl(actualStaff.getImageUrl()) : null);
 
                 actualStaffObject.put("servicesCount", actualStaff.getServicesCount());
 

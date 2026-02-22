@@ -380,7 +380,7 @@ public class CompaniesService {
 
             result.put("rating", company.getRating());
             result.put("reviewCount", company.getReviewCount());
-            result.put("imageUrl", company.getImageUrl());
+            result.put("imageUrl", FileStorageUtil.buildFullUrl(company.getImageUrl()));
 
             return result;
 

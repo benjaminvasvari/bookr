@@ -392,7 +392,7 @@ public class Tokens implements Serializable {
                     record[3].toString(),
                     formatter.parse(record[4].toString()),
                     record[5] != null ? Boolean.parseBoolean(record[5].toString()) : null,
-                    formatter.parse(record[6].toString()),
+                    record[6] != null ? formatter.parse(record[6].toString()) : null,
                     formatter.parse(record[7].toString())
             );
 
