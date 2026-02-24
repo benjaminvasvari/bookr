@@ -1,11 +1,11 @@
 -- phpMyAdmin SQL Dump
--- version 5.1.2
+-- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
--- Host: localhost:3307
--- Generation Time: Feb 20, 2026 at 09:33 AM
--- Server version: 5.7.24
--- PHP Version: 8.3.1
+-- Host: localhost:8889
+-- Generation Time: Feb 23, 2026 at 02:21 AM
+-- Server version: 8.0.40
+-- PHP Version: 8.3.14
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -27,6 +27,64 @@ DELIMITER $$
 --
 -- Procedures
 --
+CREATE DEFINER=`root`@`localhost` PROCEDURE `acceptStaffInvite` (IN `tokenIN` VARCHAR(500), IN `userIdIN` INT)   BEGIN
+    DECLARE vTokenId INT DEFAULT NULL;
+    DECLARE vExpiresAt DATETIME DEFAULT NULL;
+    DECLARE vIsRevoked TINYINT DEFAULT 0;
+    DECLARE vCompanyId INT DEFAULT NULL;
+    DECLARE vPosition VARCHAR(100) DEFAULT NULL;
+    DECLARE vDisplayName VARCHAR(255) DEFAULT NULL;
+
+    -- Token keresése
+    SELECT `id`, `expires_at`, `is_revoked`
+    INTO vTokenId, vExpiresAt, vIsRevoked
+    FROM `tokens`
+    WHERE `token` = tokenIN
+      AND `type` = 'staff_invite'
+    LIMIT 1;
+
+    IF vTokenId IS NULL THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'not_found';
+    ELSEIF vIsRevoked = 1 OR vExpiresAt < NOW() THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'expired';
+    END IF;
+
+    -- pending_staff adatok
+    SELECT `company_id`, `position`
+    INTO vCompanyId, vPosition
+    FROM `pending_staff`
+    WHERE `token_id` = vTokenId
+    LIMIT 1;
+
+    -- display_name összerakása
+    SELECT CONCAT(`first_name`, ' ', `last_name`)
+    INTO vDisplayName
+    FROM `users`
+    WHERE `id` = userIdIN;
+
+    -- users company_id beállítása
+    UPDATE `users`
+    SET `company_id` = vCompanyId
+    WHERE `id` = userIdIN;
+
+    -- staff INSERT
+    INSERT INTO `staff` (`user_id`, `company_id`, `display_name`, `specialties`, `is_active`, `is_deleted`)
+    VALUES (userIdIN, vCompanyId, vDisplayName, vPosition, 1, 0);
+
+    -- token visszavonása
+    UPDATE `tokens`
+    SET `is_revoked` = 1,
+        `revoked_at` = NOW()
+    WHERE `id` = vTokenId;
+
+    -- pending_staff status frissítése
+    UPDATE `pending_staff`
+    SET `status` = 'accepted'
+    WHERE `token_id` = vTokenId;
+
+    SELECT 'success' AS `result`;
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `activateBusinessCategory` (IN `idIN` INT)   BEGIN
     UPDATE `business_categories`
     SET 
@@ -75,7 +133,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `activateUser` (IN `userIdIN` INT)  
       AND `is_deleted` = FALSE;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `activateUserByRegToken` (IN `tokenIN` VARCHAR(100))   BEGIN
+CREATE DEFINER=`root`@`localhost` PROCEDURE `activateUserByRegToken` (IN `tokenIN` VARCHAR(500))   BEGIN
     DECLARE tokenUserId INT DEFAULT NULL;
     DECLARE tokenExpired BOOLEAN DEFAULT FALSE;
     DECLARE tokenRevoked BOOLEAN DEFAULT FALSE;
@@ -331,6 +389,66 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `checkStaff` (IN `staffIdIN` INT)   
     WHERE staff.id = staffIdIN;
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `checkStaffInviteEligibility` (IN `emailIN` VARCHAR(100), IN `companyIdIN` INT)   BEGIN
+    DECLARE hasPendingInvite TINYINT DEFAULT 0;
+    DECLARE isAlreadyStaff TINYINT DEFAULT 0;
+
+    SELECT COUNT(*) INTO hasPendingInvite
+    FROM `pending_staff`
+    WHERE `email` = emailIN
+      AND `company_id` = companyIdIN
+      AND `status` = 'pending';
+
+    SELECT COUNT(*) INTO isAlreadyStaff
+    FROM `staff`
+    INNER JOIN `users` ON `users`.`id` = `staff`.`user_id`
+    WHERE `users`.`email` = emailIN
+      AND `staff`.`company_id` = companyIdIN
+      AND `staff`.`is_deleted` = 0;
+
+    SELECT
+        CASE
+            WHEN isAlreadyStaff   > 0 THEN 'already_staff'
+            WHEN hasPendingInvite > 0 THEN 'invite_exists'
+            ELSE 'eligible'
+        END AS `result`;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `checkStaffInviteToken` (IN `tokenIN` VARCHAR(500))   BEGIN
+    DECLARE vUserId INT DEFAULT NULL;
+    DECLARE vExpiresAt DATETIME DEFAULT NULL;
+    DECLARE vIsRevoked TINYINT DEFAULT 0;
+    DECLARE vTokenId INT DEFAULT NULL;
+
+    SELECT `id`, `user_id`, `expires_at`, `is_revoked`
+    INTO vTokenId, vUserId, vExpiresAt, vIsRevoked
+    FROM `tokens`
+    WHERE `token` = tokenIN
+      AND `type` = 'staff_invite'
+    LIMIT 1;
+
+    IF vTokenId IS NULL THEN
+        SELECT 'not_found' AS `result`, NULL AS `user_id`, NULL AS `expires_at`,
+               NULL AS `email`, NULL AS `company_id`, NULL AS `position`;
+
+    ELSEIF vIsRevoked = 1 OR vExpiresAt < NOW() THEN
+        SELECT 'expired' AS `result`, NULL AS `user_id`, NULL AS `expires_at`,
+               NULL AS `email`, NULL AS `company_id`, NULL AS `position`;
+
+    ELSE
+        SELECT 
+            'valid' AS `result`,
+            vUserId AS `user_id`,
+            vExpiresAt AS `expires_at`,
+            ps.`email`,
+            ps.`company_id`,
+            ps.`position`
+        FROM `pending_staff` ps
+        WHERE ps.`token_id` = vTokenId
+        LIMIT 1;
+    END IF;
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `checkUser` (IN `userIdIN` INT)   BEGIN
     SELECT 
 			users.id,
@@ -351,38 +469,23 @@ END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `cleanExpiredTokens` ()   BEGIN
     DELETE FROM `tokens`
-    WHERE `expires_at` < NOW()
-       OR `is_revoked` = TRUE;
+    WHERE (
+        `expires_at` < NOW()
+        OR `is_revoked` = TRUE
+    )
+    AND `id` NOT IN (
+        SELECT `token_id` FROM `pending_staff`
+    );
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `completeAppointment` (IN `appointmentIdIN` INT, IN `internalNotesIN` TEXT)   BEGIN
-    -- Ellenőrzi hogy confirmed vagy in_progress státuszú-e
-    IF (SELECT status FROM appointments WHERE id = appointmentIdIN) IN ('confirmed', 'in_progress') THEN
+    IF (SELECT `status` FROM `appointments` WHERE `id` = appointmentIdIN) = 'in_progress' THEN
         UPDATE `appointments`
-        SET 
-            `status` = 'completed',
-            `internal_notes` = internalNotesIN,
-            `updated_at` = NOW()
+        SET `status` = 'completed', `internal_notes` = internalNotesIN, `updated_at` = NOW()
         WHERE `id` = appointmentIdIN;
-        
         SELECT 'SUCCESS' AS result, 'Appointment completed' AS message;
     ELSE
-        SELECT 'ERROR' AS result, 'Appointment cannot be completed' AS message;
-    END IF;
-END$$
-
-CREATE DEFINER=`root`@`localhost` PROCEDURE `confirmAppointment` (IN `appointmentIdIN` INT, IN `confirmedByIN` INT)   BEGIN
-    -- Ellenőrzi hogy pending státuszú-e
-    IF (SELECT status FROM appointments WHERE id = appointmentIdIN) = 'pending' THEN
-        UPDATE `appointments`
-        SET 
-            `status` = 'confirmed',
-            `updated_at` = NOW()
-        WHERE `id` = appointmentIdIN;
-        
-        SELECT 'SUCCESS' AS result, 'Appointment confirmed' AS message;
-    ELSE
-        SELECT 'ERROR' AS result, 'Appointment is not in pending status' AS message;
+        SELECT 'ERROR' AS result, 'Appointment is not in_progress' AS message;
     END IF;
 END$$
 
@@ -540,6 +643,29 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `createOpeningHours` (IN `companyIdI
     
     -- Visszaadjuk, hogy sikerült
     SELECT 'SUCCESS' AS result, 'Opening hours created for all days' AS message;
+END$$
+
+CREATE DEFINER=`root`@`localhost` PROCEDURE `createPendingStaff` (IN `emailIN` VARCHAR(100), IN `companyIdIN` INT, IN `userIdIN` INT, IN `tokenIdIN` INT, IN `positionIN` TEXT)   BEGIN
+    INSERT INTO `pending_staff` (
+        `email`,
+        `company_id`,
+        `user_id`,
+        `token_id`,
+        `position`,
+        `status`,
+        `created_at`
+    )
+    VALUES (
+        emailIN,
+        companyIdIN,
+        userIdIN,
+        tokenIdIN,
+        positionIN,
+        'pending',
+        NOW()
+    );
+
+    SELECT LAST_INSERT_ID() AS pending_staff_id;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `createReview` (IN `companyIdIN` INT, IN `clientIdIN` INT, IN `appointmentIdIN` INT, IN `ratingIN` INT, IN `commentIN` TEXT)   BEGIN
@@ -1042,6 +1168,39 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `generatePasswordResetToken` (IN `id
     SELECT newToken AS token, tokenExpiry AS expires_at;
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `generateStaffInviteToken` (IN `userIdIN` INT, IN `emailIN` VARCHAR(100), IN `companyIdIN` INT)   BEGIN
+    DECLARE newToken VARCHAR(64);
+    DECLARE tokenExpiry DATETIME;
+
+    -- Token generálás
+    SET newToken = MD5(CONCAT(emailIN, companyIdIN, NOW(), RAND()));
+    SET tokenExpiry = DATE_ADD(NOW(), INTERVAL 7 DAY);
+
+    -- Token mentése (user_id lehet NULL ha még nincs profil)
+    INSERT INTO `tokens` (
+        `user_id`,
+        `token`,
+        `type`,
+        `expires_at`,
+        `is_revoked`,
+        `created_at`
+    )
+    VALUES (
+        userIdIN,
+        newToken,
+        'staff_invite',
+        tokenExpiry,
+        FALSE,
+        NOW()
+    );
+
+    -- Visszaadás
+    SELECT
+        LAST_INSERT_ID() AS token_id,
+        newToken AS token,
+        tokenExpiry AS expires_at;
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getActiveServicesByCompany` (IN `companyIdIN` INT)   BEGIN
     SELECT 
         s.*,
@@ -1063,6 +1222,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getAllActiveStaffByCompany` (IN `co
         `staff`.`display_name`,
         `staff`.`specialties`,
         `staff`.`bio`,
+        `staff`.`color`,
         `staff`.`created_at` AS "staff_created_at",
         `staff`.`updated_at` AS "staff_updated_at",
 		`users`.`first_name`,
@@ -1532,34 +1692,19 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getDashboardWeeklyRevenue` (IN `com
     DECLARE thisWeekStart DATE;
     DECLARE lastWeekStart DATE;
     DECLARE lastWeekEnd DATE;
-    
-    -- Ez a hét kezdete (hétfő)
+
     SET thisWeekStart = DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY);
-    
-    -- Múlt hét kezdete és vége
     SET lastWeekStart = DATE_SUB(thisWeekStart, INTERVAL 7 DAY);
     SET lastWeekEnd = DATE_SUB(thisWeekStart, INTERVAL 1 DAY);
-    
-    -- Mindkét hét bevétele egy queryban
-    SELECT 
-        COALESCE(SUM(CASE 
-            WHEN DATE(`start_time`) >= thisWeekStart 
-            THEN `price` 
-            ELSE 0 
-        END), 0) AS this_week_revenue,
-        
-        COALESCE(SUM(CASE 
-            WHEN DATE(`start_time`) >= lastWeekStart 
-                AND DATE(`start_time`) <= lastWeekEnd 
-            THEN `price` 
-            ELSE 0 
-        END), 0) AS last_week_revenue,
-        
+
+    SELECT
+        COALESCE(SUM(CASE WHEN DATE(`start_time`) >= thisWeekStart THEN `price` ELSE 0 END), 0) AS this_week_revenue,
+        COALESCE(SUM(CASE WHEN DATE(`start_time`) BETWEEN lastWeekStart AND lastWeekEnd THEN `price` ELSE 0 END), 0) AS last_week_revenue,
         'HUF' AS currency
     FROM `appointments`
     WHERE `company_id` = companyIdIN
       AND DATE(`start_time`) >= lastWeekStart
-      AND `status` IN ('completed', 'confirmed');
+      AND `status` = 'completed';
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getFeaturedCompanies` (IN `limitIN` INT)   BEGIN
@@ -1667,8 +1812,11 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getOpeningHours` (IN `companyIdIN` 
         FIELD(`day_of_week`, 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday');
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getOwnerReviews` (IN `companyIdIN` INT, IN `searchIN` VARCHAR(100), IN `ratingFilterIN` VARCHAR(2), IN `sortByIN` ENUM('newest','oldest','highest','lowest'), IN `limitIN` INT, IN `offsetIN` INT, OUT `totalCountOUT` INT)   BEGIN
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getOwnerReviews` (IN `companyIdIN` INT, IN `searchIN` VARCHAR(100), IN `ratingFilterIN` VARCHAR(5), IN `sortByIN` ENUM('newest','oldest','highest','lowest'), IN `pageIN` INT, IN `pageSizeIN` INT, OUT `totalCountOUT` INT)   BEGIN
     DECLARE ratingInt INT DEFAULT NULL;
+    DECLARE offsetVal INT;
+
+    SET offsetVal = (pageIN - 1) * pageSizeIN;
 
     IF `ratingFilterIN` IS NOT NULL AND `ratingFilterIN` != '' THEN
         SET ratingInt = CAST(`ratingFilterIN` AS UNSIGNED);
@@ -1694,6 +1842,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getOwnerReviews` (IN `companyIdIN` 
         `r`.`comment`,
         `r`.`created_at`,
         CONCAT(`u`.`first_name`, ' ', `u`.`last_name`)         AS `client_name`,
+        `img`.`url`                                            AS `client_image`,
         `s`.`name`                                             AS `service_name`,
         DATE(`a`.`start_time`)                                 AS `appointment_date`
 
@@ -1701,6 +1850,8 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getOwnerReviews` (IN `companyIdIN` 
     INNER JOIN `users` `u`        ON `u`.`id` = `r`.`client_id`
     INNER JOIN `appointments` `a` ON `a`.`id` = `r`.`appointment_id`
     INNER JOIN `services` `s`     ON `s`.`id` = `a`.`service_id`
+    LEFT JOIN `images` `img`      ON `img`.`user_id` = `u`.`id`
+                                 AND `img`.`is_deleted` = FALSE
 
     WHERE `r`.`company_id` = companyIdIN
       AND `r`.`is_deleted` = FALSE
@@ -1717,7 +1868,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getOwnerReviews` (IN `companyIdIN` 
         CASE WHEN `sortByIN` = 'highest' THEN `r`.`rating`     END DESC,
         CASE WHEN `sortByIN` = 'lowest'  THEN `r`.`rating`     END ASC
 
-    LIMIT `limitIN` OFFSET `offsetIN`;
+    LIMIT pageSizeIN OFFSET offsetVal;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getPassword` (IN `idIN` INT)   BEGIN
@@ -2438,7 +2589,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getTodayAppointments` (IN `companyI
     ORDER BY a.start_time ASC;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getTokenInfoByToken` (IN `tokenIN` VARCHAR(100))   BEGIN
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getTokenInfoByToken` (IN `tokenIN` VARCHAR(500))   BEGIN
     SELECT 
         `tokens`.`id`,
         `tokens`.`user_id`,
@@ -2647,6 +2798,24 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `getUserProfile` (IN `userIdIN` INT)
       AND images.is_deleted = false;
 END$$
 
+CREATE DEFINER=`root`@`localhost` PROCEDURE `getUserProfileByEmail` (IN `emailIN` VARCHAR(100))   BEGIN
+    SELECT 
+        users.id,
+        users.first_name,
+        users.last_name,
+        users.company_id,
+        users.email,
+        users.phone,
+        images.url,
+        users.created_at
+    FROM users
+    LEFT JOIN images ON users.id = images.user_id
+    WHERE users.email = emailIN
+      AND users.is_deleted = FALSE
+      AND users.is_active = TRUE
+      AND images.is_deleted = false;
+END$$
+
 CREATE DEFINER=`root`@`localhost` PROCEDURE `getUserProfilePicture` (IN `userIdIN` INT)   BEGIN
     SELECT 
         `id`,
@@ -2811,11 +2980,11 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `isFavorite` (IN `userIdIN` INT, IN 
       AND `is_deleted` = FALSE;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `logAudit` (IN `performedByUserIdIN` INT, IN `performedByRoleIN` VARCHAR(50), IN `affectedUserIdIN` INT, IN `companyIdIN` INT, IN `emailIN` VARCHAR(200), IN `entityTypeIN` VARCHAR(50), IN `actionIN` VARCHAR(100), IN `oldValuesIN` JSON, IN `newValuesIN` JSON)   BEGIN
+CREATE DEFINER=`root`@`localhost` PROCEDURE `logAudit` (IN `performedByUserIdIN` INT, IN `performedByRoleIN` VARCHAR(50), IN `affectedEntityIdIN` INT, IN `companyIdIN` INT, IN `emailIN` VARCHAR(100), IN `entityTypeIN` VARCHAR(50), IN `actionIN` VARCHAR(100), IN `oldValuesIN` JSON, IN `newValuesIN` JSON)   BEGIN
     INSERT INTO audit_logs (
         performed_by_user_id,
         performed_by_role,
-        affected_user_id,
+        affected_entity_id,
         company_id,
         email,
         entity_type,
@@ -2827,7 +2996,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `logAudit` (IN `performedByUserIdIN`
     VALUES (
         performedByUserIdIN,
         performedByRoleIN,
-        affectedUserIdIN,
+        affectedEntityIdIN,
         companyIdIN,
         emailIN,
         entityTypeIN,
@@ -2838,7 +3007,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `logAudit` (IN `performedByUserIdIN`
     );
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `login` (IN `emailIN` VARCHAR(200))   BEGIN
+CREATE DEFINER=`root`@`localhost` PROCEDURE `login` (IN `emailIN` VARCHAR(100))   BEGIN
     SELECT 
         `users`.`id`,
         `users`.`first_name`,
@@ -2862,15 +3031,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `login` (IN `emailIN` VARCHAR(200)) 
       AND `user_x_role`.`is_un_assigned` = FALSE
     GROUP BY `users`.`id`, `images`.`id`
     LIMIT 1;
-END$$
-
-CREATE DEFINER=`root`@`localhost` PROCEDURE `regenerateAuthSecret` (IN `userIdIN` INT, IN `newAuthSecretIN` VARCHAR(16))   BEGIN
-    UPDATE `users`
-    SET 
-        `auth_secret` = newAuthSecretIN,
-        `updated_at` = NOW()
-    WHERE `id` = userIdIN
-      AND `is_deleted` = FALSE;
 END$$
 
 CREATE DEFINER=`root`@`localhost` PROCEDURE `registerClient` (IN `firstNameIN` VARCHAR(100), IN `lastNameIN` VARCHAR(100), IN `emailIN` VARCHAR(100), IN `passwordIN` TEXT, IN `phoneIN` VARCHAR(30))   BEGIN
@@ -2968,7 +3128,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerClient` (IN `firstNameIN` V
     SELECT newUserId AS user_id, regToken AS reg_token;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `registerOwner` (IN `firstNameIN` VARCHAR(100), IN `lastNameIN` VARCHAR(100), IN `emailIN` VARCHAR(100), IN `passwordIN` TEXT, IN `phoneIN` VARCHAR(30), IN `authSecretIN` VARCHAR(16), IN `companyNameIN` VARCHAR(255), IN `companyDescriptionIN` TEXT, IN `companyAddressIN` TEXT, IN `companyCityIN` VARCHAR(100), IN `companyPostalCodeIN` VARCHAR(20), IN `companyCountryIN` VARCHAR(100), IN `companyPhoneIN` VARCHAR(30), IN `companyEmailIN` VARCHAR(100), IN `companyWebsiteIN` VARCHAR(255))   BEGIN
+CREATE DEFINER=`root`@`localhost` PROCEDURE `registerOwner` (IN `firstNameIN` VARCHAR(100), IN `lastNameIN` VARCHAR(100), IN `emailIN` VARCHAR(100), IN `passwordIN` TEXT, IN `phoneIN` VARCHAR(30), IN `companyNameIN` VARCHAR(255), IN `companyDescriptionIN` TEXT, IN `companyAddressIN` TEXT, IN `companyCityIN` VARCHAR(100), IN `companyPostalCodeIN` VARCHAR(20), IN `companyCountryIN` VARCHAR(100), IN `companyPhoneIN` VARCHAR(30), IN `companyEmailIN` VARCHAR(100), IN `companyWebsiteIN` VARCHAR(255))   BEGIN
     DECLARE newUserId INT;
     DECLARE ownerRoleId INT;
     DECLARE regToken VARCHAR(64);
@@ -2989,7 +3149,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerOwner` (IN `firstNameIN` VA
         `email`,
         `password`,
         `phone`,
-        `auth_secret`,
         `company_id`,
         `is_active`
     )
@@ -3000,7 +3159,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerOwner` (IN `firstNameIN` VA
         emailIN,
         passwordIN,
         phoneIN,
-        authSecretIN,
         NULL,
         FALSE
     );
@@ -3105,7 +3263,7 @@ VALUES (
     SELECT newUserId AS user_id, newCompanyId AS company_id, regToken AS reg_token;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `registerStaff` (IN `firstNameIN` VARCHAR(100), IN `lastNameIN` VARCHAR(100), IN `emailIN` VARCHAR(100), IN `passwordIN` TEXT, IN `phoneIN` VARCHAR(30), IN `companyIdIN` INT, IN `authSecretIN` VARCHAR(32))   BEGIN
+CREATE DEFINER=`root`@`localhost` PROCEDURE `registerStaff` (IN `firstNameIN` VARCHAR(100), IN `lastNameIN` VARCHAR(100), IN `emailIN` VARCHAR(100), IN `passwordIN` TEXT, IN `phoneIN` VARCHAR(30), IN `companyIdIN` INT)   BEGIN
     DECLARE newUserId INT;
     DECLARE staffRoleId INT;
     DECLARE regToken VARCHAR(64);
@@ -3126,7 +3284,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerStaff` (IN `firstNameIN` VA
         `email`,
         `password`,
         `phone`,
-        `auth_secret`,
         `company_id`,
         `is_active`
     )
@@ -3137,7 +3294,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `registerStaff` (IN `firstNameIN` VA
         emailIN,
         passwordIN,
         phoneIN,
-        authSecretIN,
         companyIdIN,
         FALSE
     );
@@ -3434,7 +3590,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `resendEmailVerification` (IN `email
         userId AS user_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `resetPasswordWithToken` (IN `tokenIN` VARCHAR(64), IN `newPasswordIN` TEXT)   BEGIN
+CREATE DEFINER=`root`@`localhost` PROCEDURE `resetPasswordWithToken` (IN `tokenIN` VARCHAR(500), IN `newPasswordIN` TEXT)   BEGIN
     DECLARE tokenUserId INT DEFAULT NULL;
     
     -- Token validálás + user_id lekérése
@@ -3585,11 +3741,9 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `softDeleteUser` (IN `userIdIN` INT)
     WHERE `id` = userIdIN;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `updateAppointmentStatus` (IN `appointmentIdIN` INT, IN `newStatusIN` ENUM('pending','confirmed','cancelled','completed','no_show','in_progress'))   BEGIN
+CREATE DEFINER=`root`@`localhost` PROCEDURE `updateAppointmentStatus` (IN `appointmentIdIN` INT, IN `newStatusIN` ENUM('booked','in_progress','cancelled','completed','no_show'))   BEGIN
     UPDATE `appointments`
-    SET 
-        `status` = newStatusIN,
-        `updated_at` = NOW()
+    SET `status` = newStatusIN, `updated_at` = NOW()
     WHERE `id` = appointmentIdIN;
 END$$
 
@@ -3689,7 +3843,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `updateNotificationSetting` (IN `use
     WHERE `notification_settings`.`user_id` = userIdIN;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `updateOpeningHoursDay` (IN `companyIdIN` INT, IN `dayOfWeekIN` VARCHAR(20), IN `openTimeIN` TIME, IN `closeTimeIN` TIME, IN `isClosedIN` TINYINT(1))   BEGIN
+CREATE DEFINER=`root`@`localhost` PROCEDURE `updateOpeningHoursDay` (IN `companyIdIN` INT, IN `dayOfWeekIN` ENUM('monday','tuesday','wednesday','thursday','friday','saturday','sunday'), IN `openTimeIN` TIME, IN `closeTimeIN` TIME, IN `isClosedIN` TINYINT(1))   BEGIN
     UPDATE `opening_hours`
     SET 
         `open_time` = IF(isClosedIN = TRUE, NULL, openTimeIN),
@@ -3781,7 +3935,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `updateStaff` (IN `staffIdIN` INT, I
     SELECT 'SUCCESS' AS result, 'Staff updated successfully' AS message, staffIdIN AS staff_id;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `updateStaffWorkingHours` (IN `staffIdIN` INT, IN `dayOfWeekIN` VARCHAR(20), IN `startTimeIN` TIME, IN `endTimeIN` TIME, IN `isAvailableIN` TINYINT(1))   BEGIN
+CREATE DEFINER=`root`@`localhost` PROCEDURE `updateStaffWorkingHours` (IN `staffIdIN` INT, IN `dayOfWeekIN` ENUM('monday','tuesday','wednesday','thursday','friday','saturday','sunday'), IN `startTimeIN` TIME, IN `endTimeIN` TIME, IN `isAvailableIN` TINYINT(1))   BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM `staff` WHERE `id` = staffIdIN
     ) THEN
@@ -4015,7 +4169,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `validateBookingTime` (IN `companyId
         daysDifference AS days_ahead;
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `validatePasswordResetToken` (IN `tokenIN` VARCHAR(64))   BEGIN
+CREATE DEFINER=`root`@`localhost` PROCEDURE `validatePasswordResetToken` (IN `tokenIN` VARCHAR(500))   BEGIN
     DECLARE tokenUserId INT DEFAULT NULL;
     DECLARE tokenExpired BOOLEAN DEFAULT FALSE;
     DECLARE tokenRevoked BOOLEAN DEFAULT FALSE;
@@ -4070,15 +4224,6 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `validateRefreshToken` (IN `tokenIN`
       AND `expires_at` > NOW();
 END$$
 
-CREATE DEFINER=`root`@`localhost` PROCEDURE `verifyAuthSecret` (IN `userIdIN` INT, IN `authSecretIN` VARCHAR(16))   BEGIN
-    SELECT COUNT(*) AS is_valid
-    FROM `users`
-    WHERE `id` = userIdIN
-      AND `auth_secret` = authSecretIN
-      AND `is_deleted` = FALSE
-      AND `is_active` = TRUE;
-END$$
-
 DELIMITER ;
 
 -- --------------------------------------------------------
@@ -4088,20 +4233,20 @@ DELIMITER ;
 --
 
 CREATE TABLE `appointments` (
-  `id` int(11) NOT NULL,
-  `company_id` int(11) NOT NULL,
-  `service_id` int(11) NOT NULL,
-  `staff_id` int(11) NOT NULL,
-  `client_id` int(11) NOT NULL,
+  `id` int NOT NULL,
+  `company_id` int NOT NULL,
+  `service_id` int NOT NULL,
+  `staff_id` int NOT NULL,
+  `client_id` int NOT NULL,
   `start_time` datetime NOT NULL,
   `end_time` datetime NOT NULL,
-  `status` enum('pending','confirmed','cancelled','completed','no_show','in_progress','booked') COLLATE utf8mb4_hungarian_ci NOT NULL DEFAULT 'booked',
-  `notes` text COLLATE utf8mb4_hungarian_ci,
-  `internal_notes` text COLLATE utf8mb4_hungarian_ci COMMENT 'Visible only to staff/admin',
+  `status` enum('booked','in_progress','completed','no_show','cancelled') CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci NOT NULL DEFAULT 'booked',
+  `notes` text CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci,
+  `internal_notes` text CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci COMMENT 'Visible only to staff/admin',
   `price` decimal(10,2) NOT NULL,
-  `currency` varchar(10) COLLATE utf8mb4_hungarian_ci NOT NULL,
-  `cancelled_by` int(11) DEFAULT NULL,
-  `cancelled_reason` text COLLATE utf8mb4_hungarian_ci,
+  `currency` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci NOT NULL,
+  `cancelled_by` int DEFAULT NULL,
+  `cancelled_reason` text CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci,
   `cancelled_at` datetime DEFAULT NULL,
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime DEFAULT NULL
@@ -4112,188 +4257,540 @@ CREATE TABLE `appointments` (
 --
 
 INSERT INTO `appointments` (`id`, `company_id`, `service_id`, `staff_id`, `client_id`, `start_time`, `end_time`, `status`, `notes`, `internal_notes`, `price`, `currency`, `cancelled_by`, `cancelled_reason`, `cancelled_at`, `created_at`, `updated_at`) VALUES
-(1, 1, 1, 1, 27, '2024-02-05 10:00:00', '2024-02-05 11:00:00', 'completed', 'Első alkalom', NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-01-28 14:00:00', NULL),
-(2, 1, 2, 1, 28, '2024-02-06 14:00:00', '2024-02-06 15:30:00', 'completed', NULL, NULL, '15900.00', 'HUF', NULL, NULL, NULL, '2024-01-29 10:00:00', NULL),
-(3, 1, 3, 1, 29, '2024-02-08 11:00:00', '2024-02-08 12:15:00', 'completed', NULL, NULL, '12900.00', 'HUF', NULL, NULL, NULL, '2024-02-01 09:00:00', NULL),
-(4, 1, 1, 1, 30, '2024-02-12 09:00:00', '2024-02-12 10:00:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-02-05 16:00:00', NULL),
-(5, 1, 2, 1, 31, '2024-02-14 15:00:00', '2024-02-14 16:30:00', 'completed', 'Valentin napi időpont', NULL, '15900.00', 'HUF', NULL, NULL, NULL, '2024-02-07 11:00:00', NULL),
-(6, 1, 6, 1, 32, '2024-02-19 10:30:00', '2024-02-19 11:00:00', 'completed', NULL, NULL, '3900.00', 'HUF', NULL, NULL, NULL, '2024-02-12 13:00:00', NULL),
-(7, 1, 3, 1, 33, '2024-02-21 13:00:00', '2024-02-21 14:15:00', 'completed', NULL, NULL, '12900.00', 'HUF', NULL, NULL, NULL, '2024-02-14 15:00:00', NULL),
-(8, 1, 1, 1, 27, '2024-02-26 11:00:00', '2024-02-26 12:00:00', 'completed', 'Visszatérő ügyfél', NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-02-19 10:00:00', NULL),
-(9, 1, 2, 1, 34, '2024-03-04 10:00:00', '2024-03-04 11:30:00', 'completed', NULL, NULL, '15900.00', 'HUF', NULL, NULL, NULL, '2024-02-26 14:00:00', NULL),
-(10, 1, 3, 1, 35, '2024-03-07 14:00:00', '2024-03-07 15:15:00', 'completed', NULL, NULL, '12900.00', 'HUF', NULL, NULL, NULL, '2024-03-01 09:00:00', NULL),
-(11, 1, 1, 1, 28, '2024-03-11 09:30:00', '2024-03-11 10:30:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-03-04 16:00:00', NULL),
-(12, 1, 2, 1, 36, '2024-03-14 11:00:00', '2024-03-14 12:30:00', 'no_show', 'Nem jelent meg', NULL, '15900.00', 'HUF', NULL, NULL, NULL, '2024-03-07 10:00:00', NULL),
-(13, 1, 6, 1, 29, '2024-03-18 10:00:00', '2024-03-18 10:30:00', 'completed', NULL, NULL, '3900.00', 'HUF', NULL, NULL, NULL, '2024-03-11 14:00:00', NULL),
-(14, 1, 3, 1, 37, '2024-03-21 15:00:00', '2024-03-21 16:15:00', 'completed', NULL, NULL, '12900.00', 'HUF', NULL, NULL, NULL, '2024-03-14 11:00:00', NULL),
-(15, 1, 1, 1, 30, '2024-03-25 09:00:00', '2024-03-25 10:00:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-03-18 13:00:00', NULL),
-(16, 1, 2, 1, 27, '2024-04-03 14:00:00', '2024-04-03 15:30:00', 'completed', NULL, NULL, '15900.00', 'HUF', NULL, NULL, NULL, '2024-03-27 10:00:00', '2026-01-14 09:16:13'),
-(17, 1, 3, 1, 31, '2024-04-08 11:00:00', '2024-04-08 12:15:00', 'completed', NULL, NULL, '12900.00', 'HUF', NULL, NULL, NULL, '2024-04-01 14:00:00', '2026-01-14 09:16:13'),
-(18, 1, 1, 1, 32, '2024-04-11 10:00:00', '2024-04-11 11:00:00', 'no_show', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-04-05 09:00:00', '2026-01-14 09:16:13'),
-(19, 1, 2, 1, 33, '2024-04-15 13:00:00', '2024-04-15 14:30:00', 'no_show', NULL, NULL, '15900.00', 'HUF', NULL, NULL, NULL, '2024-04-08 16:00:00', '2026-01-14 09:16:13'),
-(20, 1, 4, 2, 34, '2024-02-07 11:00:00', '2024-02-07 11:45:00', 'completed', NULL, NULL, '4900.00', 'HUF', NULL, NULL, NULL, '2024-02-01 10:00:00', NULL),
-(21, 1, 5, 2, 35, '2024-02-09 15:00:00', '2024-02-09 16:00:00', 'completed', NULL, NULL, '6900.00', 'HUF', NULL, NULL, NULL, '2024-02-02 14:00:00', NULL),
-(22, 1, 4, 2, 36, '2024-02-13 10:30:00', '2024-02-13 11:15:00', 'completed', NULL, NULL, '4900.00', 'HUF', NULL, NULL, NULL, '2024-02-06 09:00:00', NULL),
-(23, 1, 5, 2, 37, '2024-02-16 14:00:00', '2024-02-16 15:00:00', 'completed', NULL, NULL, '6900.00', 'HUF', NULL, NULL, NULL, '2024-02-09 11:00:00', NULL),
-(24, 1, 6, 2, 27, '2024-02-20 11:00:00', '2024-02-20 11:30:00', 'completed', NULL, NULL, '3900.00', 'HUF', NULL, NULL, NULL, '2024-02-13 15:00:00', NULL),
-(25, 1, 4, 2, 28, '2024-02-23 16:00:00', '2024-02-23 16:45:00', 'completed', NULL, NULL, '4900.00', 'HUF', NULL, NULL, NULL, '2024-02-16 10:00:00', NULL),
-(26, 1, 5, 2, 29, '2024-02-27 13:00:00', '2024-02-27 14:00:00', 'completed', NULL, NULL, '6900.00', 'HUF', NULL, NULL, NULL, '2024-02-20 14:00:00', NULL),
-(27, 1, 4, 2, 30, '2024-03-05 15:00:00', '2024-03-05 15:45:00', 'completed', NULL, NULL, '4900.00', 'HUF', NULL, NULL, NULL, '2024-02-27 09:00:00', NULL),
-(28, 1, 5, 2, 31, '2024-03-08 10:00:00', '2024-03-08 11:00:00', 'completed', NULL, NULL, '6900.00', 'HUF', NULL, NULL, NULL, '2024-03-01 16:00:00', NULL),
-(29, 1, 6, 2, 32, '2024-03-12 14:30:00', '2024-03-12 15:00:00', 'completed', NULL, NULL, '3900.00', 'HUF', NULL, NULL, NULL, '2024-03-05 11:00:00', NULL),
-(30, 1, 4, 2, 33, '2024-03-15 11:00:00', '2024-03-15 11:45:00', 'completed', NULL, NULL, '4900.00', 'HUF', NULL, NULL, NULL, '2024-03-08 10:00:00', NULL),
-(31, 1, 5, 2, 34, '2024-03-19 16:00:00', '2024-03-19 17:00:00', 'completed', NULL, NULL, '6900.00', 'HUF', NULL, NULL, NULL, '2024-03-12 14:00:00', NULL),
-(32, 1, 4, 2, 35, '2024-03-22 10:30:00', '2024-03-22 11:15:00', 'completed', NULL, NULL, '4900.00', 'HUF', NULL, NULL, NULL, '2024-03-15 09:00:00', NULL),
-(33, 1, 5, 2, 36, '2024-03-26 15:00:00', '2024-03-26 16:00:00', 'cancelled', 'Ügyfél lemondta', NULL, '6900.00', 'HUF', NULL, NULL, NULL, '2024-03-19 11:00:00', NULL),
-(34, 1, 4, 2, 37, '2024-04-05 14:00:00', '2024-04-05 14:45:00', 'completed', NULL, NULL, '4900.00', 'HUF', NULL, NULL, NULL, '2024-03-29 10:00:00', '2026-01-14 09:16:13'),
-(35, 1, 5, 2, 27, '2024-04-09 11:00:00', '2024-04-09 12:00:00', 'completed', NULL, NULL, '6900.00', 'HUF', NULL, NULL, NULL, '2024-04-02 15:00:00', '2026-01-14 09:16:13'),
-(36, 1, 6, 2, 28, '2024-04-12 10:00:00', '2024-04-12 10:30:00', 'no_show', NULL, NULL, '3900.00', 'HUF', NULL, NULL, NULL, '2024-04-06 09:00:00', '2026-01-14 09:16:13'),
-(37, 1, 4, 2, 29, '2024-04-16 16:00:00', '2024-04-16 16:45:00', 'no_show', NULL, NULL, '4900.00', 'HUF', NULL, NULL, NULL, '2024-04-09 14:00:00', '2026-01-14 09:16:13'),
-(38, 2, 7, 3, 30, '2024-02-06 10:00:00', '2024-02-06 11:00:00', 'completed', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2024-01-30 14:00:00', NULL),
-(39, 2, 8, 3, 31, '2024-02-10 14:00:00', '2024-02-10 15:15:00', 'completed', NULL, NULL, '13900.00', 'HUF', NULL, NULL, NULL, '2024-02-03 10:00:00', NULL),
-(40, 2, 10, 3, 32, '2024-02-15 11:00:00', '2024-02-15 11:45:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-02-08 15:00:00', NULL),
-(41, 2, 7, 3, 33, '2024-02-20 09:00:00', '2024-02-20 10:00:00', 'completed', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2024-02-13 09:00:00', NULL),
-(42, 2, 12, 3, 34, '2024-02-24 15:00:00', '2024-02-24 16:30:00', 'completed', NULL, NULL, '24900.00', 'HUF', NULL, NULL, NULL, '2024-02-17 11:00:00', NULL),
-(43, 2, 8, 3, 35, '2024-03-01 10:00:00', '2024-03-01 11:15:00', 'completed', NULL, NULL, '13900.00', 'HUF', NULL, NULL, NULL, '2024-02-23 14:00:00', NULL),
-(44, 2, 7, 3, 36, '2024-03-06 14:00:00', '2024-03-06 15:00:00', 'completed', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2024-02-28 10:00:00', NULL),
-(45, 2, 10, 3, 37, '2024-03-12 11:30:00', '2024-03-12 12:15:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-03-05 16:00:00', NULL),
-(46, 2, 7, 3, 27, '2024-03-18 09:00:00', '2024-03-18 10:00:00', 'completed', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2024-03-11 09:00:00', NULL),
-(47, 2, 8, 3, 28, '2024-03-22 15:00:00', '2024-03-22 16:15:00', 'completed', NULL, NULL, '13900.00', 'HUF', NULL, NULL, NULL, '2024-03-15 14:00:00', NULL),
-(48, 2, 7, 3, 29, '2024-04-02 10:00:00', '2024-04-02 11:00:00', 'completed', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2024-03-26 10:00:00', '2026-01-14 09:16:13'),
-(49, 2, 10, 3, 30, '2024-04-08 14:00:00', '2024-04-08 14:45:00', 'no_show', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-04-01 15:00:00', '2026-01-14 09:16:13'),
-(50, 2, 9, 4, 31, '2024-02-08 13:00:00', '2024-02-08 14:30:00', 'completed', NULL, NULL, '16900.00', 'HUF', NULL, NULL, NULL, '2024-02-01 11:00:00', NULL),
-(51, 2, 7, 4, 32, '2024-02-14 15:00:00', '2024-02-14 16:00:00', 'completed', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2024-02-07 14:00:00', NULL),
-(52, 2, 11, 4, 33, '2024-02-19 09:00:00', '2024-02-19 12:00:00', 'completed', 'VIP csomag', NULL, '35900.00', 'HUF', NULL, NULL, NULL, '2024-02-12 10:00:00', NULL),
-(53, 2, 10, 4, 34, '2024-02-22 14:00:00', '2024-02-22 14:45:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-02-15 15:00:00', NULL),
-(54, 2, 7, 4, 35, '2024-02-28 16:00:00', '2024-02-28 17:00:00', 'completed', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2024-02-21 09:00:00', NULL),
-(55, 2, 9, 4, 36, '2024-03-05 13:00:00', '2024-03-05 14:30:00', 'completed', NULL, NULL, '16900.00', 'HUF', NULL, NULL, NULL, '2024-02-27 11:00:00', NULL),
-(56, 2, 7, 4, 37, '2024-03-11 15:00:00', '2024-03-11 16:00:00', 'completed', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2024-03-04 14:00:00', NULL),
-(57, 2, 10, 4, 27, '2024-03-16 08:30:00', '2024-03-16 09:15:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-03-09 10:00:00', NULL),
-(58, 2, 11, 4, 28, '2024-03-20 10:00:00', '2024-03-20 13:00:00', 'completed', NULL, NULL, '35900.00', 'HUF', NULL, NULL, NULL, '2024-03-13 15:00:00', NULL),
-(59, 2, 9, 4, 29, '2024-03-27 14:00:00', '2024-03-27 15:30:00', 'completed', NULL, NULL, '16900.00', 'HUF', NULL, NULL, NULL, '2024-03-20 09:00:00', NULL),
-(60, 2, 7, 4, 30, '2024-04-04 16:00:00', '2024-04-04 17:00:00', 'completed', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2024-03-28 11:00:00', '2026-01-14 09:16:13'),
-(61, 2, 10, 4, 31, '2024-04-10 13:00:00', '2024-04-10 13:45:00', 'no_show', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-04-03 14:00:00', '2026-01-14 09:16:13'),
-(62, 3, 13, 5, 32, '2024-02-09 11:00:00', '2024-02-09 11:45:00', 'completed', NULL, NULL, '6900.00', 'HUF', NULL, NULL, NULL, '2024-02-02 10:00:00', NULL),
-(63, 3, 15, 5, 33, '2024-02-16 14:00:00', '2024-02-16 15:30:00', 'completed', NULL, NULL, '12900.00', 'HUF', NULL, NULL, NULL, '2024-02-09 15:00:00', NULL),
-(64, 3, 17, 5, 34, '2024-02-23 10:00:00', '2024-02-23 12:30:00', 'completed', NULL, NULL, '22900.00', 'HUF', NULL, NULL, NULL, '2024-02-16 11:00:00', NULL),
-(65, 3, 13, 5, 35, '2024-03-02 15:00:00', '2024-03-02 15:45:00', 'completed', NULL, NULL, '6900.00', 'HUF', NULL, NULL, NULL, '2024-02-24 14:00:00', NULL),
-(66, 3, 16, 5, 36, '2024-03-09 11:00:00', '2024-03-09 13:00:00', 'completed', NULL, NULL, '17900.00', 'HUF', NULL, NULL, NULL, '2024-03-02 10:00:00', NULL),
-(67, 3, 13, 5, 37, '2024-03-16 14:00:00', '2024-03-16 14:45:00', 'completed', NULL, NULL, '6900.00', 'HUF', NULL, NULL, NULL, '2024-03-09 15:00:00', NULL),
-(68, 3, 17, 5, 27, '2024-03-23 10:00:00', '2024-03-23 12:30:00', 'completed', NULL, NULL, '22900.00', 'HUF', NULL, NULL, NULL, '2024-03-16 11:00:00', NULL),
-(69, 3, 13, 5, 28, '2024-04-06 11:00:00', '2024-04-06 11:45:00', 'completed', NULL, NULL, '6900.00', 'HUF', NULL, NULL, NULL, '2024-03-30 10:00:00', '2026-01-14 09:16:13'),
-(70, 3, 15, 5, 29, '2024-04-13 14:00:00', '2024-04-13 15:30:00', 'no_show', NULL, NULL, '12900.00', 'HUF', NULL, NULL, NULL, '2024-04-06 15:00:00', '2026-01-14 09:16:13'),
-(71, 3, 14, 6, 30, '2024-02-11 12:00:00', '2024-02-11 12:30:00', 'completed', NULL, NULL, '4500.00', 'HUF', NULL, NULL, NULL, '2024-02-04 10:00:00', NULL),
-(72, 3, 15, 6, 31, '2024-02-18 16:00:00', '2024-02-18 17:30:00', 'completed', NULL, NULL, '12900.00', 'HUF', NULL, NULL, NULL, '2024-02-11 14:00:00', NULL),
-(73, 3, 14, 6, 32, '2024-02-25 13:00:00', '2024-02-25 13:30:00', 'completed', NULL, NULL, '4500.00', 'HUF', NULL, NULL, NULL, '2024-02-18 11:00:00', NULL),
-(74, 3, 17, 6, 33, '2024-03-03 15:00:00', '2024-03-03 17:30:00', 'completed', NULL, NULL, '22900.00', 'HUF', NULL, NULL, NULL, '2024-02-25 10:00:00', NULL),
-(75, 3, 14, 6, 34, '2024-03-10 12:00:00', '2024-03-10 12:30:00', 'completed', NULL, NULL, '4500.00', 'HUF', NULL, NULL, NULL, '2024-03-03 15:00:00', NULL),
-(76, 3, 16, 6, 35, '2024-03-17 16:00:00', '2024-03-17 18:00:00', 'completed', NULL, NULL, '17900.00', 'HUF', NULL, NULL, NULL, '2024-03-10 11:00:00', NULL),
-(77, 3, 14, 6, 36, '2024-03-24 13:00:00', '2024-03-24 13:30:00', 'completed', NULL, NULL, '4500.00', 'HUF', NULL, NULL, NULL, '2024-03-17 14:00:00', NULL),
-(78, 3, 15, 6, 37, '2024-04-07 15:00:00', '2024-04-07 16:30:00', 'completed', NULL, NULL, '12900.00', 'HUF', NULL, NULL, NULL, '2024-03-31 10:00:00', '2026-01-14 09:16:13'),
-(79, 3, 14, 6, 27, '2024-04-14 12:00:00', '2024-04-14 12:30:00', 'no_show', NULL, NULL, '4500.00', 'HUF', NULL, NULL, NULL, '2024-04-07 15:00:00', '2026-01-14 09:16:13'),
-(80, 4, 18, 7, 28, '2024-02-12 10:00:00', '2024-02-12 12:00:00', 'completed', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2024-02-05 14:00:00', NULL),
-(81, 4, 20, 7, 29, '2024-02-19 14:00:00', '2024-02-19 15:30:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-02-12 11:00:00', NULL),
-(82, 4, 21, 7, 30, '2024-02-26 11:00:00', '2024-02-26 12:00:00', 'completed', NULL, NULL, '6900.00', 'HUF', NULL, NULL, NULL, '2024-02-19 15:00:00', NULL),
-(83, 4, 19, 7, 31, '2024-03-04 09:00:00', '2024-03-04 11:30:00', 'completed', NULL, NULL, '14900.00', 'HUF', NULL, NULL, NULL, '2024-02-26 10:00:00', NULL),
-(84, 4, 20, 7, 32, '2024-03-11 15:00:00', '2024-03-11 16:30:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-03-04 14:00:00', NULL),
-(85, 4, 18, 7, 33, '2024-03-18 10:00:00', '2024-03-18 12:00:00', 'completed', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2024-03-11 11:00:00', NULL),
-(86, 4, 21, 7, 34, '2024-03-25 14:00:00', '2024-03-25 15:00:00', 'completed', NULL, NULL, '6900.00', 'HUF', NULL, NULL, NULL, '2024-03-18 15:00:00', NULL),
-(87, 4, 20, 7, 35, '2024-04-08 11:00:00', '2024-04-08 12:30:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-04-01 10:00:00', '2026-01-14 09:16:13'),
-(88, 4, 18, 8, 36, '2024-02-15 11:00:00', '2024-02-15 13:00:00', 'completed', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2024-02-08 14:00:00', NULL),
-(89, 4, 22, 8, 37, '2024-02-22 15:00:00', '2024-02-22 16:15:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-02-15 11:00:00', NULL),
-(90, 4, 21, 8, 27, '2024-02-29 13:00:00', '2024-02-29 14:00:00', 'completed', NULL, NULL, '6900.00', 'HUF', NULL, NULL, NULL, '2024-02-22 10:00:00', NULL),
-(91, 4, 20, 8, 28, '2024-03-07 16:00:00', '2024-03-07 17:30:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-02-29 15:00:00', NULL),
-(92, 4, 18, 8, 29, '2024-03-14 11:00:00', '2024-03-14 13:00:00', 'completed', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2024-03-07 11:00:00', NULL),
-(93, 4, 22, 8, 30, '2024-03-21 14:00:00', '2024-03-21 15:15:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-03-14 14:00:00', NULL),
-(94, 4, 21, 8, 31, '2024-04-11 15:00:00', '2024-04-11 16:00:00', 'no_show', NULL, NULL, '6900.00', 'HUF', NULL, NULL, NULL, '2024-04-04 10:00:00', '2026-01-14 09:16:13'),
-(95, 5, 23, 9, 32, '2024-02-13 07:00:00', '2024-02-13 08:00:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-02-06 10:00:00', NULL),
-(96, 5, 26, 9, 33, '2024-02-20 08:00:00', '2024-02-20 09:00:00', 'completed', NULL, NULL, '3900.00', 'HUF', NULL, NULL, NULL, '2024-02-13 14:00:00', NULL),
-(97, 5, 23, 9, 34, '2024-02-27 07:30:00', '2024-02-27 08:30:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-02-20 11:00:00', NULL),
-(98, 5, 27, 9, 35, '2024-03-05 09:00:00', '2024-03-05 09:45:00', 'completed', NULL, NULL, '3500.00', 'HUF', NULL, NULL, NULL, '2024-02-27 15:00:00', NULL),
-(99, 5, 23, 9, 36, '2024-03-12 07:00:00', '2024-03-12 08:00:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-03-05 10:00:00', NULL),
-(100, 5, 26, 9, 37, '2024-03-19 08:30:00', '2024-03-19 09:30:00', 'completed', NULL, NULL, '3900.00', 'HUF', NULL, NULL, NULL, '2024-03-12 14:00:00', NULL),
-(101, 5, 23, 9, 27, '2024-04-09 07:00:00', '2024-04-09 08:00:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-04-02 10:00:00', '2026-01-14 09:16:13'),
-(102, 5, 25, 10, 28, '2024-02-14 18:00:00', '2024-02-14 18:45:00', 'completed', NULL, NULL, '2900.00', 'HUF', NULL, NULL, NULL, '2024-02-07 11:00:00', NULL),
-(103, 5, 23, 10, 29, '2024-02-21 19:00:00', '2024-02-21 20:00:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-02-14 15:00:00', NULL),
-(104, 5, 27, 10, 30, '2024-02-28 17:00:00', '2024-02-28 17:45:00', 'completed', NULL, NULL, '3500.00', 'HUF', NULL, NULL, NULL, '2024-02-21 10:00:00', NULL),
-(105, 5, 25, 10, 31, '2024-03-06 18:30:00', '2024-03-06 19:15:00', 'completed', NULL, NULL, '2900.00', 'HUF', NULL, NULL, NULL, '2024-02-28 14:00:00', NULL),
-(106, 5, 26, 10, 32, '2024-03-13 19:00:00', '2024-03-13 20:00:00', 'completed', NULL, NULL, '3900.00', 'HUF', NULL, NULL, NULL, '2024-03-06 11:00:00', NULL),
-(107, 5, 23, 10, 33, '2024-03-20 17:00:00', '2024-03-20 18:00:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2024-03-13 15:00:00', NULL),
-(108, 5, 25, 10, 34, '2024-04-10 18:00:00', '2024-04-10 18:45:00', 'no_show', NULL, NULL, '2900.00', 'HUF', NULL, NULL, NULL, '2024-04-03 10:00:00', '2026-01-14 09:16:13'),
-(109, 6, 28, 11, 35, '2024-02-28 11:00:00', '2024-02-28 12:15:00', 'completed', NULL, NULL, '3900.00', 'HUF', NULL, NULL, NULL, '2024-02-21 10:00:00', NULL),
-(110, 6, 29, 11, 36, '2024-03-06 15:00:00', '2024-03-06 16:00:00', 'completed', NULL, NULL, '3900.00', 'HUF', NULL, NULL, NULL, '2024-02-28 14:00:00', NULL),
-(111, 6, 30, 11, 37, '2024-03-13 12:00:00', '2024-03-13 13:30:00', 'completed', NULL, NULL, '4500.00', 'HUF', NULL, NULL, NULL, '2024-03-06 11:00:00', NULL),
-(112, 6, 31, 11, 27, '2024-03-20 16:00:00', '2024-03-20 16:45:00', 'completed', NULL, NULL, '2900.00', 'HUF', NULL, NULL, NULL, '2024-03-13 15:00:00', NULL),
-(113, 6, 32, 11, 28, '2024-03-27 14:00:00', '2024-03-27 15:00:00', 'completed', NULL, NULL, '3900.00', 'HUF', NULL, NULL, NULL, '2024-03-20 10:00:00', NULL),
-(114, 6, 28, 11, 29, '2024-04-03 11:00:00', '2024-04-03 12:15:00', 'completed', NULL, NULL, '3900.00', 'HUF', NULL, NULL, NULL, '2024-03-27 14:00:00', NULL),
-(115, 6, 29, 11, 30, '2024-04-10 15:00:00', '2024-04-10 16:00:00', 'completed', NULL, NULL, '3900.00', 'HUF', NULL, NULL, NULL, '2024-04-03 11:00:00', '2026-01-14 09:16:13'),
-(116, 6, 30, 11, 31, '2024-04-17 12:00:00', '2024-04-17 13:30:00', 'no_show', NULL, NULL, '4500.00', 'HUF', NULL, NULL, NULL, '2024-04-10 10:00:00', '2026-01-14 09:16:13'),
-(117, 7, 33, 12, 32, '2024-02-17 10:00:00', '2024-02-17 11:00:00', 'completed', NULL, NULL, '9900.00', 'HUF', NULL, NULL, NULL, '2024-02-10 14:00:00', NULL),
-(118, 7, 35, 12, 33, '2024-02-24 14:00:00', '2024-02-24 15:00:00', 'completed', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2024-02-17 11:00:00', NULL),
-(119, 7, 36, 12, 34, '2024-03-02 11:30:00', '2024-03-02 12:15:00', 'completed', NULL, NULL, '7900.00', 'HUF', NULL, NULL, NULL, '2024-02-24 15:00:00', NULL),
-(120, 7, 34, 12, 35, '2024-03-09 15:00:00', '2024-03-09 16:30:00', 'completed', NULL, NULL, '13900.00', 'HUF', NULL, NULL, NULL, '2024-03-02 10:00:00', NULL),
-(121, 7, 37, 12, 36, '2024-03-16 10:00:00', '2024-03-16 11:15:00', 'completed', NULL, NULL, '12900.00', 'HUF', NULL, NULL, NULL, '2024-03-09 14:00:00', NULL),
-(122, 7, 33, 12, 37, '2024-03-23 14:00:00', '2024-03-23 15:00:00', 'completed', NULL, NULL, '9900.00', 'HUF', NULL, NULL, NULL, '2024-03-16 11:00:00', NULL),
-(123, 7, 35, 12, 27, '2024-04-06 11:00:00', '2024-04-06 12:00:00', 'completed', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2024-03-30 10:00:00', '2026-01-14 09:16:13'),
-(124, 7, 36, 12, 28, '2024-04-13 15:00:00', '2024-04-13 15:45:00', 'no_show', NULL, NULL, '7900.00', 'HUF', NULL, NULL, NULL, '2024-04-06 14:00:00', '2026-01-14 09:16:13'),
-(125, 8, 38, 13, 29, '2024-02-13 11:00:00', '2024-02-13 11:30:00', 'completed', NULL, NULL, '4500.00', 'HUF', NULL, NULL, NULL, '2024-02-06 10:00:00', NULL),
-(126, 8, 39, 13, 30, '2024-02-20 15:00:00', '2024-02-20 15:45:00', 'completed', NULL, NULL, '5900.00', 'HUF', NULL, NULL, NULL, '2024-02-13 14:00:00', NULL),
-(127, 8, 41, 13, 31, '2024-02-27 12:00:00', '2024-02-27 12:30:00', 'completed', NULL, NULL, '3900.00', 'HUF', NULL, NULL, NULL, '2024-02-20 11:00:00', NULL),
-(128, 8, 42, 13, 32, '2024-03-05 14:00:00', '2024-03-05 15:30:00', 'completed', 'VIP csomag', NULL, '12900.00', 'HUF', NULL, NULL, NULL, '2024-02-27 15:00:00', NULL),
-(129, 8, 38, 13, 33, '2024-03-12 11:30:00', '2024-03-12 12:00:00', 'completed', NULL, NULL, '4500.00', 'HUF', NULL, NULL, NULL, '2024-03-05 10:00:00', NULL),
-(130, 8, 40, 13, 34, '2024-03-19 16:00:00', '2024-03-19 16:30:00', 'completed', NULL, NULL, '4900.00', 'HUF', NULL, NULL, NULL, '2024-03-12 14:00:00', NULL),
-(131, 8, 39, 13, 35, '2024-03-26 13:00:00', '2024-03-26 13:45:00', 'completed', NULL, NULL, '5900.00', 'HUF', NULL, NULL, NULL, '2024-03-19 11:00:00', NULL),
-(132, 8, 41, 13, 36, '2024-04-09 12:00:00', '2024-04-09 12:30:00', 'completed', NULL, NULL, '3900.00', 'HUF', NULL, NULL, NULL, '2024-04-02 10:00:00', '2026-01-14 09:16:13'),
-(133, 8, 38, 13, 37, '2024-04-16 11:00:00', '2024-04-16 11:30:00', 'no_show', NULL, NULL, '4500.00', 'HUF', NULL, NULL, NULL, '2024-04-09 15:00:00', '2026-01-14 09:16:13'),
-(134, 9, 43, 14, 27, '2024-02-18 11:00:00', '2024-02-18 12:00:00', 'completed', NULL, NULL, '9900.00', 'HUF', NULL, NULL, NULL, '2024-02-11 10:00:00', NULL),
-(135, 9, 44, 14, 28, '2024-02-25 14:00:00', '2024-02-25 15:15:00', 'completed', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2024-02-18 14:00:00', NULL),
-(136, 9, 45, 14, 29, '2024-03-03 10:30:00', '2024-03-03 11:15:00', 'completed', NULL, NULL, '6900.00', 'HUF', NULL, NULL, NULL, '2024-02-25 11:00:00', NULL),
-(137, 9, 46, 14, 30, '2024-03-10 15:00:00', '2024-03-10 16:00:00', 'completed', NULL, NULL, '10900.00', 'HUF', NULL, NULL, NULL, '2024-03-03 15:00:00', NULL),
-(138, 9, 47, 14, 31, '2024-03-17 11:00:00', '2024-03-17 11:45:00', 'completed', NULL, NULL, '5900.00', 'HUF', NULL, NULL, NULL, '2024-03-10 10:00:00', NULL),
-(139, 9, 43, 14, 32, '2024-03-24 14:00:00', '2024-03-24 15:00:00', 'completed', NULL, NULL, '9900.00', 'HUF', NULL, NULL, NULL, '2024-03-17 14:00:00', NULL),
-(140, 9, 44, 14, 33, '2024-04-07 11:00:00', '2024-04-07 12:15:00', 'completed', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2024-03-31 10:00:00', '2026-01-14 09:16:13'),
-(141, 9, 45, 14, 34, '2024-04-14 10:30:00', '2024-04-14 11:15:00', 'no_show', NULL, NULL, '6900.00', 'HUF', NULL, NULL, NULL, '2024-04-07 15:00:00', '2026-01-14 09:16:13'),
-(142, 10, 48, 15, 35, '2024-02-21 12:00:00', '2024-02-21 13:30:00', 'completed', NULL, NULL, '15900.00', 'HUF', NULL, NULL, NULL, '2024-02-14 10:00:00', NULL),
-(143, 10, 49, 15, 36, '2024-02-28 15:00:00', '2024-02-28 16:00:00', 'completed', NULL, NULL, '13900.00', 'HUF', NULL, NULL, NULL, '2024-02-21 14:00:00', NULL),
-(144, 10, 50, 15, 37, '2024-03-06 13:00:00', '2024-03-06 14:00:00', 'completed', NULL, NULL, '4900.00', 'HUF', NULL, NULL, NULL, '2024-02-28 11:00:00', NULL),
-(145, 10, 51, 15, 27, '2024-03-13 11:00:00', '2024-03-13 13:00:00', 'completed', 'Zen spa rituálé', NULL, '29900.00', 'HUF', NULL, NULL, NULL, '2024-03-06 15:00:00', NULL),
-(146, 10, 52, 15, 28, '2024-03-20 14:00:00', '2024-03-20 14:45:00', 'completed', NULL, NULL, '5900.00', 'HUF', NULL, NULL, NULL, '2024-03-13 10:00:00', NULL),
-(147, 10, 54, 15, 29, '2024-03-27 12:00:00', '2024-03-27 15:00:00', 'completed', 'Teljes Zen csomag', NULL, '42900.00', 'HUF', NULL, NULL, NULL, '2024-03-20 14:00:00', NULL),
-(148, 10, 48, 15, 30, '2024-04-10 13:00:00', '2024-04-10 14:30:00', 'completed', NULL, NULL, '15900.00', 'HUF', NULL, NULL, NULL, '2024-04-03 10:00:00', '2026-01-14 09:16:13'),
-(149, 10, 49, 15, 31, '2024-04-17 15:00:00', '2024-04-17 16:00:00', 'no_show', NULL, NULL, '13900.00', 'HUF', NULL, NULL, NULL, '2024-04-10 14:00:00', '2026-01-14 09:16:13'),
-(153, 2, 7, 4, 41, '2026-01-23 12:00:00', '2026-01-23 13:00:00', 'no_show', '', NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2026-01-17 18:56:15', '2026-01-23 18:16:13'),
-(154, 1, 1, 1, 27, '2026-02-10 10:00:00', '2026-02-10 11:00:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2026-01-30 10:41:22', '2026-02-10 11:34:00'),
-(155, 1, 2, 1, 27, '2026-02-15 14:00:00', '2026-02-15 15:30:00', 'no_show', NULL, NULL, '15900.00', 'HUF', NULL, NULL, NULL, '2026-01-30 10:41:22', '2026-02-15 17:16:13'),
-(156, 1, 3, 1, 27, '2026-02-20 11:00:00', '2026-02-20 12:15:00', 'confirmed', NULL, NULL, '12900.00', 'HUF', NULL, NULL, NULL, '2026-01-30 10:41:22', NULL),
-(157, 2, 7, 3, 27, '2026-03-05 09:00:00', '2026-03-05 10:00:00', 'booked', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2026-01-30 10:41:22', NULL),
-(158, 1, 1, 1, 27, '2026-02-10 10:00:00', '2026-02-10 11:00:00', 'completed', NULL, NULL, '8900.00', 'HUF', NULL, NULL, NULL, '2026-01-30 10:42:01', '2026-02-10 11:34:00'),
-(159, 1, 2, 1, 27, '2026-02-15 14:00:00', '2026-02-15 15:30:00', 'no_show', NULL, NULL, '15900.00', 'HUF', NULL, NULL, NULL, '2026-01-30 10:42:01', '2026-02-15 17:16:13'),
-(160, 1, 3, 1, 27, '2026-02-20 11:00:00', '2026-02-20 12:15:00', 'confirmed', NULL, NULL, '12900.00', 'HUF', NULL, NULL, NULL, '2026-01-30 10:42:01', NULL),
-(161, 2, 7, 3, 27, '2026-03-05 09:00:00', '2026-03-05 10:00:00', 'booked', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2026-01-30 10:42:01', NULL),
-(162, 2, 7, 4, 41, '2026-02-23 12:00:00', '2026-02-23 13:00:00', 'booked', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2026-02-03 13:54:36', NULL),
-(163, 2, 7, 4, 47, '2026-02-23 12:00:00', '2026-02-23 13:00:00', 'booked', NULL, NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2026-02-17 09:46:05', NULL),
-(164, 2, 7, 4, 47, '2026-02-17 12:00:00', '2026-02-17 13:00:00', 'completed', '', NULL, '11900.00', 'HUF', NULL, NULL, NULL, '2026-02-17 09:52:11', NULL),
-(165, 2, 8, 3, 47, '2026-02-20 13:30:00', '2026-02-20 13:45:00', 'booked', '', NULL, '13900.00', 'HUF', NULL, NULL, NULL, '2026-02-19 12:55:52', NULL),
-(166, 2, 7, 3, 27, '2026-01-05 10:00:00', '2026-01-05 11:00:00', 'completed', NULL, NULL, '12000.00', 'HUF', NULL, NULL, NULL, '2026-01-04 09:00:00', NULL),
-(167, 2, 7, 3, 43, '2026-01-08 11:00:00', '2026-01-08 12:00:00', 'completed', NULL, NULL, '12000.00', 'HUF', NULL, NULL, NULL, '2026-01-07 10:00:00', NULL),
-(168, 2, 7, 4, 47, '2026-01-12 09:00:00', '2026-01-12 10:00:00', 'completed', NULL, NULL, '12000.00', 'HUF', NULL, NULL, NULL, '2026-01-10 08:00:00', NULL),
-(169, 2, 8, 3, 27, '2026-01-15 13:00:00', '2026-01-15 14:00:00', 'completed', NULL, NULL, '15000.00', 'HUF', NULL, NULL, NULL, '2026-01-14 11:00:00', NULL),
-(170, 2, 8, 4, 14, '2026-01-20 10:00:00', '2026-01-20 11:00:00', 'completed', NULL, NULL, '15000.00', 'HUF', NULL, NULL, NULL, '2026-01-18 09:00:00', NULL),
-(171, 2, 9, 3, 43, '2026-01-22 14:00:00', '2026-01-22 15:30:00', 'completed', NULL, NULL, '18000.00', 'HUF', NULL, NULL, NULL, '2026-01-20 10:00:00', NULL),
-(172, 2, 10, 4, 47, '2026-01-25 09:00:00', '2026-01-25 10:00:00', 'completed', NULL, NULL, '9000.00', 'HUF', NULL, NULL, NULL, '2026-01-23 08:00:00', NULL),
-(173, 2, 7, 3, 14, '2026-02-03 10:00:00', '2026-02-03 11:00:00', 'completed', NULL, NULL, '12000.00', 'HUF', NULL, NULL, NULL, '2026-02-01 09:00:00', NULL),
-(174, 2, 7, 4, 15, '2026-02-05 11:00:00', '2026-02-05 12:00:00', 'completed', NULL, NULL, '12000.00', 'HUF', NULL, NULL, NULL, '2026-02-03 10:00:00', NULL),
-(175, 2, 8, 3, 43, '2026-02-07 13:00:00', '2026-02-07 14:00:00', 'completed', NULL, NULL, '15000.00', 'HUF', NULL, NULL, NULL, '2026-02-05 11:00:00', NULL),
-(176, 2, 9, 4, 27, '2026-02-10 09:00:00', '2026-02-10 10:30:00', 'completed', NULL, NULL, '18000.00', 'HUF', NULL, NULL, NULL, '2026-02-08 08:00:00', NULL),
-(177, 2, 11, 3, 47, '2026-02-12 14:00:00', '2026-02-12 16:00:00', 'completed', NULL, NULL, '25000.00', 'HUF', NULL, NULL, NULL, '2026-02-10 12:00:00', NULL),
-(178, 2, 7, 3, 43, '2026-02-14 10:00:00', '2026-02-14 11:00:00', 'completed', NULL, NULL, '12000.00', 'HUF', NULL, NULL, NULL, '2026-02-12 09:00:00', NULL),
-(179, 2, 10, 4, 14, '2026-02-15 11:00:00', '2026-02-15 12:00:00', 'completed', NULL, NULL, '9000.00', 'HUF', NULL, NULL, NULL, '2026-02-13 10:00:00', NULL),
-(180, 2, 12, 3, 15, '2026-02-17 13:00:00', '2026-02-17 14:00:00', 'completed', NULL, NULL, '20000.00', 'HUF', NULL, NULL, NULL, '2026-02-15 11:00:00', NULL),
-(181, 2, 8, 4, 47, '2026-02-18 09:00:00', '2026-02-18 10:00:00', 'completed', NULL, NULL, '15000.00', 'HUF', NULL, NULL, NULL, '2026-02-16 08:00:00', NULL),
-(182, 2, 7, 3, 27, '2026-02-19 10:00:00', '2026-02-19 11:00:00', 'completed', NULL, NULL, '12000.00', 'HUF', NULL, NULL, NULL, '2026-02-17 09:00:00', NULL),
-(183, 2, 9, 4, 43, '2026-02-20 14:00:00', '2026-02-20 15:30:00', 'confirmed', NULL, NULL, '18000.00', 'HUF', NULL, NULL, NULL, '2026-02-18 10:00:00', NULL),
-(184, 2, 11, 3, 14, '2026-02-20 09:00:00', '2026-02-20 11:00:00', 'confirmed', NULL, NULL, '25000.00', 'HUF', NULL, NULL, NULL, '2026-02-19 08:00:00', NULL),
-(185, 2, 12, 4, 15, '2026-02-20 13:00:00', '2026-02-20 14:00:00', 'confirmed', NULL, NULL, '20000.00', 'HUF', NULL, NULL, NULL, '2026-02-19 11:00:00', NULL);
+(1, 1, 1, 1, 1, '2026-02-24 11:00:00', '2026-02-24 11:45:00', 'booked', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-22 23:12:41', NULL),
+(2, 1, 1, 1, 10, '2025-12-23 08:00:00', '2025-12-23 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-21 04:00:00', NULL),
+(3, 1, 3, 1, 24, '2025-12-23 08:55:00', '2025-12-23 10:05:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-13 22:55:00', NULL),
+(4, 1, 1, 1, 13, '2025-12-23 10:15:00', '2025-12-23 11:00:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-15 08:15:00', NULL),
+(5, 1, 3, 1, 18, '2025-12-23 11:05:00', '2025-12-23 12:15:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-17 10:05:00', NULL),
+(6, 1, 1, 2, 21, '2025-12-23 08:00:00', '2025-12-23 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-19 05:00:00', NULL),
+(7, 1, 1, 2, 10, '2025-12-23 08:50:00', '2025-12-23 09:35:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-14 23:50:00', NULL),
+(8, 1, 1, 2, 7, '2025-12-23 09:45:00', '2025-12-23 10:30:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-18 22:45:00', NULL),
+(9, 1, 1, 2, 8, '2025-12-23 10:35:00', '2025-12-23 11:20:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-20 22:35:00', NULL),
+(10, 1, 1, 2, 15, '2025-12-23 11:30:00', '2025-12-23 12:15:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-14 10:30:00', NULL),
+(11, 1, 1, 1, 1, '2025-12-24 08:00:00', '2025-12-24 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-17 20:00:00', NULL),
+(12, 1, 2, 1, 5, '2025-12-24 08:55:00', '2025-12-24 09:55:00', 'completed', '', NULL, 10000.00, 'HUF', NULL, NULL, NULL, '2025-12-16 06:55:00', NULL),
+(13, 1, 1, 1, 13, '2025-12-24 10:00:00', '2025-12-24 10:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-16 09:00:00', NULL),
+(14, 1, 3, 1, 9, '2025-12-24 10:55:00', '2025-12-24 12:05:00', 'no_show', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-21 07:55:00', NULL),
+(15, 1, 1, 1, 8, '2025-12-24 12:10:00', '2025-12-24 12:55:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-21 12:10:00', NULL),
+(16, 1, 3, 2, 16, '2025-12-24 08:00:00', '2025-12-24 09:10:00', 'cancelled', '', NULL, 11000.00, 'HUF', 16, 'Nem tudok menni', '2025-12-23 13:00:00', '2025-12-14 02:00:00', NULL),
+(17, 1, 3, 2, 12, '2025-12-24 09:20:00', '2025-12-24 10:30:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-22 02:20:00', NULL),
+(18, 1, 3, 2, 14, '2025-12-24 10:40:00', '2025-12-24 11:50:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-19 03:40:00', NULL),
+(19, 1, 3, 1, 16, '2025-12-25 08:00:00', '2025-12-25 09:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-18 04:00:00', NULL),
+(20, 1, 1, 1, 21, '2025-12-25 09:15:00', '2025-12-25 10:00:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-20 21:15:00', NULL),
+(21, 1, 1, 1, 20, '2025-12-25 10:05:00', '2025-12-25 10:50:00', 'cancelled', '', NULL, 7000.00, 'HUF', 20, 'Nem tudok menni', '2025-12-24 13:05:00', '2025-12-16 04:05:00', NULL),
+(22, 1, 3, 1, 17, '2025-12-25 11:00:00', '2025-12-25 12:10:00', 'cancelled', '', NULL, 11000.00, 'HUF', 17, 'Nem tudok menni', '2025-12-25 02:00:00', '2025-12-18 00:00:00', NULL),
+(23, 1, 1, 2, 6, '2025-12-25 08:00:00', '2025-12-25 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-23 06:00:00', NULL),
+(24, 1, 1, 2, 5, '2025-12-25 08:50:00', '2025-12-25 09:35:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-14 23:50:00', NULL),
+(25, 1, 2, 2, 24, '2025-12-25 09:45:00', '2025-12-25 10:45:00', 'completed', '', NULL, 10000.00, 'HUF', NULL, NULL, NULL, '2025-12-23 22:45:00', NULL),
+(26, 1, 1, 2, 10, '2025-12-25 10:55:00', '2025-12-25 11:40:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-22 00:55:00', NULL),
+(27, 1, 1, 2, 23, '2025-12-25 11:45:00', '2025-12-25 12:30:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-15 05:45:00', NULL),
+(28, 1, 1, 1, 9, '2025-12-26 08:00:00', '2025-12-26 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-22 00:00:00', NULL),
+(29, 1, 1, 1, 15, '2025-12-26 08:55:00', '2025-12-26 09:40:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-22 01:55:00', NULL),
+(30, 1, 3, 1, 24, '2025-12-26 09:50:00', '2025-12-26 11:00:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-16 21:50:00', NULL),
+(31, 1, 3, 1, 7, '2025-12-26 11:05:00', '2025-12-26 12:15:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-16 01:05:00', NULL),
+(32, 1, 1, 1, 17, '2025-12-26 12:20:00', '2025-12-26 13:05:00', 'cancelled', '', NULL, 7000.00, 'HUF', 17, 'Nem tudok menni', '2025-12-25 22:20:00', '2025-12-22 04:20:00', NULL),
+(33, 1, 1, 2, 12, '2025-12-26 08:00:00', '2025-12-26 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-22 06:00:00', NULL),
+(34, 1, 1, 2, 13, '2025-12-26 08:50:00', '2025-12-26 09:35:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-18 04:50:00', NULL),
+(35, 1, 3, 2, 11, '2025-12-26 09:40:00', '2025-12-26 10:50:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-24 02:40:00', NULL),
+(36, 1, 1, 2, 15, '2025-12-26 11:00:00', '2025-12-26 11:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-25 07:00:00', NULL),
+(37, 1, 3, 1, 18, '2025-12-27 08:00:00', '2025-12-27 09:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-25 23:00:00', NULL),
+(38, 1, 3, 1, 14, '2025-12-27 09:15:00', '2025-12-27 10:25:00', 'no_show', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-20 23:15:00', NULL),
+(39, 1, 2, 1, 7, '2025-12-27 10:30:00', '2025-12-27 11:30:00', 'completed', '', NULL, 10000.00, 'HUF', NULL, NULL, NULL, '2025-12-24 09:30:00', NULL),
+(40, 1, 1, 1, 10, '2025-12-27 11:40:00', '2025-12-27 12:25:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-17 07:40:00', NULL),
+(41, 1, 1, 2, 12, '2025-12-27 08:00:00', '2025-12-27 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-24 06:00:00', NULL),
+(42, 1, 3, 2, 1, '2025-12-27 08:50:00', '2025-12-27 10:00:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-25 00:50:00', NULL),
+(43, 1, 1, 2, 11, '2025-12-27 10:10:00', '2025-12-27 10:55:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-17 10:10:00', NULL),
+(44, 1, 1, 2, 20, '2025-12-27 11:05:00', '2025-12-27 11:50:00', 'no_show', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-25 11:05:00', NULL),
+(45, 1, 3, 1, 11, '2025-12-30 08:00:00', '2025-12-30 09:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-22 01:00:00', NULL),
+(46, 1, 3, 1, 23, '2025-12-30 09:20:00', '2025-12-30 10:30:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-24 07:20:00', NULL),
+(47, 1, 3, 1, 12, '2025-12-30 10:35:00', '2025-12-30 11:45:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-21 05:35:00', NULL),
+(48, 1, 1, 1, 21, '2025-12-30 11:50:00', '2025-12-30 12:35:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-24 08:50:00', NULL),
+(49, 1, 1, 1, 1, '2025-12-30 12:40:00', '2025-12-30 13:25:00', 'cancelled', '', NULL, 7000.00, 'HUF', 1, 'Nem tudok menni', '2025-12-29 18:40:00', '2025-12-26 00:40:00', NULL),
+(50, 1, 3, 2, 6, '2025-12-30 08:00:00', '2025-12-30 09:10:00', 'no_show', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-23 05:00:00', NULL),
+(51, 1, 3, 2, 12, '2025-12-30 09:20:00', '2025-12-30 10:30:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-25 21:20:00', NULL),
+(52, 1, 1, 2, 21, '2025-12-30 10:35:00', '2025-12-30 11:20:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-22 08:35:00', NULL),
+(53, 1, 1, 1, 21, '2025-12-31 08:00:00', '2025-12-31 08:45:00', 'no_show', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-26 07:00:00', NULL),
+(54, 1, 3, 1, 12, '2025-12-31 08:50:00', '2025-12-31 10:00:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-26 04:50:00', NULL),
+(55, 1, 1, 1, 18, '2025-12-31 10:10:00', '2025-12-31 10:55:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-25 08:10:00', NULL),
+(56, 1, 3, 2, 9, '2025-12-31 08:00:00', '2025-12-31 09:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-29 20:00:00', NULL),
+(57, 1, 3, 2, 17, '2025-12-31 09:15:00', '2025-12-31 10:25:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-24 07:15:00', NULL),
+(58, 1, 1, 2, 7, '2025-12-31 10:30:00', '2025-12-31 11:15:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-26 07:30:00', NULL),
+(59, 1, 3, 2, 13, '2025-12-31 11:25:00', '2025-12-31 12:35:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-24 10:25:00', NULL),
+(60, 1, 1, 2, 8, '2025-12-31 12:40:00', '2025-12-31 13:25:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-30 10:40:00', NULL),
+(61, 1, 3, 1, 8, '2026-01-01 08:00:00', '2026-01-01 09:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-21 20:00:00', NULL),
+(62, 1, 2, 1, 21, '2026-01-01 09:15:00', '2026-01-01 10:15:00', 'completed', '', NULL, 10000.00, 'HUF', NULL, NULL, NULL, '2025-12-29 07:15:00', NULL),
+(63, 1, 3, 1, 9, '2026-01-01 10:20:00', '2026-01-01 11:30:00', 'no_show', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-23 09:20:00', NULL),
+(64, 1, 3, 2, 12, '2026-01-01 08:00:00', '2026-01-01 09:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-29 00:00:00', NULL),
+(65, 1, 3, 2, 1, '2026-01-01 09:15:00', '2026-01-01 10:25:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-24 03:15:00', NULL),
+(66, 1, 1, 2, 17, '2026-01-01 10:35:00', '2026-01-01 11:20:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-31 09:35:00', NULL),
+(67, 1, 1, 1, 19, '2026-01-02 08:00:00', '2026-01-02 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-30 21:00:00', NULL),
+(68, 1, 3, 1, 5, '2026-01-02 08:50:00', '2026-01-02 10:00:00', 'no_show', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-22 20:50:00', NULL),
+(69, 1, 1, 1, 12, '2026-01-02 10:10:00', '2026-01-02 10:55:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-23 23:10:00', NULL),
+(70, 1, 1, 2, 1, '2026-01-02 08:00:00', '2026-01-02 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-25 08:00:00', NULL),
+(71, 1, 3, 2, 16, '2026-01-02 08:55:00', '2026-01-02 10:05:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-28 07:55:00', NULL),
+(72, 1, 1, 2, 23, '2026-01-02 10:10:00', '2026-01-02 10:55:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-29 04:10:00', NULL),
+(73, 1, 1, 2, 5, '2026-01-02 11:05:00', '2026-01-02 11:50:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-27 04:05:00', NULL),
+(74, 1, 1, 2, 19, '2026-01-02 12:00:00', '2026-01-02 12:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-24 03:00:00', NULL),
+(75, 1, 1, 1, 17, '2026-01-03 08:00:00', '2026-01-03 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-26 20:00:00', NULL),
+(76, 1, 1, 1, 5, '2026-01-03 08:55:00', '2026-01-03 09:40:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-25 07:55:00', NULL),
+(77, 1, 2, 1, 19, '2026-01-03 09:50:00', '2026-01-03 10:50:00', 'completed', '', NULL, 10000.00, 'HUF', NULL, NULL, NULL, '2025-12-30 00:50:00', NULL),
+(78, 1, 1, 2, 16, '2026-01-03 08:00:00', '2026-01-03 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-31 00:00:00', NULL),
+(79, 1, 1, 2, 10, '2026-01-03 08:50:00', '2026-01-03 09:35:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-30 02:50:00', NULL),
+(80, 1, 1, 2, 21, '2026-01-03 09:40:00', '2026-01-03 10:25:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-25 02:40:00', NULL),
+(81, 1, 1, 1, 8, '2026-01-06 08:00:00', '2026-01-06 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-29 03:00:00', NULL),
+(82, 1, 1, 1, 13, '2026-01-06 08:55:00', '2026-01-06 09:40:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-29 03:55:00', NULL),
+(83, 1, 1, 1, 20, '2026-01-06 09:45:00', '2026-01-06 10:30:00', 'cancelled', '', NULL, 7000.00, 'HUF', 20, 'Nem tudok menni', '2026-01-05 12:45:00', '2026-01-04 07:45:00', NULL),
+(84, 1, 1, 1, 7, '2026-01-06 10:35:00', '2026-01-06 11:20:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-31 03:35:00', NULL),
+(85, 1, 1, 1, 22, '2026-01-06 11:30:00', '2026-01-06 12:15:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-02 07:30:00', NULL),
+(86, 1, 3, 2, 14, '2026-01-06 08:00:00', '2026-01-06 09:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-04 21:00:00', NULL),
+(87, 1, 1, 2, 9, '2026-01-06 09:20:00', '2026-01-06 10:05:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-03 01:20:00', NULL),
+(88, 1, 3, 2, 11, '2026-01-06 10:15:00', '2026-01-06 11:25:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-03 05:15:00', NULL),
+(89, 1, 1, 2, 17, '2026-01-06 11:30:00', '2026-01-06 12:15:00', 'no_show', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-01 11:30:00', NULL),
+(90, 1, 1, 2, 20, '2026-01-06 12:25:00', '2026-01-06 13:10:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-03 11:25:00', NULL),
+(91, 1, 3, 1, 8, '2026-01-07 08:00:00', '2026-01-07 09:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-30 02:00:00', NULL),
+(92, 1, 1, 1, 11, '2026-01-07 09:20:00', '2026-01-07 10:05:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-30 07:20:00', NULL),
+(93, 1, 1, 1, 23, '2026-01-07 10:15:00', '2026-01-07 11:00:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-04 01:15:00', NULL),
+(94, 1, 3, 1, 21, '2026-01-07 11:10:00', '2026-01-07 12:20:00', 'cancelled', '', NULL, 11000.00, 'HUF', 21, 'Nem tudok menni', '2026-01-06 20:10:00', '2025-12-29 03:10:00', NULL),
+(95, 1, 3, 2, 16, '2026-01-07 08:00:00', '2026-01-07 09:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-03 23:00:00', NULL),
+(96, 1, 1, 2, 11, '2026-01-07 09:20:00', '2026-01-07 10:05:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-30 07:20:00', NULL),
+(97, 1, 2, 2, 22, '2026-01-07 10:15:00', '2026-01-07 11:15:00', 'completed', '', NULL, 10000.00, 'HUF', NULL, NULL, NULL, '2025-12-27 23:15:00', NULL),
+(98, 1, 3, 1, 14, '2026-01-08 08:00:00', '2026-01-08 09:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-01 23:00:00', NULL),
+(99, 1, 3, 1, 19, '2026-01-08 09:15:00', '2026-01-08 10:25:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-06 23:15:00', NULL),
+(100, 1, 1, 1, 1, '2026-01-08 10:35:00', '2026-01-08 11:20:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-31 02:35:00', NULL),
+(101, 1, 1, 1, 23, '2026-01-08 11:25:00', '2026-01-08 12:10:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-31 01:25:00', NULL),
+(102, 1, 1, 2, 10, '2026-01-08 08:00:00', '2026-01-08 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-31 20:00:00', NULL),
+(103, 1, 1, 2, 21, '2026-01-08 08:50:00', '2026-01-08 09:35:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-07 05:50:00', NULL),
+(104, 1, 1, 2, 13, '2026-01-08 09:40:00', '2026-01-08 10:25:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-06 03:40:00', NULL),
+(105, 1, 1, 1, 17, '2026-01-09 08:00:00', '2026-01-09 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-04 00:00:00', NULL),
+(106, 1, 3, 1, 21, '2026-01-09 08:50:00', '2026-01-09 10:00:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-03 07:50:00', NULL),
+(107, 1, 1, 1, 22, '2026-01-09 10:05:00', '2026-01-09 10:50:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-08 00:05:00', NULL),
+(108, 1, 3, 2, 24, '2026-01-09 08:00:00', '2026-01-09 09:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-04 01:00:00', NULL),
+(109, 1, 3, 2, 7, '2026-01-09 09:20:00', '2026-01-09 10:30:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-01 04:20:00', NULL),
+(110, 1, 1, 2, 14, '2026-01-09 10:40:00', '2026-01-09 11:25:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-05 00:40:00', NULL),
+(111, 1, 1, 2, 9, '2026-01-09 11:30:00', '2026-01-09 12:15:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-06 23:30:00', NULL),
+(112, 1, 1, 1, 24, '2026-01-10 08:00:00', '2026-01-10 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-03 03:00:00', NULL),
+(113, 1, 1, 1, 23, '2026-01-10 08:50:00', '2026-01-10 09:35:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-06 07:50:00', NULL),
+(114, 1, 1, 1, 11, '2026-01-10 09:45:00', '2026-01-10 10:30:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-06 22:45:00', NULL),
+(115, 1, 2, 2, 9, '2026-01-10 08:00:00', '2026-01-10 09:00:00', 'completed', '', NULL, 10000.00, 'HUF', NULL, NULL, NULL, '2026-01-01 08:00:00', NULL),
+(116, 1, 1, 2, 17, '2026-01-10 09:05:00', '2026-01-10 09:50:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-06 01:05:00', NULL),
+(117, 1, 1, 2, 7, '2026-01-10 09:55:00', '2026-01-10 10:40:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-02 05:55:00', NULL),
+(118, 1, 3, 1, 1, '2026-01-13 08:00:00', '2026-01-13 09:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-12 08:00:00', NULL),
+(119, 1, 1, 1, 20, '2026-01-13 09:15:00', '2026-01-13 10:00:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-12 07:15:00', NULL),
+(120, 1, 3, 1, 5, '2026-01-13 10:05:00', '2026-01-13 11:15:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-08 07:05:00', NULL),
+(121, 1, 3, 1, 21, '2026-01-13 11:20:00', '2026-01-13 12:30:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-12 10:20:00', NULL),
+(122, 1, 2, 1, 10, '2026-01-13 12:35:00', '2026-01-13 13:35:00', 'completed', '', NULL, 10000.00, 'HUF', NULL, NULL, NULL, '2026-01-07 02:35:00', NULL),
+(123, 1, 1, 2, 20, '2026-01-13 08:00:00', '2026-01-13 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-02 22:00:00', NULL),
+(124, 1, 1, 2, 10, '2026-01-13 08:50:00', '2026-01-13 09:35:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-10 01:50:00', NULL),
+(125, 1, 1, 2, 13, '2026-01-13 09:45:00', '2026-01-13 10:30:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-12 00:45:00', NULL),
+(126, 1, 1, 2, 5, '2026-01-13 10:40:00', '2026-01-13 11:25:00', 'no_show', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-11 08:40:00', NULL),
+(127, 1, 3, 2, 14, '2026-01-13 11:30:00', '2026-01-13 12:40:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-08 07:30:00', NULL),
+(128, 1, 3, 1, 15, '2026-01-14 08:00:00', '2026-01-14 09:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-13 02:00:00', NULL),
+(129, 1, 1, 1, 5, '2026-01-14 09:20:00', '2026-01-14 10:05:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-05 03:20:00', NULL),
+(130, 1, 1, 1, 1, '2026-01-14 10:15:00', '2026-01-14 11:00:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-12 06:15:00', NULL),
+(131, 1, 1, 1, 14, '2026-01-14 11:05:00', '2026-01-14 11:50:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-09 06:05:00', NULL),
+(132, 1, 1, 1, 9, '2026-01-14 11:55:00', '2026-01-14 12:40:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-12 10:55:00', NULL),
+(133, 1, 1, 2, 15, '2026-01-14 08:00:00', '2026-01-14 08:45:00', 'cancelled', '', NULL, 7000.00, 'HUF', 15, 'Nem tudok menni', '2026-01-13 20:00:00', '2026-01-09 06:00:00', NULL),
+(134, 1, 3, 2, 7, '2026-01-14 08:55:00', '2026-01-14 10:05:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-05 04:55:00', NULL),
+(135, 1, 3, 2, 16, '2026-01-14 10:10:00', '2026-01-14 11:20:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-05 00:10:00', NULL),
+(136, 1, 1, 1, 18, '2026-01-15 08:00:00', '2026-01-15 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-07 07:00:00', NULL),
+(137, 1, 3, 1, 14, '2026-01-15 08:55:00', '2026-01-15 10:05:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-11 22:55:00', NULL),
+(138, 1, 3, 1, 1, '2026-01-15 10:15:00', '2026-01-15 11:25:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-14 01:15:00', NULL),
+(139, 1, 3, 1, 15, '2026-01-15 11:30:00', '2026-01-15 12:40:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-14 09:30:00', NULL),
+(140, 1, 1, 2, 10, '2026-01-15 08:00:00', '2026-01-15 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-13 06:00:00', NULL),
+(141, 1, 3, 2, 12, '2026-01-15 08:50:00', '2026-01-15 10:00:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-13 03:50:00', NULL),
+(142, 1, 1, 2, 16, '2026-01-15 10:10:00', '2026-01-15 10:55:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-07 05:10:00', NULL),
+(143, 1, 3, 2, 20, '2026-01-15 11:00:00', '2026-01-15 12:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-08 02:00:00', NULL),
+(144, 1, 3, 1, 5, '2026-01-16 08:00:00', '2026-01-16 09:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-09 04:00:00', NULL),
+(145, 1, 1, 1, 1, '2026-01-16 09:20:00', '2026-01-16 10:05:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-08 06:20:00', NULL),
+(146, 1, 1, 1, 13, '2026-01-16 10:10:00', '2026-01-16 10:55:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-09 00:10:00', NULL),
+(147, 1, 3, 2, 12, '2026-01-16 08:00:00', '2026-01-16 09:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-06 22:00:00', NULL),
+(148, 1, 3, 2, 17, '2026-01-16 09:15:00', '2026-01-16 10:25:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-05 21:15:00', NULL),
+(149, 1, 3, 2, 7, '2026-01-16 10:30:00', '2026-01-16 11:40:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-06 04:30:00', NULL),
+(150, 1, 1, 1, 17, '2026-01-17 08:00:00', '2026-01-17 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-12 04:00:00', NULL),
+(151, 1, 1, 1, 9, '2026-01-17 08:50:00', '2026-01-17 09:35:00', 'cancelled', '', NULL, 7000.00, 'HUF', 9, 'Nem tudok menni', '2026-01-16 10:50:00', '2026-01-10 05:50:00', NULL),
+(152, 1, 1, 1, 20, '2026-01-17 09:40:00', '2026-01-17 10:25:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-15 08:40:00', NULL),
+(153, 1, 1, 1, 5, '2026-01-17 10:30:00', '2026-01-17 11:15:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-09 05:30:00', NULL),
+(154, 1, 2, 2, 6, '2026-01-17 08:00:00', '2026-01-17 09:00:00', 'no_show', '', NULL, 10000.00, 'HUF', NULL, NULL, NULL, '2026-01-10 23:00:00', NULL),
+(155, 1, 1, 2, 9, '2026-01-17 09:10:00', '2026-01-17 09:55:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-16 03:10:00', NULL),
+(156, 1, 1, 2, 5, '2026-01-17 10:00:00', '2026-01-17 10:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-14 00:00:00', NULL),
+(157, 1, 3, 2, 16, '2026-01-17 10:50:00', '2026-01-17 12:00:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-12 08:50:00', NULL),
+(158, 1, 3, 2, 24, '2026-01-17 12:10:00', '2026-01-17 13:20:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-12 11:10:00', NULL),
+(159, 1, 1, 1, 7, '2026-01-20 08:00:00', '2026-01-20 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-15 07:00:00', NULL),
+(160, 1, 1, 1, 5, '2026-01-20 08:50:00', '2026-01-20 09:35:00', 'no_show', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-11 00:50:00', NULL),
+(161, 1, 3, 1, 21, '2026-01-20 09:45:00', '2026-01-20 10:55:00', 'cancelled', '', NULL, 11000.00, 'HUF', 21, 'Nem tudok menni', '2026-01-19 23:45:00', '2026-01-10 01:45:00', NULL),
+(162, 1, 1, 2, 20, '2026-01-20 08:00:00', '2026-01-20 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-18 01:00:00', NULL),
+(163, 1, 1, 2, 16, '2026-01-20 08:50:00', '2026-01-20 09:35:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-18 23:50:00', NULL),
+(164, 1, 1, 2, 9, '2026-01-20 09:40:00', '2026-01-20 10:25:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-19 01:40:00', NULL),
+(165, 1, 3, 2, 10, '2026-01-20 10:30:00', '2026-01-20 11:40:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-16 06:30:00', NULL),
+(166, 1, 3, 1, 10, '2026-01-21 08:00:00', '2026-01-21 09:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-12 07:00:00', NULL),
+(167, 1, 1, 1, 11, '2026-01-21 09:20:00', '2026-01-21 10:05:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-16 00:20:00', NULL),
+(168, 1, 3, 1, 5, '2026-01-21 10:10:00', '2026-01-21 11:20:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-11 02:10:00', NULL),
+(169, 1, 3, 2, 17, '2026-01-21 08:00:00', '2026-01-21 09:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-13 02:00:00', NULL),
+(170, 1, 1, 2, 8, '2026-01-21 09:15:00', '2026-01-21 10:00:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-11 07:15:00', NULL),
+(171, 1, 1, 2, 5, '2026-01-21 10:10:00', '2026-01-21 10:55:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-12 00:10:00', NULL),
+(172, 1, 1, 2, 19, '2026-01-21 11:00:00', '2026-01-21 11:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-12 04:00:00', NULL),
+(173, 1, 1, 1, 11, '2026-01-22 08:00:00', '2026-01-22 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-14 21:00:00', NULL),
+(174, 1, 1, 1, 9, '2026-01-22 08:50:00', '2026-01-22 09:35:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-11 22:50:00', NULL),
+(175, 1, 1, 1, 8, '2026-01-22 09:40:00', '2026-01-22 10:25:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-16 06:40:00', NULL),
+(176, 1, 3, 1, 22, '2026-01-22 10:30:00', '2026-01-22 11:40:00', 'cancelled', '', NULL, 11000.00, 'HUF', 22, 'Nem tudok menni', '2026-01-22 06:30:00', '2026-01-15 23:30:00', NULL),
+(177, 1, 3, 1, 18, '2026-01-22 11:45:00', '2026-01-22 12:55:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-21 10:45:00', NULL),
+(178, 1, 3, 2, 23, '2026-01-22 08:00:00', '2026-01-22 09:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-19 06:00:00', NULL),
+(179, 1, 1, 2, 8, '2026-01-22 09:20:00', '2026-01-22 10:05:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-17 01:20:00', NULL),
+(180, 1, 1, 2, 5, '2026-01-22 10:10:00', '2026-01-22 10:55:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-16 22:10:00', NULL),
+(181, 1, 1, 2, 17, '2026-01-22 11:05:00', '2026-01-22 11:50:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-18 09:05:00', NULL),
+(182, 1, 2, 2, 6, '2026-01-22 12:00:00', '2026-01-22 13:00:00', 'completed', '', NULL, 10000.00, 'HUF', NULL, NULL, NULL, '2026-01-12 00:00:00', NULL),
+(183, 1, 1, 1, 10, '2026-01-23 08:00:00', '2026-01-23 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-13 02:00:00', NULL),
+(184, 1, 2, 1, 21, '2026-01-23 08:55:00', '2026-01-23 09:55:00', 'completed', '', NULL, 10000.00, 'HUF', NULL, NULL, NULL, '2026-01-18 02:55:00', NULL),
+(185, 1, 3, 1, 22, '2026-01-23 10:00:00', '2026-01-23 11:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-19 06:00:00', NULL),
+(186, 1, 3, 2, 22, '2026-01-23 08:00:00', '2026-01-23 09:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-20 01:00:00', NULL),
+(187, 1, 1, 2, 10, '2026-01-23 09:20:00', '2026-01-23 10:05:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-14 01:20:00', NULL),
+(188, 1, 1, 2, 8, '2026-01-23 10:10:00', '2026-01-23 10:55:00', 'no_show', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-22 05:10:00', NULL),
+(189, 1, 1, 2, 23, '2026-01-23 11:00:00', '2026-01-23 11:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-19 07:00:00', NULL),
+(190, 1, 1, 1, 18, '2026-01-24 08:00:00', '2026-01-24 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-14 08:00:00', NULL),
+(191, 1, 3, 1, 19, '2026-01-24 08:50:00', '2026-01-24 10:00:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-16 22:50:00', NULL),
+(192, 1, 1, 1, 15, '2026-01-24 10:05:00', '2026-01-24 10:50:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-14 02:05:00', NULL),
+(193, 1, 1, 1, 12, '2026-01-24 10:55:00', '2026-01-24 11:40:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-19 02:55:00', NULL),
+(194, 1, 1, 1, 7, '2026-01-24 11:45:00', '2026-01-24 12:30:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-18 06:45:00', NULL),
+(195, 1, 1, 2, 21, '2026-01-24 08:00:00', '2026-01-24 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-20 05:00:00', NULL),
+(196, 1, 2, 2, 24, '2026-01-24 08:50:00', '2026-01-24 09:50:00', 'completed', '', NULL, 10000.00, 'HUF', NULL, NULL, NULL, '2026-01-15 05:50:00', NULL),
+(197, 1, 1, 2, 7, '2026-01-24 09:55:00', '2026-01-24 10:40:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-21 01:55:00', NULL),
+(198, 1, 2, 2, 9, '2026-01-24 10:50:00', '2026-01-24 11:50:00', 'completed', '', NULL, 10000.00, 'HUF', NULL, NULL, NULL, '2026-01-17 04:50:00', NULL),
+(199, 1, 1, 2, 1, '2026-01-24 11:55:00', '2026-01-24 12:40:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-22 04:55:00', NULL),
+(200, 1, 3, 1, 7, '2026-01-27 08:00:00', '2026-01-27 09:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-18 04:00:00', NULL),
+(201, 1, 1, 1, 23, '2026-01-27 09:15:00', '2026-01-27 10:00:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-17 01:15:00', NULL),
+(202, 1, 1, 1, 13, '2026-01-27 10:05:00', '2026-01-27 10:50:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-17 08:05:00', NULL),
+(203, 1, 3, 1, 21, '2026-01-27 10:55:00', '2026-01-27 12:05:00', 'no_show', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-26 05:55:00', NULL),
+(204, 1, 1, 2, 14, '2026-01-27 08:00:00', '2026-01-27 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-19 00:00:00', NULL),
+(205, 1, 3, 2, 23, '2026-01-27 08:50:00', '2026-01-27 10:00:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-22 02:50:00', NULL),
+(206, 1, 3, 2, 10, '2026-01-27 10:10:00', '2026-01-27 11:20:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-22 06:10:00', NULL),
+(207, 1, 3, 2, 12, '2026-01-27 11:30:00', '2026-01-27 12:40:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-22 07:30:00', NULL),
+(208, 1, 1, 1, 10, '2026-01-28 08:00:00', '2026-01-28 08:45:00', 'no_show', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-21 08:00:00', NULL),
+(209, 1, 3, 1, 1, '2026-01-28 08:50:00', '2026-01-28 10:00:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-17 22:50:00', NULL),
+(210, 1, 1, 1, 12, '2026-01-28 10:05:00', '2026-01-28 10:50:00', 'no_show', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-19 09:05:00', NULL),
+(211, 1, 3, 1, 6, '2026-01-28 10:55:00', '2026-01-28 12:05:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-26 10:55:00', NULL),
+(212, 1, 2, 2, 1, '2026-01-28 08:00:00', '2026-01-28 09:00:00', 'no_show', '', NULL, 10000.00, 'HUF', NULL, NULL, NULL, '2026-01-25 05:00:00', NULL),
+(213, 1, 1, 2, 24, '2026-01-28 09:05:00', '2026-01-28 09:50:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-24 09:05:00', NULL),
+(214, 1, 1, 2, 15, '2026-01-28 10:00:00', '2026-01-28 10:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-18 05:00:00', NULL),
+(215, 1, 1, 2, 21, '2026-01-28 10:55:00', '2026-01-28 11:40:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-20 06:55:00', NULL),
+(216, 1, 3, 2, 6, '2026-01-28 11:50:00', '2026-01-28 13:00:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-23 02:50:00', NULL),
+(217, 1, 1, 1, 5, '2026-01-29 08:00:00', '2026-01-29 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-18 22:00:00', NULL),
+(218, 1, 1, 1, 20, '2026-01-29 08:55:00', '2026-01-29 09:40:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-19 00:55:00', NULL),
+(219, 1, 1, 1, 1, '2026-01-29 09:50:00', '2026-01-29 10:35:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-20 09:50:00', NULL),
+(220, 1, 1, 1, 8, '2026-01-29 10:45:00', '2026-01-29 11:30:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-19 23:45:00', NULL),
+(221, 1, 3, 1, 21, '2026-01-29 11:35:00', '2026-01-29 12:45:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-28 06:35:00', NULL),
+(222, 1, 1, 2, 20, '2026-01-29 08:00:00', '2026-01-29 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-25 07:00:00', NULL),
+(223, 1, 3, 2, 21, '2026-01-29 08:50:00', '2026-01-29 10:00:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-24 22:50:00', NULL),
+(224, 1, 3, 2, 14, '2026-01-29 10:05:00', '2026-01-29 11:15:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-20 05:05:00', NULL),
+(225, 1, 1, 2, 12, '2026-01-29 11:20:00', '2026-01-29 12:05:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-26 00:20:00', NULL),
+(226, 1, 1, 1, 1, '2026-01-30 08:00:00', '2026-01-30 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-29 05:00:00', NULL),
+(227, 1, 1, 1, 8, '2026-01-30 08:55:00', '2026-01-30 09:40:00', 'no_show', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-28 23:55:00', NULL),
+(228, 1, 1, 1, 16, '2026-01-30 09:50:00', '2026-01-30 10:35:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-29 07:50:00', NULL),
+(229, 1, 1, 1, 11, '2026-01-30 10:40:00', '2026-01-30 11:25:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-23 22:40:00', NULL),
+(230, 1, 3, 2, 14, '2026-01-30 08:00:00', '2026-01-30 09:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-20 23:00:00', NULL),
+(231, 1, 3, 2, 7, '2026-01-30 09:20:00', '2026-01-30 10:30:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-27 07:20:00', NULL),
+(232, 1, 1, 2, 21, '2026-01-30 10:35:00', '2026-01-30 11:20:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-20 23:35:00', NULL),
+(233, 1, 1, 2, 22, '2026-01-30 11:25:00', '2026-01-30 12:10:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-20 10:25:00', NULL),
+(234, 1, 1, 1, 7, '2026-01-31 08:00:00', '2026-01-31 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-28 00:00:00', NULL),
+(235, 1, 3, 1, 5, '2026-01-31 08:50:00', '2026-01-31 10:00:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-29 22:50:00', NULL),
+(236, 1, 3, 1, 8, '2026-01-31 10:10:00', '2026-01-31 11:20:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-22 06:10:00', NULL),
+(237, 1, 3, 1, 1, '2026-01-31 11:25:00', '2026-01-31 12:35:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-23 02:25:00', NULL),
+(238, 1, 3, 1, 11, '2026-01-31 12:40:00', '2026-01-31 13:50:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-23 03:40:00', NULL),
+(239, 1, 2, 2, 17, '2026-01-31 08:00:00', '2026-01-31 09:00:00', 'completed', '', NULL, 10000.00, 'HUF', NULL, NULL, NULL, '2026-01-28 08:00:00', NULL),
+(240, 1, 1, 2, 1, '2026-01-31 09:10:00', '2026-01-31 09:55:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-25 09:10:00', NULL),
+(241, 1, 2, 2, 12, '2026-01-31 10:05:00', '2026-01-31 11:05:00', 'completed', '', NULL, 10000.00, 'HUF', NULL, NULL, NULL, '2026-01-30 01:05:00', NULL),
+(242, 1, 1, 1, 24, '2026-02-03 08:00:00', '2026-02-03 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-28 00:00:00', NULL),
+(243, 1, 1, 1, 5, '2026-02-03 08:55:00', '2026-02-03 09:40:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-30 00:55:00', NULL),
+(244, 1, 1, 1, 7, '2026-02-03 09:45:00', '2026-02-03 10:30:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-24 21:45:00', NULL),
+(245, 1, 3, 2, 22, '2026-02-03 08:00:00', '2026-02-03 09:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-25 04:00:00', NULL),
+(246, 1, 3, 2, 5, '2026-02-03 09:15:00', '2026-02-03 10:25:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-30 23:15:00', NULL),
+(247, 1, 3, 2, 9, '2026-02-03 10:30:00', '2026-02-03 11:40:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-31 00:30:00', NULL),
+(248, 1, 3, 1, 21, '2026-02-04 08:00:00', '2026-02-04 09:10:00', 'cancelled', '', NULL, 11000.00, 'HUF', 21, 'Nem tudok menni', '2026-02-03 19:00:00', '2026-01-25 05:00:00', NULL),
+(249, 1, 1, 1, 19, '2026-02-04 09:20:00', '2026-02-04 10:05:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-26 03:20:00', NULL),
+(250, 1, 1, 1, 16, '2026-02-04 10:10:00', '2026-02-04 10:55:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-27 10:10:00', NULL),
+(251, 1, 1, 1, 14, '2026-02-04 11:00:00', '2026-02-04 11:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-27 07:00:00', NULL),
+(252, 1, 3, 1, 24, '2026-02-04 11:50:00', '2026-02-04 13:00:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-29 09:50:00', NULL),
+(253, 1, 3, 2, 14, '2026-02-04 08:00:00', '2026-02-04 09:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-26 22:00:00', NULL),
+(254, 1, 1, 2, 6, '2026-02-04 09:15:00', '2026-02-04 10:00:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-02 02:15:00', NULL),
+(255, 1, 1, 2, 24, '2026-02-04 10:05:00', '2026-02-04 10:50:00', 'cancelled', '', NULL, 7000.00, 'HUF', 24, 'Nem tudok menni', '2026-02-04 05:05:00', '2026-01-28 05:05:00', NULL),
+(256, 1, 3, 1, 15, '2026-02-05 08:00:00', '2026-02-05 09:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-28 21:00:00', NULL),
+(257, 1, 3, 1, 13, '2026-02-05 09:15:00', '2026-02-05 10:25:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-27 07:15:00', NULL),
+(258, 1, 3, 1, 6, '2026-02-05 10:35:00', '2026-02-05 11:45:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-28 01:35:00', NULL),
+(259, 1, 1, 1, 10, '2026-02-05 11:50:00', '2026-02-05 12:35:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-03 05:50:00', NULL),
+(260, 1, 1, 1, 18, '2026-02-05 12:40:00', '2026-02-05 13:25:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-30 10:40:00', NULL),
+(261, 1, 1, 2, 9, '2026-02-05 08:00:00', '2026-02-05 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-03 01:00:00', NULL),
+(262, 1, 2, 2, 17, '2026-02-05 08:50:00', '2026-02-05 09:50:00', 'completed', '', NULL, 10000.00, 'HUF', NULL, NULL, NULL, '2026-01-31 01:50:00', NULL),
+(263, 1, 2, 2, 7, '2026-02-05 09:55:00', '2026-02-05 10:55:00', 'completed', '', NULL, 10000.00, 'HUF', NULL, NULL, NULL, '2026-01-27 01:55:00', NULL),
+(264, 1, 3, 2, 15, '2026-02-05 11:00:00', '2026-02-05 12:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-26 08:00:00', NULL),
+(265, 1, 1, 2, 23, '2026-02-05 12:15:00', '2026-02-05 13:00:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-28 06:15:00', NULL),
+(266, 1, 3, 1, 20, '2026-02-06 08:00:00', '2026-02-06 09:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-03 23:00:00', NULL),
+(267, 1, 1, 1, 19, '2026-02-06 09:20:00', '2026-02-06 10:05:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-31 22:20:00', NULL),
+(268, 1, 2, 1, 5, '2026-02-06 10:10:00', '2026-02-06 11:10:00', 'completed', '', NULL, 10000.00, 'HUF', NULL, NULL, NULL, '2026-02-01 03:10:00', NULL),
+(269, 1, 3, 2, 9, '2026-02-06 08:00:00', '2026-02-06 09:10:00', 'no_show', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-30 01:00:00', NULL),
+(270, 1, 3, 2, 16, '2026-02-06 09:15:00', '2026-02-06 10:25:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-03 02:15:00', NULL),
+(271, 1, 1, 2, 10, '2026-02-06 10:35:00', '2026-02-06 11:20:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-01 05:35:00', NULL),
+(272, 1, 1, 1, 1, '2026-02-07 08:00:00', '2026-02-07 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-05 00:00:00', NULL),
+(273, 1, 1, 1, 16, '2026-02-07 08:50:00', '2026-02-07 09:35:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-03 21:50:00', NULL),
+(274, 1, 3, 1, 21, '2026-02-07 09:40:00', '2026-02-07 10:50:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-29 23:40:00', NULL),
+(275, 1, 1, 1, 8, '2026-02-07 11:00:00', '2026-02-07 11:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-02 08:00:00', NULL),
+(276, 1, 3, 2, 17, '2026-02-07 08:00:00', '2026-02-07 09:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-04 23:00:00', NULL),
+(277, 1, 1, 2, 9, '2026-02-07 09:15:00', '2026-02-07 10:00:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-04 06:15:00', NULL),
+(278, 1, 3, 2, 23, '2026-02-07 10:10:00', '2026-02-07 11:20:00', 'cancelled', '', NULL, 11000.00, 'HUF', 23, 'Nem tudok menni', '2026-02-06 18:10:00', '2026-01-30 22:10:00', NULL),
+(279, 1, 1, 2, 24, '2026-02-07 11:25:00', '2026-02-07 12:10:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-30 08:25:00', NULL),
+(280, 1, 3, 2, 5, '2026-02-07 12:15:00', '2026-02-07 13:25:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-03 11:15:00', NULL),
+(281, 1, 3, 1, 19, '2026-02-10 08:00:00', '2026-02-10 09:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-06 07:00:00', NULL),
+(282, 1, 1, 1, 13, '2026-02-10 09:15:00', '2026-02-10 10:00:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-01 05:15:00', NULL),
+(283, 1, 3, 1, 16, '2026-02-10 10:05:00', '2026-02-10 11:15:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-09 03:05:00', NULL),
+(284, 1, 1, 2, 13, '2026-02-10 08:00:00', '2026-02-10 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-05 02:00:00', NULL),
+(285, 1, 3, 2, 11, '2026-02-10 08:50:00', '2026-02-10 10:00:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-03 06:50:00', NULL),
+(286, 1, 1, 2, 12, '2026-02-10 10:05:00', '2026-02-10 10:50:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-31 03:05:00', NULL),
+(287, 1, 3, 1, 21, '2026-02-11 08:00:00', '2026-02-11 09:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-07 20:00:00', NULL),
+(288, 1, 2, 1, 12, '2026-02-11 09:15:00', '2026-02-11 10:15:00', 'completed', '', NULL, 10000.00, 'HUF', NULL, NULL, NULL, '2026-02-03 05:15:00', NULL),
+(289, 1, 2, 1, 1, '2026-02-11 10:20:00', '2026-02-11 11:20:00', 'completed', '', NULL, 10000.00, 'HUF', NULL, NULL, NULL, '2026-02-08 03:20:00', NULL),
+(290, 1, 1, 1, 20, '2026-02-11 11:25:00', '2026-02-11 12:10:00', 'no_show', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-02 07:25:00', NULL),
+(291, 1, 1, 1, 18, '2026-02-11 12:15:00', '2026-02-11 13:00:00', 'no_show', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-03 07:15:00', NULL),
+(292, 1, 2, 2, 22, '2026-02-11 08:00:00', '2026-02-11 09:00:00', 'completed', '', NULL, 10000.00, 'HUF', NULL, NULL, NULL, '2026-02-09 21:00:00', NULL),
+(293, 1, 1, 2, 13, '2026-02-11 09:05:00', '2026-02-11 09:50:00', 'no_show', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-01 07:05:00', NULL),
+(294, 1, 1, 2, 6, '2026-02-11 10:00:00', '2026-02-11 10:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-06 08:00:00', NULL),
+(295, 1, 2, 2, 18, '2026-02-11 10:55:00', '2026-02-11 11:55:00', 'completed', '', NULL, 10000.00, 'HUF', NULL, NULL, NULL, '2026-02-10 09:55:00', NULL),
+(296, 1, 1, 2, 10, '2026-02-11 12:00:00', '2026-02-11 12:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-01 12:00:00', NULL),
+(297, 1, 1, 1, 12, '2026-02-12 08:00:00', '2026-02-12 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-05 20:00:00', NULL),
+(298, 1, 3, 1, 23, '2026-02-12 08:55:00', '2026-02-12 10:05:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-04 04:55:00', NULL),
+(299, 1, 2, 1, 17, '2026-02-12 10:15:00', '2026-02-12 11:15:00', 'completed', '', NULL, 10000.00, 'HUF', NULL, NULL, NULL, '2026-02-09 07:15:00', NULL),
+(300, 1, 3, 1, 9, '2026-02-12 11:20:00', '2026-02-12 12:30:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-03 03:20:00', NULL),
+(301, 1, 1, 2, 16, '2026-02-12 08:00:00', '2026-02-12 08:45:00', 'no_show', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-07 22:00:00', NULL),
+(302, 1, 1, 2, 12, '2026-02-12 08:50:00', '2026-02-12 09:35:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-07 23:50:00', NULL),
+(303, 1, 1, 2, 20, '2026-02-12 09:40:00', '2026-02-12 10:25:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-06 00:40:00', NULL),
+(304, 1, 1, 2, 24, '2026-02-12 10:30:00', '2026-02-12 11:15:00', 'cancelled', '', NULL, 7000.00, 'HUF', 24, 'Nem tudok menni', '2026-02-11 23:30:00', '2026-02-06 02:30:00', NULL),
+(305, 1, 1, 2, 15, '2026-02-12 11:20:00', '2026-02-12 12:05:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-07 07:20:00', NULL),
+(306, 1, 2, 1, 10, '2026-02-13 08:00:00', '2026-02-13 09:00:00', 'completed', '', NULL, 10000.00, 'HUF', NULL, NULL, NULL, '2026-02-04 05:00:00', NULL),
+(307, 1, 3, 1, 17, '2026-02-13 09:05:00', '2026-02-13 10:15:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-04 21:05:00', NULL),
+(308, 1, 2, 1, 9, '2026-02-13 10:25:00', '2026-02-13 11:25:00', 'completed', '', NULL, 10000.00, 'HUF', NULL, NULL, NULL, '2026-02-02 23:25:00', NULL),
+(309, 1, 1, 2, 14, '2026-02-13 08:00:00', '2026-02-13 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-03 07:00:00', NULL),
+(310, 1, 1, 2, 16, '2026-02-13 08:55:00', '2026-02-13 09:40:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-05 06:55:00', NULL),
+(311, 1, 1, 2, 7, '2026-02-13 09:50:00', '2026-02-13 10:35:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-10 09:50:00', NULL),
+(312, 1, 3, 2, 23, '2026-02-13 10:40:00', '2026-02-13 11:50:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-12 00:40:00', NULL),
+(313, 1, 3, 1, 13, '2026-02-14 08:00:00', '2026-02-14 09:10:00', 'no_show', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-12 06:00:00', NULL),
+(314, 1, 1, 1, 12, '2026-02-14 09:20:00', '2026-02-14 10:05:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-07 01:20:00', NULL),
+(315, 1, 1, 1, 15, '2026-02-14 10:10:00', '2026-02-14 10:55:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-04 10:10:00', NULL),
+(316, 1, 3, 2, 23, '2026-02-14 08:00:00', '2026-02-14 09:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-04 20:00:00', NULL),
+(317, 1, 3, 2, 21, '2026-02-14 09:15:00', '2026-02-14 10:25:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-04 02:15:00', NULL),
+(318, 1, 3, 2, 5, '2026-02-14 10:30:00', '2026-02-14 11:40:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-04 07:30:00', NULL),
+(319, 1, 1, 2, 7, '2026-02-14 11:50:00', '2026-02-14 12:35:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-08 07:50:00', NULL),
+(320, 1, 3, 1, 7, '2026-02-17 08:00:00', '2026-02-17 09:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-14 02:00:00', NULL),
+(321, 1, 3, 1, 21, '2026-02-17 09:20:00', '2026-02-17 10:30:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-16 01:20:00', NULL),
+(322, 1, 3, 1, 24, '2026-02-17 10:35:00', '2026-02-17 11:45:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-11 00:35:00', NULL),
+(323, 1, 1, 1, 11, '2026-02-17 11:55:00', '2026-02-17 12:40:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-12 07:55:00', NULL),
+(324, 1, 3, 2, 19, '2026-02-17 08:00:00', '2026-02-17 09:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-09 03:00:00', NULL),
+(325, 1, 3, 2, 13, '2026-02-17 09:15:00', '2026-02-17 10:25:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-16 06:15:00', NULL),
+(326, 1, 3, 2, 15, '2026-02-17 10:30:00', '2026-02-17 11:40:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-09 22:30:00', NULL),
+(327, 1, 1, 2, 10, '2026-02-17 11:45:00', '2026-02-17 12:30:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-16 09:45:00', NULL),
+(328, 1, 1, 2, 9, '2026-02-17 12:40:00', '2026-02-17 13:25:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-12 01:40:00', NULL),
+(329, 1, 1, 1, 6, '2026-02-18 08:00:00', '2026-02-18 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-07 21:00:00', NULL);
+INSERT INTO `appointments` (`id`, `company_id`, `service_id`, `staff_id`, `client_id`, `start_time`, `end_time`, `status`, `notes`, `internal_notes`, `price`, `currency`, `cancelled_by`, `cancelled_reason`, `cancelled_at`, `created_at`, `updated_at`) VALUES
+(330, 1, 3, 1, 23, '2026-02-18 08:55:00', '2026-02-18 10:05:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-08 08:55:00', NULL),
+(331, 1, 1, 1, 7, '2026-02-18 10:15:00', '2026-02-18 11:00:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-14 09:15:00', NULL),
+(332, 1, 1, 2, 23, '2026-02-18 08:00:00', '2026-02-18 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-14 23:00:00', NULL),
+(333, 1, 1, 2, 14, '2026-02-18 08:55:00', '2026-02-18 09:40:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-09 03:55:00', NULL),
+(334, 1, 3, 2, 10, '2026-02-18 09:50:00', '2026-02-18 11:00:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-14 01:50:00', NULL),
+(335, 1, 1, 2, 15, '2026-02-18 11:05:00', '2026-02-18 11:50:00', 'no_show', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-10 10:05:00', NULL),
+(336, 1, 3, 1, 15, '2026-02-19 08:00:00', '2026-02-19 09:10:00', 'cancelled', '', NULL, 11000.00, 'HUF', 15, 'Nem tudok menni', '2026-02-18 19:00:00', '2026-02-17 22:00:00', NULL),
+(337, 1, 1, 1, 11, '2026-02-19 09:20:00', '2026-02-19 10:05:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-12 09:20:00', NULL),
+(338, 1, 3, 1, 23, '2026-02-19 10:15:00', '2026-02-19 11:25:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-09 07:15:00', NULL),
+(339, 1, 1, 2, 13, '2026-02-19 08:00:00', '2026-02-19 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-15 03:00:00', NULL),
+(340, 1, 1, 2, 22, '2026-02-19 08:50:00', '2026-02-19 09:35:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-17 03:50:00', NULL),
+(341, 1, 3, 2, 1, '2026-02-19 09:40:00', '2026-02-19 10:50:00', 'no_show', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-13 07:40:00', NULL),
+(342, 1, 1, 2, 6, '2026-02-19 10:55:00', '2026-02-19 11:40:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-17 08:55:00', NULL),
+(343, 1, 1, 2, 20, '2026-02-19 11:45:00', '2026-02-19 12:30:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-16 06:45:00', NULL),
+(344, 1, 3, 1, 9, '2026-02-20 08:00:00', '2026-02-20 09:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-11 07:00:00', NULL),
+(345, 1, 3, 1, 20, '2026-02-20 09:15:00', '2026-02-20 10:25:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-14 06:15:00', NULL),
+(346, 1, 1, 1, 16, '2026-02-20 10:30:00', '2026-02-20 11:15:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-12 07:30:00', NULL),
+(347, 1, 3, 1, 23, '2026-02-20 11:20:00', '2026-02-20 12:30:00', 'no_show', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-14 06:20:00', NULL),
+(348, 1, 3, 1, 11, '2026-02-20 12:40:00', '2026-02-20 13:50:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-10 01:40:00', NULL),
+(349, 1, 1, 2, 5, '2026-02-20 08:00:00', '2026-02-20 08:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-12 22:00:00', NULL),
+(350, 1, 1, 2, 9, '2026-02-20 08:50:00', '2026-02-20 09:35:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-09 22:50:00', NULL),
+(351, 1, 1, 2, 21, '2026-02-20 09:45:00', '2026-02-20 10:30:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-12 21:45:00', NULL),
+(352, 1, 3, 2, 22, '2026-02-20 10:35:00', '2026-02-20 11:45:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-19 00:35:00', NULL),
+(353, 1, 3, 2, 10, '2026-02-20 11:50:00', '2026-02-20 13:00:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-15 10:50:00', NULL),
+(354, 1, 3, 1, 9, '2026-02-21 08:00:00', '2026-02-21 09:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-19 05:00:00', NULL),
+(355, 1, 1, 1, 13, '2026-02-21 09:15:00', '2026-02-21 10:00:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-17 04:15:00', NULL),
+(356, 1, 1, 1, 20, '2026-02-21 10:05:00', '2026-02-21 10:50:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-16 06:05:00', NULL),
+(357, 1, 3, 1, 1, '2026-02-21 11:00:00', '2026-02-21 12:10:00', 'cancelled', '', NULL, 11000.00, 'HUF', 1, 'Nem tudok menni', '2026-02-20 15:00:00', '2026-02-12 01:00:00', NULL),
+(358, 1, 3, 1, 15, '2026-02-21 12:20:00', '2026-02-21 13:30:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-14 05:20:00', NULL),
+(359, 1, 2, 2, 22, '2026-02-21 08:00:00', '2026-02-21 09:00:00', 'completed', '', NULL, 10000.00, 'HUF', NULL, NULL, NULL, '2026-02-12 08:00:00', NULL),
+(360, 1, 2, 2, 24, '2026-02-21 09:10:00', '2026-02-21 10:10:00', 'completed', '', NULL, 10000.00, 'HUF', NULL, NULL, NULL, '2026-02-15 05:10:00', NULL),
+(361, 1, 1, 2, 16, '2026-02-21 10:15:00', '2026-02-21 11:00:00', 'no_show', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-16 06:15:00', NULL),
+(362, 2, 4, 3, 16, '2025-12-23 10:00:00', '2025-12-23 11:00:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-13 02:00:00', NULL),
+(363, 2, 7, 3, 23, '2025-12-23 11:05:00', '2025-12-23 12:05:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-19 23:05:00', NULL),
+(364, 2, 4, 3, 5, '2025-12-23 12:15:00', '2025-12-23 13:15:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-22 01:15:00', NULL),
+(365, 2, 9, 3, 8, '2025-12-23 13:20:00', '2025-12-23 14:50:00', 'completed', '', NULL, 12000.00, 'HUF', NULL, NULL, NULL, '2025-12-14 04:20:00', NULL),
+(366, 2, 4, 3, 22, '2025-12-23 15:00:00', '2025-12-23 16:00:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-21 13:00:00', NULL),
+(367, 2, 10, 3, 19, '2025-12-24 10:00:00', '2025-12-24 10:30:00', 'completed', '', NULL, 16500.00, 'HUF', NULL, NULL, NULL, '2025-12-22 23:00:00', NULL),
+(368, 2, 4, 3, 6, '2025-12-24 10:35:00', '2025-12-24 11:35:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-22 02:35:00', NULL),
+(369, 2, 4, 3, 18, '2025-12-24 11:40:00', '2025-12-24 12:40:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-17 07:40:00', NULL),
+(370, 2, 7, 3, 6, '2025-12-25 10:00:00', '2025-12-25 11:00:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-14 23:00:00', NULL),
+(371, 2, 4, 3, 19, '2025-12-25 11:05:00', '2025-12-25 12:05:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-22 04:05:00', NULL),
+(372, 2, 6, 3, 7, '2025-12-25 12:15:00', '2025-12-25 12:45:00', 'completed', '', NULL, 3500.00, 'HUF', NULL, NULL, NULL, '2025-12-23 12:15:00', NULL),
+(373, 2, 4, 3, 5, '2025-12-25 12:55:00', '2025-12-25 13:55:00', 'no_show', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-20 03:55:00', NULL),
+(374, 2, 4, 3, 9, '2025-12-25 14:00:00', '2025-12-25 15:00:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-16 03:00:00', NULL),
+(375, 2, 9, 3, 20, '2025-12-26 10:00:00', '2025-12-26 11:30:00', 'completed', '', NULL, 12000.00, 'HUF', NULL, NULL, NULL, '2025-12-18 23:00:00', NULL),
+(376, 2, 4, 3, 18, '2025-12-26 11:40:00', '2025-12-26 12:40:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-17 06:40:00', NULL),
+(377, 2, 5, 3, 16, '2025-12-26 12:50:00', '2025-12-26 14:20:00', 'no_show', '', NULL, 8500.00, 'HUF', NULL, NULL, NULL, '2025-12-19 06:50:00', NULL),
+(378, 2, 9, 3, 12, '2025-12-26 14:30:00', '2025-12-26 16:00:00', 'completed', '', NULL, 12000.00, 'HUF', NULL, NULL, NULL, '2025-12-16 10:30:00', NULL),
+(379, 2, 8, 3, 19, '2025-12-27 10:00:00', '2025-12-27 11:00:00', 'completed', '', NULL, 8000.00, 'HUF', NULL, NULL, NULL, '2025-12-20 02:00:00', NULL),
+(380, 2, 7, 3, 21, '2025-12-27 11:05:00', '2025-12-27 12:05:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-23 02:05:00', NULL),
+(381, 2, 10, 3, 9, '2025-12-27 12:10:00', '2025-12-27 12:40:00', 'completed', '', NULL, 16500.00, 'HUF', NULL, NULL, NULL, '2025-12-18 00:10:00', NULL),
+(382, 2, 7, 3, 16, '2025-12-27 12:45:00', '2025-12-27 13:45:00', 'no_show', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-26 01:45:00', NULL),
+(383, 2, 6, 3, 6, '2025-12-27 13:55:00', '2025-12-27 14:25:00', 'completed', '', NULL, 3500.00, 'HUF', NULL, NULL, NULL, '2025-12-21 03:55:00', NULL),
+(384, 2, 9, 3, 8, '2025-12-30 10:00:00', '2025-12-30 11:30:00', 'completed', '', NULL, 12000.00, 'HUF', NULL, NULL, NULL, '2025-12-29 10:00:00', NULL),
+(385, 2, 4, 3, 16, '2025-12-30 11:35:00', '2025-12-30 12:35:00', 'cancelled', '', NULL, 7000.00, 'HUF', 16, 'Nem tudok menni', '2025-12-29 19:35:00', '2025-12-25 03:35:00', NULL),
+(386, 2, 5, 3, 6, '2025-12-30 12:45:00', '2025-12-30 14:15:00', 'completed', '', NULL, 8500.00, 'HUF', NULL, NULL, NULL, '2025-12-23 04:45:00', NULL),
+(387, 2, 10, 3, 21, '2025-12-30 14:20:00', '2025-12-30 14:50:00', 'completed', '', NULL, 16500.00, 'HUF', NULL, NULL, NULL, '2025-12-24 07:20:00', NULL),
+(388, 2, 4, 3, 18, '2025-12-31 10:00:00', '2025-12-31 11:00:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-28 07:00:00', NULL),
+(389, 2, 4, 3, 20, '2025-12-31 11:10:00', '2025-12-31 12:10:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-25 02:10:00', NULL),
+(390, 2, 7, 3, 17, '2025-12-31 12:20:00', '2025-12-31 13:20:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-24 12:20:00', NULL),
+(391, 2, 7, 3, 5, '2025-12-31 13:25:00', '2025-12-31 14:25:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-24 07:25:00', NULL),
+(392, 2, 4, 3, 20, '2026-01-01 10:00:00', '2026-01-01 11:00:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-30 06:00:00', NULL),
+(393, 2, 4, 3, 18, '2026-01-01 11:05:00', '2026-01-01 12:05:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-28 05:05:00', NULL),
+(394, 2, 4, 3, 1, '2026-01-01 12:10:00', '2026-01-01 13:10:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-26 02:10:00', NULL),
+(395, 2, 7, 3, 5, '2026-01-01 13:15:00', '2026-01-01 14:15:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-27 08:15:00', NULL),
+(396, 2, 10, 3, 17, '2026-01-02 10:00:00', '2026-01-02 10:30:00', 'completed', '', NULL, 16500.00, 'HUF', NULL, NULL, NULL, '2026-01-01 01:00:00', NULL),
+(397, 2, 4, 3, 6, '2026-01-02 10:35:00', '2026-01-02 11:35:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-28 07:35:00', NULL),
+(398, 2, 8, 3, 13, '2026-01-02 11:40:00', '2026-01-02 12:40:00', 'completed', '', NULL, 8000.00, 'HUF', NULL, NULL, NULL, '2025-12-23 23:40:00', NULL),
+(399, 2, 8, 3, 9, '2026-01-02 12:45:00', '2026-01-02 13:45:00', 'completed', '', NULL, 8000.00, 'HUF', NULL, NULL, NULL, '2025-12-27 07:45:00', NULL),
+(400, 2, 4, 3, 22, '2026-01-03 10:00:00', '2026-01-03 11:00:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-26 06:00:00', NULL),
+(401, 2, 4, 3, 7, '2026-01-03 11:05:00', '2026-01-03 12:05:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2025-12-31 04:05:00', NULL),
+(402, 2, 8, 3, 14, '2026-01-03 12:10:00', '2026-01-03 13:10:00', 'cancelled', '', NULL, 8000.00, 'HUF', 14, 'Nem tudok menni', '2026-01-02 13:10:00', '2025-12-27 12:10:00', NULL),
+(403, 2, 6, 3, 11, '2026-01-06 10:00:00', '2026-01-06 10:30:00', 'completed', '', NULL, 3500.00, 'HUF', NULL, NULL, NULL, '2026-01-04 23:00:00', NULL),
+(404, 2, 9, 3, 10, '2026-01-06 10:35:00', '2026-01-06 12:05:00', 'completed', '', NULL, 12000.00, 'HUF', NULL, NULL, NULL, '2025-12-31 09:35:00', NULL),
+(405, 2, 8, 3, 5, '2026-01-06 12:10:00', '2026-01-06 13:10:00', 'completed', '', NULL, 8000.00, 'HUF', NULL, NULL, NULL, '2026-01-05 12:10:00', NULL),
+(406, 2, 6, 3, 18, '2026-01-06 13:15:00', '2026-01-06 13:45:00', 'completed', '', NULL, 3500.00, 'HUF', NULL, NULL, NULL, '2025-12-29 11:15:00', NULL),
+(407, 2, 7, 3, 12, '2026-01-06 13:55:00', '2026-01-06 14:55:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-29 12:55:00', NULL),
+(408, 2, 7, 3, 20, '2026-01-07 10:00:00', '2026-01-07 11:00:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2025-12-28 07:00:00', NULL),
+(409, 2, 10, 3, 21, '2026-01-07 11:10:00', '2026-01-07 11:40:00', 'completed', '', NULL, 16500.00, 'HUF', NULL, NULL, NULL, '2025-12-30 09:10:00', NULL),
+(410, 2, 4, 3, 8, '2026-01-07 11:45:00', '2026-01-07 12:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-01 08:45:00', NULL),
+(411, 2, 9, 3, 1, '2026-01-08 10:00:00', '2026-01-08 11:30:00', 'completed', '', NULL, 12000.00, 'HUF', NULL, NULL, NULL, '2025-12-29 06:00:00', NULL),
+(412, 2, 4, 3, 15, '2026-01-08 11:35:00', '2026-01-08 12:35:00', 'cancelled', '', NULL, 7000.00, 'HUF', 15, 'Nem tudok menni', '2026-01-07 22:35:00', '2025-12-30 09:35:00', NULL),
+(413, 2, 8, 3, 16, '2026-01-08 12:45:00', '2026-01-08 13:45:00', 'no_show', '', NULL, 8000.00, 'HUF', NULL, NULL, NULL, '2026-01-01 03:45:00', NULL),
+(414, 2, 5, 3, 11, '2026-01-09 10:00:00', '2026-01-09 11:30:00', 'completed', '', NULL, 8500.00, 'HUF', NULL, NULL, NULL, '2026-01-06 02:00:00', NULL),
+(415, 2, 10, 3, 15, '2026-01-09 11:35:00', '2026-01-09 12:05:00', 'completed', '', NULL, 16500.00, 'HUF', NULL, NULL, NULL, '2026-01-03 02:35:00', NULL),
+(416, 2, 7, 3, 5, '2026-01-09 12:10:00', '2026-01-09 13:10:00', 'no_show', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-06 03:10:00', NULL),
+(417, 2, 7, 3, 13, '2026-01-09 13:20:00', '2026-01-09 14:20:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-07 02:20:00', NULL),
+(418, 2, 4, 3, 13, '2026-01-10 10:00:00', '2026-01-10 11:00:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-09 06:00:00', NULL),
+(419, 2, 8, 3, 17, '2026-01-10 11:05:00', '2026-01-10 12:05:00', 'completed', '', NULL, 8000.00, 'HUF', NULL, NULL, NULL, '2026-01-05 05:05:00', NULL),
+(420, 2, 4, 3, 22, '2026-01-10 12:15:00', '2026-01-10 13:15:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-01 03:15:00', NULL),
+(421, 2, 9, 3, 17, '2026-01-13 10:00:00', '2026-01-13 11:30:00', 'completed', '', NULL, 12000.00, 'HUF', NULL, NULL, NULL, '2026-01-03 04:00:00', NULL),
+(422, 2, 7, 3, 19, '2026-01-13 11:35:00', '2026-01-13 12:35:00', 'no_show', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-11 02:35:00', NULL),
+(423, 2, 9, 3, 12, '2026-01-13 12:40:00', '2026-01-13 14:10:00', 'completed', '', NULL, 12000.00, 'HUF', NULL, NULL, NULL, '2026-01-03 11:40:00', NULL),
+(424, 2, 8, 3, 13, '2026-01-13 14:15:00', '2026-01-13 15:15:00', 'completed', '', NULL, 8000.00, 'HUF', NULL, NULL, NULL, '2026-01-06 12:15:00', NULL),
+(425, 2, 10, 3, 7, '2026-01-13 15:25:00', '2026-01-13 15:55:00', 'completed', '', NULL, 16500.00, 'HUF', NULL, NULL, NULL, '2026-01-10 08:25:00', NULL),
+(426, 2, 4, 3, 8, '2026-01-14 10:00:00', '2026-01-14 11:00:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-12 01:00:00', NULL),
+(427, 2, 8, 3, 13, '2026-01-14 11:05:00', '2026-01-14 12:05:00', 'completed', '', NULL, 8000.00, 'HUF', NULL, NULL, NULL, '2026-01-09 11:05:00', NULL),
+(428, 2, 7, 3, 10, '2026-01-14 12:15:00', '2026-01-14 13:15:00', 'no_show', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-12 03:15:00', NULL),
+(429, 2, 7, 3, 21, '2026-01-15 10:00:00', '2026-01-15 11:00:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-09 06:00:00', NULL),
+(430, 2, 5, 3, 19, '2026-01-15 11:05:00', '2026-01-15 12:35:00', 'completed', '', NULL, 8500.00, 'HUF', NULL, NULL, NULL, '2026-01-14 09:05:00', NULL),
+(431, 2, 8, 3, 20, '2026-01-15 12:40:00', '2026-01-15 13:40:00', 'completed', '', NULL, 8000.00, 'HUF', NULL, NULL, NULL, '2026-01-14 11:40:00', NULL),
+(432, 2, 4, 3, 12, '2026-01-16 10:00:00', '2026-01-16 11:00:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-06 09:00:00', NULL),
+(433, 2, 4, 3, 24, '2026-01-16 11:05:00', '2026-01-16 12:05:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-13 00:05:00', NULL),
+(434, 2, 9, 3, 17, '2026-01-16 12:10:00', '2026-01-16 13:40:00', 'completed', '', NULL, 12000.00, 'HUF', NULL, NULL, NULL, '2026-01-07 01:10:00', NULL),
+(435, 2, 4, 3, 5, '2026-01-16 13:50:00', '2026-01-16 14:50:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-11 08:50:00', NULL),
+(436, 2, 7, 3, 21, '2026-01-16 15:00:00', '2026-01-16 16:00:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-12 04:00:00', NULL),
+(437, 2, 5, 3, 13, '2026-01-17 10:00:00', '2026-01-17 11:30:00', 'no_show', '', NULL, 8500.00, 'HUF', NULL, NULL, NULL, '2026-01-06 22:00:00', NULL),
+(438, 2, 7, 3, 21, '2026-01-17 11:35:00', '2026-01-17 12:35:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-07 05:35:00', NULL),
+(439, 2, 8, 3, 14, '2026-01-17 12:40:00', '2026-01-17 13:40:00', 'completed', '', NULL, 8000.00, 'HUF', NULL, NULL, NULL, '2026-01-11 07:40:00', NULL),
+(440, 2, 7, 3, 9, '2026-01-20 10:00:00', '2026-01-20 11:00:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-19 09:00:00', NULL),
+(441, 2, 4, 3, 24, '2026-01-20 11:10:00', '2026-01-20 12:10:00', 'cancelled', '', NULL, 7000.00, 'HUF', 24, 'Nem tudok menni', '2026-01-20 00:10:00', '2026-01-14 09:10:00', NULL),
+(442, 2, 7, 3, 18, '2026-01-20 12:20:00', '2026-01-20 13:20:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-19 02:20:00', NULL),
+(443, 2, 7, 3, 10, '2026-01-21 10:00:00', '2026-01-21 11:00:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-16 01:00:00', NULL),
+(444, 2, 9, 3, 6, '2026-01-21 11:05:00', '2026-01-21 12:35:00', 'completed', '', NULL, 12000.00, 'HUF', NULL, NULL, NULL, '2026-01-11 04:05:00', NULL),
+(445, 2, 10, 3, 21, '2026-01-21 12:45:00', '2026-01-21 13:15:00', 'completed', '', NULL, 16500.00, 'HUF', NULL, NULL, NULL, '2026-01-20 07:45:00', NULL),
+(446, 2, 4, 3, 24, '2026-01-21 13:20:00', '2026-01-21 14:20:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-15 06:20:00', NULL),
+(447, 2, 5, 3, 15, '2026-01-22 10:00:00', '2026-01-22 11:30:00', 'completed', '', NULL, 8500.00, 'HUF', NULL, NULL, NULL, '2026-01-14 02:00:00', NULL),
+(448, 2, 8, 3, 12, '2026-01-22 11:40:00', '2026-01-22 12:40:00', 'completed', '', NULL, 8000.00, 'HUF', NULL, NULL, NULL, '2026-01-21 10:40:00', NULL),
+(449, 2, 4, 3, 7, '2026-01-22 12:45:00', '2026-01-22 13:45:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-17 02:45:00', NULL),
+(450, 2, 5, 3, 24, '2026-01-22 13:55:00', '2026-01-22 15:25:00', 'completed', '', NULL, 8500.00, 'HUF', NULL, NULL, NULL, '2026-01-19 08:55:00', NULL),
+(451, 2, 9, 3, 17, '2026-01-22 15:30:00', '2026-01-22 17:00:00', 'completed', '', NULL, 12000.00, 'HUF', NULL, NULL, NULL, '2026-01-14 08:30:00', NULL),
+(452, 2, 10, 3, 16, '2026-01-23 10:00:00', '2026-01-23 10:30:00', 'completed', '', NULL, 16500.00, 'HUF', NULL, NULL, NULL, '2026-01-19 09:00:00', NULL),
+(453, 2, 7, 3, 6, '2026-01-23 10:35:00', '2026-01-23 11:35:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-22 10:35:00', NULL),
+(454, 2, 10, 3, 21, '2026-01-23 11:45:00', '2026-01-23 12:15:00', 'completed', '', NULL, 16500.00, 'HUF', NULL, NULL, NULL, '2026-01-21 11:45:00', NULL),
+(455, 2, 10, 3, 9, '2026-01-23 12:25:00', '2026-01-23 12:55:00', 'completed', '', NULL, 16500.00, 'HUF', NULL, NULL, NULL, '2026-01-21 04:25:00', NULL),
+(456, 2, 4, 3, 1, '2026-01-23 13:05:00', '2026-01-23 14:05:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-15 03:05:00', NULL),
+(457, 2, 7, 3, 15, '2026-01-24 10:00:00', '2026-01-24 11:00:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-17 09:00:00', NULL),
+(458, 2, 4, 3, 1, '2026-01-24 11:10:00', '2026-01-24 12:10:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-18 02:10:00', NULL),
+(459, 2, 9, 3, 19, '2026-01-24 12:20:00', '2026-01-24 13:50:00', 'no_show', '', NULL, 12000.00, 'HUF', NULL, NULL, NULL, '2026-01-21 06:20:00', NULL),
+(460, 2, 7, 3, 16, '2026-01-24 13:55:00', '2026-01-24 14:55:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-19 10:55:00', NULL),
+(461, 2, 9, 3, 10, '2026-01-27 10:00:00', '2026-01-27 11:30:00', 'completed', '', NULL, 12000.00, 'HUF', NULL, NULL, NULL, '2026-01-19 22:00:00', NULL),
+(462, 2, 4, 3, 24, '2026-01-27 11:35:00', '2026-01-27 12:35:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-24 01:35:00', NULL),
+(463, 2, 8, 3, 8, '2026-01-27 12:40:00', '2026-01-27 13:40:00', 'completed', '', NULL, 8000.00, 'HUF', NULL, NULL, NULL, '2026-01-20 04:40:00', NULL),
+(464, 2, 6, 3, 19, '2026-01-27 13:45:00', '2026-01-27 14:15:00', 'completed', '', NULL, 3500.00, 'HUF', NULL, NULL, NULL, '2026-01-24 13:45:00', NULL),
+(465, 2, 8, 3, 13, '2026-01-28 10:00:00', '2026-01-28 11:00:00', 'completed', '', NULL, 8000.00, 'HUF', NULL, NULL, NULL, '2026-01-21 05:00:00', NULL),
+(466, 2, 5, 3, 18, '2026-01-28 11:05:00', '2026-01-28 12:35:00', 'completed', '', NULL, 8500.00, 'HUF', NULL, NULL, NULL, '2026-01-25 06:05:00', NULL),
+(467, 2, 4, 3, 10, '2026-01-28 12:40:00', '2026-01-28 13:40:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-18 12:40:00', NULL),
+(468, 2, 7, 3, 20, '2026-01-28 13:50:00', '2026-01-28 14:50:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-24 01:50:00', NULL),
+(469, 2, 8, 3, 21, '2026-01-29 10:00:00', '2026-01-29 11:00:00', 'completed', '', NULL, 8000.00, 'HUF', NULL, NULL, NULL, '2026-01-19 23:00:00', NULL),
+(470, 2, 8, 3, 8, '2026-01-29 11:05:00', '2026-01-29 12:05:00', 'completed', '', NULL, 8000.00, 'HUF', NULL, NULL, NULL, '2026-01-22 09:05:00', NULL),
+(471, 2, 8, 3, 1, '2026-01-29 12:10:00', '2026-01-29 13:10:00', 'completed', '', NULL, 8000.00, 'HUF', NULL, NULL, NULL, '2026-01-25 01:10:00', NULL),
+(472, 2, 7, 3, 8, '2026-01-30 10:00:00', '2026-01-30 11:00:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-28 06:00:00', NULL),
+(473, 2, 10, 3, 14, '2026-01-30 11:10:00', '2026-01-30 11:40:00', 'completed', '', NULL, 16500.00, 'HUF', NULL, NULL, NULL, '2026-01-28 07:10:00', NULL),
+(474, 2, 10, 3, 20, '2026-01-30 11:50:00', '2026-01-30 12:20:00', 'completed', '', NULL, 16500.00, 'HUF', NULL, NULL, NULL, '2026-01-28 03:50:00', NULL),
+(475, 2, 9, 3, 15, '2026-01-31 10:00:00', '2026-01-31 11:30:00', 'completed', '', NULL, 12000.00, 'HUF', NULL, NULL, NULL, '2026-01-22 04:00:00', NULL),
+(476, 2, 4, 3, 13, '2026-01-31 11:35:00', '2026-01-31 12:35:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-23 03:35:00', NULL),
+(477, 2, 9, 3, 24, '2026-01-31 12:45:00', '2026-01-31 14:15:00', 'completed', '', NULL, 12000.00, 'HUF', NULL, NULL, NULL, '2026-01-22 10:45:00', NULL),
+(478, 2, 4, 3, 8, '2026-01-31 14:20:00', '2026-01-31 15:20:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-27 04:20:00', NULL),
+(479, 2, 4, 3, 22, '2026-02-03 10:00:00', '2026-02-03 11:00:00', 'no_show', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-30 22:00:00', NULL),
+(480, 2, 10, 3, 1, '2026-02-03 11:10:00', '2026-02-03 11:40:00', 'completed', '', NULL, 16500.00, 'HUF', NULL, NULL, NULL, '2026-01-25 23:10:00', NULL),
+(481, 2, 7, 3, 21, '2026-02-03 11:45:00', '2026-02-03 12:45:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-29 23:45:00', NULL),
+(482, 2, 10, 3, 18, '2026-02-03 12:55:00', '2026-02-03 13:25:00', 'completed', '', NULL, 16500.00, 'HUF', NULL, NULL, NULL, '2026-01-26 03:55:00', NULL),
+(483, 2, 6, 3, 15, '2026-02-04 10:00:00', '2026-02-04 10:30:00', 'completed', '', NULL, 3500.00, 'HUF', NULL, NULL, NULL, '2026-01-26 07:00:00', NULL),
+(484, 2, 10, 3, 11, '2026-02-04 10:35:00', '2026-02-04 11:05:00', 'completed', '', NULL, 16500.00, 'HUF', NULL, NULL, NULL, '2026-02-01 22:35:00', NULL),
+(485, 2, 7, 3, 24, '2026-02-04 11:10:00', '2026-02-04 12:10:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-02 09:10:00', NULL),
+(486, 2, 10, 3, 10, '2026-02-04 12:15:00', '2026-02-04 12:45:00', 'completed', '', NULL, 16500.00, 'HUF', NULL, NULL, NULL, '2026-01-25 09:15:00', NULL),
+(487, 2, 7, 3, 13, '2026-02-04 12:50:00', '2026-02-04 13:50:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-25 09:50:00', NULL),
+(488, 2, 7, 3, 19, '2026-02-05 10:00:00', '2026-02-05 11:00:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-29 23:00:00', NULL),
+(489, 2, 7, 3, 7, '2026-02-05 11:05:00', '2026-02-05 12:05:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-27 01:05:00', NULL),
+(490, 2, 4, 3, 20, '2026-02-05 12:10:00', '2026-02-05 13:10:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-29 00:10:00', NULL),
+(491, 2, 7, 3, 12, '2026-02-06 10:00:00', '2026-02-06 11:00:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-01-29 10:00:00', NULL),
+(492, 2, 10, 3, 8, '2026-02-06 11:05:00', '2026-02-06 11:35:00', 'no_show', '', NULL, 16500.00, 'HUF', NULL, NULL, NULL, '2026-01-27 01:05:00', NULL),
+(493, 2, 9, 3, 14, '2026-02-06 11:40:00', '2026-02-06 13:10:00', 'no_show', '', NULL, 12000.00, 'HUF', NULL, NULL, NULL, '2026-02-03 09:40:00', NULL),
+(494, 2, 4, 3, 9, '2026-02-06 13:20:00', '2026-02-06 14:20:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-01-31 08:20:00', NULL),
+(495, 2, 5, 3, 19, '2026-02-07 10:00:00', '2026-02-07 11:30:00', 'completed', '', NULL, 8500.00, 'HUF', NULL, NULL, NULL, '2026-02-03 01:00:00', NULL),
+(496, 2, 5, 3, 5, '2026-02-07 11:40:00', '2026-02-07 13:10:00', 'completed', '', NULL, 8500.00, 'HUF', NULL, NULL, NULL, '2026-01-31 04:40:00', NULL),
+(497, 2, 4, 3, 21, '2026-02-07 13:15:00', '2026-02-07 14:15:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-01 13:15:00', NULL),
+(498, 2, 9, 3, 9, '2026-02-07 14:20:00', '2026-02-07 15:50:00', 'completed', '', NULL, 12000.00, 'HUF', NULL, NULL, NULL, '2026-02-03 12:20:00', NULL),
+(499, 2, 5, 3, 15, '2026-02-10 10:00:00', '2026-02-10 11:30:00', 'completed', '', NULL, 8500.00, 'HUF', NULL, NULL, NULL, '2026-02-04 05:00:00', NULL),
+(500, 2, 9, 3, 5, '2026-02-10 11:40:00', '2026-02-10 13:10:00', 'completed', '', NULL, 12000.00, 'HUF', NULL, NULL, NULL, '2026-02-01 04:40:00', NULL),
+(501, 2, 7, 3, 18, '2026-02-10 13:15:00', '2026-02-10 14:15:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-09 06:15:00', NULL),
+(502, 2, 5, 3, 8, '2026-02-10 14:20:00', '2026-02-10 15:50:00', 'completed', '', NULL, 8500.00, 'HUF', NULL, NULL, NULL, '2026-02-09 09:20:00', NULL),
+(503, 2, 7, 3, 24, '2026-02-11 10:00:00', '2026-02-11 11:00:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-07 06:00:00', NULL),
+(504, 2, 7, 3, 13, '2026-02-11 11:05:00', '2026-02-11 12:05:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-06 06:05:00', NULL),
+(505, 2, 4, 3, 20, '2026-02-11 12:10:00', '2026-02-11 13:10:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-05 12:10:00', NULL),
+(506, 2, 9, 3, 21, '2026-02-12 10:00:00', '2026-02-12 11:30:00', 'completed', '', NULL, 12000.00, 'HUF', NULL, NULL, NULL, '2026-02-03 07:00:00', NULL),
+(507, 2, 6, 3, 5, '2026-02-12 11:35:00', '2026-02-12 12:05:00', 'completed', '', NULL, 3500.00, 'HUF', NULL, NULL, NULL, '2026-02-06 05:35:00', NULL),
+(508, 2, 9, 3, 6, '2026-02-12 12:15:00', '2026-02-12 13:45:00', 'completed', '', NULL, 12000.00, 'HUF', NULL, NULL, NULL, '2026-02-11 01:15:00', NULL),
+(509, 2, 7, 3, 8, '2026-02-12 13:50:00', '2026-02-12 14:50:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-03 09:50:00', NULL),
+(510, 2, 10, 3, 13, '2026-02-13 10:00:00', '2026-02-13 10:30:00', 'completed', '', NULL, 16500.00, 'HUF', NULL, NULL, NULL, '2026-02-10 10:00:00', NULL),
+(511, 2, 8, 3, 15, '2026-02-13 10:40:00', '2026-02-13 11:40:00', 'completed', '', NULL, 8000.00, 'HUF', NULL, NULL, NULL, '2026-02-10 05:40:00', NULL),
+(512, 2, 9, 3, 12, '2026-02-13 11:45:00', '2026-02-13 13:15:00', 'completed', '', NULL, 12000.00, 'HUF', NULL, NULL, NULL, '2026-02-11 06:45:00', NULL),
+(513, 2, 4, 3, 18, '2026-02-13 13:20:00', '2026-02-13 14:20:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-11 06:20:00', NULL),
+(514, 2, 6, 3, 23, '2026-02-14 10:00:00', '2026-02-14 10:30:00', 'completed', '', NULL, 3500.00, 'HUF', NULL, NULL, NULL, '2026-02-12 08:00:00', NULL),
+(515, 2, 10, 3, 13, '2026-02-14 10:40:00', '2026-02-14 11:10:00', 'completed', '', NULL, 16500.00, 'HUF', NULL, NULL, NULL, '2026-02-08 05:40:00', NULL),
+(516, 2, 10, 3, 14, '2026-02-14 11:20:00', '2026-02-14 11:50:00', 'completed', '', NULL, 16500.00, 'HUF', NULL, NULL, NULL, '2026-02-06 03:20:00', NULL),
+(517, 2, 5, 3, 13, '2026-02-17 10:00:00', '2026-02-17 11:30:00', 'no_show', '', NULL, 8500.00, 'HUF', NULL, NULL, NULL, '2026-02-07 10:00:00', NULL),
+(518, 2, 4, 3, 21, '2026-02-17 11:35:00', '2026-02-17 12:35:00', 'completed', '', NULL, 7000.00, 'HUF', NULL, NULL, NULL, '2026-02-13 03:35:00', NULL),
+(519, 2, 5, 3, 12, '2026-02-17 12:40:00', '2026-02-17 14:10:00', 'completed', '', NULL, 8500.00, 'HUF', NULL, NULL, NULL, '2026-02-12 08:40:00', NULL),
+(520, 2, 8, 3, 22, '2026-02-18 10:00:00', '2026-02-18 11:00:00', 'completed', '', NULL, 8000.00, 'HUF', NULL, NULL, NULL, '2026-02-10 03:00:00', NULL),
+(521, 2, 5, 3, 20, '2026-02-18 11:10:00', '2026-02-18 12:40:00', 'completed', '', NULL, 8500.00, 'HUF', NULL, NULL, NULL, '2026-02-13 04:10:00', NULL),
+(522, 2, 7, 3, 19, '2026-02-18 12:50:00', '2026-02-18 13:50:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-09 01:50:00', NULL),
+(523, 2, 7, 3, 9, '2026-02-19 10:00:00', '2026-02-19 11:00:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-12 10:00:00', NULL),
+(524, 2, 5, 3, 21, '2026-02-19 11:10:00', '2026-02-19 12:40:00', 'completed', '', NULL, 8500.00, 'HUF', NULL, NULL, NULL, '2026-02-16 04:10:00', NULL),
+(525, 2, 10, 3, 19, '2026-02-19 12:45:00', '2026-02-19 13:15:00', 'cancelled', '', NULL, 16500.00, 'HUF', 19, 'Nem tudok menni', '2026-02-19 02:45:00', '2026-02-18 00:45:00', NULL),
+(526, 2, 7, 3, 21, '2026-02-20 10:00:00', '2026-02-20 11:00:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-14 23:00:00', NULL),
+(527, 2, 8, 3, 17, '2026-02-20 11:10:00', '2026-02-20 12:10:00', 'completed', '', NULL, 8000.00, 'HUF', NULL, NULL, NULL, '2026-02-18 02:10:00', NULL),
+(528, 2, 10, 3, 12, '2026-02-20 12:15:00', '2026-02-20 12:45:00', 'completed', '', NULL, 16500.00, 'HUF', NULL, NULL, NULL, '2026-02-11 00:15:00', NULL),
+(529, 2, 5, 3, 21, '2026-02-21 10:00:00', '2026-02-21 11:30:00', 'no_show', '', NULL, 8500.00, 'HUF', NULL, NULL, NULL, '2026-02-11 08:00:00', NULL),
+(530, 2, 7, 3, 10, '2026-02-21 11:40:00', '2026-02-21 12:40:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-17 08:40:00', NULL),
+(531, 2, 7, 3, 15, '2026-02-21 12:45:00', '2026-02-21 13:45:00', 'completed', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-16 08:45:00', NULL),
+(532, 2, 7, 3, 1, '2026-02-21 13:50:00', '2026-02-21 14:50:00', 'no_show', '', NULL, 11000.00, 'HUF', NULL, NULL, NULL, '2026-02-11 01:50:00', NULL),
+(533, 2, 8, 3, 16, '2026-02-21 14:55:00', '2026-02-21 15:55:00', 'completed', '', NULL, 8000.00, 'HUF', NULL, NULL, NULL, '2026-02-11 09:55:00', NULL);
 
 -- --------------------------------------------------------
 
@@ -4302,173 +4799,85 @@ INSERT INTO `appointments` (`id`, `company_id`, `service_id`, `staff_id`, `clien
 --
 
 CREATE TABLE `audit_logs` (
-  `id` int(11) NOT NULL,
-  `performed_by_user_id` int(11) NOT NULL,
-  `performed_by_role` varchar(50) COLLATE utf8mb4_hungarian_ci DEFAULT NULL,
-  `affected_entity_id` int(11) DEFAULT NULL,
-  `company_id` int(11) DEFAULT NULL,
-  `email` varchar(200) COLLATE utf8mb4_hungarian_ci DEFAULT NULL,
-  `entity_type` varchar(50) COLLATE utf8mb4_hungarian_ci DEFAULT NULL COMMENT 'appointment, user, company, service, etc.',
-  `action` varchar(100) COLLATE utf8mb4_hungarian_ci NOT NULL COMMENT 'create, update, delete, login, etc.',
+  `id` int NOT NULL,
+  `performed_by_user_id` int NOT NULL,
+  `performed_by_role` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci DEFAULT NULL,
+  `affected_entity_id` int DEFAULT NULL,
+  `company_id` int DEFAULT NULL,
+  `email` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci DEFAULT NULL,
+  `entity_type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci DEFAULT NULL COMMENT 'appointment, user, company, service, etc.',
+  `action` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci NOT NULL COMMENT 'create, update, delete, login, etc.',
   `old_values` json DEFAULT NULL,
   `new_values` json DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `affected_user_id` int(11) DEFAULT NULL
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
 
 --
 -- Dumping data for table `audit_logs`
 --
 
-INSERT INTO `audit_logs` (`id`, `performed_by_user_id`, `performed_by_role`, `affected_entity_id`, `company_id`, `email`, `entity_type`, `action`, `old_values`, `new_values`, `created_at`, `affected_user_id`) VALUES
-(1, 41, 'client', 41, NULL, 'admin@admin.hu', 'user', 'register', NULL, '{\"role\": \"client\", \"email\": \"admin@admin.hu\", \"user_id\": 41, \"last_name\": \"Admin\", \"first_name\": \"Admin\"}', '2026-01-17 17:19:35', NULL),
-(2, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'register', NULL, '{\"role\": \"client\", \"email\": \"admin@admin.hu\", \"user_id\": 41, \"last_name\": \"Admin\", \"first_name\": \"Admin\"}', '2026-01-17 17:19:35', NULL),
-(3, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'email_verified', NULL, NULL, '2026-01-17 17:36:57', NULL),
-(4, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-17 17:37:52', NULL),
-(5, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-17 17:56:11', NULL),
-(6, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-17 18:09:44', NULL),
-(7, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-17 18:46:36', NULL),
-(8, 24, NULL, NULL, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-01-18 20:46:23', NULL),
-(9, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-18 20:47:27', NULL),
-(10, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-18 20:49:01', NULL),
-(11, 43, 'client', NULL, NULL, 'admin@admin.com', 'user', 'register', NULL, '{\"role\": \"client\", \"email\": \"admin@admin.com\", \"user_id\": 43, \"last_name\": \"Admin\", \"first_name\": \"Admin\"}', '2026-01-23 09:48:02', NULL),
-(12, 43, NULL, NULL, NULL, 'admin@admin.com', 'user', 'email_verified', NULL, NULL, '2026-01-23 09:48:09', NULL),
-(13, 43, 'client', NULL, NULL, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-23 09:48:28', NULL),
-(14, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-23 10:18:22', NULL),
-(15, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-23 19:11:44', NULL),
-(16, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-23 19:13:53', NULL),
-(17, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-23 19:13:59', NULL),
-(18, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-23 19:17:16', NULL),
-(19, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-23 19:17:28', NULL),
-(20, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-23 19:42:25', NULL),
-(22, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-27 09:00:51', NULL),
-(23, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-27 09:02:29', NULL),
-(24, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'company', 'deleteImage', NULL, NULL, '2026-01-27 09:04:10', NULL),
-(25, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'password_reset_request', NULL, NULL, '2026-01-27 09:56:07', NULL),
-(26, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'password_reset', NULL, NULL, '2026-01-27 09:57:09', NULL),
-(27, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'password_reset_request', NULL, NULL, '2026-01-27 09:57:49', NULL),
-(28, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'password_reset', NULL, NULL, '2026-01-27 09:58:29', NULL),
-(29, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-27 09:58:39', NULL),
-(30, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-27 10:05:29', NULL),
-(31, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 18:08:38', NULL),
-(32, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 18:42:39', NULL),
-(33, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 18:43:29', NULL),
-(34, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 18:43:38', NULL),
-(35, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 20:04:36', NULL),
-(36, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 20:18:31', NULL),
-(37, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 20:29:44', NULL),
-(38, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 20:29:58', NULL),
-(39, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 20:30:05', NULL),
-(40, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-28 21:02:46', NULL),
-(41, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-29 16:27:08', NULL),
-(42, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-29 16:31:53', NULL),
-(43, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-29 20:39:05', NULL),
-(44, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-29 20:45:37', NULL),
-(45, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-29 21:29:48', NULL),
-(46, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 08:49:07', NULL),
-(47, 41, NULL, NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 15:08:44', NULL),
-(48, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-01-30 15:08:57', NULL),
-(49, 44, 'client', NULL, NULL, 'vben@gmail.com', 'user', 'register', NULL, '{\"role\": \"client\", \"email\": \"vben@gmail.com\", \"user_id\": 44, \"last_name\": \"Vasvári\", \"first_name\": \"Benjamin\"}', '2026-01-30 19:17:16', NULL),
-(50, 44, NULL, NULL, NULL, 'vben@gmail.com', 'user', 'email_verified', NULL, NULL, '2026-01-30 19:17:54', NULL),
-(51, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 19:18:21', NULL),
-(52, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 19:26:28', NULL),
-(53, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 19:32:33', NULL),
-(54, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 19:41:14', NULL),
-(55, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 19:50:38', NULL),
-(56, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 19:59:28', NULL),
-(57, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 20:08:07', NULL),
-(58, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-30 20:13:27', NULL),
-(59, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-01-31 19:35:49', NULL),
-(60, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-02-01 11:50:29', NULL),
-(61, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-02-01 13:32:13', NULL),
-(62, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-02-01 13:33:06', NULL),
-(63, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-02-01 13:38:36', NULL),
-(64, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-02-01 13:43:48', NULL),
-(65, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-02-03 08:41:02', NULL),
-(66, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-02-03 08:44:11', NULL),
-(67, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-02-03 08:51:11', NULL),
-(68, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-02-03 08:59:04', NULL),
-(69, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-02-03 12:13:09', NULL),
-(70, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-02-03 12:14:16', NULL),
-(71, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-02-03 12:14:28', NULL),
-(72, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-02-03 12:43:59', NULL),
-(73, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-02-03 12:54:27', NULL),
-(74, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'bookAppointment', NULL, '{\"notes\": \"\", \"price\": 11900, \"endTime\": \"2026-02-23 13:00:00.0\", \"staffId\": 4, \"clientId\": 41, \"companyId\": 2, \"serviceId\": 7, \"startTime\": \"2026-02-23 12:00:00.0\"}', '2026-02-03 12:54:36', NULL),
-(75, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-02-03 12:58:50', NULL),
-(76, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-02-04 08:41:14', NULL),
-(77, 45, 'staff', NULL, 1, 'uhunor41@gmail.com', 'user', 'soft_delete', '{\"is_deleted\": 0}', '{\"deleted_at\": null, \"is_deleted\": 1}', '2026-02-04 08:42:51', 45),
-(78, 45, 'staff', NULL, 1, 'uhunor41@gmail.com', 'user', 'login', NULL, NULL, '2026-02-04 08:43:53', NULL),
-(79, 47, 'client', NULL, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-09 18:55:29', 47),
-(80, 3, NULL, NULL, NULL, 'kuki', 'user', 'login', NULL, NULL, '2026-02-09 18:56:10', NULL),
-(81, 47, 'client', NULL, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-09 18:56:14', 47),
-(82, 47, 'client', NULL, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-09 19:19:48', 47),
-(83, 47, 'client', NULL, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-09 19:19:54', NULL),
-(84, 47, 'client', NULL, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-10 10:00:37', 47),
-(85, 47, 'client', NULL, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-10 10:02:03', 47),
-(86, 47, 'client', NULL, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-10 18:43:02', 47),
-(87, 47, 'client', NULL, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-10 22:50:26', 47),
-(88, 47, 'client', NULL, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-10 22:55:44', 47),
-(89, 47, 'client', NULL, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-10 23:27:10', 47),
-(90, 47, 'client', NULL, NULL, 'vasvariben@gmail.com', 'company', 'create', NULL, '{\"city\": \"Pécs\", \"name\": \"Jungle Salon Pécs\", \"email\": \"durvajunglesalon@jungle.hu\", \"phone\": \"+36209876543\", \"address\": \"Koller utca 7\", \"country\": \"Hungary\", \"ownerId\": 47, \"postalCode\": \"7626\", \"description\": \"Ahol TE vagy a lényeg! Próbáld ki bármelyik szolgáltatásunkat, nem fogsz csalódni. Szakmai tudásunk folyamatos fejlesztése nagyon fontos számunkra. Itt kerülsz TE a középpontba! Szolgáltatásaink során figyelünk az egyéniségedre, fejformádra, hajtípusodra és persze a kezelhetőségre is. Várunk sok szeretettel szalonunkban!\", \"cancellationHours\": 48, \"bookingAdvanceDays\": 45, \"businessCategoryId\": 3, \"allowSameDayBooking\": true, \"minimumBookingHoursahead\": 4}', '2026-02-10 23:27:11', NULL),
-(91, 47, 'client', NULL, 13, 'vasvariben@gmail.com', 'user', 'logout', NULL, NULL, '2026-02-10 23:30:50', 47),
-(92, 47, 'client', NULL, 13, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-10 23:31:01', 47),
-(93, 47, 'client', NULL, 13, 'vasvariben@gmail.com', 'user', 'logout', NULL, NULL, '2026-02-10 23:31:54', 47),
-(94, 47, 'client', NULL, 13, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-10 23:32:05', 47),
-(95, 47, 'owner', NULL, 13, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-10 23:40:13', 47),
-(96, 47, 'owner', NULL, 13, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-10 23:44:01', 47),
-(97, 47, 'owner', NULL, 13, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-10 23:45:23', 47),
-(98, 47, 'owner', NULL, 13, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-10 23:45:27', 47),
-(99, 47, 'owner', NULL, 13, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-10 23:47:17', 47),
-(100, 47, 'owner', NULL, 13, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-10 23:48:21', 47),
-(101, 47, 'owner', NULL, 13, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-10 23:49:48', 47),
-(102, 47, 'owner', NULL, 13, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-10 23:49:57', 47),
-(103, 47, 'owner', NULL, 13, 'vasvariben@gmail.com', 'user', 'logout', NULL, NULL, '2026-02-10 23:51:06', 47),
-(104, 47, 'superadmin', NULL, 13, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-10 23:51:16', 47),
-(105, 47, 'superadmin', NULL, 13, 'vasvariben@gmail.com', 'user', 'logout', NULL, NULL, '2026-02-11 08:35:49', 47),
-(106, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-02-11 08:35:59', 41),
-(107, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'logout', NULL, NULL, '2026-02-11 08:36:03', 41),
-(108, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'login', NULL, NULL, '2026-02-11 08:36:16', 43),
-(109, 43, 'superadmin', NULL, 2, 'admin@admin.com', 'user', 'logout', NULL, NULL, '2026-02-11 08:36:19', 43),
-(110, 47, 'superadmin', NULL, 13, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-11 11:36:45', 47),
-(111, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'login', NULL, NULL, '2026-02-11 12:08:10', 41),
-(112, 41, 'client', NULL, NULL, 'admin@admin.hu', 'user', 'logout', NULL, NULL, '2026-02-11 12:08:18', 41),
-(113, 47, 'superadmin', NULL, 13, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-11 19:00:59', 47),
-(114, 47, 'superadmin', NULL, 13, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-15 18:11:59', 47),
-(115, 47, 'superadmin', NULL, 13, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-15 18:23:16', 47),
-(116, 47, 'superadmin', NULL, 13, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-16 09:14:25', 47),
-(117, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-16 09:20:25', 47),
-(118, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-16 09:42:46', 47),
-(119, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-16 09:50:19', 47),
-(120, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-16 10:19:44', 47),
-(121, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-16 19:49:08', 47),
-(122, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-16 19:57:56', 47),
-(123, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-16 20:08:04', 47),
-(124, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-16 20:15:18', 47),
-(125, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-16 20:51:15', 47),
-(126, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-17 08:46:04', 47),
-(127, 47, 'superadmin', NULL, NULL, 'vasvariben@gmail.com', 'user', 'bookAppointment', NULL, '{\"notes\": \"\", \"price\": 11900, \"endTime\": \"2026-02-23 13:00:00.0\", \"staffId\": 4, \"clientId\": 47, \"companyId\": 2, \"serviceId\": 7, \"startTime\": \"2026-02-23 12:00:00.0\"}', '2026-02-17 08:46:05', NULL),
-(128, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-17 08:52:10', 47),
-(129, 47, 'superadmin', NULL, NULL, 'vasvariben@gmail.com', 'user', 'bookAppointment', NULL, '{\"notes\": \"\", \"price\": 11900, \"endTime\": \"2026-02-17 13:00:00.0\", \"staffId\": 4, \"clientId\": 47, \"companyId\": 2, \"serviceId\": 7, \"startTime\": \"2026-02-17 12:00:00.0\"}', '2026-02-17 08:52:11', NULL),
-(130, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'logout', NULL, NULL, '2026-02-17 09:35:47', 47),
-(131, 45, 'staff', NULL, 1, 'uhunor41@gmail.com', 'user', 'login', NULL, NULL, '2026-02-17 09:36:01', 45),
-(132, 45, 'staff', NULL, 1, 'uhunor41@gmail.com', 'user', 'login', NULL, NULL, '2026-02-17 09:47:08', 45),
-(133, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-17 09:49:42', 47),
-(134, 45, 'staff', NULL, 1, 'uhunor41@gmail.com', 'user', 'login', NULL, NULL, '2026-02-17 12:52:16', 45),
-(135, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-17 12:53:19', 47),
-(136, 45, 'staff', NULL, 1, 'uhunor41@gmail.com', 'user', 'login', NULL, NULL, '2026-02-17 18:27:46', 45),
-(137, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-17 18:28:56', 47),
-(138, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-18 21:02:12', 47),
-(139, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-19 09:30:24', 47),
-(140, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-19 09:58:27', 47),
-(141, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-19 10:12:48', 47),
-(142, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-19 10:40:01', 47),
-(143, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-19 11:23:37', 47),
-(144, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-19 11:41:21', 47),
-(145, 47, 'superadmin', NULL, NULL, 'vasvariben@gmail.com', 'user', 'bookAppointment', NULL, '{\"notes\": \"\", \"price\": 13900, \"endTime\": \"2026-02-20 13:45:00.0\", \"staffId\": 3, \"clientId\": 47, \"companyId\": 2, \"serviceId\": 8, \"startTime\": \"2026-02-20 13:30:00.0\"}', '2026-02-19 11:55:52', NULL),
-(146, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-19 16:54:06', 47),
-(147, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-19 20:52:23', 47),
-(148, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'logout', NULL, NULL, '2026-02-19 20:53:49', 47),
-(149, 47, 'superadmin', NULL, 2, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-20 08:39:59', 47);
+INSERT INTO `audit_logs` (`id`, `performed_by_user_id`, `performed_by_role`, `affected_entity_id`, `company_id`, `email`, `entity_type`, `action`, `old_values`, `new_values`, `created_at`) VALUES
+(1, 1, 'client', NULL, NULL, 'vasvariben@gmail.com', 'user', 'register', NULL, '{\"role\": \"client\", \"email\": \"vasvariben@gmail.com\", \"user_id\": 1, \"last_name\": \"Vasvári\", \"first_name\": \"Benjámin\"}', '2026-02-22 19:40:46'),
+(2, 1, NULL, NULL, NULL, 'vasvariben@gmail.com', 'user', 'email_verified', NULL, NULL, '2026-02-22 19:43:44'),
+(3, 1, 'client', 1, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-22 19:45:30'),
+(4, 1, 'superadmin', 1, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-22 19:46:38'),
+(5, 1, 'superadmin', 1, NULL, 'vasvariben@gmail.com', 'user', 'logout', NULL, NULL, '2026-02-22 19:46:47'),
+(6, 2, 'client', NULL, NULL, 'jungle@jungle.hu', 'user', 'register', NULL, '{\"role\": \"client\", \"email\": \"jungle@jungle.hu\", \"user_id\": 2, \"last_name\": \"Jungle\", \"first_name\": \"Tulaj\"}', '2026-02-22 19:47:44'),
+(7, 2, NULL, NULL, NULL, 'jungle@jungle.hu', 'user', 'email_verified', NULL, NULL, '2026-02-22 19:48:36'),
+(8, 2, 'client', 2, NULL, 'jungle@jungle.hu', 'user', 'login', NULL, NULL, '2026-02-22 19:48:42'),
+(9, 1, 'superadmin', 1, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-22 19:51:38'),
+(10, 1, 'vasvariben@gmail.com', 1, NULL, 'vasvariben@gmail.com', 'BusinessCategory', 'create', NULL, '{\"id\": 1, \"name\": \"Haj és Hajformázás\", \"description\": \"Hát ez egy fodrászat\"}', '2026-02-22 19:51:51'),
+(11, 2, 'client', 2, NULL, 'jungle@jungle.hu', 'user', 'logout', NULL, NULL, '2026-02-22 20:24:53'),
+(12, 2, 'client', 2, NULL, 'jungle@jungle.hu', 'user', 'login', NULL, NULL, '2026-02-22 20:37:53'),
+(13, 2, 'client', 1, NULL, 'jungle@jungle.hu', 'company', 'create', NULL, '{\"city\": \"Pécs\", \"name\": \"Jungle Pécs\", \"email\": \"jungle@jungle.hu\", \"phone\": \"+36203482974\", \"address\": \"Koller utca 7\", \"country\": \"Magyarország\", \"ownerId\": 2, \"postalCode\": \"7626\", \"description\": \"Ahol TE vagy a lényeg! Próbáld ki bármelyik szolgáltatásunkat, nem fogsz csalódni. Szakmai tudásunk folyamatos fejlesztése nagyon fontos számunkra. Itt kerülsz TE a középpontba! Szolgáltatásaink során figyelünk az egyéniségedre, fejformádra, hajtípusodra és persze a kezelhetőségre is. Várunk sok szeretettel szalonunkban!\", \"cancellationHours\": 24, \"bookingAdvanceDays\": 90, \"businessCategoryId\": 1, \"allowSameDayBooking\": false}', '2026-02-22 20:39:33'),
+(14, 2, 'client', 2, NULL, 'jungle@jungle.hu', 'user', 'logout', NULL, NULL, '2026-02-22 20:39:41'),
+(15, 2, 'owner', 2, 1, 'jungle@jungle.hu', 'user', 'login', NULL, NULL, '2026-02-22 20:40:05'),
+(16, 2, 'owner', 2, 1, 'jungle@jungle.hu', 'user', 'login', NULL, NULL, '2026-02-22 20:43:54'),
+(17, 2, 'owner', 2, 1, 'jungle@jungle.hu', 'user', 'login', NULL, NULL, '2026-02-22 20:45:31'),
+(18, 2, 'owner', NULL, 1, 'jungle@jungle.hu', 'company', 'uploadedMainImage', NULL, NULL, '2026-02-22 20:46:06'),
+(19, 2, 'owner', NULL, 1, 'jungle@jungle.hu', 'company', 'uploadedImage', NULL, NULL, '2026-02-22 20:47:09'),
+(20, 2, 'owner', NULL, 1, 'jungle@jungle.hu', 'company', 'uploadedImage', NULL, NULL, '2026-02-22 20:47:27'),
+(21, 2, 'owner', NULL, 1, 'jungle@jungle.hu', 'company', 'uploadedImage', NULL, NULL, '2026-02-22 20:47:36'),
+(22, 2, 'owner', 2, 1, 'jungle@jungle.hu', 'user', 'logout', NULL, NULL, '2026-02-22 20:53:34'),
+(23, 3, 'client', NULL, NULL, 'kerekes@kriszto.hu', 'user', 'register', NULL, '{\"role\": \"client\", \"email\": \"kerekes@kriszto.hu\", \"user_id\": 3, \"last_name\": \"Kerekes\", \"first_name\": \"Krisztofer\"}', '2026-02-22 21:37:08'),
+(24, 3, NULL, NULL, NULL, 'kerekes@kriszto.hu', 'user', 'email_verified', NULL, NULL, '2026-02-22 21:38:31'),
+(25, 3, 'client', 3, NULL, 'kerekes@kriszto.hu', 'user', 'login', NULL, NULL, '2026-02-22 21:38:48'),
+(26, 3, 'client', NULL, NULL, 'kerekes@kriszto.hu', 'user', 'uploadProfileImage', NULL, NULL, '2026-02-22 21:41:53'),
+(27, 3, 'client', 3, NULL, 'kerekes@kriszto.hu', 'user', 'logout', NULL, NULL, '2026-02-22 21:42:51'),
+(28, 3, 'client', 3, NULL, 'kerekes@kriszto.hu', 'user', 'login', NULL, NULL, '2026-02-22 21:43:30'),
+(29, 3, 'client', 3, NULL, 'kerekes@kriszto.hu', 'user', 'logout', NULL, NULL, '2026-02-22 21:43:42'),
+(30, 3, 'client', 3, NULL, 'kerekes@kriszto.hu', 'user', 'login', NULL, NULL, '2026-02-22 21:44:22'),
+(31, 3, 'client', 3, NULL, 'kerekes@kriszto.hu', 'user', 'logout', NULL, NULL, '2026-02-22 21:45:59'),
+(32, 3, 'staff', 3, 1, 'kerekes@kriszto.hu', 'user', 'login', NULL, NULL, '2026-02-22 21:46:11'),
+(33, 1, 'superadmin', 1, NULL, 'vasvariben@gmail.com', 'user', 'login', NULL, NULL, '2026-02-22 22:12:28'),
+(34, 1, 'superadmin', NULL, NULL, 'vasvariben@gmail.com', 'user', 'bookAppointment', NULL, '{\"notes\": \"\", \"price\": 7000, \"endTime\": \"2026-02-24 11:45:00.0\", \"staffId\": 1, \"clientId\": 1, \"companyId\": 1, \"serviceId\": 1, \"startTime\": \"2026-02-24 11:00:00.0\"}', '2026-02-22 22:12:41'),
+(35, 1, 'superadmin', 1, NULL, 'vasvariben@gmail.com', 'user', 'logout', NULL, NULL, '2026-02-22 22:13:58'),
+(36, 2, 'owner', 2, 1, 'jungle@jungle.hu', 'user', 'login', NULL, NULL, '2026-02-22 22:14:20'),
+(37, 4, 'client', NULL, NULL, 'mikor@balazs.hu', 'user', 'register', NULL, '{\"role\": \"client\", \"email\": \"mikor@balazs.hu\", \"user_id\": 4, \"last_name\": \"Mikó\", \"first_name\": \"Balázs\"}', '2026-02-22 23:06:43'),
+(38, 4, NULL, NULL, NULL, 'mikor@balazs.hu', 'user', 'email_verified', NULL, NULL, '2026-02-22 23:07:19'),
+(39, 4, 'staff', 4, 1, 'miko@balazs.hu', 'user', 'login', NULL, NULL, '2026-02-22 23:09:16'),
+(40, 4, 'staff', NULL, NULL, 'miko@balazs.hu', 'user', 'uploadProfileImage', NULL, NULL, '2026-02-22 23:11:28'),
+(41, 4, 'staff', 4, 1, 'miko@balazs.hu', 'user', 'logout', NULL, NULL, '2026-02-22 23:11:33'),
+(42, 25, 'client', NULL, NULL, 'perspective@perspective.hu', 'user', 'register', NULL, '{\"role\": \"client\", \"email\": \"perspective@perspective.hu\", \"user_id\": 25, \"last_name\": \"Perspective\", \"first_name\": \"Tulaj\"}', '2026-02-23 01:22:04'),
+(43, 25, NULL, NULL, NULL, 'perspective@perspective.hu', 'user', 'email_verified', NULL, NULL, '2026-02-23 01:22:11'),
+(44, 25, 'client', 25, NULL, 'perspective@perspective.hu', 'user', 'login', NULL, NULL, '2026-02-23 01:22:27'),
+(45, 25, 'client', 2, NULL, 'perspective@perspective.hu', 'company', 'create', NULL, '{\"city\": \"Pécs\", \"name\": \"Perspective\", \"email\": \"perspective@perspective.hu\", \"phone\": \"+36704839813\", \"address\": \"Boszorkány út, 1/2 Golden Corner\", \"country\": \"Magyarország\", \"ownerId\": 25, \"postalCode\": \"7624\", \"description\": \"Exklúzív férfi szalon, a gyönyörű Megyeszékhelyen, Baranya megye szívében a TV torony alatt Pécsett. Csapatunk törekszik a borbély szakmát a tradíciókhoz hűen képviselni modern köntösbe öltöztetve. Modern és klasszikus formákkal találkozhatnak nálunk a vendégeink, professzionális szolgáltatásunk napra készen tartását rendszeres szakmai továbbképzésekkel tarjuk fent. Köszönjük, ha minket választotok, számunkra ez hivatás nem csak egy közömbös szakma!\", \"cancellationHours\": 24, \"bookingAdvanceDays\": 90, \"businessCategoryId\": 1, \"allowSameDayBooking\": false}', '2026-02-23 01:24:25'),
+(46, 25, 'client', 25, NULL, 'perspective@perspective.hu', 'user', 'logout', NULL, NULL, '2026-02-23 01:24:34'),
+(47, 25, 'owner', 25, 2, 'perspective@perspective.hu', 'user', 'login', NULL, NULL, '2026-02-23 01:24:47'),
+(48, 25, 'owner', 25, 2, 'perspective@perspective.hu', 'user', 'login', NULL, NULL, '2026-02-23 01:25:22'),
+(49, 25, 'owner', 25, 2, 'perspective@perspective.hu', 'user', 'login', NULL, NULL, '2026-02-23 01:31:24'),
+(50, 25, 'owner', 25, 2, 'perspective@perspective.hu', 'user', 'login', NULL, NULL, '2026-02-23 01:37:35'),
+(51, 25, 'owner', NULL, 2, 'perspective@perspective.hu', 'company', 'uploadedMainImage', NULL, NULL, '2026-02-23 01:37:37'),
+(52, 25, 'owner', NULL, 2, 'perspective@perspective.hu', 'company', 'uploadedMainImage', NULL, NULL, '2026-02-23 01:38:29'),
+(53, 25, 'owner', NULL, 2, 'perspective@perspective.hu', 'company', 'uploadedMainImage', NULL, NULL, '2026-02-23 01:40:00'),
+(54, 25, 'owner', NULL, 2, 'perspective@perspective.hu', 'company', 'uploadedMainImage', NULL, NULL, '2026-02-23 01:41:47'),
+(55, 25, 'owner', 25, 2, 'perspective@perspective.hu', 'user', 'logout', NULL, NULL, '2026-02-23 01:44:35'),
+(56, 26, 'client', NULL, NULL, 'csoke@mark.hu', 'user', 'register', NULL, '{\"role\": \"client\", \"email\": \"csoke@mark.hu\", \"user_id\": 26, \"last_name\": \"Csőke\", \"first_name\": \"Márk\"}', '2026-02-23 01:46:20'),
+(57, 26, NULL, NULL, NULL, 'csoke@mark.hu', 'user', 'email_verified', NULL, NULL, '2026-02-23 01:46:26'),
+(58, 26, 'client', 26, NULL, 'csoke@mark.hu', 'user', 'login', NULL, NULL, '2026-02-23 01:46:59'),
+(59, 26, 'client', NULL, NULL, 'csoke@mark.hu', 'user', 'uploadProfileImage', NULL, NULL, '2026-02-23 01:47:16'),
+(60, 26, 'client', 26, NULL, 'csoke@mark.hu', 'user', 'logout', NULL, NULL, '2026-02-23 01:47:21'),
+(61, 2, 'owner', 2, 1, 'jungle@jungle.hu', 'user', 'login', NULL, NULL, '2026-02-23 02:08:35');
 
 -- --------------------------------------------------------
 
@@ -4477,13 +4886,13 @@ INSERT INTO `audit_logs` (`id`, `performed_by_user_id`, `performed_by_role`, `af
 --
 
 CREATE TABLE `business_categories` (
-  `id` int(11) NOT NULL,
-  `name` varchar(100) COLLATE utf8mb4_hungarian_ci NOT NULL,
-  `description` text COLLATE utf8mb4_hungarian_ci,
+  `id` int NOT NULL,
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci NOT NULL,
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci,
   `is_active` tinyint(1) NOT NULL DEFAULT '1',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT NULL,
-  `icon` varchar(50) COLLATE utf8mb4_hungarian_ci DEFAULT NULL
+  `icon` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
 
 --
@@ -4491,17 +4900,7 @@ CREATE TABLE `business_categories` (
 --
 
 INSERT INTO `business_categories` (`id`, `name`, `description`, `is_active`, `created_at`, `updated_at`, `icon`) VALUES
-(1, 'Szépségszalon', 'Kozmetikai és szépségápolási szolgáltatások', 1, '2024-01-01 09:00:00', NULL, NULL),
-(2, 'Wellness és Spa', 'Wellness, spa és masszázs szolgáltatások', 1, '2024-01-01 09:00:00', NULL, NULL),
-(3, 'Fodrászat', 'Fodrász és hajápolási szolgáltatások', 1, '2024-01-01 09:00:00', NULL, NULL),
-(4, 'Körömstúdió', 'Műköröm és manikűr szolgáltatások', 1, '2024-01-01 09:00:00', NULL, NULL),
-(5, 'Fitness', 'Fitness, jóga és edzőterem szolgáltatások', 1, '2024-01-01 09:00:00', NULL, NULL),
-(6, 'Egészségügy', 'Orvosi rendelő, gyógytorna és egészségügyi szolgáltatások', 1, '2024-01-01 09:00:00', NULL, NULL),
-(7, 'Fogorvos', 'Fogászati szolgáltatások', 1, '2024-01-01 09:00:00', NULL, NULL),
-(8, 'Állatorvos', 'Állatorvosi rendelő és szolgáltatások', 1, '2024-01-01 09:00:00', NULL, NULL),
-(9, 'Autószerviz', 'Autószerelés és karbantartás', 1, '2024-01-01 09:00:00', NULL, NULL),
-(10, 'Oktatás', 'Magánoktatás, tanfolyamok', 1, '2024-01-01 09:00:00', NULL, NULL),
-(11, 'Kukis faszos kezelés', 'anyád geci amugy tudtad?', 0, '2026-02-01 13:38:38', '2026-02-01 13:46:13', NULL);
+(1, 'Haj és Hajformázás', 'Hát ez egy fodrászat', 1, '2026-02-22 19:51:51', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -4510,27 +4909,27 @@ INSERT INTO `business_categories` (`id`, `name`, `description`, `is_active`, `cr
 --
 
 CREATE TABLE `companies` (
-  `id` int(11) NOT NULL,
-  `name` varchar(255) COLLATE utf8mb4_hungarian_ci NOT NULL,
-  `description` text COLLATE utf8mb4_hungarian_ci,
-  `address` text COLLATE utf8mb4_hungarian_ci,
-  `city` varchar(100) COLLATE utf8mb4_hungarian_ci DEFAULT NULL,
-  `postal_code` varchar(20) COLLATE utf8mb4_hungarian_ci DEFAULT NULL,
-  `country` varchar(100) COLLATE utf8mb4_hungarian_ci DEFAULT 'Hungary',
-  `phone` varchar(30) COLLATE utf8mb4_hungarian_ci DEFAULT NULL,
-  `email` varchar(100) COLLATE utf8mb4_hungarian_ci DEFAULT NULL,
-  `website` varchar(255) COLLATE utf8mb4_hungarian_ci DEFAULT NULL,
-  `business_category_id` int(11) DEFAULT NULL,
-  `owner_id` int(11) NOT NULL,
-  `booking_advance_days` int(11) DEFAULT '30' COMMENT 'How many days in advance bookings can be made',
-  `cancellation_hours` int(11) DEFAULT '24' COMMENT 'How many hours before appointment can be canceled',
+  `id` int NOT NULL,
+  `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci NOT NULL,
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci,
+  `address` text CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci,
+  `city` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci DEFAULT NULL,
+  `postal_code` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci DEFAULT NULL,
+  `country` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci DEFAULT 'Hungary',
+  `phone` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci DEFAULT NULL,
+  `email` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci DEFAULT NULL,
+  `website` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci DEFAULT NULL,
+  `business_category_id` int DEFAULT NULL,
+  `owner_id` int NOT NULL,
+  `booking_advance_days` int DEFAULT '30' COMMENT 'How many days in advance bookings can be made',
+  `cancellation_hours` int DEFAULT '24' COMMENT 'How many hours before appointment can be canceled',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime DEFAULT NULL,
   `deleted_at` datetime DEFAULT NULL,
   `is_deleted` tinyint(1) DEFAULT '0',
   `is_active` tinyint(1) NOT NULL DEFAULT '1',
   `allow_same_day_booking` tinyint(1) DEFAULT '1' COMMENT 'Can clients book appointments on the same day? TRUE = yes, FALSE = only next day onwards',
-  `minimum_booking_hours_ahead` int(11) DEFAULT '2' COMMENT 'If same-day booking allowed, minimum hours in advance (e.g. 2 hours). Only used if allow_same_day_booking = TRUE'
+  `minimum_booking_hours_ahead` int DEFAULT '2' COMMENT 'If same-day booking allowed, minimum hours in advance (e.g. 2 hours). Only used if allow_same_day_booking = TRUE'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
 
 --
@@ -4538,17 +4937,8 @@ CREATE TABLE `companies` (
 --
 
 INSERT INTO `companies` (`id`, `name`, `description`, `address`, `city`, `postal_code`, `country`, `phone`, `email`, `website`, `business_category_id`, `owner_id`, `booking_advance_days`, `cancellation_hours`, `created_at`, `updated_at`, `deleted_at`, `is_deleted`, `is_active`, `allow_same_day_booking`, `minimum_booking_hours_ahead`) VALUES
-(1, 'Bella Beauty Szalon', 'Modern szépségszalon a belvárosban, teljes körű kozmetikai szolgáltatásokkal', 'Váci utca 15.', 'Budapest', '1052', 'Hungary', '+36301111001', 'info@bellasalon.hu', 'www.bellasalon.hu', 1, 2, 30, 24, '2024-02-01 09:30:00', NULL, NULL, 0, 1, 1, 2),
-(2, 'Harmónia Wellness Centrum', 'Wellness központ masszázzsal és spa kezelésekkel', 'Thermal utca 8.', 'Budapest', '1039', 'Hungary', '+36301111002', 'info@harmoniawellness.hu', 'www.harmoniawellness.hu', 2, 47, 30, 24, '2024-02-05 10:30:00', NULL, NULL, 0, 1, 1, 2),
-(3, 'StyleCut Hair Studio', 'Trendi frizurák és hajkezelések minden korosztálynak', 'Rákóczi út 56.', 'Budapest', '1074', 'Hungary', '+36301111003', 'idopont@stylecut.hu', 'www.stylecut.hu', 3, 4, 21, 24, '2024-02-10 11:30:00', NULL, NULL, 0, 1, 1, 2),
-(4, 'Perfect Nails Studio', 'Professzionális körömépítés és díszítés', 'Ferenciek tere 3.', 'Budapest', '1053', 'Hungary', '+36301111004', 'booking@perfectnails.hu', 'www.perfectnails.hu', 4, 5, 21, 12, '2024-02-15 12:30:00', NULL, NULL, 0, 1, 1, 2),
-(5, 'FitZone Edzőterem', 'Modern edzőterem személyi edzőkkel és csoportos órákkal', 'Október 6. utca 22.', 'Budapest', '1051', 'Hungary', '+36301111005', 'info@fitzone.hu', 'www.fitzone.hu', 5, 6, 7, 6, '2024-02-20 13:30:00', NULL, NULL, 0, 1, 1, 2),
-(6, 'Yoga & Balance Stúdió', 'Jóga és meditációs stúdió minden szintű gyakorlóknak', 'Bem rakpart 15.', 'Budapest', '1011', 'Hungary', '+36301111006', 'hello@yogabalance.hu', 'www.yogabalance.hu', 5, 7, 14, 12, '2024-02-25 14:30:00', NULL, NULL, 0, 1, 1, 2),
-(7, 'Relaxa Masszázsszalon', 'Professzionális masszázs szolgáltatások nyugodt környezetben', 'Kossuth utca 12.', 'Debrecen', '4024', 'Hungary', '+36301111007', 'info@relaxa.hu', 'www.relaxa.hu', 2, 8, 14, 12, '2024-03-01 15:30:00', NULL, NULL, 0, 1, 1, 2),
-(8, 'BarberShop Budapest', 'Férfi fodrászat és borbély szolgáltatások', 'Wesselényi utca 18.', 'Budapest', '1077', 'Hungary', '+36301111008', 'booking@barbershop.hu', 'www.barbershop-bp.hu', 3, 9, 14, 12, '2024-03-05 16:30:00', NULL, NULL, 0, 1, 1, 2),
-(9, 'Naturál Szépségstúdió', 'Természetes alapanyagokkal dolgozó családias szalon', 'Fő utca 23.', 'Győr', '9021', 'Hungary', '+36301111009', 'hello@naturalszepseg.hu', 'www.naturalszepseg.hu', 1, 10, 21, 24, '2024-03-10 17:30:00', NULL, NULL, 0, 1, 1, 2),
-(10, 'ZenSpa Központ', 'Ázsiai ihletésű spa és wellness központ', 'Dózsa György út 34.', 'Szeged', '6720', 'Hungary', '+36301111010', 'reception@zenspa.hu', 'www.zenspa.hu', 2, 11, 60, 48, '2024-03-15 18:30:00', NULL, NULL, 0, 1, 1, 2),
-(13, 'Jungle Salon Pécs', 'Ahol TE vagy a lényeg! Próbáld ki bármelyik szolgáltatásunkat, nem fogsz csalódni. Szakmai tudásunk folyamatos fejlesztése nagyon fontos számunkra. Itt kerülsz TE a középpontba! Szolgáltatásaink során figyelünk az egyéniségedre, fejformádra, hajtípusodra és persze a kezelhetőségre is. Várunk sok szeretettel szalonunkban!', 'Koller utca 7', 'Pécs', '7626', 'Hungary', '+36209876543', 'durvajunglesalon@jungle.hu', NULL, 3, 47, 45, 48, '2026-02-11 00:27:11', NULL, NULL, 0, 1, 1, 4);
+(1, 'Jungle Pécs', 'Ahol TE vagy a lényeg! Próbáld ki bármelyik szolgáltatásunkat, nem fogsz csalódni. Szakmai tudásunk folyamatos fejlesztése nagyon fontos számunkra. Itt kerülsz TE a középpontba! Szolgáltatásaink során figyelünk az egyéniségedre, fejformádra, hajtípusodra és persze a kezelhetőségre is. Várunk sok szeretettel szalonunkban!', 'Koller utca 7', 'Pécs', '7626', 'Magyarország', '+36203482974', 'jungle@jungle.hu', NULL, 1, 2, 90, 24, '2026-02-22 21:39:33', NULL, NULL, 0, 1, 0, NULL),
+(2, 'Perspective', 'Exklúzív férfi szalon, a gyönyörű Megyeszékhelyen, Baranya megye szívében a TV torony alatt Pécsett. Csapatunk törekszik a borbély szakmát a tradíciókhoz hűen képviselni modern köntösbe öltöztetve. Modern és klasszikus formákkal találkozhatnak nálunk a vendégeink, professzionális szolgáltatásunk napra készen tartását rendszeres szakmai továbbképzésekkel tarjuk fent. Köszönjük, ha minket választotok, számunkra ez hivatás nem csak egy közömbös szakma!', 'Boszorkány út, 1/2 Golden Corner', 'Pécs', '7624', 'Magyarország', '+36704839813', 'perspective@perspective.hu', NULL, 1, 25, 90, 24, '2026-02-23 02:24:25', NULL, NULL, 0, 1, 0, NULL);
 
 -- --------------------------------------------------------
 
@@ -4557,70 +4947,13 @@ INSERT INTO `companies` (`id`, `name`, `description`, `address`, `city`, `postal
 --
 
 CREATE TABLE `favorites` (
-  `id` int(11) NOT NULL,
-  `user_id` int(11) NOT NULL COMMENT 'A felhasználó aki kedvencnek jelölte',
-  `company_id` int(11) NOT NULL COMMENT 'A kedvencnek jelölt cég',
+  `id` int NOT NULL,
+  `user_id` int NOT NULL COMMENT 'A felhasználó aki kedvencnek jelölte',
+  `company_id` int NOT NULL COMMENT 'A kedvencnek jelölt cég',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Mikor lett kedvenc',
   `deleted_at` timestamp NULL DEFAULT NULL COMMENT 'Mikor lett törölve',
   `is_deleted` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'Soft delete flag'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
-
---
--- Dumping data for table `favorites`
---
-
-INSERT INTO `favorites` (`id`, `user_id`, `company_id`, `created_at`, `deleted_at`, `is_deleted`) VALUES
-(1, 27, 1, '2024-02-06 14:00:00', NULL, 0),
-(2, 27, 2, '2024-02-07 15:00:00', NULL, 0),
-(3, 27, 7, '2024-03-23 14:30:00', NULL, 0),
-(4, 27, 10, '2024-03-14 14:00:00', NULL, 0),
-(5, 28, 1, '2024-02-07 10:00:00', NULL, 0),
-(6, 28, 3, '2024-03-02 15:00:00', NULL, 0),
-(7, 28, 6, '2024-03-28 16:00:00', NULL, 0),
-(8, 28, 10, '2024-03-21 15:00:00', NULL, 0),
-(9, 29, 1, '2024-02-09 15:00:00', NULL, 0),
-(10, 29, 4, '2024-02-27 14:00:00', NULL, 0),
-(11, 29, 8, '2024-02-14 13:00:00', NULL, 0),
-(12, 30, 1, '2024-02-13 11:00:00', NULL, 0),
-(13, 30, 2, '2024-02-07 15:00:00', NULL, 0),
-(14, 30, 4, '2024-02-27 14:00:00', NULL, 0),
-(15, 30, 9, '2024-03-11 17:00:00', NULL, 0),
-(16, 31, 1, '2024-02-15 09:00:00', NULL, 0),
-(17, 31, 2, '2024-02-11 10:00:00', NULL, 0),
-(18, 31, 3, '2024-02-18 17:00:00', NULL, 0),
-(19, 32, 1, '2024-02-19 10:30:00', NULL, 0),
-(20, 32, 3, '2024-02-10 14:00:00', NULL, 0),
-(21, 32, 5, '2024-02-14 10:00:00', NULL, 0),
-(22, 32, 7, '2024-02-18 12:00:00', NULL, 0),
-(23, 33, 1, '2024-02-21 13:30:00', NULL, 0),
-(24, 33, 2, '2024-02-21 11:00:00', NULL, 0),
-(25, 33, 5, '2024-02-21 11:00:00', NULL, 0),
-(26, 33, 8, '2024-03-13 12:00:00', NULL, 0),
-(27, 34, 1, '2024-03-04 11:00:00', NULL, 0),
-(28, 34, 3, '2024-02-24 15:00:00', NULL, 0),
-(29, 34, 7, '2024-03-03 13:00:00', NULL, 0),
-(30, 35, 1, '2024-03-07 14:30:00', NULL, 0),
-(31, 35, 3, '2024-03-03 17:00:00', NULL, 0),
-(32, 35, 6, '2024-03-01 14:00:00', NULL, 0),
-(33, 35, 10, '2024-02-22 14:00:00', NULL, 0),
-(34, 36, 2, '2024-03-05 13:30:00', NULL, 0),
-(35, 36, 4, '2024-02-15 14:00:00', NULL, 0),
-(36, 36, 6, '2024-03-07 17:00:00', NULL, 0),
-(37, 37, 1, '2024-03-21 15:30:00', NULL, 0),
-(38, 37, 2, '2024-03-11 15:30:00', NULL, 0),
-(39, 37, 6, '2024-03-14 15:00:00', NULL, 0),
-(40, 37, 9, '2024-02-19 13:00:00', NULL, 0),
-(41, 38, 5, '2024-03-10 09:00:00', NULL, 0),
-(42, 38, 8, '2024-03-15 13:00:00', NULL, 0),
-(43, 39, 3, '2024-03-12 10:00:00', NULL, 0),
-(44, 39, 9, '2024-03-18 14:00:00', NULL, 0),
-(45, 40, 4, '2024-03-20 11:00:00', NULL, 0),
-(46, 40, 7, '2024-03-25 12:00:00', NULL, 0),
-(47, 40, 10, '2024-03-28 13:00:00', NULL, 0),
-(48, 41, 2, '2026-01-29 20:38:45', NULL, 0),
-(49, 41, 5, '2026-01-29 20:40:37', NULL, 0),
-(50, 41, 7, '2026-01-29 21:29:50', '2026-01-30 08:49:14', 1),
-(51, 47, 13, '2026-02-11 08:32:17', NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -4629,11 +4962,11 @@ INSERT INTO `favorites` (`id`, `user_id`, `company_id`, `created_at`, `deleted_a
 --
 
 CREATE TABLE `images` (
-  `id` int(11) NOT NULL,
-  `company_id` int(11) DEFAULT NULL,
-  `user_id` int(11) DEFAULT NULL,
-  `url` text COLLATE utf8mb4_hungarian_ci,
-  `is_main` tinyint(4) NOT NULL DEFAULT '0',
+  `id` int NOT NULL,
+  `company_id` int DEFAULT NULL,
+  `user_id` int DEFAULT NULL,
+  `url` text CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci,
+  `is_main` tinyint NOT NULL DEFAULT '0',
   `uploaded_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `deleted_at` timestamp NULL DEFAULT NULL,
   `is_deleted` tinyint(1) NOT NULL DEFAULT '0'
@@ -4644,65 +4977,40 @@ CREATE TABLE `images` (
 --
 
 INSERT INTO `images` (`id`, `company_id`, `user_id`, `url`, `is_main`, `uploaded_at`, `deleted_at`, `is_deleted`) VALUES
-(1, 1, NULL, 'https://storage.bookr.hu/companies/bella-beauty/main-facade.jpg', 1, '2024-02-01 08:30:00', NULL, 0),
-(2, 1, NULL, 'https://storage.bookr.hu/companies/bella-beauty/interior-1.jpg', 0, '2024-02-01 08:35:00', NULL, 0),
-(3, 1, NULL, 'https://storage.bookr.hu/companies/bella-beauty/treatment-room.jpg', 0, '2024-02-01 08:40:00', NULL, 0),
-(4, 1, NULL, 'https://storage.bookr.hu/companies/bella-beauty/reception-area.jpg', 0, '2024-02-01 08:45:00', NULL, 0),
-(5, 2, NULL, 'uploads/companies/2/bd36d2db-55a1-4170-8807-4366cb4d971d.jpg', 1, '2024-02-05 09:30:00', NULL, 0),
-(9, 3, NULL, 'https://storage.bookr.hu/companies/stylecut/main-salon.jpg', 1, '2024-02-10 10:30:00', NULL, 0),
-(10, 3, NULL, 'https://storage.bookr.hu/companies/stylecut/washing-area.jpg', 0, '2024-02-10 10:35:00', NULL, 0),
-(11, 3, NULL, 'https://storage.bookr.hu/companies/stylecut/styling-stations.jpg', 0, '2024-02-10 10:40:00', NULL, 0),
-(12, 3, NULL, 'https://storage.bookr.hu/companies/stylecut/waiting-area.jpg', 0, '2024-02-10 10:45:00', NULL, 0),
-(13, 4, NULL, 'https://storage.bookr.hu/companies/perfect-nails/main-studio.jpg', 1, '2024-02-15 11:30:00', NULL, 0),
-(14, 4, NULL, 'https://storage.bookr.hu/companies/perfect-nails/work-station.jpg', 0, '2024-02-15 11:35:00', NULL, 0),
-(15, 4, NULL, 'https://storage.bookr.hu/companies/perfect-nails/waiting-area.jpg', 0, '2024-02-15 11:40:00', NULL, 0),
-(16, 4, NULL, 'https://storage.bookr.hu/companies/perfect-nails/nail-products.jpg', 0, '2024-02-15 11:45:00', NULL, 0),
-(17, 5, NULL, 'https://storage.bookr.hu/companies/fitzone/main-gym.jpg', 1, '2024-02-20 12:30:00', NULL, 0),
-(18, 5, NULL, 'https://storage.bookr.hu/companies/fitzone/cardio-area.jpg', 0, '2024-02-20 12:35:00', NULL, 0),
-(19, 5, NULL, 'https://storage.bookr.hu/companies/fitzone/weights-area.jpg', 0, '2024-02-20 12:40:00', NULL, 0),
-(20, 5, NULL, 'https://storage.bookr.hu/companies/fitzone/group-class-room.jpg', 0, '2024-02-20 12:45:00', NULL, 0),
-(21, 6, NULL, 'https://storage.bookr.hu/companies/yoga-balance/main-studio.jpg', 1, '2024-02-25 13:30:00', NULL, 0),
-(22, 6, NULL, 'https://storage.bookr.hu/companies/yoga-balance/meditation-room.jpg', 0, '2024-02-25 13:35:00', NULL, 0),
-(23, 6, NULL, 'https://storage.bookr.hu/companies/yoga-balance/yoga-props.jpg', 0, '2024-02-25 13:40:00', NULL, 0),
-(24, 6, NULL, 'https://storage.bookr.hu/companies/yoga-balance/changing-room.jpg', 0, '2024-02-25 13:45:00', NULL, 0),
-(25, 7, NULL, 'https://storage.bookr.hu/companies/relaxa/main-reception.jpg', 1, '2024-03-01 14:30:00', NULL, 0),
-(26, 7, NULL, 'https://storage.bookr.hu/companies/relaxa/massage-room-1.jpg', 0, '2024-03-01 14:35:00', NULL, 0),
-(27, 7, NULL, 'https://storage.bookr.hu/companies/relaxa/relax-area.jpg', 0, '2024-03-01 14:40:00', NULL, 0),
-(28, 7, NULL, 'https://storage.bookr.hu/companies/relaxa/massage-room-2.jpg', 0, '2024-03-01 14:45:00', NULL, 0),
-(29, 8, NULL, 'https://storage.bookr.hu/companies/barbershop/main-shop.jpg', 1, '2024-03-05 15:30:00', NULL, 0),
-(30, 8, NULL, 'https://storage.bookr.hu/companies/barbershop/barber-chair.jpg', 0, '2024-03-05 15:35:00', NULL, 0),
-(31, 8, NULL, 'https://storage.bookr.hu/companies/barbershop/vintage-interior.jpg', 0, '2024-03-05 15:40:00', NULL, 0),
-(32, 8, NULL, 'https://storage.bookr.hu/companies/barbershop/products-shelf.jpg', 0, '2024-03-05 15:45:00', NULL, 0),
-(33, 9, NULL, 'https://storage.bookr.hu/companies/natural/main-studio.jpg', 1, '2024-03-10 16:30:00', NULL, 0),
-(34, 9, NULL, 'https://storage.bookr.hu/companies/natural/treatment-area.jpg', 0, '2024-03-10 16:35:00', NULL, 0),
-(35, 9, NULL, 'https://storage.bookr.hu/companies/natural/products.jpg', 0, '2024-03-10 16:40:00', NULL, 0),
-(36, 9, NULL, 'https://storage.bookr.hu/companies/natural/garden-view.jpg', 0, '2024-03-10 16:45:00', NULL, 0),
-(37, 10, NULL, 'https://storage.bookr.hu/companies/zenspa/main-lobby.jpg', 1, '2024-03-15 17:30:00', NULL, 0),
-(38, 10, NULL, 'https://storage.bookr.hu/companies/zenspa/spa-pool.jpg', 0, '2024-03-15 17:35:00', NULL, 0),
-(39, 10, NULL, 'https://storage.bookr.hu/companies/zenspa/zen-garden.jpg', 0, '2024-03-15 17:40:00', NULL, 0),
-(40, 10, NULL, 'https://storage.bookr.hu/companies/zenspa/relaxation-lounge.jpg', 0, '2024-03-15 17:45:00', NULL, 0),
-(41, NULL, 12, 'https://storage.bookr.hu/staff/eszter-kozmetikus/profile.jpg', 0, '2024-02-01 12:05:00', NULL, 0),
-(42, NULL, 13, 'https://storage.bookr.hu/staff/kati-koromspecialista/profile.jpg', 0, '2024-02-01 12:10:00', NULL, 0),
-(43, NULL, 14, 'https://storage.bookr.hu/staff/marta-masszor/profile.jpg', 0, '2024-02-05 13:05:00', NULL, 0),
-(44, NULL, 15, 'https://storage.bookr.hu/staff/julia-spa-specialist/profile.jpg', 0, '2024-02-05 13:10:00', NULL, 0),
-(45, NULL, 16, 'https://storage.bookr.hu/staff/anna-fodrasz/profile.jpg', 0, '2024-02-10 14:05:00', NULL, 0),
-(46, NULL, 17, 'https://storage.bookr.hu/staff/peter-szinezo/profile.jpg', 0, '2024-02-10 14:10:00', NULL, 0),
-(47, NULL, 18, 'https://storage.bookr.hu/staff/zsuzsanna-mukorom/profile.jpg', 0, '2024-02-15 15:05:00', NULL, 0),
-(48, NULL, 19, 'https://storage.bookr.hu/staff/viktoria-nail-artist/profile.jpg', 0, '2024-02-15 15:10:00', NULL, 0),
-(49, NULL, 20, 'https://storage.bookr.hu/staff/gabor-personal-trainer/profile.jpg', 0, '2024-02-20 16:05:00', NULL, 0),
-(50, NULL, 21, 'https://storage.bookr.hu/staff/laura-fitness-instructor/profile.jpg', 0, '2024-02-20 16:10:00', NULL, 0),
-(51, NULL, 22, 'https://storage.bookr.hu/staff/emese-yoga-oktato/profile.jpg', 0, '2024-02-25 17:05:00', NULL, 0),
-(52, NULL, 23, 'https://storage.bookr.hu/staff/istvan-masszor/profile.jpg', 0, '2024-03-01 18:05:00', NULL, 0),
-(53, NULL, 24, 'https://storage.bookr.hu/staff/daniel-barber/profile.jpg', 0, '2024-03-05 19:05:00', NULL, 0),
-(54, NULL, 25, 'https://storage.bookr.hu/staff/reka-bio-kozmetikus/profile.jpg', 0, '2024-03-10 20:05:00', NULL, 0),
-(55, NULL, 26, 'https://storage.bookr.hu/staff/tamas-thai-specialist/profile.jpg', 0, '2024-03-15 21:05:00', NULL, 0),
-(56, NULL, 43, NULL, 0, '2026-01-23 09:48:02', NULL, 0),
-(58, 2, NULL, 'uploads/companies/2/cc09c873-09de-4693-8400-7d337ae8f585.jpg', 0, '2026-01-24 14:35:03', '2026-01-27 09:04:10', 1),
-(59, NULL, 44, NULL, 0, '2026-01-30 19:17:16', NULL, 0),
-(60, NULL, 45, NULL, 0, '2026-02-02 09:59:27', NULL, 0),
-(61, NULL, 41, NULL, 0, '2026-02-09 17:25:03', NULL, 0),
-(62, NULL, 47, NULL, 0, '2026-02-09 17:30:58', NULL, 0),
-(65, 13, NULL, NULL, 1, '2026-02-10 23:27:11', NULL, 0);
+(1, NULL, 1, NULL, 0, '2026-02-22 19:40:46', NULL, 0),
+(2, NULL, 2, NULL, 0, '2026-02-22 19:47:44', NULL, 0),
+(3, 1, NULL, 'uploads/companies/1/7b499da7-eada-4972-a5c5-73f7f0d231fa.jpg', 1, '2026-02-22 20:39:33', NULL, 0),
+(4, 1, NULL, 'uploads/companies/1/c4499e61-b454-426c-b10a-190d03e4ad3b.jpg', 0, '2026-02-22 20:47:09', NULL, 0),
+(5, 1, NULL, 'uploads/companies/1/831d9701-e94c-46d6-9fa4-339530751bb3.jpg', 0, '2026-02-22 20:47:27', NULL, 0),
+(6, 1, NULL, 'uploads/companies/1/770b0caf-fec5-413d-847a-03f9dbf293e5.jpg', 0, '2026-02-22 20:47:36', NULL, 0),
+(7, NULL, 3, NULL, 0, '2026-02-22 21:37:08', '2026-02-22 21:41:53', 1),
+(8, NULL, 3, 'uploads/users/3/885857a2-4aaf-45c5-aa90-908c10befd24.jpg', 0, '2026-02-22 21:41:53', NULL, 0),
+(9, NULL, 4, NULL, 0, '2026-02-22 23:06:43', '2026-02-22 23:11:28', 1),
+(10, NULL, 4, 'uploads/users/4/b553958e-32e2-4b4f-9e11-8a917c46c3ae.jpeg', 0, '2026-02-22 23:11:28', NULL, 0),
+(11, NULL, 5, NULL, 0, '2026-02-01 08:08:00', NULL, 0),
+(12, NULL, 6, NULL, 0, '2026-02-02 10:13:00', NULL, 0),
+(13, NULL, 7, NULL, 0, '2026-01-27 11:09:00', NULL, 0),
+(14, NULL, 8, NULL, 0, '2026-02-06 17:12:00', NULL, 0),
+(15, NULL, 9, NULL, 0, '2026-01-29 13:06:00', NULL, 0),
+(16, NULL, 10, NULL, 0, '2026-01-27 11:03:00', NULL, 0),
+(17, NULL, 11, NULL, 0, '2026-01-27 17:09:00', NULL, 0),
+(18, NULL, 12, NULL, 0, '2026-02-07 16:08:00', NULL, 0),
+(19, NULL, 13, NULL, 0, '2026-01-17 19:02:00', NULL, 0),
+(20, NULL, 14, NULL, 0, '2026-01-27 13:11:00', NULL, 0),
+(21, NULL, 15, NULL, 0, '2026-02-05 15:14:00', NULL, 0),
+(22, NULL, 16, NULL, 0, '2026-01-29 07:13:00', NULL, 0),
+(23, NULL, 17, NULL, 0, '2026-02-10 17:10:00', NULL, 0),
+(24, NULL, 18, NULL, 0, '2026-02-13 07:11:00', NULL, 0),
+(25, NULL, 19, NULL, 0, '2026-01-16 10:11:00', NULL, 0),
+(26, NULL, 20, NULL, 0, '2026-01-19 17:09:00', NULL, 0),
+(27, NULL, 21, NULL, 0, '2026-02-14 10:10:00', NULL, 0),
+(28, NULL, 22, NULL, 0, '2026-01-29 15:09:00', NULL, 0),
+(29, NULL, 23, NULL, 0, '2026-02-02 10:02:00', NULL, 0),
+(30, NULL, 24, NULL, 0, '2026-01-17 15:05:00', NULL, 0),
+(31, NULL, 25, NULL, 0, '2026-02-23 01:22:04', NULL, 0),
+(33, 2, NULL, 'uploads/companies/2/1aafe677-293f-4765-84ac-cc841c871f50.jpeg', 1, '2026-02-23 01:41:32', NULL, 0),
+(35, NULL, 26, NULL, 0, '2026-02-23 01:46:20', '2026-02-23 01:47:16', 1),
+(36, NULL, 26, 'uploads/users/26/f51a4a85-fdfb-4ee8-86e7-dde551723448.jpeg', 0, '2026-02-23 01:47:16', NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -4711,8 +5019,8 @@ INSERT INTO `images` (`id`, `company_id`, `user_id`, `url`, `is_main`, `uploaded
 --
 
 CREATE TABLE `notification_settings` (
-  `id` int(11) NOT NULL,
-  `user_id` int(11) NOT NULL,
+  `id` int NOT NULL,
+  `user_id` int NOT NULL,
   `appointment_confirmation` tinyint(1) NOT NULL DEFAULT '1',
   `appointment_reminder` tinyint(1) NOT NULL DEFAULT '1',
   `appointment_cancellation` tinyint(1) NOT NULL DEFAULT '1',
@@ -4727,48 +5035,12 @@ CREATE TABLE `notification_settings` (
 --
 
 INSERT INTO `notification_settings` (`id`, `user_id`, `appointment_confirmation`, `appointment_reminder`, `appointment_cancellation`, `marketing_emails`, `updated_at`, `created_at`, `userId`) VALUES
-(1, 1, 1, 1, 1, 0, NULL, '2024-01-15 09:00:00', NULL),
-(2, 2, 1, 1, 1, 1, NULL, '2024-01-20 10:00:00', NULL),
-(3, 3, 1, 1, 1, 1, NULL, '2024-01-20 10:00:00', NULL),
-(4, 4, 1, 1, 1, 0, NULL, '2024-01-20 10:00:00', NULL),
-(5, 5, 1, 1, 1, 1, NULL, '2024-01-20 10:00:00', NULL),
-(6, 6, 1, 1, 1, 0, NULL, '2024-01-20 10:00:00', NULL),
-(7, 7, 1, 1, 1, 1, NULL, '2024-01-20 10:00:00', NULL),
-(8, 8, 1, 1, 1, 0, NULL, '2024-01-20 10:00:00', NULL),
-(9, 9, 1, 1, 1, 1, NULL, '2024-01-20 10:00:00', NULL),
-(10, 10, 1, 1, 1, 0, NULL, '2024-01-20 10:00:00', NULL),
-(11, 11, 1, 1, 1, 1, NULL, '2024-01-20 10:00:00', NULL),
-(12, 12, 1, 1, 1, 0, NULL, '2024-02-01 13:00:00', NULL),
-(13, 13, 1, 1, 1, 0, NULL, '2024-02-01 13:00:00', NULL),
-(14, 14, 1, 1, 1, 0, NULL, '2024-02-05 14:00:00', NULL),
-(15, 15, 1, 1, 1, 0, NULL, '2024-02-05 14:00:00', NULL),
-(16, 16, 1, 1, 1, 0, NULL, '2024-02-10 15:00:00', NULL),
-(17, 17, 1, 1, 1, 0, NULL, '2024-02-10 15:00:00', NULL),
-(18, 18, 1, 1, 1, 0, NULL, '2024-02-15 16:00:00', NULL),
-(19, 19, 1, 1, 1, 0, NULL, '2024-02-15 16:00:00', NULL),
-(20, 20, 1, 1, 1, 0, NULL, '2024-02-20 17:00:00', NULL),
-(21, 21, 1, 1, 1, 0, NULL, '2024-02-20 17:00:00', NULL),
-(22, 22, 1, 1, 1, 0, NULL, '2024-02-25 18:00:00', NULL),
-(23, 23, 1, 1, 1, 0, NULL, '2024-03-01 19:00:00', NULL),
-(24, 24, 1, 1, 1, 0, NULL, '2024-03-05 20:00:00', NULL),
-(25, 25, 1, 1, 1, 0, NULL, '2024-03-10 21:00:00', NULL),
-(26, 26, 1, 1, 1, 0, NULL, '2024-03-15 22:00:00', NULL),
-(27, 27, 1, 1, 1, 1, NULL, '2024-01-25 09:00:00', NULL),
-(28, 28, 1, 1, 1, 0, NULL, '2024-01-25 09:00:00', NULL),
-(29, 29, 1, 0, 1, 0, NULL, '2024-01-25 09:00:00', NULL),
-(30, 30, 1, 1, 1, 1, NULL, '2024-01-25 09:00:00', NULL),
-(31, 31, 1, 1, 1, 0, NULL, '2024-01-25 09:00:00', NULL),
-(32, 32, 1, 1, 1, 1, NULL, '2024-01-25 09:00:00', NULL),
-(33, 33, 1, 1, 1, 1, NULL, '2024-01-25 09:00:00', NULL),
-(34, 34, 0, 0, 1, 0, NULL, '2024-01-25 09:00:00', NULL),
-(35, 35, 1, 1, 1, 1, NULL, '2024-01-25 09:00:00', NULL),
-(36, 36, 1, 1, 1, 0, NULL, '2024-01-25 09:00:00', NULL),
-(37, 37, 1, 0, 1, 0, NULL, '2024-01-25 09:00:00', NULL),
-(38, 38, 1, 1, 1, 1, NULL, '2024-01-25 09:00:00', NULL),
-(39, 39, 1, 1, 1, 0, NULL, '2024-01-25 09:00:00', NULL),
-(40, 40, 1, 1, 1, 0, NULL, '2024-01-25 09:00:00', NULL),
-(41, 43, 1, 0, 0, 0, '2026-02-03 09:00:40', '2026-02-03 08:42:59', NULL),
-(42, 47, 1, 1, 1, 0, NULL, '2026-02-09 17:30:58', NULL);
+(1, 1, 1, 1, 1, 0, NULL, '2026-02-22 19:40:46', NULL),
+(2, 2, 1, 1, 1, 0, NULL, '2026-02-22 19:47:44', NULL),
+(3, 3, 1, 1, 1, 0, NULL, '2026-02-22 21:37:08', NULL),
+(4, 4, 1, 1, 1, 0, NULL, '2026-02-22 23:06:43', NULL),
+(5, 25, 1, 1, 1, 0, NULL, '2026-02-23 01:22:04', NULL),
+(6, 26, 1, 1, 1, 0, NULL, '2026-02-23 01:46:20', NULL);
 
 -- --------------------------------------------------------
 
@@ -4777,9 +5049,9 @@ INSERT INTO `notification_settings` (`id`, `user_id`, `appointment_confirmation`
 --
 
 CREATE TABLE `opening_hours` (
-  `id` int(11) NOT NULL,
-  `company_id` int(11) NOT NULL,
-  `day_of_week` enum('monday','tuesday','wednesday','thursday','friday','saturday','sunday') COLLATE utf8mb4_hungarian_ci NOT NULL,
+  `id` int NOT NULL,
+  `company_id` int NOT NULL,
+  `day_of_week` enum('monday','tuesday','wednesday','thursday','friday','saturday','sunday') CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci NOT NULL,
   `open_time` time DEFAULT NULL,
   `close_time` time DEFAULT NULL,
   `is_closed` tinyint(1) DEFAULT '0',
@@ -4792,83 +5064,20 @@ CREATE TABLE `opening_hours` (
 --
 
 INSERT INTO `opening_hours` (`id`, `company_id`, `day_of_week`, `open_time`, `close_time`, `is_closed`, `created_at`, `updated_at`) VALUES
-(1, 1, 'monday', '09:00:00', '18:00:00', 0, '2024-02-01 09:00:00', NULL),
-(2, 1, 'tuesday', '09:00:00', '18:00:00', 0, '2024-02-01 09:00:00', NULL),
-(3, 1, 'wednesday', '09:00:00', '18:00:00', 0, '2024-02-01 09:00:00', NULL),
-(4, 1, 'thursday', '09:00:00', '18:00:00', 0, '2024-02-01 09:00:00', NULL),
-(5, 1, 'friday', '09:00:00', '18:00:00', 0, '2024-02-01 09:00:00', NULL),
-(6, 1, 'saturday', '09:00:00', '14:00:00', 0, '2024-02-01 09:00:00', NULL),
-(7, 1, 'sunday', NULL, NULL, 1, '2024-02-01 09:00:00', NULL),
-(8, 2, 'monday', '08:00:00', '20:00:00', 0, '2024-02-05 10:00:00', NULL),
-(9, 2, 'tuesday', '08:00:00', '20:00:00', 0, '2024-02-05 10:00:00', NULL),
-(10, 2, 'wednesday', '08:00:00', '20:00:00', 0, '2024-02-05 10:00:00', NULL),
-(11, 2, 'thursday', '08:00:00', '20:00:00', 0, '2024-02-05 10:00:00', NULL),
-(12, 2, 'friday', '08:00:00', '20:00:00', 0, '2024-02-05 10:00:00', NULL),
-(13, 2, 'saturday', '09:00:00', '18:00:00', 0, '2024-02-05 10:00:00', NULL),
-(14, 2, 'sunday', '10:00:00', '16:00:00', 0, '2024-02-05 10:00:00', NULL),
-(15, 3, 'monday', NULL, NULL, 1, '2024-02-10 11:00:00', NULL),
-(16, 3, 'tuesday', '10:00:00', '19:00:00', 0, '2024-02-10 11:00:00', NULL),
-(17, 3, 'wednesday', '10:00:00', '19:00:00', 0, '2024-02-10 11:00:00', NULL),
-(18, 3, 'thursday', '10:00:00', '19:00:00', 0, '2024-02-10 11:00:00', NULL),
-(19, 3, 'friday', '10:00:00', '19:00:00', 0, '2024-02-10 11:00:00', NULL),
-(20, 3, 'saturday', '09:00:00', '17:00:00', 0, '2024-02-10 11:00:00', NULL),
-(21, 3, 'sunday', NULL, NULL, 1, '2024-02-10 11:00:00', NULL),
-(22, 4, 'monday', '09:00:00', '19:00:00', 0, '2024-02-15 12:00:00', NULL),
-(23, 4, 'tuesday', '09:00:00', '19:00:00', 0, '2024-02-15 12:00:00', NULL),
-(24, 4, 'wednesday', '09:00:00', '19:00:00', 0, '2024-02-15 12:00:00', NULL),
-(25, 4, 'thursday', '09:00:00', '19:00:00', 0, '2024-02-15 12:00:00', NULL),
-(26, 4, 'friday', '09:00:00', '19:00:00', 0, '2024-02-15 12:00:00', NULL),
-(27, 4, 'saturday', '10:00:00', '16:00:00', 0, '2024-02-15 12:00:00', NULL),
-(28, 4, 'sunday', NULL, NULL, 1, '2024-02-15 12:00:00', NULL),
-(29, 5, 'monday', '06:00:00', '22:00:00', 0, '2024-02-20 13:00:00', NULL),
-(30, 5, 'tuesday', '06:00:00', '22:00:00', 0, '2024-02-20 13:00:00', NULL),
-(31, 5, 'wednesday', '06:00:00', '22:00:00', 0, '2024-02-20 13:00:00', NULL),
-(32, 5, 'thursday', '06:00:00', '22:00:00', 0, '2024-02-20 13:00:00', NULL),
-(33, 5, 'friday', '06:00:00', '22:00:00', 0, '2024-02-20 13:00:00', NULL),
-(34, 5, 'saturday', '08:00:00', '20:00:00', 0, '2024-02-20 13:00:00', NULL),
-(35, 5, 'sunday', '08:00:00', '20:00:00', 0, '2024-02-20 13:00:00', NULL),
-(36, 6, 'monday', '07:00:00', '21:00:00', 0, '2024-02-25 14:00:00', NULL),
-(37, 6, 'tuesday', '07:00:00', '21:00:00', 0, '2024-02-25 14:00:00', NULL),
-(38, 6, 'wednesday', '07:00:00', '21:00:00', 0, '2024-02-25 14:00:00', NULL),
-(39, 6, 'thursday', '07:00:00', '21:00:00', 0, '2024-02-25 14:00:00', NULL),
-(40, 6, 'friday', '07:00:00', '21:00:00', 0, '2024-02-25 14:00:00', NULL),
-(41, 6, 'saturday', '08:00:00', '18:00:00', 0, '2024-02-25 14:00:00', NULL),
-(42, 6, 'sunday', '09:00:00', '15:00:00', 0, '2024-02-25 14:00:00', NULL),
-(43, 7, 'monday', '10:00:00', '20:00:00', 0, '2024-03-01 15:00:00', NULL),
-(44, 7, 'tuesday', '10:00:00', '20:00:00', 0, '2024-03-01 15:00:00', NULL),
-(45, 7, 'wednesday', '10:00:00', '20:00:00', 0, '2024-03-01 15:00:00', NULL),
-(46, 7, 'thursday', '10:00:00', '20:00:00', 0, '2024-03-01 15:00:00', NULL),
-(47, 7, 'friday', '10:00:00', '20:00:00', 0, '2024-03-01 15:00:00', NULL),
-(48, 7, 'saturday', '10:00:00', '18:00:00', 0, '2024-03-01 15:00:00', NULL),
-(49, 7, 'sunday', NULL, NULL, 1, '2024-03-01 15:00:00', NULL),
-(50, 8, 'monday', NULL, NULL, 1, '2024-03-05 16:00:00', NULL),
-(51, 8, 'tuesday', '10:00:00', '19:00:00', 0, '2024-03-05 16:00:00', NULL),
-(52, 8, 'wednesday', '10:00:00', '19:00:00', 0, '2024-03-05 16:00:00', NULL),
-(53, 8, 'thursday', '10:00:00', '19:00:00', 0, '2024-03-05 16:00:00', NULL),
-(54, 8, 'friday', '10:00:00', '19:00:00', 0, '2024-03-05 16:00:00', NULL),
-(55, 8, 'saturday', '09:00:00', '18:00:00', 0, '2024-03-05 16:00:00', NULL),
-(56, 8, 'sunday', NULL, NULL, 1, '2024-03-05 16:00:00', NULL),
-(57, 9, 'monday', '09:00:00', '18:00:00', 0, '2024-03-10 17:00:00', NULL),
-(58, 9, 'tuesday', '09:00:00', '18:00:00', 0, '2024-03-10 17:00:00', NULL),
-(59, 9, 'wednesday', '09:00:00', '18:00:00', 0, '2024-03-10 17:00:00', NULL),
-(60, 9, 'thursday', '09:00:00', '18:00:00', 0, '2024-03-10 17:00:00', NULL),
-(61, 9, 'friday', '09:00:00', '18:00:00', 0, '2024-03-10 17:00:00', NULL),
-(62, 9, 'saturday', '09:00:00', '14:00:00', 0, '2024-03-10 17:00:00', NULL),
-(63, 9, 'sunday', NULL, NULL, 1, '2024-03-10 17:00:00', NULL),
-(64, 10, 'monday', '09:00:00', '21:00:00', 0, '2024-03-15 18:00:00', NULL),
-(65, 10, 'tuesday', '09:00:00', '21:00:00', 0, '2024-03-15 18:00:00', NULL),
-(66, 10, 'wednesday', '09:00:00', '21:00:00', 0, '2024-03-15 18:00:00', NULL),
-(67, 10, 'thursday', '09:00:00', '21:00:00', 0, '2024-03-15 18:00:00', NULL),
-(68, 10, 'friday', '09:00:00', '21:00:00', 0, '2024-03-15 18:00:00', NULL),
-(69, 10, 'saturday', '09:00:00', '21:00:00', 0, '2024-03-15 18:00:00', NULL),
-(70, 10, 'sunday', '09:00:00', '21:00:00', 0, '2024-03-15 18:00:00', NULL),
-(71, 13, 'monday', NULL, NULL, 1, '2026-02-10 23:27:11', NULL),
-(72, 13, 'tuesday', '08:00:00', '19:00:00', 0, '2026-02-10 23:27:11', NULL),
-(73, 13, 'wednesday', '08:00:00', '19:00:00', 0, '2026-02-10 23:27:11', NULL),
-(74, 13, 'thursday', '08:00:00', '19:00:00', 0, '2026-02-10 23:27:11', NULL),
-(75, 13, 'friday', '08:00:00', '19:00:00', 0, '2026-02-10 23:27:11', NULL),
-(76, 13, 'saturday', '08:00:00', '19:00:00', 0, '2026-02-10 23:27:11', NULL),
-(77, 13, 'sunday', NULL, NULL, 1, '2026-02-10 23:27:11', NULL);
+(1, 1, 'monday', NULL, NULL, 1, '2026-02-22 20:39:33', NULL),
+(2, 1, 'tuesday', '08:00:00', '19:00:00', 0, '2026-02-22 20:39:33', NULL),
+(3, 1, 'wednesday', '08:00:00', '19:00:00', 0, '2026-02-22 20:39:33', NULL),
+(4, 1, 'thursday', '08:00:00', '19:00:00', 0, '2026-02-22 20:39:33', NULL),
+(5, 1, 'friday', '08:00:00', '19:00:00', 0, '2026-02-22 20:39:33', NULL),
+(6, 1, 'saturday', '08:00:00', '19:00:00', 0, '2026-02-22 20:39:33', NULL),
+(7, 1, 'sunday', NULL, NULL, 1, '2026-02-22 20:39:33', NULL),
+(8, 2, 'monday', NULL, NULL, 1, '2026-02-23 01:24:25', NULL),
+(9, 2, 'tuesday', '10:00:00', '19:00:00', 0, '2026-02-23 01:24:25', NULL),
+(10, 2, 'wednesday', '10:00:00', '19:00:00', 0, '2026-02-23 01:24:25', NULL),
+(11, 2, 'thursday', '10:00:00', '19:00:00', 0, '2026-02-23 01:24:25', NULL),
+(12, 2, 'friday', '10:00:00', '19:00:00', 0, '2026-02-23 01:24:25', NULL),
+(13, 2, 'saturday', '10:00:00', '19:00:00', 0, '2026-02-23 01:24:25', NULL),
+(14, 2, 'sunday', NULL, NULL, 1, '2026-02-23 01:24:25', NULL);
 
 -- --------------------------------------------------------
 
@@ -4877,13 +5086,14 @@ INSERT INTO `opening_hours` (`id`, `company_id`, `day_of_week`, `open_time`, `cl
 --
 
 CREATE TABLE `pending_staff` (
-  `id` int(11) NOT NULL,
-  `email` text COLLATE utf8mb4_hungarian_ci NOT NULL,
-  `company_id` int(11) NOT NULL,
-  `token_id` int(11) NOT NULL,
-  `position` text COLLATE utf8mb4_hungarian_ci NOT NULL,
-  `status` varchar(20) COLLATE utf8mb4_hungarian_ci DEFAULT 'pending',
-  `created_at` datetime NOT NULL
+  `id` int NOT NULL,
+  `email` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci NOT NULL,
+  `company_id` int NOT NULL,
+  `user_id` int DEFAULT NULL,
+  `token_id` int NOT NULL,
+  `position` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci NOT NULL,
+  `status` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci NOT NULL DEFAULT 'pending',
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
 
 -- --------------------------------------------------------
@@ -4893,12 +5103,12 @@ CREATE TABLE `pending_staff` (
 --
 
 CREATE TABLE `reviews` (
-  `id` int(11) NOT NULL,
-  `company_id` int(11) NOT NULL,
-  `client_id` int(11) NOT NULL,
-  `appointment_id` int(11) DEFAULT NULL,
-  `rating` int(11) NOT NULL COMMENT '1-5 stars',
-  `comment` text COLLATE utf8mb4_hungarian_ci,
+  `id` int NOT NULL,
+  `company_id` int NOT NULL,
+  `client_id` int NOT NULL,
+  `appointment_id` int DEFAULT NULL,
+  `rating` int NOT NULL COMMENT '1-5 stars',
+  `comment` text CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci,
   `updated_at` timestamp NULL DEFAULT NULL,
   `deleted_at` timestamp NULL DEFAULT NULL,
   `is_deleted` tinyint(1) DEFAULT '0',
@@ -4910,70 +5120,65 @@ CREATE TABLE `reviews` (
 --
 
 INSERT INTO `reviews` (`id`, `company_id`, `client_id`, `appointment_id`, `rating`, `comment`, `updated_at`, `deleted_at`, `is_deleted`, `created_at`) VALUES
-(1, 1, 27, 1, 5, 'Fantasztikus élmény volt! Eszter nagyon profin dolgozott, teljesen elégedett vagyok az arckezeléssel.', NULL, NULL, 0, '2024-02-06 13:00:00'),
-(2, 1, 28, 2, 5, 'Prémium arckezelés tényleg prémium! Csak ajánlani tudom.', NULL, NULL, 0, '2024-02-07 09:00:00'),
-(3, 1, 29, 3, 4, 'Nagyon jó szolgáltatás, kicsit hosszú volt a várakozás.', NULL, NULL, 0, '2024-02-09 14:00:00'),
-(4, 1, 30, 4, 5, 'Visszatérő ügyfél leszek! Kiváló!', NULL, NULL, 0, '2024-02-13 10:00:00'),
-(5, 1, 31, 5, 5, 'Valentin napra tökéletes meglepetés volt!', NULL, NULL, 0, '2024-02-15 08:00:00'),
-(6, 1, 34, 21, 5, 'Kati köröm specialista, csak ajánlani tudom!', NULL, NULL, 0, '2024-02-08 13:00:00'),
-(7, 1, 35, 22, 4, 'Szép munka, visszajövök!', NULL, NULL, 0, '2024-02-10 15:00:00'),
-(8, 1, 36, 23, 5, 'Profi manikűr, elégedett vagyok.', NULL, NULL, 0, '2024-02-14 11:00:00'),
-(9, 1, 37, 24, 4, 'Jó élmény volt, ajánlom!', NULL, NULL, 0, '2024-02-17 09:00:00'),
-(10, 2, 30, 39, 5, 'Luxus élmény! A hot stone masszázs csodálatos volt.', NULL, NULL, 0, '2024-02-07 14:00:00'),
-(11, 2, 31, 40, 5, 'Márta arany kezű masszőr! Teljesen ellazultam.', NULL, NULL, 0, '2024-02-11 09:00:00'),
-(12, 2, 32, 41, 4, 'Nagyon jó, de kicsit drága.', NULL, NULL, 0, '2024-02-16 13:00:00'),
-(13, 2, 33, 42, 5, 'Minden alkalommal tökéletes!', NULL, NULL, 0, '2024-02-21 10:00:00'),
-(14, 2, 34, 43, 5, 'A SPA csomag felülmúlta a várakozásaimat!', NULL, NULL, 0, '2024-02-25 09:00:00'),
-(15, 2, 31, 50, 5, 'Júlia masszázsa fantasztikus volt!', NULL, NULL, 0, '2024-02-09 15:00:00'),
-(16, 2, 32, 51, 4, 'Kellemes környezet és kedves személyzet.', NULL, NULL, 0, '2024-02-15 10:00:00'),
-(17, 2, 33, 52, 5, 'A VIP csomag minden forintot megért!', NULL, NULL, 0, '2024-02-20 14:00:00'),
-(18, 3, 32, 60, 5, 'Anna csodát művelt a hajammal! Imádom az új frizurámat.', NULL, NULL, 0, '2024-02-10 13:00:00'),
-(19, 3, 33, 61, 4, 'Szép hajfestés, kicsit hosszú volt a folyamat.', NULL, NULL, 0, '2024-02-17 10:00:00'),
-(20, 3, 34, 62, 5, 'A melírozás tökéletesen sikerült!', NULL, NULL, 0, '2024-02-24 14:00:00'),
-(21, 3, 35, 63, 5, 'Profi munka, visszajövök!', NULL, NULL, 0, '2024-03-03 16:00:00'),
-(22, 3, 36, 64, 4, 'Jó élmény, ajánlom!', NULL, NULL, 0, '2024-03-10 13:00:00'),
-(23, 3, 30, 69, 5, 'Péter profi fodrász, csak ajánlani tudom!', NULL, NULL, 0, '2024-02-12 09:00:00'),
-(24, 3, 31, 70, 4, 'Szép munka, elégedett vagyok.', NULL, NULL, 0, '2024-02-19 16:00:00'),
-(25, 3, 32, 71, 5, 'Gyors és precíz férfi hajvágás!', NULL, NULL, 0, '2024-02-26 10:00:00'),
-(26, 4, 28, 78, 5, 'Zsuzsanna műköröm építése fantasztikus! Tartós és gyönyörű.', NULL, NULL, 0, '2024-02-13 14:00:00'),
-(27, 4, 29, 79, 5, 'Professzionális munka, csak ajánlani tudom!', NULL, NULL, 0, '2024-02-20 15:00:00'),
-(28, 4, 30, 80, 4, 'Szép gél lakk, kicsit drága.', NULL, NULL, 0, '2024-02-27 13:00:00'),
-(29, 4, 31, 81, 5, 'A porcelán műköröm gyönyörű lett!', NULL, NULL, 0, '2024-03-05 12:00:00'),
-(30, 4, 32, 82, 5, 'Műköröm töltés tökéletes!', NULL, NULL, 0, '2024-03-12 16:00:00'),
-(31, 4, 36, 86, 5, 'Viktória remek körömművész!', NULL, NULL, 0, '2024-02-16 13:00:00'),
-(32, 4, 37, 87, 4, 'SPA pedikűr élmény volt!', NULL, NULL, 0, '2024-02-23 16:00:00'),
-(33, 5, 32, 93, 5, 'Gábor fantasztikus személyi edző! Motiváló és szakértő.', NULL, NULL, 0, '2024-02-14 09:00:00'),
-(34, 5, 33, 94, 5, 'CrossFit óra brutál volt, de imádtam!', NULL, NULL, 0, '2024-02-21 10:00:00'),
-(35, 5, 34, 95, 4, 'Jó edzés, visszajövök!', NULL, NULL, 0, '2024-02-28 09:00:00'),
-(36, 5, 35, 96, 5, 'TRX edzés kihívás volt, de megérte!', NULL, NULL, 0, '2024-03-06 10:00:00'),
-(37, 5, 28, 100, 5, 'Laura spinning órája energikus és motiváló!', NULL, NULL, 0, '2024-02-15 19:00:00'),
-(38, 5, 29, 101, 4, 'Jó edzés, ajánlom!', NULL, NULL, 0, '2024-02-22 10:00:00'),
-(39, 6, 35, 107, 5, 'Emese jóga órája békét és harmóniát hoz. Csodálatos élmény!', NULL, NULL, 0, '2024-03-01 13:00:00'),
-(40, 6, 36, 108, 5, 'Vinyasa flow jóga energizáló volt!', NULL, NULL, 0, '2024-03-07 16:00:00'),
-(41, 6, 37, 109, 5, 'Yin jóga tökéletes relaxáció!', NULL, NULL, 0, '2024-03-14 14:00:00'),
-(42, 6, 27, 110, 4, 'Meditációs óra nyugtató volt.', NULL, NULL, 0, '2024-03-21 17:00:00'),
-(43, 6, 28, 111, 5, 'Pilates óra kihívás, de imádtam!', NULL, NULL, 0, '2024-03-28 15:00:00'),
-(44, 7, 32, 115, 5, 'István masszázsa felülmúlhatatlan! Profin dolgozik.', NULL, NULL, 0, '2024-02-18 11:00:00'),
-(45, 7, 33, 116, 5, 'Sportmasszázs után mint újjászületett!', NULL, NULL, 0, '2024-02-25 15:00:00'),
-(46, 7, 34, 117, 4, 'Talpmasszázs kellemes volt.', NULL, NULL, 0, '2024-03-03 12:00:00'),
-(47, 7, 35, 118, 5, 'Svéd masszázs 90 perc luxus!', NULL, NULL, 0, '2024-03-10 16:00:00'),
-(48, 7, 36, 119, 5, 'Aromaterápiás masszázs csodálatos!', NULL, NULL, 0, '2024-03-17 11:00:00'),
-(49, 8, 29, 123, 5, 'Dániel a legjobb barber! Klasszikus hajvágás tökéletes.', NULL, NULL, 0, '2024-02-14 12:00:00'),
-(50, 8, 30, 124, 5, 'Modern férfi vágás profi munka!', NULL, NULL, 0, '2024-02-21 15:00:00'),
-(51, 8, 31, 125, 4, 'Szakáll formázás jó volt.', NULL, NULL, 0, '2024-02-28 12:00:00'),
-(52, 8, 32, 126, 5, 'VIP csomag minden forintot megért!', NULL, NULL, 0, '2024-03-06 15:00:00'),
-(53, 8, 33, 127, 5, 'Hajvágás gyors és precíz!', NULL, NULL, 0, '2024-03-13 11:30:00'),
-(54, 9, 27, 131, 5, 'Réka bio arckezelése csodálatos! Természetes és hatékony.', NULL, NULL, 0, '2024-02-19 12:00:00'),
-(55, 9, 28, 132, 5, 'Organikus testkezelés luxus élmény!', NULL, NULL, 0, '2024-02-26 15:00:00'),
-(56, 9, 29, 133, 4, 'Natúr hámlasztás kellemes volt.', NULL, NULL, 0, '2024-03-04 11:00:00'),
-(57, 9, 30, 134, 5, 'Bio masszázs felfrissítő!', NULL, NULL, 0, '2024-03-11 16:00:00'),
-(58, 9, 31, 135, 4, 'Öko manikűr szép munka.', NULL, NULL, 0, '2024-03-18 11:00:00'),
-(59, 10, 35, 139, 5, 'Tamás thai masszázsa csodálatos! Ázsiai élmény Budapesten.', NULL, NULL, 0, '2024-02-22 13:00:00'),
-(60, 10, 36, 140, 5, 'Shiatsu masszázs professzionális!', NULL, NULL, 0, '2024-02-29 16:00:00'),
-(61, 10, 37, 141, 4, 'Meditációs óra nyugtató.', NULL, NULL, 0, '2024-03-07 14:00:00'),
-(62, 10, 27, 142, 5, 'Zen spa rituálé elképesztő élmény!', NULL, NULL, 0, '2024-03-14 13:00:00'),
-(63, 10, 28, 143, 5, 'Infra szauna relaxáló!', NULL, NULL, 0, '2024-03-21 14:00:00'),
-(64, 10, 29, 144, 5, 'Teljes Zen csomag felülmúlhatatlan! Három óra mennyország!', NULL, NULL, 0, '2024-03-28 15:00:00');
+(1, 1, 9, 300, 4, 'Elégedett vagyok, csak kicsit kellett várni.', NULL, NULL, 0, '2026-02-16 21:20:00'),
+(2, 1, 14, 110, 5, 'Nagyon kedves és figyelmes, pontosan értette mit szeretnék.', NULL, NULL, 0, '2026-01-13 02:40:00'),
+(3, 1, 6, 258, 5, 'Profi kiszolgálás, kellemes hangulat. Visszajövök!', NULL, NULL, 0, '2026-02-10 18:35:00'),
+(4, 1, 5, 318, 4, 'Szolid munka, ajánlom.', NULL, NULL, 0, '2026-02-17 20:30:00'),
+(5, 1, 5, 73, 4, 'Elégedett vagyok, csak kicsit kellett várni.', NULL, NULL, 0, '2026-01-05 12:05:00'),
+(6, 2, 20, 474, 4, NULL, NULL, NULL, 0, '2026-02-01 22:50:00'),
+(7, 1, 15, 358, 5, 'Gyorsan végzett és tényleg szép lett.', NULL, NULL, 0, '2026-02-25 22:20:00'),
+(8, 2, 14, 439, 5, 'Tökéletes hajvágás, teljes mértékben elégedett vagyok.', NULL, NULL, 0, '2026-01-22 00:40:00'),
+(9, 1, 18, 177, 4, 'Jó munka volt, legközelebb is visszajövök.', NULL, NULL, 0, '2026-01-25 20:45:00'),
+(10, 2, 13, 487, 4, NULL, NULL, NULL, 0, '2026-02-08 02:50:00'),
+(11, 1, 13, 146, 2, 'Nem teljesen az lett amit kértem, kicsit csalódott vagyok.', NULL, NULL, 0, '2026-01-19 17:10:00'),
+(12, 2, 8, 463, 5, 'A szakáll is tökéletesen lett igazítva, köszönöm!', NULL, NULL, 0, '2026-02-01 07:40:00'),
+(13, 1, 23, 46, 5, 'Tökéletes hajvágás, teljes mértékben elégedett vagyok.', NULL, NULL, 0, '2026-01-04 00:20:00'),
+(14, 1, 13, 4, 3, 'Átlagos volt, vártam jobbat is.', NULL, NULL, 0, '2025-12-24 23:15:00'),
+(15, 1, 10, 259, 3, NULL, NULL, NULL, 0, '2026-02-09 12:50:00'),
+(16, 1, 8, 9, 5, NULL, NULL, NULL, 0, '2025-12-29 03:35:00'),
+(17, 1, 7, 194, 5, 'Nagyon kedves és figyelmes, pontosan értette mit szeretnék.', NULL, NULL, 0, '2026-01-30 02:45:00'),
+(18, 1, 21, 287, 5, 'Gyorsan végzett és tényleg szép lett.', NULL, NULL, 0, '2026-02-13 16:00:00'),
+(19, 1, 7, 8, 5, 'A szakáll is tökéletesen lett igazítva, köszönöm!', NULL, NULL, 0, '2025-12-27 13:45:00'),
+(20, 1, 16, 346, 5, 'Messze a legjobb hely a városban.', NULL, NULL, 0, '2026-02-26 00:30:00'),
+(21, 1, 11, 229, 5, 'Gyorsan végzett és tényleg szép lett.', NULL, NULL, 0, '2026-02-03 23:40:00'),
+(22, 1, 24, 112, 5, 'Nagyon elégedett vagyok, pontosan azt kaptam amit kértem!', NULL, NULL, 0, '2026-01-14 18:00:00'),
+(23, 1, 22, 359, 5, 'Fantasztikus eredmény, jól érzem magam benne.', NULL, NULL, 0, '2026-02-25 13:00:00'),
+(24, 2, 14, 516, 5, 'Messze a legjobb hely a városban.', NULL, NULL, 0, '2026-02-17 01:20:00'),
+(25, 1, 19, 172, 5, NULL, NULL, NULL, 0, '2026-01-23 04:00:00'),
+(26, 1, 9, 87, 5, 'A szakáll is tökéletesen lett igazítva, köszönöm!', NULL, NULL, 0, '2026-01-07 10:20:00'),
+(27, 2, 21, 469, 5, 'A szakáll is tökéletesen lett igazítva, köszönöm!', NULL, NULL, 0, '2026-02-01 01:00:00'),
+(28, 1, 12, 47, 3, 'Megkaptam amit kértem, de nem volt különleges.', NULL, NULL, 0, '2026-01-02 15:35:00'),
+(29, 2, 6, 508, 4, 'Jó munka volt, legközelebb is visszajövök.', NULL, NULL, 0, '2026-02-16 06:15:00'),
+(30, 1, 6, 216, 3, NULL, NULL, NULL, 0, '2026-01-30 14:50:00'),
+(31, 1, 10, 306, 4, 'Szolid munka, ajánlom.', NULL, NULL, 0, '2026-02-16 10:00:00'),
+(32, 2, 13, 515, 5, NULL, NULL, NULL, 0, '2026-02-16 23:40:00'),
+(33, 2, 17, 451, 5, 'Nagyon kedves és figyelmes, pontosan értette mit szeretnék.', NULL, NULL, 0, '2026-01-26 22:30:00'),
+(34, 2, 12, 491, 5, NULL, NULL, NULL, 0, '2026-02-11 03:00:00'),
+(35, 1, 14, 131, 5, NULL, NULL, NULL, 0, '2026-01-16 20:05:00'),
+(36, 2, 15, 475, 5, 'Gyors, precíz munka. Mindenkinek ajánlom!', NULL, NULL, 0, '2026-02-02 20:00:00'),
+(37, 2, 18, 466, 4, NULL, NULL, NULL, 0, '2026-01-30 17:05:00'),
+(38, 2, 18, 442, 5, 'Gyorsan végzett és tényleg szép lett.', NULL, NULL, 0, '2026-01-22 23:20:00'),
+(39, 1, 20, 303, 4, 'Elégedett vagyok, csak kicsit kellett várni.', NULL, NULL, 0, '2026-02-15 10:40:00'),
+(40, 1, 8, 60, 2, 'Sajnos nem voltam elégedett az eredménnyel.', NULL, NULL, 0, '2026-01-01 12:40:00'),
+(41, 2, 15, 457, 5, 'Gyors, precíz munka. Mindenkinek ajánlom!', NULL, NULL, 0, '2026-01-25 22:00:00'),
+(42, 1, 15, 10, 5, 'Gyors, precíz munka. Mindenkinek ajánlom!', NULL, NULL, 0, '2025-12-29 00:30:00'),
+(43, 2, 5, 391, 5, 'Mindig ide jövök, soha nem csalódtam.', NULL, NULL, 0, '2026-01-02 13:25:00'),
+(44, 2, 21, 454, 5, 'Gyorsan végzett és tényleg szép lett.', NULL, NULL, 0, '2026-01-27 13:45:00'),
+(45, 1, 19, 99, 5, 'Gyorsan végzett és tényleg szép lett.', NULL, NULL, 0, '2026-01-14 03:15:00'),
+(46, 1, 11, 323, 5, 'Nagyon elégedett vagyok, pontosan azt kaptam amit kértem!', NULL, NULL, 0, '2026-02-21 05:55:00'),
+(47, 1, 12, 147, 2, 'Nem teljesen az lett amit kértem, kicsit csalódott vagyok.', NULL, NULL, 0, '2026-01-21 00:00:00'),
+(48, 1, 1, 226, 4, 'Szolid munka, ajánlom.', NULL, NULL, 0, '2026-02-03 10:00:00'),
+(49, 1, 16, 95, 5, 'Messze a legjobb hely a városban.', NULL, NULL, 0, '2026-01-11 23:00:00'),
+(50, 2, 7, 401, 5, NULL, NULL, NULL, 0, '2026-01-07 12:05:00'),
+(51, 2, 9, 498, 4, NULL, NULL, NULL, 0, '2026-02-09 19:20:00'),
+(52, 2, 11, 403, 5, NULL, NULL, NULL, 0, '2026-01-07 17:00:00'),
+(53, 1, 23, 312, 5, NULL, NULL, NULL, 0, '2026-02-17 02:40:00'),
+(54, 1, 21, 215, 5, 'Fantasztikus eredmény, jól érzem magam benne.', NULL, NULL, 0, '2026-01-29 18:55:00'),
+(55, 2, 1, 411, 5, 'Gyorsan végzett és tényleg szép lett.', NULL, NULL, 0, '2026-01-12 04:00:00'),
+(56, 2, 24, 446, 5, 'A szakáll is tökéletesen lett igazítva, köszönöm!', NULL, NULL, 0, '2026-01-25 14:20:00'),
+(57, 2, 12, 528, 4, 'Szép lett, összességében jó volt.', NULL, NULL, 0, '2026-02-22 02:15:00'),
+(58, 2, 17, 396, 5, 'Nagyon elégedett vagyok, pontosan azt kaptam amit kértem!', NULL, NULL, 0, '2026-01-04 23:00:00'),
+(59, 2, 5, 435, 5, 'Messze a legjobb hely a városban.', NULL, NULL, 0, '2026-01-22 01:50:00');
 
 -- --------------------------------------------------------
 
@@ -4982,9 +5187,9 @@ INSERT INTO `reviews` (`id`, `company_id`, `client_id`, `appointment_id`, `ratin
 --
 
 CREATE TABLE `roles` (
-  `id` int(11) NOT NULL,
-  `name` varchar(50) COLLATE utf8mb4_hungarian_ci NOT NULL,
-  `description` text COLLATE utf8mb4_hungarian_ci,
+  `id` int NOT NULL,
+  `name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci NOT NULL,
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci,
   `updated_at` datetime DEFAULT NULL,
   `deleted_at` datetime DEFAULT NULL,
   `is_deleted` tinyint(1) DEFAULT '0',
@@ -4996,10 +5201,10 @@ CREATE TABLE `roles` (
 --
 
 INSERT INTO `roles` (`id`, `name`, `description`, `updated_at`, `deleted_at`, `is_deleted`, `created_at`) VALUES
-(1, 'superadmin', 'Teljes hozzáférés az összes rendszer funkcióhoz és minden céghez', NULL, NULL, 0, '2024-01-01 10:00:00'),
-(2, 'owner', 'Cég szintű adminisztrátor, teljes hozzáférés a saját céghez', NULL, NULL, 0, '2024-01-01 10:00:00'),
-(3, 'staff', 'Munkatárs, aki szolgáltatásokat nyújt és időpontokat kezel', NULL, NULL, 0, '2024-01-01 10:00:00'),
-(4, 'client', 'Ügyfél, aki időpontokat foglal', NULL, NULL, 0, '2024-01-01 10:00:00');
+(1, 'superadmin', 'Teljes hozzáférés az összes rendszer funkcióhoz és minden céghez', NULL, NULL, 0, '2026-02-22 20:00:00'),
+(2, 'owner', 'Cég szintű adminisztrátor, teljes hozzáférés a saját céghez', NULL, NULL, 0, '2026-02-22 20:00:00'),
+(3, 'staff', 'Munkatárs, aki szolgáltatásokat nyújt és időpontokat kezel', NULL, NULL, 0, '2026-02-22 20:00:00'),
+(4, 'client', 'Ügyfél, aki időpontokat foglal', NULL, NULL, 0, '2026-02-22 20:00:00');
 
 -- --------------------------------------------------------
 
@@ -5008,13 +5213,13 @@ INSERT INTO `roles` (`id`, `name`, `description`, `updated_at`, `deleted_at`, `i
 --
 
 CREATE TABLE `services` (
-  `id` int(11) NOT NULL,
-  `company_id` int(11) NOT NULL,
-  `name` varchar(255) COLLATE utf8mb4_hungarian_ci NOT NULL,
-  `description` text COLLATE utf8mb4_hungarian_ci,
-  `duration_minutes` int(11) NOT NULL,
+  `id` int NOT NULL,
+  `company_id` int NOT NULL,
+  `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci NOT NULL,
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci,
+  `duration_minutes` int NOT NULL,
   `price` decimal(10,2) DEFAULT NULL,
-  `currency` varchar(10) COLLATE utf8mb4_hungarian_ci DEFAULT NULL,
+  `currency` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci DEFAULT NULL,
   `is_active` tinyint(1) DEFAULT '1',
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime DEFAULT NULL,
@@ -5027,60 +5232,16 @@ CREATE TABLE `services` (
 --
 
 INSERT INTO `services` (`id`, `company_id`, `name`, `description`, `duration_minutes`, `price`, `currency`, `is_active`, `created_at`, `updated_at`, `deleted_at`, `is_deleted`) VALUES
-(1, 1, 'Basic arckezelés', 'Alapos arctisztítás, pakolás, arcmasszázs', 60, '8900.00', 'HUF', 1, '2024-02-01 12:00:00', NULL, NULL, 0),
-(2, 1, 'Prémium arckezelés', 'Luxus arckezelés anti-aging hatással', 90, '15900.00', 'HUF', 1, '2024-02-01 12:00:00', NULL, NULL, 0),
-(3, 1, 'Hialuronsavas kezelés', 'Intenzív hidratáló arckezelés', 75, '12900.00', 'HUF', 1, '2024-02-01 12:00:00', NULL, NULL, 0),
-(4, 1, 'Manikűr', 'Kéz- és körömápolás', 45, '4900.00', 'HUF', 1, '2024-02-01 12:00:00', NULL, NULL, 0),
-(5, 1, 'Gél lakk', 'Tartós géllakk kézre', 60, '6900.00', 'HUF', 1, '2024-02-01 12:00:00', NULL, NULL, 0),
-(6, 1, 'Szempillafestés', 'Természetes szempilla festés', 30, '3900.00', 'HUF', 1, '2024-02-01 12:00:00', NULL, NULL, 0),
-(7, 2, 'Svéd masszázs', 'Klasszikus relaxáló masszázs', 60, '11900.00', 'HUF', 1, '2024-02-05 13:00:00', NULL, NULL, 0),
-(8, 2, 'Aromaterápiás masszázs', 'Illóolajos masszázs kezelés', 75, '13900.00', 'HUF', 1, '2024-02-05 13:00:00', NULL, NULL, 0),
-(9, 2, 'Hot stone masszázs', 'Forró kő masszázs', 90, '16900.00', 'HUF', 1, '2024-02-05 13:00:00', NULL, NULL, 0),
-(10, 2, 'Talpmasszázs', 'Reflexológiai talpmasszázs', 45, '8900.00', 'HUF', 1, '2024-02-05 13:00:00', NULL, NULL, 0),
-(11, 2, 'Teljes SPA csomag', 'Komplex spa élmény 3 órában', 180, '35900.00', 'HUF', 1, '2024-02-05 13:00:00', NULL, NULL, 0),
-(12, 2, 'Arckezelés gold maszkkal', 'Luxus arany arckezelés', 90, '24900.00', 'HUF', 1, '2024-02-05 13:00:00', NULL, NULL, 0),
-(13, 3, 'Női hajvágás', 'Professzionális női hajvágás', 45, '6900.00', 'HUF', 1, '2024-02-10 14:00:00', NULL, NULL, 0),
-(14, 3, 'Férfi hajvágás', 'Modern férfi frizura', 30, '4500.00', 'HUF', 1, '2024-02-10 14:00:00', NULL, NULL, 0),
-(15, 3, 'Hajfestés rövid hajra', 'Teljes hajfestés rövid hajra', 90, '12900.00', 'HUF', 1, '2024-02-10 14:00:00', NULL, NULL, 0),
-(16, 3, 'Hajfestés hosszú hajra', 'Teljes hajfestés hosszú hajra', 120, '17900.00', 'HUF', 1, '2024-02-10 14:00:00', NULL, NULL, 0),
-(17, 3, 'Melírozás', 'Melír vagy balayage', 150, '22900.00', 'HUF', 1, '2024-02-10 14:00:00', NULL, NULL, 0),
-(18, 4, 'Zselés műköröm', 'Teljes zselés műköröm építés', 120, '11900.00', 'HUF', 1, '2024-02-15 15:00:00', NULL, NULL, 0),
-(19, 4, 'Porcelán műköröm', 'Porcelán műköröm építés', 150, '14900.00', 'HUF', 1, '2024-02-15 15:00:00', NULL, NULL, 0),
-(20, 4, 'Műköröm töltés', 'Műköröm karbantartás', 90, '8900.00', 'HUF', 1, '2024-02-15 15:00:00', NULL, NULL, 0),
-(21, 4, 'Gél lakk manikűr', 'Manikűr géllakkal', 60, '6900.00', 'HUF', 1, '2024-02-15 15:00:00', NULL, NULL, 0),
-(22, 4, 'SPA pedikűr', 'Luxus pedikűr kezelés', 75, '8900.00', 'HUF', 1, '2024-02-15 15:00:00', NULL, NULL, 0),
-(23, 5, 'Személyi edzés 1 alkalom', 'Egyéni személyi edzés', 60, '8900.00', 'HUF', 1, '2024-02-20 16:00:00', NULL, NULL, 0),
-(24, 5, 'Személyi edzés 5 alkalom', '5 alkalmas személyi edzés bérlet', 300, '39900.00', 'HUF', 1, '2024-02-20 16:00:00', NULL, NULL, 0),
-(25, 5, 'Spinning óra', 'Csoportos spinning', 45, '2900.00', 'HUF', 1, '2024-02-20 16:00:00', NULL, NULL, 0),
-(26, 5, 'CrossFit edzés', 'Funkcionális crossfit', 60, '3900.00', 'HUF', 1, '2024-02-20 16:00:00', NULL, NULL, 0),
-(27, 5, 'TRX edzés', 'TRX funkcionális tréning', 45, '3500.00', 'HUF', 1, '2024-02-20 16:00:00', NULL, NULL, 0),
-(28, 6, 'Hatha jóga', 'Klasszikus hatha jóga óra', 75, '3900.00', 'HUF', 1, '2024-02-25 17:00:00', NULL, NULL, 0),
-(29, 6, 'Vinyasa flow jóga', 'Dinamikus jóga óra', 60, '3900.00', 'HUF', 1, '2024-02-25 17:00:00', NULL, NULL, 0),
-(30, 6, 'Yin jóga', 'Lassú, meditatív jóga', 90, '4500.00', 'HUF', 1, '2024-02-25 17:00:00', NULL, NULL, 0),
-(31, 6, 'Meditációs óra', 'Vezetett meditáció', 45, '2900.00', 'HUF', 1, '2024-02-25 17:00:00', NULL, NULL, 0),
-(32, 6, 'Pilates óra', 'Pilates edzés', 60, '3900.00', 'HUF', 1, '2024-02-25 17:00:00', NULL, NULL, 0),
-(33, 7, 'Svéd masszázs 60 perc', 'Klasszikus svéd masszázs', 60, '9900.00', 'HUF', 1, '2024-03-01 18:00:00', NULL, NULL, 0),
-(34, 7, 'Svéd masszázs 90 perc', 'Hosszú svéd masszázs', 90, '13900.00', 'HUF', 1, '2024-03-01 18:00:00', NULL, NULL, 0),
-(35, 7, 'Sportmasszázs', 'Sportolóknak ajánlott', 60, '11900.00', 'HUF', 1, '2024-03-01 18:00:00', NULL, NULL, 0),
-(36, 7, 'Talpmasszázs', 'Reflexológia', 45, '7900.00', 'HUF', 1, '2024-03-01 18:00:00', NULL, NULL, 0),
-(37, 7, 'Aromaterápiás masszázs', 'Illóolajos kezelés', 75, '12900.00', 'HUF', 1, '2024-03-01 18:00:00', NULL, NULL, 0),
-(38, 8, 'Klasszikus férfi vágás', 'Hagyományos férfi hajvágás', 30, '4500.00', 'HUF', 1, '2024-03-05 19:00:00', NULL, NULL, 0),
-(39, 8, 'Modern férfi vágás', 'Trendi férfi frizura', 45, '5900.00', 'HUF', 1, '2024-03-05 19:00:00', NULL, NULL, 0),
-(40, 8, 'Borotválás', 'Hagyományos borotválás', 30, '4900.00', 'HUF', 1, '2024-03-05 19:00:00', NULL, NULL, 0),
-(41, 8, 'Szakáll formázás', 'Szakáll igazítás és ápolás', 30, '3900.00', 'HUF', 1, '2024-03-05 19:00:00', NULL, NULL, 0),
-(42, 8, 'VIP csomag', 'Vágás, borotválás, masszázs', 90, '12900.00', 'HUF', 1, '2024-03-05 19:00:00', NULL, NULL, 0),
-(43, 9, 'Bio arckezelés', 'Természetes alapanyagú arckezelés', 60, '9900.00', 'HUF', 1, '2024-03-10 20:00:00', NULL, NULL, 0),
-(44, 9, 'Organikus testkezelés', 'Teljes test kezelés bio termékekkel', 75, '11900.00', 'HUF', 1, '2024-03-10 20:00:00', NULL, NULL, 0),
-(45, 9, 'Natúr hámlasztás', 'Természetes peeling kezelés', 45, '6900.00', 'HUF', 1, '2024-03-10 20:00:00', NULL, NULL, 0),
-(46, 9, 'Bio masszázs', 'Természetes olajos masszázs', 60, '10900.00', 'HUF', 1, '2024-03-10 20:00:00', NULL, NULL, 0),
-(47, 9, 'Öko manikűr', 'Vegán köröm kezelés', 45, '5900.00', 'HUF', 1, '2024-03-10 20:00:00', NULL, NULL, 0),
-(48, 10, 'Thai masszázs', 'Hagyományos thai masszázs', 90, '15900.00', 'HUF', 1, '2024-03-15 21:00:00', NULL, NULL, 0),
-(49, 10, 'Shiatsu masszázs', 'Japán nyomásontos masszázs', 60, '13900.00', 'HUF', 1, '2024-03-15 21:00:00', NULL, NULL, 0),
-(50, 10, 'Meditációs óra', 'Vezetett meditáció', 60, '4900.00', 'HUF', 1, '2024-03-15 21:00:00', NULL, NULL, 0),
-(51, 10, 'Zen spa rituálé', 'Komplex ázsiai spa élmény', 120, '29900.00', 'HUF', 1, '2024-03-15 21:00:00', NULL, NULL, 0),
-(52, 10, 'Infra szauna', 'Infra szauna használat', 45, '5900.00', 'HUF', 1, '2024-03-15 21:00:00', NULL, NULL, 0),
-(53, 10, 'Gyógyfürdő belépő', 'Ásványvizes gyógyfürdő', 90, '6900.00', 'HUF', 1, '2024-03-15 21:00:00', NULL, NULL, 0),
-(54, 10, 'Teljes Zen csomag', 'Masszázs + szauna + fürdő', 180, '42900.00', 'HUF', 1, '2024-03-15 21:00:00', NULL, NULL, 0);
+(1, 1, 'Hajvágás / Haircut', 'füstölni fog a cut', 45, 7000.00, 'HUF', 1, '2026-02-22 22:11:56', NULL, NULL, 0),
+(2, 1, 'Hosszú hajvágás / Long Haircut', 'levágják a hosszú hajad', 60, 10000.00, 'HUF', 1, '2026-02-22 22:15:45', NULL, NULL, 0),
+(3, 1, 'Hajvágás & Szakáll Igazítás / Haircut & Beard Trim', 'megnyírnak mindenhol', 70, 11000.00, 'HUF', 1, '2026-02-22 22:18:09', NULL, NULL, 0),
+(4, 2, 'Hajvágás / Haircut', 'hajas vágás', 60, 7000.00, 'HUF', 1, '2026-02-23 02:51:35', NULL, NULL, 0),
+(5, 2, 'Hosszú hajvágás / Long haircut', 'hosszas hajas vágás', 90, 8500.00, 'HUF', 1, '2026-02-23 02:52:19', NULL, NULL, 0),
+(6, 2, 'Egy hossz hajvágás / One lenght haircut', 'egy hossz hajas vágás', 30, 3500.00, 'HUF', 1, '2026-02-23 02:53:07', NULL, NULL, 0),
+(7, 2, 'Hajvágás & Szakáll igazítás / Haircut & Beard', 'Friss, ápolt megjelenésre vágyik? Hajvágás és szakáll igazítás szolgáltatásunkkal egyszerre gondoskodunk frizurájáról és szakálláról. Tapasztalt kezek formázzák haját és igazítják arcvonalát, hogy mindig magabiztosan nézhessen tükörbe.', 60, 11000.00, 'HUF', 1, '2026-02-23 02:55:59', NULL, NULL, 0),
+(8, 2, 'Egy hossz haj & Szakáll / One lenght haircut & Beard', 'Géppel, egy hosszúságra vágott frizura szakáll igazítással kiegészítve. A szakállat géppel és pengével igazítjuk, kérés esetén forró törölközőt is használunk.', 60, 8000.00, 'HUF', 1, '2026-02-23 02:57:12', NULL, NULL, 0),
+(9, 2, 'Hosszú haj & Szakáll / Long haircut & Beard', 'Szeretné, ha haja és szakálla is tökéletes összhangban lenne? Profi hajvágás hosszú hajra, kiegészítve precíz szakállformázással. Frissítse meg megjelenését egy ápolt, stílusos összhatással, amely kiemeli egyéni karakterét.', 90, 12000.00, 'HUF', 1, '2026-02-23 02:57:13', NULL, NULL, 0),
+(10, 2, 'Szakáll igazítás & Borotválás / Beard trim & Shave', 'Szakáll igazítás géppel és pengével, kérés esetén forró törölközővel.', 30, 16500.00, 'HUF', 1, '2026-02-23 02:59:12', NULL, NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -5089,10 +5250,10 @@ INSERT INTO `services` (`id`, `company_id`, `name`, `description`, `duration_min
 --
 
 CREATE TABLE `service_categories` (
-  `id` int(11) NOT NULL,
-  `company_id` int(11) NOT NULL,
-  `name` varchar(255) COLLATE utf8mb4_hungarian_ci NOT NULL,
-  `description` text COLLATE utf8mb4_hungarian_ci,
+  `id` int NOT NULL,
+  `company_id` int NOT NULL,
+  `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci NOT NULL,
+  `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
@@ -5102,48 +5263,11 @@ CREATE TABLE `service_categories` (
 --
 
 INSERT INTO `service_categories` (`id`, `company_id`, `name`, `description`, `created_at`, `updated_at`) VALUES
-(1, 1, 'Arcápolás', 'Professzionális arckezelések minden bőrtípusra', '2024-02-01 10:00:00', NULL),
-(2, 1, 'Testkezelések', 'Testformáló és relaxáló testkezelések', '2024-02-01 10:00:00', NULL),
-(3, 1, 'Körömápolás', 'Manikűr, pedikűr és műköröm', '2024-02-01 10:00:00', NULL),
-(4, 1, 'Szempilla és szemöldök', 'Szempilla és szemöldök szépítés', '2024-02-01 10:00:00', NULL),
-(5, 1, 'Szőrtelenítés', 'Tartós és hagyományos szőrtelenítés', '2024-02-01 10:00:00', NULL),
-(6, 2, 'Masszázsok', 'Különböző típusú masszázs kezelések', '2024-02-05 11:00:00', NULL),
-(7, 2, 'Spa kezelések', 'Luxus spa és wellness kezelések', '2024-02-05 11:00:00', NULL),
-(8, 2, 'Aromaterápia', 'Illóolajos kezelések és terápiák', '2024-02-05 11:00:00', NULL),
-(9, 2, 'Arckezelések', 'Prémium arcápoló kezelések', '2024-02-05 11:00:00', NULL),
-(10, 3, 'Női hajvágás', 'Női frizurák és hajvágások', '2024-02-10 12:00:00', NULL),
-(11, 3, 'Férfi hajvágás', 'Férfi frizurák és hajvágások', '2024-02-10 12:00:00', NULL),
-(12, 3, 'Hajfestés', 'Hajszínezés és melírozás', '2024-02-10 12:00:00', NULL),
-(13, 3, 'Hajkezelések', 'Ápoló és regeneráló hajkezelések', '2024-02-10 12:00:00', NULL),
-(14, 4, 'Műköröm', 'Zselés és porcelán műköröm', '2024-02-15 13:00:00', NULL),
-(15, 4, 'Gél lakk', 'Tartós géllakk kezelések', '2024-02-15 13:00:00', NULL),
-(16, 4, 'Körömművészet', 'Körömdekorációk és díszítések', '2024-02-15 13:00:00', NULL),
-(17, 4, 'Pedikűr', 'Lábápolás és pedikűr', '2024-02-15 13:00:00', NULL),
-(18, 5, 'Személyi edzés', 'Egyéni edzéstervek személyi edzővel', '2024-02-20 14:00:00', NULL),
-(19, 5, 'Csoportos órák', 'Változatos csoportos edzések', '2024-02-20 14:00:00', NULL),
-(20, 5, 'Funkcionális tréning', 'Funkcionális edzések', '2024-02-20 14:00:00', NULL),
-(21, 5, 'Spinning', 'Spinning és cardio edzések', '2024-02-20 14:00:00', NULL),
-(22, 6, 'Jóga órák', 'Különböző stílusú jóga órák', '2024-02-25 15:00:00', NULL),
-(23, 6, 'Meditáció', 'Meditációs foglalkozások', '2024-02-25 15:00:00', NULL),
-(24, 6, 'Pilates', 'Pilates edzések', '2024-02-25 15:00:00', NULL),
-(25, 6, 'Légzéstechnika', 'Légzőgyakorlatok és relaxáció', '2024-02-25 15:00:00', NULL),
-(26, 7, 'Svéd masszázs', 'Klasszikus svéd masszázs kezelések', '2024-03-01 16:00:00', NULL),
-(27, 7, 'Sportmasszázs', 'Sportolóknak ajánlott masszázsok', '2024-03-01 16:00:00', NULL),
-(28, 7, 'Talpmasszázs', 'Reflexológia és talpmasszázs', '2024-03-01 16:00:00', NULL),
-(29, 7, 'Aromaterápiás masszázs', 'Illóolajos masszázs kezelések', '2024-03-01 16:00:00', NULL),
-(30, 8, 'Férfi hajvágás', 'Klasszikus és modern férfi frizurák', '2024-03-05 17:00:00', NULL),
-(31, 8, 'Borotválás', 'Hagyományos borotválás', '2024-03-05 17:00:00', NULL),
-(32, 8, 'Szakáll formázás', 'Szakáll nyírás és ápolás', '2024-03-05 17:00:00', NULL),
-(33, 8, 'VIP csomagok', 'Komplett csomagok férfiaknak', '2024-03-05 17:00:00', NULL),
-(34, 9, 'Bio kozmetika', 'Természetes alapanyagú kezelések', '2024-03-10 18:00:00', NULL),
-(35, 9, 'Arcápolás', 'Organikus arckezelések', '2024-03-10 18:00:00', NULL),
-(36, 9, 'Testápolás', 'Természetes testkezelések', '2024-03-10 18:00:00', NULL),
-(37, 9, 'Masszázs', 'Bio olajos masszázsok', '2024-03-10 18:00:00', NULL),
-(38, 10, 'Ázsiai masszázsok', 'Thai, Shiatsu és egyéb ázsiai technikák', '2024-03-15 19:00:00', NULL),
-(39, 10, 'Meditáció', 'Meditációs szekciók és tanfolyamok', '2024-03-15 19:00:00', NULL),
-(40, 10, 'Spa rituálék', 'Komplex spa élmények', '2024-03-15 19:00:00', NULL),
-(41, 10, 'Szauna és gőzfürdő', 'Hagyományos és infra szauna', '2024-03-15 19:00:00', NULL),
-(42, 10, 'Gyógyfürdő', 'Ásványvizes gyógyfürdő kezelések', '2024-03-15 19:00:00', NULL);
+(1, 1, 'Férfi Hajvágás / Men\'s haircut', 'levágják a hajad ha férfi vagy', '2026-02-22 21:04:47', NULL),
+(2, 1, 'Haj & Szakáll / Hair & Beard', 'hajvágás és szakáll nyírás egybekötve', '2026-02-22 21:06:20', NULL),
+(3, 2, 'Hajvágás / Haircut & Styling', 'hajas vágások', '2026-02-23 01:49:24', NULL),
+(4, 2, 'Haj & Szakáll / Hair & Beard', 'minden is', '2026-02-23 01:49:59', NULL),
+(5, 2, 'Szakáll / Beard', 'arc szőrzet mentesítéses téma', '2026-02-23 01:50:37', NULL);
 
 -- --------------------------------------------------------
 
@@ -5152,9 +5276,9 @@ INSERT INTO `service_categories` (`id`, `company_id`, `name`, `description`, `cr
 --
 
 CREATE TABLE `service_category_map` (
-  `id` int(11) NOT NULL,
-  `service_id` int(11) NOT NULL,
-  `category_id` int(11) NOT NULL,
+  `id` int NOT NULL,
+  `service_id` int NOT NULL,
+  `category_id` int NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
 
@@ -5163,65 +5287,16 @@ CREATE TABLE `service_category_map` (
 --
 
 INSERT INTO `service_category_map` (`id`, `service_id`, `category_id`, `created_at`) VALUES
-(1, 1, 1, '2024-02-01 11:30:00'),
-(2, 2, 1, '2024-02-01 11:30:00'),
-(3, 3, 1, '2024-02-01 11:30:00'),
-(4, 4, 3, '2024-02-01 11:30:00'),
-(5, 5, 3, '2024-02-01 11:30:00'),
-(6, 6, 4, '2024-02-01 11:30:00'),
-(7, 7, 6, '2024-02-05 12:30:00'),
-(8, 8, 6, '2024-02-05 12:30:00'),
-(9, 8, 8, '2024-02-05 12:30:00'),
-(10, 9, 6, '2024-02-05 12:30:00'),
-(11, 10, 6, '2024-02-05 12:30:00'),
-(12, 11, 7, '2024-02-05 12:30:00'),
-(13, 12, 9, '2024-02-05 12:30:00'),
-(14, 13, 10, '2024-02-10 13:30:00'),
-(15, 14, 11, '2024-02-10 13:30:00'),
-(16, 15, 12, '2024-02-10 13:30:00'),
-(17, 16, 12, '2024-02-10 13:30:00'),
-(18, 17, 12, '2024-02-10 13:30:00'),
-(19, 18, 14, '2024-02-15 14:30:00'),
-(20, 19, 14, '2024-02-15 14:30:00'),
-(21, 20, 14, '2024-02-15 14:30:00'),
-(22, 21, 15, '2024-02-15 14:30:00'),
-(23, 22, 17, '2024-02-15 14:30:00'),
-(24, 23, 18, '2024-02-20 15:30:00'),
-(25, 24, 18, '2024-02-20 15:30:00'),
-(26, 25, 21, '2024-02-20 15:30:00'),
-(27, 26, 20, '2024-02-20 15:30:00'),
-(28, 27, 20, '2024-02-20 15:30:00'),
-(29, 28, 22, '2024-02-25 16:30:00'),
-(30, 29, 22, '2024-02-25 16:30:00'),
-(31, 30, 22, '2024-02-25 16:30:00'),
-(32, 31, 23, '2024-02-25 16:30:00'),
-(33, 32, 24, '2024-02-25 16:30:00'),
-(34, 33, 26, '2024-03-01 17:30:00'),
-(35, 34, 26, '2024-03-01 17:30:00'),
-(36, 35, 27, '2024-03-01 17:30:00'),
-(37, 36, 28, '2024-03-01 17:30:00'),
-(38, 37, 29, '2024-03-01 17:30:00'),
-(39, 38, 30, '2024-03-05 18:30:00'),
-(40, 39, 30, '2024-03-05 18:30:00'),
-(41, 40, 31, '2024-03-05 18:30:00'),
-(42, 41, 32, '2024-03-05 18:30:00'),
-(43, 42, 33, '2024-03-05 18:30:00'),
-(44, 43, 34, '2024-03-10 19:30:00'),
-(45, 43, 35, '2024-03-10 19:30:00'),
-(46, 44, 34, '2024-03-10 19:30:00'),
-(47, 44, 36, '2024-03-10 19:30:00'),
-(48, 45, 34, '2024-03-10 19:30:00'),
-(49, 46, 37, '2024-03-10 19:30:00'),
-(50, 47, 35, '2024-03-10 19:30:00'),
-(51, 48, 38, '2024-03-15 20:30:00'),
-(52, 49, 38, '2024-03-15 20:30:00'),
-(53, 50, 39, '2024-03-15 20:30:00'),
-(54, 51, 40, '2024-03-15 20:30:00'),
-(55, 52, 41, '2024-03-15 20:30:00'),
-(56, 53, 42, '2024-03-15 20:30:00'),
-(57, 54, 40, '2024-03-15 20:30:00'),
-(58, 54, 41, '2024-03-15 20:30:00'),
-(59, 54, 42, '2024-03-15 20:30:00');
+(1, 1, 1, '2026-02-22 21:20:00'),
+(2, 2, 1, '2026-02-22 21:20:26'),
+(3, 3, 2, '2026-02-22 21:20:38'),
+(4, 4, 3, '2026-02-23 01:53:57'),
+(5, 5, 3, '2026-02-23 01:54:34'),
+(6, 6, 3, '2026-02-23 01:54:34'),
+(7, 7, 4, '2026-02-23 01:58:01'),
+(8, 8, 4, '2026-02-23 01:58:21'),
+(9, 9, 4, '2026-02-23 01:58:21'),
+(10, 10, 5, '2026-02-23 01:59:51');
 
 -- --------------------------------------------------------
 
@@ -5230,13 +5305,13 @@ INSERT INTO `service_category_map` (`id`, `service_id`, `category_id`, `created_
 --
 
 CREATE TABLE `staff` (
-  `id` int(11) NOT NULL,
-  `user_id` int(11) NOT NULL,
-  `company_id` int(11) NOT NULL,
-  `display_name` varchar(255) COLLATE utf8mb4_hungarian_ci DEFAULT NULL,
-  `specialties` text COLLATE utf8mb4_hungarian_ci,
-  `bio` text COLLATE utf8mb4_hungarian_ci,
-  `color` char(7) COLLATE utf8mb4_hungarian_ci DEFAULT NULL,
+  `id` int NOT NULL,
+  `user_id` int NOT NULL,
+  `company_id` int NOT NULL,
+  `display_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci DEFAULT NULL,
+  `specialties` text CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci,
+  `bio` text CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci,
+  `color` char(7) CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci DEFAULT NULL,
   `is_active` tinyint(1) DEFAULT '1',
   `is_deleted` tinyint(1) DEFAULT '0',
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
@@ -5248,21 +5323,9 @@ CREATE TABLE `staff` (
 --
 
 INSERT INTO `staff` (`id`, `user_id`, `company_id`, `display_name`, `specialties`, `bio`, `color`, `is_active`, `is_deleted`, `created_at`, `updated_at`) VALUES
-(1, 12, 1, 'Eszter - Senior Kozmetikus', 'Arckezelés, Bőrápolás, Anti-aging', '10+ éves tapasztalat a szépségiparban. Szakértő vagyok az arckezelések területén.', NULL, 1, 0, '2024-02-01 13:00:00', NULL),
-(2, 13, 1, 'Kati - Körömspecialista', 'Manikűr, Pedikűr, Műköröm, Gél lakk', 'Körömápolás specialista vagyok, imádom a kreatív körömművészetet.', NULL, 1, 0, '2024-02-01 13:00:00', NULL),
-(3, 14, 2, 'Márta - Masszőr', 'Svéd masszázs, Aromaterápia, Relaxációs masszázs', 'Certificált masszőr vagyok, aki a teljes körű ellazulást helyezi előtérbe.', NULL, 1, 0, '2024-02-05 14:00:00', NULL),
-(4, 15, 2, 'Júlia - Spa Specialista', 'Hot stone, Thai masszázs, Sportmasszázs', '8 éve foglalkozom masszázzsal. Sportolóknak és aktív életmódot élőknek ajánlom szolgáltatásaimat.', NULL, 1, 0, '2024-02-05 14:00:00', NULL),
-(5, 16, 3, 'Anna - Fodrász', 'Női hajvágás, Hajfestés, Melírozás', 'Kreatív fodrász vagyok, aki imádja a trendi frizurákat és a színezési technikákat.', NULL, 1, 0, '2024-02-10 15:00:00', NULL),
-(6, 17, 3, 'Péter - Színező specialista', 'Hajfestés, Balayage, Ombre', 'A hajszínezés a szenvedélyem. Modern technikákkal dolgozom.', NULL, 1, 0, '2024-02-10 15:00:00', NULL),
-(7, 18, 4, 'Zsuzsanna - Műköröm építő', 'Zselés műköröm, Porcelán köröm, Babyboomer', 'Műköröm specialista vagyok 7 éves tapasztalattal.', NULL, 1, 0, '2024-02-15 16:00:00', NULL),
-(8, 19, 4, 'Viktória - Nail Artist', 'Körömművészet, Gél lakk, Díszítés', 'Kreatív körömművész vagyok, egyedi dizájnokat készítek.', NULL, 1, 0, '2024-02-15 16:00:00', NULL),
-(9, 20, 5, 'Gábor - Személyi edző', 'Erőnléti edzés, CrossFit, TRX', 'Személyi edző vagyok 12 éves tapasztalattal. Segítek elérni a céljaidat!', NULL, 1, 0, '2024-02-20 17:00:00', NULL),
-(10, 21, 5, 'Laura - Fitness instruktor', 'Spinning, Csoportos órák, Funkcionális tréning', 'Csoportos órák specialistája vagyok, motiválni szeretek!', NULL, 1, 0, '2024-02-20 17:00:00', NULL),
-(11, 22, 6, 'Emese - Jóga oktató', 'Hatha jóga, Vinyasa, Yin jóga, Meditáció', 'Certificált jóga oktató vagyok. A test-lélek-szellem harmóniája a célom.', NULL, 1, 0, '2024-02-25 18:00:00', NULL),
-(12, 23, 7, 'István - Masszőr', 'Svéd masszázs, Sportmasszázs, Talpmasszázs', 'Professzionális masszőr vagyok, specializációm a sportmasszázs.', NULL, 1, 0, '2024-03-01 19:00:00', NULL),
-(13, 24, 8, 'Dániel - Barber', 'Férfi hajvágás, Borotválás, Szakáll formázás', 'Hagyományos borbély vagyok modern technikákkal. Férfi frizurák specialistája.', NULL, 1, 0, '2024-03-05 20:00:00', NULL),
-(14, 25, 9, 'Réka - Bio kozmetikus', 'Bio arckezelés, Természetes termékek, Organikus kezelések', 'Természetes szépségápolás híve vagyok. Csak bio termékekkel dolgozom.', NULL, 1, 0, '2024-03-10 21:00:00', NULL),
-(15, 26, 10, 'Tamás - Ázsiai masszázs specialista', 'Thai masszázs, Shiatsu, Meditáció', 'Ázsiai masszázs technikák szakértője vagyok. 15 éve praktizálom a thai masszázst.', NULL, 1, 0, '2024-03-15 22:00:00', NULL);
+(1, 3, 1, 'Kriszto', 'Senior Stylist', NULL, NULL, 1, 0, '2026-02-22 22:52:54', NULL),
+(2, 4, 1, 'Mikó', 'Stylist', NULL, NULL, 1, 0, '2026-02-23 00:14:59', NULL),
+(3, 26, 2, 'Márk', 'Barber', NULL, NULL, 1, 0, '2026-02-23 03:01:27', NULL);
 
 --
 -- Triggers `staff`
@@ -5315,68 +5378,17 @@ DELIMITER ;
 --
 
 CREATE TABLE `staff_exceptions` (
-  `id` int(11) NOT NULL,
-  `staff_id` int(11) NOT NULL,
+  `id` int NOT NULL,
+  `staff_id` int NOT NULL,
   `date` date NOT NULL,
   `start_time` time DEFAULT NULL,
   `end_time` time DEFAULT NULL,
-  `type` enum('day_off','custom_hours') COLLATE utf8mb4_hungarian_ci NOT NULL COMMENT 'teljes szabi vagy egyedi időablak',
-  `note` text COLLATE utf8mb4_hungarian_ci,
+  `type` enum('day_off','custom_hours') CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci NOT NULL COMMENT 'teljes szabi vagy egyedi időablak',
+  `note` text CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `deleted_at` datetime DEFAULT NULL,
   `is_deleted` tinyint(1) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
-
---
--- Dumping data for table `staff_exceptions`
---
-
-INSERT INTO `staff_exceptions` (`id`, `staff_id`, `date`, `start_time`, `end_time`, `type`, `note`, `created_at`, `deleted_at`, `is_deleted`) VALUES
-(1, 1, '2024-03-08', NULL, NULL, 'day_off', 'Nőnap - pihenőnap', '2024-02-20 09:00:00', NULL, 0),
-(2, 1, '2024-03-15', '09:00:00', '13:00:00', 'custom_hours', 'Csak délelőtt - délután orvosi vizit', '2024-02-20 09:00:00', NULL, 0),
-(3, 1, '2024-04-01', NULL, NULL, 'day_off', 'Húsvéti hétfő', '2024-02-20 09:00:00', NULL, 0),
-(4, 2, '2024-03-20', NULL, NULL, 'day_off', 'Családi program', '2024-02-20 09:00:00', NULL, 0),
-(5, 2, '2024-03-25', '14:00:00', '18:00:00', 'custom_hours', 'Csak délután - reggel vizsgaidőszak', '2024-02-20 09:00:00', NULL, 0),
-(6, 2, '2024-04-02', NULL, NULL, 'day_off', 'Húsvét utáni pihenőnap', '2024-02-20 09:00:00', NULL, 0),
-(7, 3, '2024-03-11', NULL, NULL, 'day_off', 'Betegszabadság', '2024-02-25 10:00:00', NULL, 0),
-(8, 3, '2024-03-29', NULL, NULL, 'day_off', 'Nagypéntek', '2024-02-25 10:00:00', NULL, 0),
-(9, 3, '2024-04-05', '09:00:00', '13:00:00', 'custom_hours', 'Rövid műszak - délután továbbképzés', '2024-02-25 10:00:00', NULL, 0),
-(10, 4, '2024-03-18', NULL, NULL, 'day_off', 'Családi esemény', '2024-02-25 10:00:00', NULL, 0),
-(11, 4, '2024-03-28', '08:00:00', '20:00:00', 'custom_hours', 'Extra hosszú műszak - kolléga helyettesítése', '2024-02-25 10:00:00', NULL, 0),
-(12, 4, '2024-04-10', NULL, NULL, 'day_off', 'Szabadság', '2024-02-25 10:00:00', NULL, 0),
-(13, 5, '2024-03-12', NULL, NULL, 'day_off', 'Továbbképzés Bécsben', '2024-03-01 11:00:00', NULL, 0),
-(14, 5, '2024-03-22', '14:00:00', '18:00:00', 'custom_hours', 'Csak délután - reggel fogorvos', '2024-03-01 11:00:00', NULL, 0),
-(15, 5, '2024-04-08', NULL, NULL, 'day_off', 'Tavaszi szabadság', '2024-03-01 11:00:00', NULL, 0),
-(16, 6, '2024-03-14', NULL, NULL, 'day_off', 'Nemzeti ünnep utáni pihenő', '2024-03-01 11:00:00', NULL, 0),
-(17, 6, '2024-03-27', '11:00:00', '15:00:00', 'custom_hours', 'Rövid műszak - esti program', '2024-03-01 11:00:00', NULL, 0),
-(18, 6, '2024-04-12', NULL, NULL, 'day_off', 'Szabadság', '2024-03-01 11:00:00', NULL, 0),
-(19, 7, '2024-03-08', NULL, NULL, 'day_off', 'Nőnap - szabadnap', '2024-03-05 12:00:00', NULL, 0),
-(20, 7, '2024-03-21', '09:00:00', '13:00:00', 'custom_hours', 'Délelőtt - köröm szakmai nap délután', '2024-03-05 12:00:00', NULL, 0),
-(21, 7, '2024-04-03', NULL, NULL, 'day_off', 'Húsvéti szabadság', '2024-03-05 12:00:00', NULL, 0),
-(22, 8, '2024-03-13', NULL, NULL, 'day_off', 'Betegszabadság', '2024-03-05 12:00:00', NULL, 0),
-(23, 8, '2024-03-26', '13:00:00', '19:00:00', 'custom_hours', 'Délutáni műszak - reggel vizsgaidőszak', '2024-03-05 12:00:00', NULL, 0),
-(24, 8, '2024-04-09', NULL, NULL, 'day_off', 'Családi program', '2024-03-05 12:00:00', NULL, 0),
-(25, 9, '2024-03-16', NULL, NULL, 'day_off', 'Nemzeti ünnep utáni pihenő', '2024-03-10 13:00:00', NULL, 0),
-(26, 9, '2024-03-30', NULL, NULL, 'day_off', 'Nagyszombat', '2024-03-10 13:00:00', NULL, 0),
-(27, 9, '2024-04-06', '08:00:00', '14:00:00', 'custom_hours', 'Később kezdés - korábbi zárás', '2024-03-10 13:00:00', NULL, 0),
-(28, 10, '2024-03-19', NULL, NULL, 'day_off', 'Fitness verseny - résztvevő', '2024-03-10 13:00:00', NULL, 0),
-(29, 10, '2024-03-28', '16:00:00', '22:00:00', 'custom_hours', 'Későbbi kezdés - délelőtt szeminarium', '2024-03-10 13:00:00', NULL, 0),
-(30, 10, '2024-04-11', NULL, NULL, 'day_off', 'Szabadság', '2024-03-10 13:00:00', NULL, 0),
-(31, 11, '2024-03-17', NULL, NULL, 'day_off', 'Jóga retreat vezetése máshol', '2024-03-12 14:00:00', NULL, 0),
-(32, 11, '2024-03-24', '14:00:00', '18:00:00', 'custom_hours', 'Csak délután - reggel meditációs workshop', '2024-03-12 14:00:00', NULL, 0),
-(33, 11, '2024-04-07', NULL, NULL, 'day_off', 'Húsvéti vasárnap', '2024-03-12 14:00:00', NULL, 0),
-(34, 12, '2024-03-09', NULL, NULL, 'day_off', 'Betegszabadság', '2024-03-14 15:00:00', NULL, 0),
-(35, 12, '2024-03-23', '09:00:00', '14:00:00', 'custom_hours', 'Rövid műszak - délután családi program', '2024-03-14 15:00:00', NULL, 0),
-(36, 12, '2024-04-04', NULL, NULL, 'day_off', 'Húsvéti csütörtök', '2024-03-14 15:00:00', NULL, 0),
-(37, 13, '2024-03-15', NULL, NULL, 'day_off', 'Nemzeti ünnep', '2024-03-16 16:00:00', NULL, 0),
-(38, 13, '2024-03-31', NULL, NULL, 'day_off', 'Húsvét', '2024-03-16 16:00:00', NULL, 0),
-(39, 13, '2024-04-13', '12:00:00', '19:00:00', 'custom_hours', 'Későbbi kezdés - reggel barber verseny', '2024-03-16 16:00:00', NULL, 0),
-(40, 14, '2024-03-10', NULL, NULL, 'day_off', 'Bio kozmetikum konferencia', '2024-03-18 17:00:00', NULL, 0),
-(41, 14, '2024-03-25', '10:00:00', '14:00:00', 'custom_hours', 'Rövid műszak - délután tanfolyam', '2024-03-18 17:00:00', NULL, 0),
-(42, 14, '2024-04-14', NULL, NULL, 'day_off', 'Tavaszi szabadság', '2024-03-18 17:00:00', NULL, 0),
-(43, 15, '2024-03-07', NULL, NULL, 'day_off', 'Thai masszázs továbbképzés', '2024-03-20 18:00:00', NULL, 0),
-(44, 15, '2024-03-29', '13:00:00', '19:00:00', 'custom_hours', 'Délutáni műszak - reggel meditációs tanfolyam', '2024-03-20 18:00:00', NULL, 0),
-(45, 15, '2024-04-15', NULL, NULL, 'day_off', 'Húsvéti pihenő', '2024-03-20 18:00:00', NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -5385,9 +5397,9 @@ INSERT INTO `staff_exceptions` (`id`, `staff_id`, `date`, `start_time`, `end_tim
 --
 
 CREATE TABLE `staff_services` (
-  `id` int(11) NOT NULL,
-  `staff_id` int(11) NOT NULL,
-  `service_id` int(11) NOT NULL,
+  `id` int NOT NULL,
+  `staff_id` int NOT NULL,
+  `service_id` int NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
 
@@ -5396,73 +5408,19 @@ CREATE TABLE `staff_services` (
 --
 
 INSERT INTO `staff_services` (`id`, `staff_id`, `service_id`, `created_at`) VALUES
-(1, 1, 1, '2024-02-01 13:00:00'),
-(2, 1, 2, '2024-02-01 13:00:00'),
-(3, 1, 3, '2024-02-01 13:00:00'),
-(4, 1, 6, '2024-02-01 13:00:00'),
-(5, 2, 4, '2024-02-01 13:00:00'),
-(6, 2, 5, '2024-02-01 13:00:00'),
-(7, 2, 6, '2024-02-01 13:00:00'),
-(8, 3, 7, '2024-02-05 13:30:00'),
-(9, 3, 8, '2024-02-05 13:30:00'),
-(10, 3, 10, '2024-02-05 13:30:00'),
-(11, 3, 12, '2024-02-05 13:30:00'),
-(12, 4, 7, '2024-02-05 13:30:00'),
-(13, 4, 9, '2024-02-05 13:30:00'),
-(14, 4, 10, '2024-02-05 13:30:00'),
-(15, 4, 11, '2024-02-05 13:30:00'),
-(16, 5, 13, '2024-02-10 14:30:00'),
-(17, 5, 15, '2024-02-10 14:30:00'),
-(18, 5, 16, '2024-02-10 14:30:00'),
-(19, 5, 17, '2024-02-10 14:30:00'),
-(20, 6, 14, '2024-02-10 14:30:00'),
-(21, 6, 15, '2024-02-10 14:30:00'),
-(22, 6, 16, '2024-02-10 14:30:00'),
-(23, 6, 17, '2024-02-10 14:30:00'),
-(24, 7, 18, '2024-02-15 15:30:00'),
-(25, 7, 19, '2024-02-15 15:30:00'),
-(26, 7, 20, '2024-02-15 15:30:00'),
-(27, 7, 21, '2024-02-15 15:30:00'),
-(28, 8, 18, '2024-02-15 15:30:00'),
-(29, 8, 20, '2024-02-15 15:30:00'),
-(30, 8, 21, '2024-02-15 15:30:00'),
-(31, 8, 22, '2024-02-15 15:30:00'),
-(32, 9, 23, '2024-02-20 16:30:00'),
-(33, 9, 24, '2024-02-20 16:30:00'),
-(34, 9, 26, '2024-02-20 16:30:00'),
-(35, 9, 27, '2024-02-20 16:30:00'),
-(36, 10, 23, '2024-02-20 16:30:00'),
-(37, 10, 24, '2024-02-20 16:30:00'),
-(38, 10, 25, '2024-02-20 16:30:00'),
-(39, 10, 26, '2024-02-20 16:30:00'),
-(40, 10, 27, '2024-02-20 16:30:00'),
-(41, 11, 28, '2024-02-25 17:30:00'),
-(42, 11, 29, '2024-02-25 17:30:00'),
-(43, 11, 30, '2024-02-25 17:30:00'),
-(44, 11, 31, '2024-02-25 17:30:00'),
-(45, 11, 32, '2024-02-25 17:30:00'),
-(46, 12, 33, '2024-03-01 18:30:00'),
-(47, 12, 34, '2024-03-01 18:30:00'),
-(48, 12, 35, '2024-03-01 18:30:00'),
-(49, 12, 36, '2024-03-01 18:30:00'),
-(50, 12, 37, '2024-03-01 18:30:00'),
-(51, 13, 38, '2024-03-05 19:30:00'),
-(52, 13, 39, '2024-03-05 19:30:00'),
-(53, 13, 40, '2024-03-05 19:30:00'),
-(54, 13, 41, '2024-03-05 19:30:00'),
-(55, 13, 42, '2024-03-05 19:30:00'),
-(56, 14, 43, '2024-03-10 20:30:00'),
-(57, 14, 44, '2024-03-10 20:30:00'),
-(58, 14, 45, '2024-03-10 20:30:00'),
-(59, 14, 46, '2024-03-10 20:30:00'),
-(60, 14, 47, '2024-03-10 20:30:00'),
-(61, 15, 48, '2024-03-15 21:30:00'),
-(62, 15, 49, '2024-03-15 21:30:00'),
-(63, 15, 50, '2024-03-15 21:30:00'),
-(64, 15, 51, '2024-03-15 21:30:00'),
-(65, 15, 52, '2024-03-15 21:30:00'),
-(66, 15, 53, '2024-03-15 21:30:00'),
-(67, 15, 54, '2024-03-15 21:30:00');
+(3, 1, 1, '2026-02-22 21:53:16'),
+(5, 1, 2, '2026-02-22 23:17:17'),
+(6, 1, 3, '2026-02-22 23:17:22'),
+(7, 2, 1, '2026-02-22 23:17:41'),
+(8, 2, 2, '2026-02-22 23:17:41'),
+(9, 2, 3, '2026-02-22 23:17:41'),
+(10, 3, 4, '2026-02-23 02:01:56'),
+(11, 3, 5, '2026-02-23 02:02:14'),
+(12, 3, 6, '2026-02-23 02:02:14'),
+(13, 3, 7, '2026-02-23 02:02:14'),
+(14, 3, 8, '2026-02-23 02:02:14'),
+(15, 3, 9, '2026-02-23 02:02:14'),
+(16, 3, 10, '2026-02-23 02:02:14');
 
 -- --------------------------------------------------------
 
@@ -5471,9 +5429,9 @@ INSERT INTO `staff_services` (`id`, `staff_id`, `service_id`, `created_at`) VALU
 --
 
 CREATE TABLE `staff_working_hours` (
-  `id` int(11) NOT NULL,
-  `staff_id` int(11) NOT NULL,
-  `day_of_week` enum('monday','tuesday','wednesday','thursday','friday','saturday','sunday') COLLATE utf8mb4_hungarian_ci NOT NULL,
+  `id` int NOT NULL,
+  `staff_id` int NOT NULL,
+  `day_of_week` enum('monday','tuesday','wednesday','thursday','friday','saturday','sunday') CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci NOT NULL,
   `start_time` time DEFAULT NULL,
   `end_time` time DEFAULT NULL,
   `is_available` tinyint(1) DEFAULT '1',
@@ -5486,111 +5444,27 @@ CREATE TABLE `staff_working_hours` (
 --
 
 INSERT INTO `staff_working_hours` (`id`, `staff_id`, `day_of_week`, `start_time`, `end_time`, `is_available`, `created_at`, `updated_at`) VALUES
-(1, 1, 'monday', '09:00:00', '17:00:00', 1, '2024-02-01 12:30:00', NULL),
-(2, 1, 'tuesday', '09:00:00', '17:00:00', 1, '2024-02-01 12:30:00', NULL),
-(3, 1, 'wednesday', '09:00:00', '17:00:00', 1, '2024-02-01 12:30:00', NULL),
-(4, 1, 'thursday', '09:00:00', '17:00:00', 1, '2024-02-01 12:30:00', NULL),
-(5, 1, 'friday', '09:00:00', '17:00:00', 1, '2024-02-01 12:30:00', NULL),
-(6, 1, 'saturday', NULL, NULL, 0, '2024-02-01 12:30:00', NULL),
-(7, 1, 'sunday', NULL, NULL, 0, '2024-02-01 12:30:00', NULL),
-(8, 2, 'monday', NULL, NULL, 0, '2024-02-01 12:30:00', NULL),
-(9, 2, 'tuesday', '10:00:00', '18:00:00', 1, '2024-02-01 12:30:00', NULL),
-(10, 2, 'wednesday', '10:00:00', '18:00:00', 1, '2024-02-01 12:30:00', NULL),
-(11, 2, 'thursday', '10:00:00', '18:00:00', 1, '2024-02-01 12:30:00', NULL),
-(12, 2, 'friday', '10:00:00', '18:00:00', 1, '2024-02-01 12:30:00', NULL),
-(13, 2, 'saturday', '10:00:00', '18:00:00', 1, '2024-02-01 12:30:00', NULL),
-(14, 2, 'sunday', NULL, NULL, 0, '2024-02-01 12:30:00', NULL),
-(15, 3, 'monday', '09:00:00', '17:00:00', 1, '2024-02-05 13:30:00', NULL),
-(16, 3, 'tuesday', '09:00:00', '17:00:00', 1, '2024-02-05 13:30:00', NULL),
-(17, 3, 'wednesday', '09:00:00', '17:00:00', 1, '2024-02-05 13:30:00', NULL),
-(18, 3, 'thursday', '09:00:00', '17:00:00', 1, '2024-02-05 13:30:00', NULL),
-(19, 3, 'friday', '09:00:00', '17:00:00', 1, '2024-02-05 13:30:00', NULL),
-(20, 3, 'saturday', NULL, NULL, 0, '2024-02-05 13:30:00', NULL),
-(21, 3, 'sunday', NULL, NULL, 0, '2024-02-05 13:30:00', NULL),
-(22, 4, 'monday', NULL, NULL, 0, '2024-02-05 13:30:00', NULL),
-(23, 4, 'tuesday', '12:00:00', '20:00:00', 1, '2024-02-05 13:30:00', NULL),
-(24, 4, 'wednesday', '08:00:00', '16:00:00', 1, '2024-02-05 13:30:00', NULL),
-(25, 4, 'thursday', '12:00:00', '20:00:00', 1, '2024-02-05 13:30:00', NULL),
-(26, 4, 'friday', '08:00:00', '16:00:00', 1, '2024-02-05 13:30:00', NULL),
-(27, 4, 'saturday', '08:00:00', '16:00:00', 1, '2024-02-05 13:30:00', NULL),
-(28, 4, 'sunday', NULL, NULL, 0, '2024-02-05 13:30:00', NULL),
-(29, 5, 'monday', '10:00:00', '18:00:00', 1, '2024-02-10 14:30:00', NULL),
-(30, 5, 'tuesday', '10:00:00', '18:00:00', 1, '2024-02-10 14:30:00', NULL),
-(31, 5, 'wednesday', '10:00:00', '18:00:00', 1, '2024-02-10 14:30:00', NULL),
-(32, 5, 'thursday', '10:00:00', '18:00:00', 1, '2024-02-10 14:30:00', NULL),
-(33, 5, 'friday', '10:00:00', '18:00:00', 1, '2024-02-10 14:30:00', NULL),
-(34, 5, 'saturday', '09:00:00', '14:00:00', 1, '2024-02-10 14:30:00', NULL),
-(35, 5, 'sunday', NULL, NULL, 0, '2024-02-10 14:30:00', NULL),
-(36, 6, 'monday', NULL, NULL, 0, '2024-02-10 14:30:00', NULL),
-(37, 6, 'tuesday', '11:00:00', '19:00:00', 1, '2024-02-10 14:30:00', NULL),
-(38, 6, 'wednesday', '11:00:00', '19:00:00', 1, '2024-02-10 14:30:00', NULL),
-(39, 6, 'thursday', '11:00:00', '19:00:00', 1, '2024-02-10 14:30:00', NULL),
-(40, 6, 'friday', '11:00:00', '19:00:00', 1, '2024-02-10 14:30:00', NULL),
-(41, 6, 'saturday', '11:00:00', '19:00:00', 1, '2024-02-10 14:30:00', NULL),
-(42, 6, 'sunday', NULL, NULL, 0, '2024-02-10 14:30:00', NULL),
-(43, 7, 'monday', '09:00:00', '18:00:00', 1, '2024-02-15 15:30:00', NULL),
-(44, 7, 'tuesday', '09:00:00', '18:00:00', 1, '2024-02-15 15:30:00', NULL),
-(45, 7, 'wednesday', '09:00:00', '18:00:00', 1, '2024-02-15 15:30:00', NULL),
-(46, 7, 'thursday', '09:00:00', '18:00:00', 1, '2024-02-15 15:30:00', NULL),
-(47, 7, 'friday', '09:00:00', '18:00:00', 1, '2024-02-15 15:30:00', NULL),
-(48, 7, 'saturday', '09:00:00', '15:00:00', 1, '2024-02-15 15:30:00', NULL),
-(49, 7, 'sunday', NULL, NULL, 0, '2024-02-15 15:30:00', NULL),
-(50, 8, 'monday', NULL, NULL, 0, '2024-02-15 15:30:00', NULL),
-(51, 8, 'tuesday', '10:00:00', '19:00:00', 1, '2024-02-15 15:30:00', NULL),
-(52, 8, 'wednesday', '10:00:00', '19:00:00', 1, '2024-02-15 15:30:00', NULL),
-(53, 8, 'thursday', '10:00:00', '19:00:00', 1, '2024-02-15 15:30:00', NULL),
-(54, 8, 'friday', '10:00:00', '19:00:00', 1, '2024-02-15 15:30:00', NULL),
-(55, 8, 'saturday', '10:00:00', '19:00:00', 1, '2024-02-15 15:30:00', NULL),
-(56, 8, 'sunday', NULL, NULL, 0, '2024-02-15 15:30:00', NULL),
-(57, 9, 'monday', '06:00:00', '14:00:00', 1, '2024-02-20 16:30:00', NULL),
-(58, 9, 'tuesday', '06:00:00', '14:00:00', 1, '2024-02-20 16:30:00', NULL),
-(59, 9, 'wednesday', '06:00:00', '14:00:00', 1, '2024-02-20 16:30:00', NULL),
-(60, 9, 'thursday', '06:00:00', '14:00:00', 1, '2024-02-20 16:30:00', NULL),
-(61, 9, 'friday', '06:00:00', '14:00:00', 1, '2024-02-20 16:30:00', NULL),
-(62, 9, 'saturday', NULL, NULL, 0, '2024-02-20 16:30:00', NULL),
-(63, 9, 'sunday', NULL, NULL, 0, '2024-02-20 16:30:00', NULL),
-(64, 10, 'monday', '14:00:00', '22:00:00', 1, '2024-02-20 16:30:00', NULL),
-(65, 10, 'tuesday', '14:00:00', '22:00:00', 1, '2024-02-20 16:30:00', NULL),
-(66, 10, 'wednesday', '14:00:00', '22:00:00', 1, '2024-02-20 16:30:00', NULL),
-(67, 10, 'thursday', '14:00:00', '22:00:00', 1, '2024-02-20 16:30:00', NULL),
-(68, 10, 'friday', '14:00:00', '22:00:00', 1, '2024-02-20 16:30:00', NULL),
-(69, 10, 'saturday', '08:00:00', '16:00:00', 1, '2024-02-20 16:30:00', NULL),
-(70, 10, 'sunday', NULL, NULL, 0, '2024-02-20 16:30:00', NULL),
-(71, 11, 'monday', NULL, NULL, 0, '2024-02-25 17:30:00', NULL),
-(72, 11, 'tuesday', NULL, NULL, 0, '2024-02-25 17:30:00', NULL),
-(73, 11, 'wednesday', '10:00:00', '18:00:00', 1, '2024-02-25 17:30:00', NULL),
-(74, 11, 'thursday', '10:00:00', '18:00:00', 1, '2024-02-25 17:30:00', NULL),
-(75, 11, 'friday', '10:00:00', '18:00:00', 1, '2024-02-25 17:30:00', NULL),
-(76, 11, 'saturday', '10:00:00', '18:00:00', 1, '2024-02-25 17:30:00', NULL),
-(77, 11, 'sunday', '10:00:00', '18:00:00', 1, '2024-02-25 17:30:00', NULL),
-(78, 12, 'monday', '09:00:00', '18:00:00', 1, '2024-03-01 18:30:00', NULL),
-(79, 12, 'tuesday', '09:00:00', '18:00:00', 1, '2024-03-01 18:30:00', NULL),
-(80, 12, 'wednesday', '09:00:00', '18:00:00', 1, '2024-03-01 18:30:00', NULL),
-(81, 12, 'thursday', '09:00:00', '18:00:00', 1, '2024-03-01 18:30:00', NULL),
-(82, 12, 'friday', '09:00:00', '18:00:00', 1, '2024-03-01 18:30:00', NULL),
-(83, 12, 'saturday', '10:00:00', '15:00:00', 1, '2024-03-01 18:30:00', NULL),
-(84, 12, 'sunday', NULL, NULL, 0, '2024-03-01 18:30:00', NULL),
-(85, 13, 'monday', NULL, NULL, 0, '2024-03-05 19:30:00', NULL),
-(86, 13, 'tuesday', '10:00:00', '19:00:00', 1, '2024-03-05 19:30:00', NULL),
-(87, 13, 'wednesday', '10:00:00', '19:00:00', 1, '2024-03-05 19:30:00', NULL),
-(88, 13, 'thursday', '10:00:00', '19:00:00', 1, '2024-03-05 19:30:00', NULL),
-(89, 13, 'friday', '10:00:00', '19:00:00', 1, '2024-03-05 19:30:00', NULL),
-(90, 13, 'saturday', '10:00:00', '19:00:00', 1, '2024-03-05 19:30:00', NULL),
-(91, 13, 'sunday', NULL, NULL, 0, '2024-03-05 19:30:00', NULL),
-(92, 14, 'monday', '10:00:00', '18:00:00', 1, '2024-03-10 20:30:00', NULL),
-(93, 14, 'tuesday', '10:00:00', '18:00:00', 1, '2024-03-10 20:30:00', NULL),
-(94, 14, 'wednesday', '10:00:00', '18:00:00', 1, '2024-03-10 20:30:00', NULL),
-(95, 14, 'thursday', '10:00:00', '18:00:00', 1, '2024-03-10 20:30:00', NULL),
-(96, 14, 'friday', '10:00:00', '18:00:00', 1, '2024-03-10 20:30:00', NULL),
-(97, 14, 'saturday', NULL, NULL, 0, '2024-03-10 20:30:00', NULL),
-(98, 14, 'sunday', NULL, NULL, 0, '2024-03-10 20:30:00', NULL),
-(99, 15, 'monday', '11:00:00', '19:00:00', 1, '2024-03-15 21:30:00', NULL),
-(100, 15, 'tuesday', '11:00:00', '19:00:00', 1, '2024-03-15 21:30:00', NULL),
-(101, 15, 'wednesday', '11:00:00', '19:00:00', 1, '2024-03-15 21:30:00', NULL),
-(102, 15, 'thursday', '11:00:00', '19:00:00', 1, '2024-03-15 21:30:00', NULL),
-(103, 15, 'friday', '11:00:00', '19:00:00', 1, '2024-03-15 21:30:00', NULL),
-(104, 15, 'saturday', '11:00:00', '19:00:00', 1, '2024-03-15 21:30:00', NULL),
-(105, 15, 'sunday', NULL, NULL, 0, '2024-03-15 21:30:00', NULL);
+(1, 1, 'monday', NULL, NULL, 0, '2026-02-22 21:59:11', NULL),
+(2, 1, 'tuesday', '08:00:00', '19:00:00', 1, '2026-02-22 21:59:11', NULL),
+(3, 1, 'wednesday', '08:00:00', '19:00:00', 1, '2026-02-22 21:59:11', NULL),
+(4, 1, 'thursday', '08:00:00', '19:00:00', 1, '2026-02-22 21:59:11', NULL),
+(5, 1, 'friday', '08:00:00', '19:00:00', 1, '2026-02-22 21:59:11', NULL),
+(6, 1, 'saturday', '08:00:00', '19:00:00', 1, '2026-02-22 21:59:11', NULL),
+(7, 1, 'sunday', NULL, NULL, 0, '2026-02-22 21:59:11', NULL),
+(8, 2, 'monday', NULL, NULL, 0, '2026-02-22 23:18:11', NULL),
+(9, 2, 'tuesday', '08:00:00', '19:00:00', 1, '2026-02-22 23:18:11', NULL),
+(10, 2, 'wednesday', '08:00:00', '19:00:00', 1, '2026-02-22 23:18:11', NULL),
+(11, 2, 'thursday', '08:00:00', '19:00:00', 1, '2026-02-22 23:18:11', NULL),
+(12, 2, 'friday', '08:00:00', '19:00:00', 1, '2026-02-22 23:18:11', NULL),
+(13, 2, 'saturday', '08:00:00', '19:00:00', 1, '2026-02-22 23:18:11', NULL),
+(14, 2, 'sunday', NULL, NULL, 0, '2026-02-22 23:18:11', NULL),
+(15, 3, 'monday', NULL, NULL, 0, '2026-02-23 02:04:57', NULL),
+(16, 3, 'tuesday', '10:00:00', '19:00:00', 1, '2026-02-23 02:04:57', NULL),
+(17, 3, 'wednesday', '10:00:00', '19:00:00', 1, '2026-02-23 02:04:57', NULL),
+(18, 3, 'thursday', '10:00:00', '19:00:00', 1, '2026-02-23 02:04:57', NULL),
+(19, 3, 'friday', '10:00:00', '19:00:00', 1, '2026-02-23 02:04:57', NULL),
+(20, 3, 'saturday', '10:00:00', '19:00:00', 1, '2026-02-23 02:04:57', NULL),
+(21, 3, 'sunday', NULL, NULL, 0, '2026-02-23 02:04:57', NULL);
 
 -- --------------------------------------------------------
 
@@ -5599,8 +5473,8 @@ INSERT INTO `staff_working_hours` (`id`, `staff_id`, `day_of_week`, `start_time`
 --
 
 CREATE TABLE `temporary_closed_periods` (
-  `id` int(11) NOT NULL,
-  `company_id` int(11) NOT NULL,
+  `id` int NOT NULL,
+  `company_id` int NOT NULL,
   `start_date` date NOT NULL,
   `end_date` date NOT NULL,
   `open_time` time DEFAULT NULL,
@@ -5609,82 +5483,6 @@ CREATE TABLE `temporary_closed_periods` (
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
 
---
--- Dumping data for table `temporary_closed_periods`
---
-
-INSERT INTO `temporary_closed_periods` (`id`, `company_id`, `start_date`, `end_date`, `open_time`, `close_time`, `created_at`, `updated_at`) VALUES
-(1, 1, '2024-03-29', '2024-04-01', NULL, NULL, '2024-02-15 09:00:00', NULL),
-(2, 1, '2024-05-01', '2024-05-01', NULL, NULL, '2024-03-20 10:00:00', NULL),
-(3, 1, '2024-07-15', '2024-07-28', NULL, NULL, '2024-05-10 12:00:00', NULL),
-(4, 1, '2024-12-24', '2024-12-26', NULL, NULL, '2024-10-01 08:00:00', NULL),
-(5, 1, '2024-12-31', '2024-12-31', '09:00:00', '14:00:00', '2024-10-01 08:00:00', NULL),
-(6, 2, '2024-03-28', '2024-04-02', NULL, NULL, '2024-02-20 10:00:00', NULL),
-(7, 2, '2024-05-01', '2024-05-01', NULL, NULL, '2024-03-25 11:00:00', NULL),
-(8, 2, '2024-08-01', '2024-08-14', NULL, NULL, '2024-06-01 13:00:00', NULL),
-(9, 2, '2024-12-23', '2024-12-27', NULL, NULL, '2024-10-05 09:00:00', NULL),
-(10, 2, '2024-12-31', '2024-12-31', '10:00:00', '15:00:00', '2024-10-05 09:00:00', NULL),
-(11, 3, '2024-03-29', '2024-04-01', NULL, NULL, '2024-02-25 11:00:00', NULL),
-(12, 3, '2024-05-01', '2024-05-01', NULL, NULL, '2024-03-30 12:00:00', NULL),
-(13, 3, '2024-08-05', '2024-08-18', NULL, NULL, '2024-06-10 14:00:00', NULL),
-(14, 3, '2024-12-24', '2024-12-25', NULL, NULL, '2024-10-10 10:00:00', NULL),
-(15, 3, '2024-12-31', '2024-12-31', '08:00:00', '13:00:00', '2024-10-10 10:00:00', NULL),
-(16, 4, '2024-03-29', '2024-04-01', NULL, NULL, '2024-03-01 12:00:00', NULL),
-(17, 4, '2024-05-01', '2024-05-01', NULL, NULL, '2024-04-01 12:00:00', NULL),
-(18, 4, '2024-08-01', '2024-08-10', NULL, NULL, '2024-06-15 15:00:00', NULL),
-(19, 4, '2024-12-24', '2024-12-26', NULL, NULL, '2024-10-15 11:00:00', NULL),
-(20, 4, '2024-12-31', '2025-01-01', NULL, NULL, '2024-10-15 11:00:00', NULL),
-(21, 5, '2024-03-31', '2024-04-01', NULL, NULL, '2024-03-05 13:00:00', NULL),
-(22, 5, '2024-05-01', '2024-05-01', NULL, NULL, '2024-04-05 13:00:00', NULL),
-(23, 5, '2024-12-25', '2024-12-25', NULL, NULL, '2024-10-20 12:00:00', NULL),
-(24, 5, '2025-01-01', '2025-01-01', NULL, NULL, '2024-10-20 12:00:00', NULL),
-(25, 1, '2024-03-29', '2024-04-01', NULL, NULL, '2024-02-15 09:00:00', NULL),
-(26, 1, '2024-05-01', '2024-05-01', NULL, NULL, '2024-03-20 10:00:00', NULL),
-(27, 1, '2024-07-15', '2024-07-28', NULL, NULL, '2024-05-10 12:00:00', NULL),
-(28, 1, '2024-12-24', '2024-12-26', NULL, NULL, '2024-10-01 08:00:00', NULL),
-(29, 1, '2024-12-31', '2024-12-31', '09:00:00', '14:00:00', '2024-10-01 08:00:00', NULL),
-(30, 2, '2024-03-28', '2024-04-02', NULL, NULL, '2024-02-20 10:00:00', NULL),
-(31, 2, '2024-05-01', '2024-05-01', NULL, NULL, '2024-03-25 11:00:00', NULL),
-(32, 2, '2024-08-01', '2024-08-14', NULL, NULL, '2024-06-01 13:00:00', NULL),
-(33, 2, '2024-12-23', '2024-12-27', NULL, NULL, '2024-10-05 09:00:00', NULL),
-(34, 2, '2024-12-31', '2024-12-31', '10:00:00', '15:00:00', '2024-10-05 09:00:00', NULL),
-(35, 3, '2024-03-29', '2024-04-01', NULL, NULL, '2024-02-25 11:00:00', NULL),
-(36, 3, '2024-05-01', '2024-05-01', NULL, NULL, '2024-03-30 12:00:00', NULL),
-(37, 3, '2024-08-05', '2024-08-18', NULL, NULL, '2024-06-10 14:00:00', NULL),
-(38, 3, '2024-12-24', '2024-12-25', NULL, NULL, '2024-10-10 10:00:00', NULL),
-(39, 3, '2024-12-31', '2024-12-31', '08:00:00', '13:00:00', '2024-10-10 10:00:00', NULL),
-(40, 4, '2024-03-29', '2024-04-01', NULL, NULL, '2024-03-01 12:00:00', NULL),
-(41, 4, '2024-05-01', '2024-05-01', NULL, NULL, '2024-04-01 12:00:00', NULL),
-(42, 4, '2024-08-01', '2024-08-10', NULL, NULL, '2024-06-15 15:00:00', NULL),
-(43, 4, '2024-12-24', '2024-12-26', NULL, NULL, '2024-10-15 11:00:00', NULL),
-(44, 4, '2024-12-31', '2025-01-01', NULL, NULL, '2024-10-15 11:00:00', NULL),
-(45, 5, '2024-03-31', '2024-04-01', NULL, NULL, '2024-03-05 13:00:00', NULL),
-(46, 5, '2024-05-01', '2024-05-01', NULL, NULL, '2024-04-05 13:00:00', NULL),
-(47, 5, '2024-12-25', '2024-12-25', NULL, NULL, '2024-10-20 12:00:00', NULL),
-(48, 5, '2025-01-01', '2025-01-01', NULL, NULL, '2024-10-20 12:00:00', NULL),
-(49, 6, '2024-03-29', '2024-04-01', NULL, NULL, '2024-03-10 14:00:00', NULL),
-(50, 6, '2024-05-01', '2024-05-01', NULL, NULL, '2024-04-10 14:00:00', NULL),
-(51, 6, '2024-08-10', '2024-08-23', NULL, NULL, '2024-06-20 16:00:00', NULL),
-(52, 6, '2024-12-24', '2024-12-26', NULL, NULL, '2024-10-25 13:00:00', NULL),
-(53, 7, '2024-03-29', '2024-04-01', NULL, NULL, '2024-03-12 15:00:00', NULL),
-(54, 7, '2024-05-01', '2024-05-01', NULL, NULL, '2024-04-12 15:00:00', NULL),
-(55, 7, '2024-07-01', '2024-07-31', NULL, NULL, '2024-05-20 17:00:00', NULL),
-(56, 7, '2024-12-22', '2025-01-05', NULL, NULL, '2024-10-30 15:00:00', NULL),
-(57, 8, '2024-03-31', '2024-04-01', NULL, NULL, '2024-03-15 16:00:00', NULL),
-(58, 8, '2024-05-01', '2024-05-01', NULL, NULL, '2024-04-15 16:00:00', NULL),
-(59, 8, '2024-08-05', '2024-08-18', NULL, NULL, '2024-06-25 18:00:00', NULL),
-(60, 8, '2024-12-24', '2024-12-25', NULL, NULL, '2024-11-01 16:00:00', NULL),
-(61, 8, '2024-12-31', '2024-12-31', '09:00:00', '14:00:00', '2024-11-01 16:00:00', NULL),
-(62, 9, '2024-03-29', '2024-04-01', NULL, NULL, '2024-03-18 17:00:00', NULL),
-(63, 9, '2024-05-01', '2024-05-01', NULL, NULL, '2024-04-18 17:00:00', NULL),
-(64, 9, '2024-08-01', '2024-08-14', NULL, NULL, '2024-06-30 19:00:00', NULL),
-(65, 9, '2024-12-24', '2024-12-26', NULL, NULL, '2024-11-05 17:00:00', NULL),
-(66, 10, '2024-03-29', '2024-04-01', NULL, NULL, '2024-03-20 18:00:00', NULL),
-(67, 10, '2024-05-01', '2024-05-01', NULL, NULL, '2024-04-20 18:00:00', NULL),
-(68, 10, '2024-08-15', '2024-08-30', NULL, NULL, '2024-07-01 20:00:00', NULL),
-(69, 10, '2024-12-24', '2024-12-26', NULL, NULL, '2024-11-10 18:00:00', NULL),
-(70, 10, '2024-12-31', '2025-01-02', NULL, NULL, '2024-11-10 18:00:00', NULL);
-
 -- --------------------------------------------------------
 
 --
@@ -5692,10 +5490,10 @@ INSERT INTO `temporary_closed_periods` (`id`, `company_id`, `start_date`, `end_d
 --
 
 CREATE TABLE `tokens` (
-  `id` int(11) NOT NULL,
-  `user_id` int(11) NOT NULL,
-  `token` varchar(500) COLLATE utf8mb4_hungarian_ci NOT NULL,
-  `type` varchar(100) COLLATE utf8mb4_hungarian_ci NOT NULL,
+  `id` int NOT NULL,
+  `user_id` int DEFAULT NULL,
+  `token` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci NOT NULL,
+  `type` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci NOT NULL,
   `expires_at` datetime NOT NULL,
   `is_revoked` tinyint(1) NOT NULL DEFAULT '0',
   `revoked_at` datetime DEFAULT NULL,
@@ -5709,9 +5507,9 @@ CREATE TABLE `tokens` (
 --
 
 CREATE TABLE `two_factor_recovery_codes` (
-  `id` int(11) NOT NULL,
-  `user_id` int(11) NOT NULL,
-  `code` varchar(64) COLLATE utf8mb4_hungarian_ci NOT NULL COMMENT 'Hashed recovery code',
+  `id` int NOT NULL,
+  `user_id` int NOT NULL,
+  `code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci NOT NULL COMMENT 'Hashed recovery code',
   `used_at` datetime DEFAULT NULL,
   `is_used` tinyint(1) NOT NULL DEFAULT '0',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -5724,14 +5522,14 @@ CREATE TABLE `two_factor_recovery_codes` (
 --
 
 CREATE TABLE `users` (
-  `id` int(11) NOT NULL,
-  `guid` char(36) COLLATE utf8mb4_hungarian_ci NOT NULL,
-  `first_name` varchar(100) COLLATE utf8mb4_hungarian_ci DEFAULT NULL,
-  `last_name` varchar(100) COLLATE utf8mb4_hungarian_ci DEFAULT NULL,
-  `email` varchar(100) COLLATE utf8mb4_hungarian_ci NOT NULL,
-  `password` text COLLATE utf8mb4_hungarian_ci NOT NULL,
-  `phone` varchar(30) COLLATE utf8mb4_hungarian_ci NOT NULL,
-  `company_id` int(11) DEFAULT NULL COMMENT 'NULL for superadmins or independent clients',
+  `id` int NOT NULL,
+  `guid` char(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci NOT NULL,
+  `first_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci DEFAULT NULL,
+  `last_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci DEFAULT NULL,
+  `email` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci NOT NULL,
+  `password` text CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci NOT NULL,
+  `phone` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci NOT NULL,
+  `company_id` int DEFAULT NULL COMMENT 'NULL for superadmins or independent clients',
   `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` datetime DEFAULT NULL,
   `deleted_at` datetime DEFAULT NULL,
@@ -5740,9 +5538,9 @@ CREATE TABLE `users` (
   `register_finished_at` datetime DEFAULT NULL,
   `is_active` tinyint(1) NOT NULL DEFAULT '1' COMMENT 'Admins can deactivate users',
   `two_factor_enabled` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'Whether 2FA is enabled',
-  `two_factor_secret` varchar(32) COLLATE utf8mb4_hungarian_ci DEFAULT NULL COMMENT 'TOTP secret key (encrypted)',
+  `two_factor_secret` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci DEFAULT NULL COMMENT 'TOTP secret key (encrypted)',
   `two_factor_confirmed_at` datetime DEFAULT NULL COMMENT 'When 2FA was confirmed/activated',
-  `two_factor_recovery_codes` longtext COLLATE utf8mb4_hungarian_ci
+  `two_factor_recovery_codes` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_hungarian_ci
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_hungarian_ci;
 
 --
@@ -5750,51 +5548,32 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `guid`, `first_name`, `last_name`, `email`, `password`, `phone`, `company_id`, `created_at`, `updated_at`, `deleted_at`, `is_deleted`, `last_login`, `register_finished_at`, `is_active`, `two_factor_enabled`, `two_factor_secret`, `two_factor_confirmed_at`, `two_factor_recovery_codes`) VALUES
-(1, '390fde34-f069-11f0-bb19-94e23c940cf4', 'Admin', 'Rendszer', 'admin@bookr.hu', '$2y$10$abcdefghijklmnopqrstuv', '+36301111111', NULL, '2024-01-15 10:00:00', NULL, NULL, 0, NULL, '2024-01-15 10:00:00', 1, 0, NULL, NULL, NULL),
-(2, '3915b990-f069-11f0-bb19-94e23c940cf4', 'Kovács', 'Anna', 'anna.kovacs@szepseg.hu', '$2y$10$hash1', '+36301234501', 1, '2024-02-01 09:00:00', '2024-02-01 10:00:00', NULL, 0, NULL, '2024-02-01 09:00:00', 1, 0, NULL, NULL, NULL),
-(3, '3915c0e4-f069-11f0-bb19-94e23c940cf4', 'Nagy', 'Péter', 'peter.nagy@wellness.hu', '$2y$10$hash2', '+36301234502', 2, '2024-02-05 10:00:00', '2024-02-05 11:00:00', NULL, 0, NULL, '2024-02-05 10:00:00', 1, 0, NULL, NULL, NULL),
-(4, '3915c388-f069-11f0-bb19-94e23c940cf4', 'Szabó', 'Eszter', 'eszter.szabo@fodrasz.hu', '$2y$10$hash3', '+36301234503', 3, '2024-02-10 11:00:00', '2024-02-10 12:00:00', NULL, 0, NULL, '2024-02-10 11:00:00', 1, 0, NULL, NULL, NULL),
-(5, '3915c4f5-f069-11f0-bb19-94e23c940cf4', 'Tóth', 'Márton', 'marton.toth@nails.hu', '$2y$10$hash4', '+36301234504', 4, '2024-02-15 12:00:00', '2024-02-15 13:00:00', NULL, 0, NULL, '2024-02-15 12:00:00', 1, 0, NULL, NULL, NULL),
-(6, '3915c64a-f069-11f0-bb19-94e23c940cf4', 'Varga', 'Katalin', 'katalin.varga@fitness.hu', '$2y$10$hash5', '+36301234505', 5, '2024-02-20 13:00:00', '2024-02-20 14:00:00', NULL, 0, NULL, '2024-02-20 13:00:00', 1, 0, NULL, NULL, NULL),
-(7, '3915c78b-f069-11f0-bb19-94e23c940cf4', 'Horváth', 'László', 'laszlo.horvath@yoga.hu', '$2y$10$hash6', '+36301234506', 6, '2024-02-25 14:00:00', '2024-02-25 15:00:00', NULL, 0, NULL, '2024-02-25 14:00:00', 1, 0, NULL, NULL, NULL),
-(8, '3915c8cc-f069-11f0-bb19-94e23c940cf4', 'Kiss', 'Mónika', 'monika.kiss@massage.hu', '$2y$10$hash7', '+36301234507', 7, '2024-03-01 15:00:00', '2024-03-01 16:00:00', NULL, 0, NULL, '2024-03-01 15:00:00', 1, 0, NULL, NULL, NULL),
-(9, '3915cd0c-f069-11f0-bb19-94e23c940cf4', 'Molnár', 'Gábor', 'gabor.molnar@barber.hu', '$2y$10$hash8', '+36301234508', 8, '2024-03-05 16:00:00', '2024-03-05 17:00:00', NULL, 0, NULL, '2024-03-05 16:00:00', 1, 0, NULL, NULL, NULL),
-(10, '3915cec7-f069-11f0-bb19-94e23c940cf4', 'Farkas', 'Judit', 'judit.farkas@beauty.hu', '$2y$10$hash9', '+36301234509', 9, '2024-03-10 17:00:00', '2024-03-10 18:00:00', NULL, 0, NULL, '2024-03-10 17:00:00', 1, 0, NULL, NULL, NULL),
-(11, '3915d0c2-f069-11f0-bb19-94e23c940cf4', 'Balogh', 'Tamás', 'tamas.balogh@spa.hu', '$2y$10$hash10', '+36301234510', 10, '2024-03-15 18:00:00', '2024-03-15 19:00:00', NULL, 0, NULL, '2024-03-15 18:00:00', 1, 0, NULL, NULL, NULL),
-(12, '391b3432-f069-11f0-bb19-94e23c940cf4', 'Lukács', 'Réka', 'reka.lukacs@staff.hu', '$2y$10$staff1', '+36302345601', 1, '2024-02-02 09:00:00', '2024-02-02 10:00:00', NULL, 0, NULL, '2024-02-02 09:00:00', 1, 0, NULL, NULL, NULL),
-(13, '391ebe24-f069-11f0-bb19-94e23c940cf4', 'Papp', 'Nikolett', 'nikolett.papp@staff.hu', '$2y$10$staff2', '+36302345602', 1, '2024-02-02 10:00:00', '2024-02-02 11:00:00', NULL, 0, NULL, '2024-02-02 10:00:00', 1, 0, NULL, NULL, NULL),
-(14, '391ec2f9-f069-11f0-bb19-94e23c940cf4', 'Simon', 'Dóra', 'dora.simon@staff.hu', '$2y$10$staff3', '+36302345603', 2, '2024-02-02 11:00:00', '2024-02-06 10:00:00', NULL, 0, NULL, '2024-02-02 11:00:00', 1, 0, NULL, NULL, NULL),
-(15, '391ec4f4-f069-11f0-bb19-94e23c940cf4', 'Takács', 'Beáta', 'beata.takacs@staff.hu', '$2y$10$staff4', '+36302345604', 2, '2024-02-06 09:00:00', '2024-02-06 11:00:00', NULL, 0, NULL, '2024-02-06 09:00:00', 1, 0, NULL, NULL, NULL),
-(16, '391ec642-f069-11f0-bb19-94e23c940cf4', 'Németh', 'Zsuzsanna', 'zsuzsanna.nemeth@staff.hu', '$2y$10$staff5', '+36302345605', 3, '2024-02-06 10:00:00', '2024-02-11 10:00:00', NULL, 0, NULL, '2024-02-06 10:00:00', 1, 0, NULL, NULL, NULL),
-(17, '391ec741-f069-11f0-bb19-94e23c940cf4', 'Lakatos', 'Andrea', 'andrea.lakatos@staff.hu', '$2y$10$staff6', '+36302345606', 3, '2024-02-06 11:00:00', '2024-02-11 11:00:00', NULL, 0, NULL, '2024-02-06 11:00:00', 1, 0, NULL, NULL, NULL),
-(18, '391ec822-f069-11f0-bb19-94e23c940cf4', 'Juhász', 'Vivien', 'vivien.juhasz@staff.hu', '$2y$10$staff7', '+36302345607', 4, '2024-02-11 09:00:00', '2024-02-16 10:00:00', NULL, 0, NULL, '2024-02-11 09:00:00', 1, 0, NULL, NULL, NULL),
-(19, '391ec906-f069-11f0-bb19-94e23c940cf4', 'Mészáros', 'Petra', 'petra.meszaros@staff.hu', '$2y$10$staff8', '+36302345608', 4, '2024-02-11 10:00:00', '2024-02-16 11:00:00', NULL, 0, NULL, '2024-02-11 10:00:00', 1, 0, NULL, NULL, NULL),
-(20, '391ec9dd-f069-11f0-bb19-94e23c940cf4', 'Fekete', 'Noémi', 'noemi.fekete@staff.hu', '$2y$10$staff9', '+36302345609', 5, '2024-02-11 11:00:00', '2024-02-21 10:00:00', NULL, 0, NULL, '2024-02-11 11:00:00', 1, 0, NULL, NULL, NULL),
-(21, '391ecab8-f069-11f0-bb19-94e23c940cf4', 'Bodnár', 'Krisztina', 'krisztina.bodnar@staff.hu', '$2y$10$staff10', '+36302345610', 5, '2024-02-16 09:00:00', '2024-02-21 11:00:00', NULL, 0, NULL, '2024-02-16 09:00:00', 1, 0, NULL, NULL, NULL),
-(22, '391ecb94-f069-11f0-bb19-94e23c940cf4', 'Rácz', 'Melinda', 'melinda.racz@staff.hu', '$2y$10$staff11', '+36302345611', 6, '2024-02-16 10:00:00', '2024-02-26 10:00:00', NULL, 0, NULL, '2024-02-16 10:00:00', 1, 0, NULL, NULL, NULL),
-(23, '391ecc6d-f069-11f0-bb19-94e23c940cf4', 'Szilágyi', 'Bence', 'bence.szilagyi@staff.hu', '$2y$10$staff12', '+36302345612', 7, '2024-02-21 09:00:00', '2024-03-01 10:00:00', NULL, 0, NULL, '2024-02-21 09:00:00', 1, 0, NULL, NULL, NULL),
-(24, '391ecd40-f069-11f0-bb19-94e23c940cf4', 'Kovács', 'Dániel', 'daniel.kovacs@staff.hu', '$2y$10$staff13', '+36302345613', 8, '2024-02-21 10:00:00', '2024-03-05 10:00:00', NULL, 0, NULL, '2024-02-21 10:00:00', 1, 0, NULL, NULL, NULL),
-(25, '391ece17-f069-11f0-bb19-94e23c940cf4', 'Nagy', 'Roland', 'roland.nagy@staff.hu', '$2y$10$staff14', '+36302345614', 9, '2024-02-21 11:00:00', '2024-03-10 10:00:00', NULL, 0, NULL, '2024-02-21 11:00:00', 1, 0, NULL, NULL, NULL),
-(26, '391eceef-f069-11f0-bb19-94e23c940cf4', 'Barta', 'Lilla', 'lilla.barta@staff.hu', '$2y$10$staff15', '+36302345615', 10, '2024-02-26 09:00:00', '2024-03-15 10:00:00', NULL, 0, NULL, '2024-02-26 09:00:00', 1, 0, NULL, NULL, NULL),
-(27, '39221d73-f069-11f0-bb19-94e23c940cf4', 'Kovács', 'János', 'janos.kovacs@gmail.com', '$2y$10$client1', '+36203456701', NULL, '2024-03-20 10:00:00', NULL, NULL, 0, NULL, '2024-03-20 10:00:00', 1, 0, NULL, NULL, NULL),
-(28, '39222174-f069-11f0-bb19-94e23c940cf4', 'Nagy', 'Éva', 'eva.nagy@gmail.com', '$2y$10$client2', '+36203456702', NULL, '2024-03-21 11:00:00', NULL, NULL, 0, NULL, '2024-03-21 11:00:00', 1, 0, NULL, NULL, NULL),
-(29, '392222b5-f069-11f0-bb19-94e23c940cf4', 'Szabó', 'Gergő', 'gergo.szabo@gmail.com', '$2y$10$client3', '+36203456703', NULL, '2024-03-22 12:00:00', NULL, NULL, 0, NULL, '2024-03-22 12:00:00', 1, 0, NULL, NULL, NULL),
-(30, '392223b1-f069-11f0-bb19-94e23c940cf4', 'Tóth', 'Klaudia', 'klaudia.toth@freemail.hu', '$2y$10$client4', '+36203456704', NULL, '2024-03-23 13:00:00', NULL, NULL, 0, NULL, '2024-03-23 13:00:00', 1, 0, NULL, NULL, NULL),
-(31, '39222481-f069-11f0-bb19-94e23c940cf4', 'Varga', 'Zsolt', 'zsolt.varga@citromail.hu', '$2y$10$client5', '+36203456705', NULL, '2024-03-24 14:00:00', NULL, NULL, 0, NULL, '2024-03-24 14:00:00', 1, 0, NULL, NULL, NULL),
-(32, '39222545-f069-11f0-bb19-94e23c940cf4', 'Horváth', 'Barbara', 'barbara.horvath@gmail.com', '$2y$10$client6', '+36203456706', NULL, '2024-03-25 15:00:00', NULL, NULL, 0, NULL, '2024-03-25 15:00:00', 1, 0, NULL, NULL, NULL),
-(33, '39222606-f069-11f0-bb19-94e23c940cf4', 'Kiss', 'Márk', 'mark.kiss@yahoo.com', '$2y$10$client7', '+36203456707', NULL, '2024-03-26 16:00:00', NULL, NULL, 0, NULL, '2024-03-26 16:00:00', 1, 0, NULL, NULL, NULL),
-(34, '392226c5-f069-11f0-bb19-94e23c940cf4', 'Molnár', 'Linda', 'linda.molnar@outlook.com', '$2y$10$client8', '+36203456708', NULL, '2024-03-27 17:00:00', NULL, NULL, 0, NULL, '2024-03-27 17:00:00', 1, 0, NULL, NULL, NULL),
-(35, '39222791-f069-11f0-bb19-94e23c940cf4', 'Farkas', 'Dávid', 'david.farkas@gmail.com', '$2y$10$client9', '+36203456709', NULL, '2024-03-28 18:00:00', NULL, NULL, 0, NULL, '2024-03-28 18:00:00', 1, 0, NULL, NULL, NULL),
-(36, '392228e7-f069-11f0-bb19-94e23c940cf4', 'Balogh', 'Csilla', 'csilla.balogh@freemail.hu', '$2y$10$client10', '+36203456710', NULL, '2024-03-29 19:00:00', NULL, NULL, 0, NULL, '2024-03-29 19:00:00', 1, 0, NULL, NULL, NULL),
-(37, '39222a2c-f069-11f0-bb19-94e23c940cf4', 'Lukács', 'Tamás', 'tamas.lukacs@gmail.com', '$2y$10$client11', '+36203456711', NULL, '2024-03-30 10:00:00', NULL, NULL, 0, NULL, '2024-03-30 10:00:00', 1, 0, NULL, NULL, NULL),
-(38, '39222b04-f069-11f0-bb19-94e23c940cf4', 'Papp', 'Bernadett', 'bernadett.papp@citromail.hu', '$2y$10$client12', '+36203456712', NULL, '2024-03-31 11:00:00', NULL, NULL, 0, NULL, '2024-03-31 11:00:00', 1, 0, NULL, NULL, NULL),
-(39, '39222bc4-f069-11f0-bb19-94e23c940cf4', 'Simon', 'Balázs', 'balazs.simon@yahoo.com', '$2y$10$client13', '+36203456713', NULL, '2024-04-01 12:00:00', NULL, NULL, 0, NULL, '2024-04-01 12:00:00', 1, 0, NULL, NULL, NULL),
-(40, '39222c81-f069-11f0-bb19-94e23c940cf4', 'Takács', 'Nikoletta', 'nikoletta.takacs@gmail.com', '$2y$10$client14', '+36203456714', NULL, '2024-04-02 13:00:00', NULL, NULL, 0, NULL, '2024-04-02 13:00:00', 1, 0, NULL, NULL, NULL),
-(41, 'b1f05ffe-f3c8-11f0-9e1f-41a67f8a3877', 'Admin', 'Admin', 'admin@admin.hu', '$argon2id$v=19$m=65536,t=3,p=1$Ovn1EvOxM0EzsPJHJ7inqA$nkFzFuikclUha8Jaz3itNGdPMHwGAhrPvDlXElQos/k', '+3670123252', NULL, '2026-01-17 18:19:35', '2026-01-27 10:58:29', NULL, 0, '2026-02-11 13:08:10', '2026-01-17 18:36:57', 1, 0, NULL, NULL, NULL),
-(43, '9be7f6aa-f840-11f0-89b9-b5e6602fcb6e', 'Admin', 'Admin', 'admin@admin.com', '$argon2id$v=19$m=65536,t=3,p=1$neSrpLHeChl9iqqk6FQH0A$/3zpvnj5TlX9YNwOF4j87qT7xszB9UcLDMOT3YLwEDY', '+367012344356', 2, '2026-01-23 10:48:02', '2026-01-23 20:10:10', NULL, 0, '2026-02-11 09:36:16', '2026-01-23 10:48:09', 1, 0, NULL, NULL, NULL),
-(44, '4a23ba5e-fe10-11f0-b291-2d2d5b3f2a16', 'Benjamin', 'Vasvári', 'vben@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$TRB9TpdpKZUGgk1f6UJx2Q$xf7/9r7En197Ae+nOOSe39voTcXtd/YHhurfOymEUH8', '+3670123252', NULL, '2026-01-30 20:17:16', '2026-01-30 20:17:54', NULL, 0, NULL, '2026-01-30 20:17:54', 1, 0, NULL, NULL, NULL),
-(45, 'dc156670-001d-11f1-b548-94e23c940cf4', 'Ujhelyi', 'Hunor', 'uhunor41@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$Vt6xKq2Pg5jG54y5qoWLig$sClVSYAUPPP+b1KldK9U5WB8Uhlbk8spOJDG5CezPyk', '+36703477754', 1, '2026-02-02 10:59:27', NULL, NULL, 0, '2026-02-17 19:27:46', NULL, 1, 0, NULL, NULL, NULL),
-(47, '185fbdd6-05dd-11f1-906a-ad4a6c3ef204', 'Benjamin', 'Vasvári', 'vasvariben@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$pH8GOc2tdYSG0DZDMBNDug$iXdhos2XjSQcAHrC6DfvQJ105G647p9ZpHjksBKS1po', '+3670123252', 2, '2026-02-09 18:30:58', '2026-02-11 00:27:11', NULL, 0, '2026-02-20 09:39:59', '2026-02-09 18:31:36', 1, 0, NULL, NULL, NULL);
+(1, '6231cba4-1026-11f1-afc2-2178f5682584', 'Benjámin', 'Vasvári', 'vasvariben@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$nlmx/azGmOP53sKF3tJUwQ$LVWmEY9KjqxX6DWLaU5lL1+Ul7FcXQri/yhpVB5qAOs', '+36704134374', NULL, '2026-02-22 20:40:46', '2026-02-22 20:43:44', NULL, 0, '2026-02-22 23:12:28', '2026-02-22 20:43:44', 1, 0, NULL, NULL, NULL),
+(2, '5b5ce1aa-1027-11f1-afc2-2178f5682584', 'Tulaj', 'Jungle', 'jungle@jungle.hu', '$argon2id$v=19$m=65536,t=3,p=1$7gayZE9rh1QYR2KBE+urgg$WPksHWfoAw41UQYIVoGx914oP/VC72tKCepKzYhb0Zw', '+36302433894', 1, '2026-02-22 20:47:44', '2026-02-22 21:39:33', NULL, 0, '2026-02-23 03:08:35', '2026-02-22 20:48:36', 1, 0, NULL, NULL, NULL),
+(3, 'a397a37e-1036-11f1-afc2-2178f5682584', 'Krisztofer', 'Kerekes', 'kerekes@kriszto.hu', '$argon2id$v=19$m=65536,t=3,p=1$+gQ0xtich2UV0+NCPcNBjw$0zMS+Ni8EoS+NlHvWxx8H72J4UyeignBRO74ftdmRzU', '+36704923823', 1, '2026-02-22 22:37:08', '2026-02-22 22:45:25', NULL, 0, '2026-02-22 22:46:11', '2026-02-22 22:38:31', 1, 0, NULL, NULL, NULL),
+(4, '273333e0-1043-11f1-afc2-2178f5682584', 'Balázs', 'Mikó', 'miko@balazs.hu', '$argon2id$v=19$m=65536,t=3,p=1$06e6EVB1P9tIf2GjN4eTHw$dHG1nalIct/wGfTA2+gsUtk/krqPGqq31Tgxmqo3f/g', '+36308741474', 1, '2026-02-23 00:06:43', '2026-02-23 00:08:11', NULL, 0, '2026-02-23 00:09:16', '2026-02-23 00:07:19', 1, 0, NULL, NULL, NULL),
+(5, '87a56bad-20ae-4625-8186-512bb72434ab', 'István', 'Bíró', 'istvan.biro87@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$dGVzdHNhbHQxMjM0NTY3$8K3R2vQmN1pL9xF6wE4hJcYuBoTsAiDnMkGlPrVeHfU', '+36720870787', NULL, '2026-02-01 09:00:00', '2026-02-01 09:08:00', NULL, 0, '2026-02-05 01:08:00', '2026-02-01 09:08:00', 1, 0, NULL, NULL, NULL),
+(6, '5835f453-aef1-41d2-89f3-b643b177d66d', 'Péter', 'Simon', 'peter.simon@citromail.hu', '$argon2id$v=19$m=65536,t=3,p=1$dGVzdHNhbHQxMjM0NTY3$8K3R2vQmN1pL9xF6wE4hJcYuBoTsAiDnMkGlPrVeHfU', '+36770706722', NULL, '2026-02-02 11:00:00', '2026-02-02 11:13:00', NULL, 0, '2026-02-05 19:13:00', '2026-02-02 11:13:00', 1, 0, NULL, NULL, NULL),
+(7, '31801d5f-f59f-4707-a758-87e53e98ab7f', 'Norbert', 'Molnár', 'norbert.molnar47@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$dGVzdHNhbHQxMjM0NTY3$8K3R2vQmN1pL9xF6wE4hJcYuBoTsAiDnMkGlPrVeHfU', '+36720269452', NULL, '2026-01-27 12:00:00', '2026-01-27 12:09:00', NULL, 0, '2026-02-08 22:09:00', '2026-01-27 12:09:00', 1, 0, NULL, NULL, NULL),
+(8, 'd6b78df3-e6dd-4b7a-b638-febaa9d16431', 'Dávid', 'Rácz', 'david.racz@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$dGVzdHNhbHQxMjM0NTY3$8K3R2vQmN1pL9xF6wE4hJcYuBoTsAiDnMkGlPrVeHfU', '+36770547914', NULL, '2026-02-06 18:00:00', '2026-02-06 18:12:00', NULL, 0, '2026-02-10 11:12:00', '2026-02-06 18:12:00', 1, 0, NULL, NULL, NULL),
+(9, '562ed0b0-7468-4840-83ae-f973adfd402d', 'Viktória', 'Fekete', 'viktoria.fekete78@citromail.hu', '$argon2id$v=19$m=65536,t=3,p=1$dGVzdHNhbHQxMjM0NTY3$8K3R2vQmN1pL9xF6wE4hJcYuBoTsAiDnMkGlPrVeHfU', '+36720374143', NULL, '2026-01-29 14:00:00', '2026-01-29 14:06:00', NULL, 0, '2026-02-17 01:06:00', '2026-01-29 14:06:00', 1, 0, NULL, NULL, NULL),
+(10, 'f2457988-7286-4ecf-8b52-eae1d4ab3a81', 'Gábor', 'Oláh', 'gabor.olah17@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$dGVzdHNhbHQxMjM0NTY3$8K3R2vQmN1pL9xF6wE4hJcYuBoTsAiDnMkGlPrVeHfU', '+36720629242', NULL, '2026-01-27 12:00:00', '2026-01-27 12:03:00', NULL, 0, '2026-02-04 05:03:00', '2026-01-27 12:03:00', 1, 0, NULL, NULL, NULL),
+(11, '32b30873-1b5b-493a-a50b-8182910010da', 'Katalin', 'Fehér', 'katalin.feher50@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$dGVzdHNhbHQxMjM0NTY3$8K3R2vQmN1pL9xF6wE4hJcYuBoTsAiDnMkGlPrVeHfU', '+36770937571', NULL, '2026-01-27 18:00:00', '2026-01-27 18:09:00', NULL, 0, '2026-02-02 06:09:00', '2026-01-27 18:09:00', 1, 0, NULL, NULL, NULL),
+(12, '44a2e694-5263-456a-9292-714a92c93ae0', 'László', 'Nagy', 'laszlo.nagy@citromail.hu', '$argon2id$v=19$m=65536,t=3,p=1$dGVzdHNhbHQxMjM0NTY3$8K3R2vQmN1pL9xF6wE4hJcYuBoTsAiDnMkGlPrVeHfU', '+36770540807', NULL, '2026-02-07 17:00:00', '2026-02-07 17:08:00', NULL, 0, '2026-02-27 07:08:00', '2026-02-07 17:08:00', 1, 0, NULL, NULL, NULL),
+(13, '919b1d1b-e0aa-4a75-a516-5a161ff7b519', 'Anna', 'Horváth', 'anna.horvath@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$dGVzdHNhbHQxMjM0NTY3$8K3R2vQmN1pL9xF6wE4hJcYuBoTsAiDnMkGlPrVeHfU', '+36770927982', NULL, '2026-01-17 20:00:00', '2026-01-17 20:02:00', NULL, 0, '2026-01-22 06:02:00', '2026-01-17 20:02:00', 1, 0, NULL, NULL, NULL),
+(14, '5a74e998-8b07-4669-9dbb-fa2a68c3fcc1', 'Boglárka', 'Kiss', 'boglarka.kiss97@hotmail.com', '$argon2id$v=19$m=65536,t=3,p=1$dGVzdHNhbHQxMjM0NTY3$8K3R2vQmN1pL9xF6wE4hJcYuBoTsAiDnMkGlPrVeHfU', '+36770206581', NULL, '2026-01-27 14:00:00', '2026-01-27 14:11:00', NULL, 0, '2026-02-12 06:11:00', '2026-01-27 14:11:00', 1, 0, NULL, NULL, NULL),
+(15, '5f47bc45-4ed1-44cd-9492-969de8d048c6', 'Eszter', 'Szabó', 'eszter.szabo@freemail.hu', '$argon2id$v=19$m=65536,t=3,p=1$dGVzdHNhbHQxMjM0NTY3$8K3R2vQmN1pL9xF6wE4hJcYuBoTsAiDnMkGlPrVeHfU', '+36720292185', NULL, '2026-02-05 16:00:00', '2026-02-05 16:14:00', NULL, 0, '2026-02-15 12:14:00', '2026-02-05 16:14:00', 1, 0, NULL, NULL, NULL),
+(16, '85fdfd8a-1aa6-420c-939a-b1e583d2389e', 'Ádám', 'Tóth', 'adam.toth24@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$dGVzdHNhbHQxMjM0NTY3$8K3R2vQmN1pL9xF6wE4hJcYuBoTsAiDnMkGlPrVeHfU', '+36730365344', NULL, '2026-01-29 08:00:00', '2026-01-29 08:13:00', NULL, 0, '2026-02-08 00:13:00', '2026-01-29 08:13:00', 1, 0, NULL, NULL, NULL),
+(17, 'e004cff4-3d5e-484d-b14e-d559490b8b0f', 'Nikolett', 'Papp', 'nikolett.papp74@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$dGVzdHNhbHQxMjM0NTY3$8K3R2vQmN1pL9xF6wE4hJcYuBoTsAiDnMkGlPrVeHfU', '+36770600707', NULL, '2026-02-10 18:00:00', '2026-02-10 18:10:00', NULL, 0, '2026-02-23 05:10:00', '2026-02-10 18:10:00', 1, 0, NULL, NULL, NULL),
+(18, 'd6347fbd-b874-421a-a17c-04bec1b7f193', 'Zsófia', 'Kovács', 'zsofia.kovacs@yahoo.com', '$argon2id$v=19$m=65536,t=3,p=1$dGVzdHNhbHQxMjM0NTY3$8K3R2vQmN1pL9xF6wE4hJcYuBoTsAiDnMkGlPrVeHfU', '+36720989785', NULL, '2026-02-13 08:00:00', '2026-02-13 08:11:00', NULL, 0, '2026-02-22 23:11:00', '2026-02-13 08:11:00', 1, 0, NULL, NULL, NULL),
+(19, 'cddcd9b1-acb5-4b13-bc3f-e7e6adc3feb2', 'Éva', 'Szűcs', 'eva.szucs@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$dGVzdHNhbHQxMjM0NTY3$8K3R2vQmN1pL9xF6wE4hJcYuBoTsAiDnMkGlPrVeHfU', '+36730501734', NULL, '2026-01-16 11:00:00', '2026-01-16 11:11:00', NULL, 0, '2026-01-19 20:11:00', '2026-01-16 11:11:00', 1, 0, NULL, NULL, NULL),
+(20, '03e371c4-59d2-417a-929f-971a86d19857', 'Richárd', 'Lukács', 'richard.lukacs18@yahoo.com', '$argon2id$v=19$m=65536,t=3,p=1$dGVzdHNhbHQxMjM0NTY3$8K3R2vQmN1pL9xF6wE4hJcYuBoTsAiDnMkGlPrVeHfU', '+36770310991', NULL, '2026-01-19 18:00:00', '2026-01-19 18:09:00', NULL, 0, '2026-02-07 04:09:00', '2026-01-19 18:09:00', 1, 0, NULL, NULL, NULL),
+(21, '22137d4e-3323-4119-96b8-d4cb63b0c724', 'Zoltán', 'Farkas', 'zoltan.farkas@yahoo.com', '$argon2id$v=19$m=65536,t=3,p=1$dGVzdHNhbHQxMjM0NTY3$8K3R2vQmN1pL9xF6wE4hJcYuBoTsAiDnMkGlPrVeHfU', '+36770809907', NULL, '2026-02-14 11:00:00', '2026-02-14 11:10:00', NULL, 0, '2026-02-22 06:10:00', '2026-02-14 11:10:00', 1, 0, NULL, NULL, NULL),
+(22, 'cdee7ef2-fb39-46a6-acb9-806723144ef8', 'Réka', 'Takács', 'reka.takacs@citromail.hu', '$argon2id$v=19$m=65536,t=3,p=1$dGVzdHNhbHQxMjM0NTY3$8K3R2vQmN1pL9xF6wE4hJcYuBoTsAiDnMkGlPrVeHfU', '+36770726495', NULL, '2026-01-29 16:00:00', '2026-01-29 16:09:00', NULL, 0, '2026-02-03 03:09:00', '2026-01-29 16:09:00', 1, 0, NULL, NULL, NULL),
+(23, '60560777-c10f-4d0f-9c95-d8131217ccb9', 'Tamás', 'Varga', 'tamas.varga@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$dGVzdHNhbHQxMjM0NTY3$8K3R2vQmN1pL9xF6wE4hJcYuBoTsAiDnMkGlPrVeHfU', '+36720486068', NULL, '2026-02-02 11:00:00', '2026-02-02 11:02:00', NULL, 0, '2026-02-06 06:02:00', '2026-02-02 11:02:00', 1, 0, NULL, NULL, NULL),
+(24, '70ae0fc0-4cb3-4ad2-b108-0f1f8fcffb58', 'Mónika', 'Balogh', 'monika.balogh39@gmail.com', '$argon2id$v=19$m=65536,t=3,p=1$dGVzdHNhbHQxMjM0NTY3$8K3R2vQmN1pL9xF6wE4hJcYuBoTsAiDnMkGlPrVeHfU', '+36720654367', NULL, '2026-01-17 16:00:00', '2026-01-17 16:05:00', NULL, 0, '2026-01-27 10:05:00', '2026-01-17 16:05:00', 1, 0, NULL, NULL, NULL),
+(25, '0fa6c30a-1056-11f1-afc2-2178f5682584', 'Tulaj', 'Perspective', 'perspective@perspective.hu', '$argon2id$v=19$m=65536,t=3,p=1$s6NGsjCzbJqxfcy5nDEPIw$aEsPeb4EN240quTwokcV+GyLencSz0DKLKx3KnPgbVE', '+36704385629', 2, '2026-02-23 02:22:04', '2026-02-23 02:24:25', NULL, 0, '2026-02-23 02:37:34', '2026-02-23 02:22:11', 1, 0, NULL, NULL, NULL),
+(26, '73c87434-1059-11f1-afc2-2178f5682584', 'Márk', 'Csőke', 'csoke@mark.hu', '$argon2id$v=19$m=65536,t=3,p=1$dXJZK1hrqWQRU4W22lnalw$x19iPAAsVxdT2N4xOyo19rqwXYMPgTnCKkUM5QLFmag', '+36205935829', 2, '2026-02-23 02:46:20', '2026-02-23 02:47:56', NULL, 0, '2026-02-23 02:46:58', '2026-02-23 02:46:26', 1, 0, NULL, NULL, NULL);
 
 --
 -- Triggers `users`
@@ -5905,9 +5684,9 @@ DELIMITER ;
 --
 
 CREATE TABLE `user_x_role` (
-  `id` int(11) NOT NULL,
-  `user_id` int(11) NOT NULL,
-  `role_id` int(11) NOT NULL,
+  `id` int NOT NULL,
+  `user_id` int NOT NULL,
+  `role_id` int NOT NULL,
   `assigned_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `un_assigned_at` timestamp NULL DEFAULT NULL,
   `is_un_assigned` tinyint(1) DEFAULT '0'
@@ -5918,80 +5697,38 @@ CREATE TABLE `user_x_role` (
 --
 
 INSERT INTO `user_x_role` (`id`, `user_id`, `role_id`, `assigned_at`, `un_assigned_at`, `is_un_assigned`) VALUES
-(1, 1, 1, '2024-01-15 09:00:00', NULL, 0),
-(2, 1, 4, '2024-01-15 09:00:00', NULL, 0),
-(3, 2, 2, '2024-02-01 08:00:00', NULL, 0),
-(4, 2, 4, '2024-02-01 08:00:00', NULL, 0),
-(5, 3, 2, '2024-02-05 09:00:00', NULL, 0),
-(6, 3, 4, '2024-02-05 09:00:00', NULL, 0),
-(7, 4, 2, '2024-02-10 10:00:00', NULL, 0),
-(8, 4, 4, '2024-02-10 10:00:00', NULL, 0),
-(9, 5, 2, '2024-02-15 11:00:00', NULL, 0),
-(10, 5, 4, '2024-02-15 11:00:00', NULL, 0),
-(11, 6, 2, '2024-02-20 12:00:00', NULL, 0),
-(12, 6, 4, '2024-02-20 12:00:00', NULL, 0),
-(13, 7, 2, '2024-02-25 13:00:00', NULL, 0),
-(14, 7, 4, '2024-02-25 13:00:00', NULL, 0),
-(15, 8, 2, '2024-03-01 14:00:00', NULL, 0),
-(16, 8, 4, '2024-03-01 14:00:00', NULL, 0),
-(17, 9, 2, '2024-03-05 15:00:00', NULL, 0),
-(18, 9, 4, '2024-03-05 15:00:00', NULL, 0),
-(19, 10, 2, '2024-03-10 16:00:00', NULL, 0),
-(20, 10, 4, '2024-03-10 16:00:00', NULL, 0),
-(21, 11, 2, '2024-03-15 17:00:00', NULL, 0),
-(22, 11, 4, '2024-03-15 17:00:00', NULL, 0),
-(23, 12, 3, '2024-02-02 08:00:00', NULL, 0),
-(24, 12, 4, '2024-02-02 08:00:00', NULL, 0),
-(25, 13, 3, '2024-02-02 09:00:00', NULL, 0),
-(26, 13, 4, '2024-02-02 09:00:00', NULL, 0),
-(27, 14, 3, '2024-02-02 10:00:00', NULL, 0),
-(28, 14, 4, '2024-02-02 10:00:00', NULL, 0),
-(29, 15, 3, '2024-02-06 08:00:00', NULL, 0),
-(30, 15, 4, '2024-02-06 08:00:00', NULL, 0),
-(31, 16, 3, '2024-02-06 09:00:00', NULL, 0),
-(32, 16, 4, '2024-02-06 09:00:00', NULL, 0),
-(33, 17, 3, '2024-02-06 10:00:00', NULL, 0),
-(34, 17, 4, '2024-02-06 10:00:00', NULL, 0),
-(35, 18, 3, '2024-02-11 08:00:00', NULL, 0),
-(36, 18, 4, '2024-02-11 08:00:00', NULL, 0),
-(37, 19, 3, '2024-02-11 09:00:00', NULL, 0),
-(38, 19, 4, '2024-02-11 09:00:00', NULL, 0),
-(39, 20, 3, '2024-02-11 10:00:00', NULL, 0),
-(40, 20, 4, '2024-02-11 10:00:00', NULL, 0),
-(41, 21, 3, '2024-02-16 08:00:00', NULL, 0),
-(42, 21, 4, '2024-02-16 08:00:00', NULL, 0),
-(43, 22, 3, '2024-02-16 09:00:00', NULL, 0),
-(44, 22, 4, '2024-02-16 09:00:00', NULL, 0),
-(45, 23, 3, '2024-02-21 08:00:00', NULL, 0),
-(46, 23, 4, '2024-02-21 08:00:00', NULL, 0),
-(47, 24, 3, '2024-02-21 09:00:00', NULL, 0),
-(48, 24, 4, '2024-02-21 09:00:00', NULL, 0),
-(49, 25, 3, '2024-02-21 10:00:00', NULL, 0),
-(50, 25, 4, '2024-02-21 10:00:00', NULL, 0),
-(51, 26, 3, '2024-02-26 08:00:00', NULL, 0),
-(52, 26, 4, '2024-02-26 08:00:00', NULL, 0),
-(53, 27, 4, '2024-03-20 09:00:00', NULL, 0),
-(54, 28, 4, '2024-03-21 10:00:00', NULL, 0),
-(55, 29, 4, '2024-03-22 11:00:00', NULL, 0),
-(56, 30, 4, '2024-03-23 12:00:00', NULL, 0),
-(57, 31, 4, '2024-03-24 13:00:00', NULL, 0),
-(58, 32, 4, '2024-03-25 14:00:00', NULL, 0),
-(59, 33, 4, '2024-03-26 15:00:00', NULL, 0),
-(60, 34, 4, '2024-03-27 16:00:00', NULL, 0),
-(61, 35, 4, '2024-03-28 17:00:00', NULL, 0),
-(62, 36, 4, '2024-03-29 18:00:00', NULL, 0),
-(63, 37, 4, '2024-03-30 09:00:00', NULL, 0),
-(64, 38, 4, '2024-03-31 09:00:00', NULL, 0),
-(65, 39, 4, '2024-04-01 10:00:00', NULL, 0),
-(66, 40, 4, '2024-04-02 11:00:00', NULL, 0),
-(67, 41, 4, '2026-01-17 17:19:35', NULL, 0),
-(68, 43, 4, '2026-01-23 09:48:02', NULL, 0),
-(69, 43, 1, '2026-01-23 19:13:42', NULL, 0),
-(70, 44, 4, '2026-01-30 19:17:16', NULL, 0),
-(71, 45, 3, '2026-02-02 09:59:27', NULL, 0),
-(72, 47, 4, '2026-02-09 17:30:58', NULL, 0),
-(73, 47, 2, '2026-02-10 23:39:57', NULL, 0),
-(74, 47, 1, '2026-02-10 23:51:01', NULL, 0);
+(1, 1, 4, '2026-02-22 19:40:46', NULL, 0),
+(2, 1, 1, '2026-02-22 19:46:23', NULL, 0),
+(3, 2, 4, '2026-02-22 19:47:44', NULL, 0),
+(4, 2, 2, '2026-02-22 20:39:33', NULL, 0),
+(5, 3, 4, '2026-02-22 21:37:08', NULL, 0),
+(6, 3, 3, '2026-02-22 21:45:54', NULL, 0),
+(7, 4, 4, '2026-02-22 23:06:43', NULL, 0),
+(8, 4, 3, '2026-02-22 23:08:19', NULL, 0),
+(9, 5, 4, '2026-02-01 08:08:00', NULL, 0),
+(10, 6, 4, '2026-02-02 10:13:00', NULL, 0),
+(11, 7, 4, '2026-01-27 11:09:00', NULL, 0),
+(12, 8, 4, '2026-02-06 17:12:00', NULL, 0),
+(13, 9, 4, '2026-01-29 13:06:00', NULL, 0),
+(14, 10, 4, '2026-01-27 11:03:00', NULL, 0),
+(15, 11, 4, '2026-01-27 17:09:00', NULL, 0),
+(16, 12, 4, '2026-02-07 16:08:00', NULL, 0),
+(17, 13, 4, '2026-01-17 19:02:00', NULL, 0),
+(18, 14, 4, '2026-01-27 13:11:00', NULL, 0),
+(19, 15, 4, '2026-02-05 15:14:00', NULL, 0),
+(20, 16, 4, '2026-01-29 07:13:00', NULL, 0),
+(21, 17, 4, '2026-02-10 17:10:00', NULL, 0),
+(22, 18, 4, '2026-02-13 07:11:00', NULL, 0),
+(23, 19, 4, '2026-01-16 10:11:00', NULL, 0),
+(24, 20, 4, '2026-01-19 17:09:00', NULL, 0),
+(25, 21, 4, '2026-02-14 10:10:00', NULL, 0),
+(26, 22, 4, '2026-01-29 15:09:00', NULL, 0),
+(27, 23, 4, '2026-02-02 10:02:00', NULL, 0),
+(28, 24, 4, '2026-01-17 15:05:00', NULL, 0),
+(29, 25, 4, '2026-02-23 01:22:04', NULL, 0),
+(30, 25, 2, '2026-02-23 01:24:25', NULL, 0),
+(31, 26, 4, '2026-02-23 01:46:20', NULL, 0),
+(32, 26, 3, '2026-02-23 01:47:50', NULL, 0);
 
 --
 -- Indexes for dumped tables
@@ -6068,7 +5805,9 @@ ALTER TABLE `opening_hours`
 --
 ALTER TABLE `pending_staff`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `fk_pending_staff_company` (`company_id`);
+  ADD KEY `fk_pending_staff_company` (`company_id`),
+  ADD KEY `fk_pending_staff_token` (`token_id`),
+  ADD KEY `fk_pending_staff_user` (`user_id`);
 
 --
 -- Indexes for table `reviews`
@@ -6191,139 +5930,139 @@ ALTER TABLE `user_x_role`
 -- AUTO_INCREMENT for table `appointments`
 --
 ALTER TABLE `appointments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=186;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=534;
 
 --
 -- AUTO_INCREMENT for table `audit_logs`
 --
 ALTER TABLE `audit_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=150;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=62;
 
 --
 -- AUTO_INCREMENT for table `business_categories`
 --
 ALTER TABLE `business_categories`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `companies`
 --
 ALTER TABLE `companies`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `favorites`
 --
 ALTER TABLE `favorites`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=52;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `images`
 --
 ALTER TABLE `images`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=66;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=37;
 
 --
 -- AUTO_INCREMENT for table `notification_settings`
 --
 ALTER TABLE `notification_settings`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=43;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `opening_hours`
 --
 ALTER TABLE `opening_hours`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=78;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT for table `pending_staff`
 --
 ALTER TABLE `pending_staff`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `reviews`
 --
 ALTER TABLE `reviews`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=65;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=60;
 
 --
 -- AUTO_INCREMENT for table `roles`
 --
 ALTER TABLE `roles`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `services`
 --
 ALTER TABLE `services`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=55;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `service_categories`
 --
 ALTER TABLE `service_categories`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=43;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `service_category_map`
 --
 ALTER TABLE `service_category_map`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=60;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `staff`
 --
 ALTER TABLE `staff`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `staff_exceptions`
 --
 ALTER TABLE `staff_exceptions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=46;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `staff_services`
 --
 ALTER TABLE `staff_services`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=68;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `staff_working_hours`
 --
 ALTER TABLE `staff_working_hours`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=106;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 
 --
 -- AUTO_INCREMENT for table `temporary_closed_periods`
 --
 ALTER TABLE `temporary_closed_periods`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=71;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `tokens`
 --
 ALTER TABLE `tokens`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `two_factor_recovery_codes`
 --
 ALTER TABLE `two_factor_recovery_codes`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=48;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
 
 --
 -- AUTO_INCREMENT for table `user_x_role`
 --
 ALTER TABLE `user_x_role`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=75;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=33;
 
 --
 -- Constraints for dumped tables
@@ -6385,7 +6124,9 @@ ALTER TABLE `opening_hours`
 -- Constraints for table `pending_staff`
 --
 ALTER TABLE `pending_staff`
-  ADD CONSTRAINT `fk_pending_staff_company` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`);
+  ADD CONSTRAINT `fk_pending_staff_company` FOREIGN KEY (`company_id`) REFERENCES `companies` (`id`),
+  ADD CONSTRAINT `fk_pending_staff_token` FOREIGN KEY (`token_id`) REFERENCES `tokens` (`id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `fk_pending_staff_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `reviews`
@@ -6486,24 +6227,6 @@ CREATE DEFINER=`root`@`localhost` EVENT `deactivateInactiveUsers` ON SCHEDULE EV
       AND `is_deleted` = FALSE;
 END$$
 
-CREATE DEFINER=`root`@`localhost` EVENT `updateExpiredAppointments` ON SCHEDULE EVERY 1 HOUR STARTS '2025-12-12 10:16:13' ON COMPLETION NOT PRESERVE ENABLE DO BEGIN
-    -- Pending appointmentek amelyek már lejártak -> no_show
-    UPDATE `appointments`
-    SET 
-        `status` = 'no_show',
-        `updated_at` = NOW()
-    WHERE `status` = 'pending'
-      AND `start_time` < DATE_SUB(NOW(), INTERVAL 1 HOUR);
-    
-    -- Confirmed appointmentek amelyek véget értek -> completed
-    UPDATE `appointments`
-    SET 
-        `status` = 'completed',
-        `updated_at` = NOW()
-    WHERE `status` = 'confirmed'
-      AND `end_time` < NOW();
-END$$
-
 CREATE DEFINER=`root`@`localhost` EVENT `expire_pending_staff` ON SCHEDULE EVERY 1 DAY STARTS '2026-02-18 18:55:41' ON COMPLETION NOT PRESERVE ENABLE DO UPDATE `pending_staff`
     SET `status` = 'lejart'
     WHERE `status` = 'pending'
@@ -6536,11 +6259,23 @@ CREATE DEFINER=`root`@`localhost` EVENT `cleanupExpiredTokens` ON SCHEDULE EVERY
     );
 END$$
 
-CREATE DEFINER=`root`@`localhost` EVENT `cleanOldAuditLogs` ON SCHEDULE EVERY 1 WEEK STARTS '2025-12-12 10:13:56' ON COMPLETION NOT PRESERVE ENABLE DO BEGIN
-    -- Régi audit logok törlése (365 napnál régebbiek)
+CREATE DEFINER=`root`@`localhost` EVENT `cleanOldAuditLogs` ON SCHEDULE EVERY 1 WEEK STARTS '2025-12-12 10:13:56' ON COMPLETION NOT PRESERVE ENABLE DO -- Régi audit logok törlése (365 napnál régebbiek)
     DELETE FROM `audit_logs`
-    WHERE `created_at` < DATE_SUB(NOW(), INTERVAL 365 DAY);
-    
+    WHERE `created_at` < DATE_SUB(NOW(), INTERVAL 365 DAY)$$
+
+CREATE DEFINER=`root`@`localhost` EVENT `updateExpiredAppointments` ON SCHEDULE EVERY 1 MINUTE STARTS '2026-02-21 19:12:43' ON COMPLETION PRESERVE ENABLE DO BEGIN
+    -- booked -> in_progress ha elkezdődött
+    UPDATE `appointments`
+    SET `status` = 'in_progress', `updated_at` = NOW()
+    WHERE `status` = 'booked'
+      AND `start_time` <= NOW()
+      AND `end_time` > NOW();
+
+    -- in_progress -> no_show ha véget ért és nem lett lezárva
+    UPDATE `appointments`
+    SET `status` = 'no_show', `updated_at` = NOW()
+    WHERE `status` IN ('booked', 'in_progress')
+      AND `end_time` <= NOW();
 END$$
 
 DELIMITER ;
