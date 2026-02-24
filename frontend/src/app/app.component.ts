@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { HeaderComponent } from './shared/header/header.component';
 import { FooterComponent } from './shared/footer/footer.component';
 import { filter, map } from 'rxjs/operators';
+import { ThemeService } from './core/services/theme.service';
 
 @Component({
   selector: 'app-root',
@@ -19,8 +20,11 @@ export class AppComponent {
 
   constructor(
     private router: Router,
-    private activatedRoute: ActivatedRoute
+    private activatedRoute: ActivatedRoute,
+    private themeService: ThemeService
   ) {
+    this.themeService.initializeTheme();
+
     this.router.events
       .pipe(
         filter(event => event instanceof NavigationEnd),

@@ -109,6 +109,12 @@
   border-bottom: 1px solid #e9ecef;
 }
 
+.appearance-setting {
+  padding-top: 4px;
+  padding-bottom: 4px;
+  border-bottom: none;
+}
+
 .setting-item:last-child {
   border-bottom: none;
   padding-bottom: 0;

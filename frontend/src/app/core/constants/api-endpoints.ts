@@ -8,6 +8,8 @@ export const API_ENDPOINTS = {
     VERIFY_EMAIL: '/auth/verify',
     REQUEST_PASSWORD_RESET: '/auth/resetPassRequest',
     RESET_PASSWORD: '/auth/resetPassUpdate',
+    SALES_TOP_SERVICES: (companyId: number, period: 'week' | 'month' | 'year') =>
+      `/services/getSalesTopServices?companyId=${companyId}&period=${period}`,
   },
 
   COMPANIES: {
@@ -51,6 +53,16 @@ export const API_ENDPOINTS = {
     OCCUPIED_SLOTS: '/appointments/occupied-slots',
     CREATE: '/appointments/createAppointment',
     BY_CLIENT: '/appointments/getAppointmentsByClient',
+    SALES_OVERVIEW_REVENUE: (companyId: number, period: 'week' | 'month' | 'year') =>
+      `/appointments/getSalesOverviewRevenueByCompany?companyId=${companyId}&period=${period}`,
+    SALES_OVERVIEW_AVG_BASKET: (companyId: number, period: 'week' | 'month' | 'year') =>
+      `/appointments/getSalesOverviewAvgBasket?companyId=${companyId}&period=${period}`,
+    SALES_OVERVIEW_BOOKINGS_COUNT: (companyId: number, period: 'week' | 'month' | 'year') =>
+      `/appointments/getSalesOverviewBookingsCount?companyId=${companyId}&period=${period}`,
+    SALES_OVERVIEW_RETURNING_CLIENTS: (companyId: number, period: 'week' | 'month' | 'year') =>
+      `/appointments/getSalesOverviewReturningClients?companyId=${companyId}&period=${period}`,
+    SALES_REVENUE_CHART: (companyId: number, period: 'week' | 'month' | 'year') =>
+      `/appointments/getSalesRevenueChart?companyId=${companyId}&period=${period}`,
   },
 
   REVIEWS: {
@@ -64,7 +76,7 @@ export const API_ENDPOINTS = {
     PROFILE: '/users/profile',
     UPDATE_PROFILE: '/users/updateProfile',
     CHANGE_PASSWORD: '/users/change-password',
-    UPLOAD_AVATAR: '/users/uploadAvatar',
+    UPLOAD_AVATAR: '/images/uploadUserImage',
     DELETE_AVATAR: '/users/deleteAvatar',
     UPDATE_NOTIFICATION_SETTINGS: '/notifsetting/update',
     CLIENTS_BY_COMPANY: (companyId: number, page: number, pageSize: number) =>

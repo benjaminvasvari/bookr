@@ -1,5 +1,13 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { finalize } from 'rxjs';
+
+import {
+  OwnerSalesService,
+  SalesRevenueChartPoint,
+  SalesOverviewPeriod,
+} from '../../../../../core/services/owner-sales.service';
+import { AuthService } from '../../../../../core/services/auth.service';
 
 export type Period = 'weekly' | 'monthly' | 'yearly';
 
@@ -51,19 +59,30 @@ interface Transaction {
   templateUrl: './sales.component.html',
   styleUrl: './sales.component.css',
 })
-export class SalesComponent {
+export class SalesComponent implements OnInit {
+  kpiErrorMessage = '';
+  isChartLoading = false;
   selectedPeriod: Period = 'weekly';
+  isKpiLoading = false;
+  isTopServicesLoading: boolean = false;
+  topServicesError: string = '';
 
-  private readonly monthlyDailyRevenue = [
-    32000, 35000, 30000, 41000, 36000, 38000, 44000,
-    34000, 37000, 39000, 42000, 40000, 45000, 47000,
-    36000, 38000, 41000, 43000, 45000, 46000, 49000,
-    37000, 39000, 42000, 44000, 43000, 47000, 50000,
-    52000, 54000,
-  ];
+  private readonly loadedPeriods = new Set<Period>();
+  private readonly loadedChartPeriods = new Set<Period>();
+
+  private readonly kpiByPeriod: Record<Period, KpiData> = {
+    weekly: this.createDefaultKpi(),
+    monthly: this.createDefaultKpi(),
+    yearly: this.createDefaultKpi(),
+  };
+
+  private readonly chartBarsByPeriod: Record<Period, BarData[]> = {
+    weekly: [],
+    monthly: [],
+    yearly: [],
+  };
 
   private readonly data: Record<Period, {
-    kpi: KpiData;
     bars: BarData[];
     chartCaption: string;
     breakdown: BreakdownRow[];
@@ -71,121 +90,56 @@ export class SalesComponent {
     transactions: Transaction[];
   }> = {
     weekly: {
-      kpi: {
-        totalRevenue: '248 000 Ft',
-        avgBasket: '12 400 Ft',
-        bookings: '20',
-        returningClients: '42%',
-        totalRevenueTrend: '+12% az előző héthez képest',
-        totalRevenueTrendClass: 'positive',
-        avgBasketTrend: '-3% az előző héthez képest',
-        avgBasketTrendClass: 'negative',
-        bookingsTrend: '+4 foglalás az előző héthez képest',
-        bookingsTrendClass: 'positive',
-        returningTrend: '+2% az előző héthez képest',
-        returningTrendClass: 'positive',
-      },
-      bars: [
-        { height: 40, label: 'H', value: '32 000' }, { height: 60, label: 'K', value: '48 000' }, { height: 55, label: 'Sz', value: '44 000' },
-        { height: 80, label: 'Cs', value: '64 000' }, { height: 65, label: 'P', value: '52 000' }, { height: 75, label: 'Sz', value: '60 000' }, { height: 90, label: 'V', value: '72 000' },
-      ],
-      chartCaption: 'Napi bevétel az elmúlt 7 napban.',
-      breakdown: [
-        { label: 'Hétfő', percent: 65, value: '52 000 Ft' },
-        { label: 'Kedd', percent: 48, value: '38 000 Ft' },
-        { label: 'Szerda', percent: 72, value: '58 000 Ft' },
-        { label: 'Csütörtök', percent: 58, value: '46 000 Ft' },
-        { label: 'Péntek', percent: 80, value: '64 000 Ft' },
-        { label: 'Szombat', percent: 90, value: '72 000 Ft' },
-      ],
-      services: [
-        { name: 'Hajvágás', bookings: 8, revenue: '68 000 Ft' },
-        { name: 'Relax masszázs', bookings: 4, revenue: '42 000 Ft' },
-        { name: 'Szakáll igazítás', bookings: 6, revenue: '31 000 Ft' },
-      ],
-      transactions: [
-        { date: '2026.02.17', client: 'Kiss Anna', service: 'Hajvágás', amount: '8 500 Ft', success: true },
-        { date: '2026.02.16', client: 'Gábor Máté', service: 'Relax masszázs', amount: '14 000 Ft', success: true },
-        { date: '2026.02.15', client: 'Szabó Petra', service: 'Festés', amount: '18 000 Ft', success: false },
-      ],
+      bars: [],
+      chartCaption: '',
+      breakdown: [],
+      services: [],
+      transactions: [],
     },
     monthly: {
-      kpi: {
-        totalRevenue: '1 120 000 Ft',
-        avgBasket: '11 900 Ft',
-        bookings: '94',
-        returningClients: '46%',
-        totalRevenueTrend: '+8% az előző hónaphoz képest',
-        totalRevenueTrendClass: 'positive',
-        avgBasketTrend: '-4% az előző hónaphoz képest',
-        avgBasketTrendClass: 'negative',
-        bookingsTrend: '+11 foglalás az előző hónaphoz képest',
-        bookingsTrendClass: 'positive',
-        returningTrend: '+4% az előző hónaphoz képest',
-        returningTrendClass: 'positive',
-      },
-      bars: this.createMonthlyBars(this.monthlyDailyRevenue),
-      chartCaption: 'Fix 7 napos blokkokra aggregált bevétel az utolsó 30 napból.',
-      breakdown: [
-        { label: '1. hét (7 nap)', percent: 67, value: '256 000 Ft' },
-        { label: '2. hét (7 nap)', percent: 77, value: '284 000 Ft' },
-        { label: '3. hét (7 nap)', percent: 85, value: '298 000 Ft' },
-        { label: '4. hét (7 nap)', percent: 84, value: '302 000 Ft' },
-        { label: '5. blokk (2 nap)', percent: 30, value: '106 000 Ft' },
-      ],
-      services: [
-        { name: 'Hajvágás', bookings: 32, revenue: '272 000 Ft' },
-        { name: 'Relax masszázs', bookings: 18, revenue: '252 000 Ft' },
-        { name: 'Szakáll igazítás', bookings: 24, revenue: '192 000 Ft' },
-      ],
-      transactions: [
-        { date: '2026.02.14', client: 'Nagy Bálint', service: 'Hajvágás', amount: '8 500 Ft', success: true },
-        { date: '2026.02.10', client: 'Varga Réka', service: 'Festés', amount: '22 000 Ft', success: true },
-        { date: '2026.02.05', client: 'Tóth Miklós', service: 'Masszázs', amount: '16 000 Ft', success: false },
-      ],
+      bars: [],
+      chartCaption: '',
+      breakdown: [],
+      services: [],
+      transactions: [],
     },
     yearly: {
-      kpi: {
-        totalRevenue: '13 440 000 Ft',
-        avgBasket: '12 200 Ft',
-        bookings: '1 102',
-        returningClients: '51%',
-        totalRevenueTrend: '+15% az előző évhez képest',
-        totalRevenueTrendClass: 'positive',
-        avgBasketTrend: '+2% az előző évhez képest',
-        avgBasketTrendClass: 'positive',
-        bookingsTrend: '+98 foglalás az előző évhez képest',
-        bookingsTrendClass: 'positive',
-        returningTrend: '+5% az előző évhez képest',
-        returningTrendClass: 'positive',
-      },
-      bars: [
-        { height: 45, label: 'Jan', value: '890 e' }, { height: 55, label: 'Feb', value: '1,1 M' }, { height: 60, label: 'Már', value: '1,2 M' }, { height: 70, label: 'Ápr', value: '1,4 M' },
-        { height: 80, label: 'Máj', value: '1,6 M' }, { height: 90, label: 'Jún', value: '1,8 M' }, { height: 85, label: 'Júl', value: '1,7 M' }, { height: 78, label: 'Aug', value: '1,5 M' },
-        { height: 72, label: 'Szep', value: '1,4 M' }, { height: 65, label: 'Okt', value: '1,3 M' }, { height: 58, label: 'Nov', value: '1,1 M' }, { height: 50, label: 'Dec', value: '990 e' },
-      ],
-      chartCaption: 'Havi bevétel bontás az elmúlt évben.',
-      breakdown: [
-        { label: 'Q1', percent: 60, value: '2 850 000 Ft' },
-        { label: 'Q2', percent: 85, value: '4 020 000 Ft' },
-        { label: 'Q3', percent: 78, value: '3 680 000 Ft' },
-        { label: 'Q4', percent: 62, value: '2 890 000 Ft' },
-      ],
-      services: [
-        { name: 'Hajvágás', bookings: 380, revenue: '3 230 000 Ft' },
-        { name: 'Relax masszázs', bookings: 210, revenue: '2 940 000 Ft' },
-        { name: 'Szakáll igazítás', bookings: 290, revenue: '2 320 000 Ft' },
-      ],
-      transactions: [
-        { date: '2026.01.28', client: 'Horváth Zsolt', service: 'Hajvágás', amount: '8 500 Ft', success: true },
-        { date: '2026.01.15', client: 'Fekete Dóra', service: 'Festés', amount: '22 000 Ft', success: true },
-        { date: '2025.12.22', client: 'Simon Péter', service: 'Masszázs', amount: '16 000 Ft', success: false },
-      ],
+      bars: [],
+      chartCaption: '',
+      breakdown: [],
+      services: [],
+      transactions: [],
     },
   };
 
+  constructor(
+    private readonly authService: AuthService,
+    private readonly ownerSalesService: OwnerSalesService
+  ) {}
+
+  ngOnInit(): void {
+    this.chartBarsByPeriod.weekly = [...this.data.weekly.bars];
+    this.chartBarsByPeriod.monthly = [...this.data.monthly.bars];
+    this.chartBarsByPeriod.yearly = [...this.data.yearly.bars];
+
+    this.loadSalesOverviewForPeriod(this.selectedPeriod);
+    this.loadSalesRevenueChartForPeriod(this.selectedPeriod);
+    this.loadTopServicesForPeriod(this.selectedPeriod);
+  }
+
+  get currentTopServices(): ServiceRow[] {
+    return this.data[this.selectedPeriod].services;
+  }
   get current() {
     return this.data[this.selectedPeriod];
+  }
+
+  get currentKpi(): KpiData {
+    return this.kpiByPeriod[this.selectedPeriod];
+  }
+
+  get currentBars(): BarData[] {
+    return this.chartBarsByPeriod[this.selectedPeriod];
   }
 
   get periodLabel(): string {
@@ -194,6 +148,270 @@ export class SalesComponent {
 
   selectPeriod(period: Period): void {
     this.selectedPeriod = period;
+    this.loadSalesOverviewForPeriod(period);
+    this.loadSalesRevenueChartForPeriod(period);
+    this.loadTopServicesForPeriod(period);
+  }
+  private loadTopServicesForPeriod(period: Period): void {
+    const user = this.authService.getCurrentUser();
+    if (!user?.companyId) {
+      this.topServicesError = 'Nem található cégazonosító a szolgáltatásokhoz.';
+      this.data[period].services = [];
+      return;
+    }
+    this.isTopServicesLoading = true;
+    this.topServicesError = '';
+    this.ownerSalesService.getSalesTopServices(user.companyId, this.toSalesOverviewPeriod(period)).pipe(
+      finalize(() => (this.isTopServicesLoading = false))
+    ).subscribe({
+      next: (services) => {
+        // Map backend response to ServiceRow
+        this.data[period].services = (services as any)?.result?.map((item: any) => ({
+          name: item.serviceName || '',
+          bookings: item.clientCount ?? 0,
+          revenue: item.currency ? `${item.currency} Ft` : '0 Ft',
+        })) || [];
+      },
+      error: (err) => {
+        this.topServicesError = 'Nem sikerült betölteni a kiemelt szolgáltatásokat.';
+        this.data[period].services = [];
+      }
+    });
+  }
+
+  private loadSalesOverviewForPeriod(period: Period): void {
+    const user = this.authService.getCurrentUser();
+
+    if (!user?.companyId) {
+      this.kpiErrorMessage = 'Nem található cégazonosító a pénzügyi adatok betöltéséhez.';
+      this.kpiByPeriod[period] = this.createDefaultKpi();
+      return;
+    }
+
+    if (this.loadedPeriods.has(period)) {
+      return;
+    }
+
+    this.isKpiLoading = true;
+    this.kpiErrorMessage = '';
+
+    this.ownerSalesService
+      .getSalesOverview(user.companyId, this.toSalesOverviewPeriod(period))
+      .pipe(finalize(() => (this.isKpiLoading = false)))
+      .subscribe({
+        next: (overview) => {
+          this.kpiByPeriod[period] = {
+            totalRevenue: this.formatCurrency(overview.revenue),
+            avgBasket: this.formatCurrency(overview.avgBasket),
+            bookings: this.formatInteger(overview.bookingsCount),
+            returningClients: `${this.formatInteger(overview.returningClientsPercent)}%`,
+            totalRevenueTrend: 'Backend adat',
+            totalRevenueTrendClass: '',
+            avgBasketTrend: 'Backend adat',
+            avgBasketTrendClass: '',
+            bookingsTrend: 'Backend adat',
+            bookingsTrendClass: '',
+            returningTrend: 'Backend adat',
+            returningTrendClass: '',
+          };
+
+          this.loadedPeriods.add(period);
+        },
+        error: (error) => {
+          console.error('Sales overview load error:', error);
+          this.kpiErrorMessage = 'Nem sikerült betölteni a pénzügyi KPI adatokat.';
+          this.kpiByPeriod[period] = this.createDefaultKpi();
+        },
+      });
+  }
+
+  private createDefaultKpi(): KpiData {
+    return {
+      totalRevenue: '0 Ft',
+      avgBasket: '0 Ft',
+      bookings: '0',
+      returningClients: '0%',
+      totalRevenueTrend: '—',
+      totalRevenueTrendClass: '',
+      avgBasketTrend: '—',
+      avgBasketTrendClass: '',
+      bookingsTrend: '—',
+      bookingsTrendClass: '',
+      returningTrend: '—',
+      returningTrendClass: '',
+    };
+  }
+
+  private loadSalesRevenueChartForPeriod(period: Period): void {
+    const user = this.authService.getCurrentUser();
+
+    if (!user?.companyId) {
+      return;
+    }
+
+    if (this.loadedChartPeriods.has(period)) {
+      return;
+    }
+
+    this.isChartLoading = true;
+
+    this.ownerSalesService
+      .getSalesRevenueChart(user.companyId, this.toSalesOverviewPeriod(period))
+      .pipe(finalize(() => (this.isChartLoading = false)))
+      .subscribe({
+        next: (points) => {
+          const bars = this.mapChartPointsToBars(points, period);
+          if (bars.length > 0) {
+            this.chartBarsByPeriod[period] = bars;
+          }
+
+          this.loadedChartPeriods.add(period);
+        },
+        error: (error) => {
+          console.error('Sales revenue chart load error:', error);
+        },
+      });
+  }
+
+  private mapChartPointsToBars(points: SalesRevenueChartPoint[], period: Period): BarData[] {
+    if (points.length === 0) {
+      return [];
+    }
+
+    if (period === 'monthly') {
+      return this.mapMonthlyPointsToWeeklyBars(points);
+    }
+
+    if (period === 'weekly') {
+      return this.mapWeeklyPointsToDailyBars(points);
+    }
+
+    const maxValue = Math.max(...points.map((point) => point.value), 1);
+
+    return points.map((point) => {
+      const height = Math.max(20, Math.round((point.value / maxValue) * 90));
+
+      return {
+        height,
+        label: point.label,
+        value: this.formatInteger(point.value),
+      };
+    });
+  }
+
+  private mapWeeklyPointsToDailyBars(points: SalesRevenueChartPoint[]): BarData[] {
+    // Mindig csak 7 nap (hétfő-vasárnap)
+    const weekPoints = points.slice(0, 7);
+    const maxValue = Math.max(...weekPoints.map((point) => point.value), 1);
+    return weekPoints.map((point, index) => {
+      const height = Math.max(20, Math.round((point.value / maxValue) * 90));
+      return {
+        height,
+        label: this.getLongWeekdayLabel(point.label, index),
+        value: this.formatInteger(point.value),
+      };
+    });
+  }
+
+  private mapMonthlyPointsToWeeklyBars(points: SalesRevenueChartPoint[]): BarData[] {
+    const bucketSize = 7;
+    const grouped: Array<{ value: number; label: string }> = [];
+    const now = new Date();
+    const currentYear = now.getFullYear();
+
+    for (let index = 0; index < points.length; index += bucketSize) {
+      const chunk = points.slice(index, index + bucketSize);
+      const bucketValue = chunk.reduce((sum, point) => sum + point.value, 0);
+      let label = '';
+      if (chunk.length > 0) {
+        const firstDate = this.tryParseDate(chunk[0].label);
+        const lastDate = this.tryParseDate(chunk[chunk.length - 1].label);
+        if (firstDate) {
+          // utolsó, csonka blokk: csak kezdő dátum + kötőjel
+          if (chunk.length < bucketSize) {
+            label = this.formatChartDate(firstDate, null, currentYear) + ' –';
+          } else if (lastDate) {
+            label = this.formatChartDate(firstDate, lastDate, currentYear);
+          }
+        }
+      }
+      grouped.push({
+        value: bucketValue,
+        label,
+      });
+    }
+
+    const maxValue = Math.max(...grouped.map((item) => item.value), 1);
+
+    return grouped.map((item) => ({
+      height: Math.max(20, Math.round((item.value / maxValue) * 90)),
+      label: item.label,
+      value: this.formatInteger(item.value),
+    }));
+  }
+
+  private formatChartDate(from: Date, to: Date | null, currentYear: number): string {
+    // Ha év eltér, vagy nem az aktuális év, akkor év is kell
+    const fromYear = from.getFullYear();
+    const fromMonth = from.getMonth() + 1;
+    const fromDay = from.getDate();
+    let fromStr = `${this.pad2(fromMonth)}.${this.pad2(fromDay)}`;
+    if (fromYear !== currentYear) {
+      fromStr = `${fromYear}.` + fromStr;
+    }
+    if (!to) return fromStr;
+    const toYear = to.getFullYear();
+    const toMonth = to.getMonth() + 1;
+    const toDay = to.getDate();
+    let toStr = `${this.pad2(toMonth)}.${this.pad2(toDay)}`;
+    if (toYear !== fromYear) {
+      toStr = `${toYear}.` + toStr;
+    }
+    return `${fromStr} – ${toStr}`;
+  }
+
+  private pad2(n: number): string {
+    return n < 10 ? '0' + n : '' + n;
+  }
+
+  private getLongWeekdayLabel(rawLabel: string, index: number): string {
+    const dateFromApi = this.tryParseDate(rawLabel);
+    if (dateFromApi) {
+      // hosszú napnév (Hétfő, Kedd, ...)
+      return dateFromApi.toLocaleDateString('hu-HU', { weekday: 'long' });
+    }
+    const fallbackLabels = ['Hétfő', 'Kedd', 'Szerda', 'Csütörtök', 'Péntek', 'Szombat', 'Vasárnap'];
+    return fallbackLabels[index % fallbackLabels.length];
+  }
+
+  private tryParseDate(value: string): Date | null {
+    if (!value || typeof value !== 'string') {
+      return null;
+    }
+
+    const normalized = value.includes('T') ? value : `${value}T00:00:00`;
+    const date = new Date(normalized);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  private toSalesOverviewPeriod(period: Period): SalesOverviewPeriod {
+    if (period === 'weekly') {
+      return 'week';
+    }
+
+    if (period === 'monthly') {
+      return 'month';
+    }
+
+    return 'year';
+  }
+
+  private formatCurrency(value: number): string {
+    return `${new Intl.NumberFormat('hu-HU').format(Math.round(value))} Ft`;
+  }
+
+  private formatInteger(value: number): string {
+    return new Intl.NumberFormat('hu-HU').format(Math.round(value));
   }
 
   private createMonthlyBars(dailyRevenue: number[]): BarData[] {

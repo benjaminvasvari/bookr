@@ -4,6 +4,8 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } 
 import { UserService } from '../../../core/services/user.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { UpdateNotificationSettingsRequest } from '../../../core/models';
+import { ThemeService } from '../../../core/services/theme.service';
+import { Subscription } from 'rxjs';
 
 interface NotificationSettings {
   appointmentConfirmation: boolean;
@@ -22,6 +24,7 @@ interface NotificationSettings {
 export class ProfileSettingsComponent implements OnInit, OnDestroy {
   passwordForm!: FormGroup;
   deleteAccountForm!: FormGroup;
+  isDarkMode = false;
 
   // Notification Settings
   notificationSettings: NotificationSettings = {
@@ -36,6 +39,7 @@ export class ProfileSettingsComponent implements OnInit, OnDestroy {
   isSavingNotifications = false;
   notificationSaveSuccess = false;
   private hasPendingNotificationSave = false;
+  private themeSubscription?: Subscription;
 
   // Password modal states
   showPasswordModal = false;
@@ -53,18 +57,29 @@ export class ProfileSettingsComponent implements OnInit, OnDestroy {
   constructor(
     private fb: FormBuilder,
     private userService: UserService,
-    private authService: AuthService
+    private authService: AuthService,
+    private themeService: ThemeService
   ) {}
 
   ngOnInit(): void {
     this.initForms();
     this.loadNotificationSettings();
+
+    this.themeSubscription = this.themeService.isDarkMode$.subscribe((isDarkMode) => {
+      this.isDarkMode = isDarkMode;
+    });
   }
 
   ngOnDestroy(): void {
+    this.themeSubscription?.unsubscribe();
+
     // Restore body scroll when component is destroyed
     document.documentElement.style.overflow = '';
     document.body.style.overflow = '';
+  }
+
+  onDarkModeChange(): void {
+    this.themeService.setDarkMode(this.isDarkMode);
   }
 
   initForms(): void {
