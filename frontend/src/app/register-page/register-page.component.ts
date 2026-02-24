@@ -80,11 +80,7 @@ export class RegisterComponent implements OnInit, OnDestroy {
   }
 
   get stepProgress(): number {
-    if (this.totalSteps <= 1) {
-      return 0;
-    }
-
-    return (this.currentStep / (this.totalSteps - 1)) * 100;
+    return ((this.currentStep + 1) / this.totalSteps) * 100;
   }
 
   prevStep(): void {

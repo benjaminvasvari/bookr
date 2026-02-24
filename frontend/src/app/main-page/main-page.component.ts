@@ -45,36 +45,68 @@ export class MainPageComponent implements OnInit, AfterViewInit {
 
   reviews: Review[] = [
     {
-      author: 'Kovács Klára',
-      authorImage: 'assets/images/user1.jpg',
-      title: 'Legjobb oldal amit használhatok',
+      author: 'Vendég felhasználó',
+      authorImage: 'assets/images/favicon.png',
+      title: 'Gyors és egyszerű foglalás',
       content:
-        'Nagyon jó az oldal, egyszerű és gyors foglalásokat csinálni. Az oldal átlátható és könnyen kezelhető. Mindenkinek ajánlom, aki szeretne foglalni.',
+        'A foglalás folyamata átlátható volt, néhány kattintással sikerült időpontot választani.',
       rating: 5,
     },
     {
-      author: 'Nagy Gábor',
-      authorImage: 'assets/images/user2.jpg',
-      title: 'Könnyű használhatóság és felfedezhetőség',
+      author: 'Vendég felhasználó',
+      authorImage: 'assets/images/favicon.png',
+      title: 'Letisztult felület',
       content:
-        'Szép dizájnnal rendelkezik az oldal, könnyen találtam meg amit kerestem. Gyors foglalási folyamat és segítőkész ügyfélszolgálat.',
+        'Minden fontos információ könnyen megtalálható, a folyamat gyors és logikus.',
+      rating: 4,
+    },
+    {
+      author: 'Vendég felhasználó',
+      authorImage: 'assets/images/favicon.png',
+      title: 'Jó keresési élmény',
+      content:
+        'A kategóriák és az értékelések alapján gyorsan megtaláltam a megfelelő szolgáltatót.',
       rating: 5,
     },
     {
-      author: 'Tóth Bence',
-      authorImage: 'assets/images/user3.jpg',
-      title: 'Gyors és egyszerű keresés rendszere',
+      author: 'Vendég felhasználó',
+      authorImage: 'assets/images/favicon.png',
+      title: 'Stabil működés',
       content:
-        'Jól áttekinthető, minden fogalomhoz könnyű eljutni, nagyon szeretem. Nagyon tetszik a design és a felhasználói élmény.',
+        'Többször használtam már, minden alkalommal probléma nélkül ment végig a foglalás.',
       rating: 5,
     },
     {
-      author: 'Szabó Márton',
-      authorImage: 'assets/images/user4.jpg',
-      title: 'Saját cégem promóciója használattal időmegtakarítás',
+      author: 'Vendég felhasználó',
+      authorImage: 'assets/images/favicon.png',
+      title: 'Mobilon is kényelmes',
       content:
-        'A bookr-t megszoktam az időpontfoglalásra, egyszerű az online rendszer, ami segíti a vállalkozásomat. Könnyen kezelhető és hatékony.',
+        'Telefonról is jól használható, a felület gyors és a gombok jól eltalálhatók.',
       rating: 5,
+    },
+    {
+      author: 'Vendég felhasználó',
+      authorImage: 'assets/images/favicon.png',
+      title: 'Átlátható adatok',
+      content:
+        'A szolgáltatások, árak és időpontok egyértelműen jelennek meg, könnyű dönteni.',
+      rating: 4,
+    },
+    {
+      author: 'Vendég felhasználó',
+      authorImage: 'assets/images/favicon.png',
+      title: 'Gyors visszajelzés',
+      content:
+        'A foglalás után rögtön kaptam visszaigazolást, ami sokat segített a tervezésben.',
+      rating: 5,
+    },
+    {
+      author: 'Vendég felhasználó',
+      authorImage: 'assets/images/favicon.png',
+      title: 'Korrekt felhasználói élmény',
+      content:
+        'Összességében megbízható platform, egyszerű kezeléssel és gyors működéssel.',
+      rating: 4,
     },
   ];
 

@@ -5,6 +5,28 @@
     <p class="section-subtitle">Itt kezelheted a fiók beállításaidat</p>
   </div>
 
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Megjelenés</h2>
+    </div>
+    <div class="card-body">
+      <div class="setting-item appearance-setting">
+        <div class="setting-info">
+          <h3 class="setting-title">Dark mode</h3>
+          <p class="setting-description">Sötét téma az összes oldalon</p>
+        </div>
+        <label class="toggle-switch">
+          <input
+            type="checkbox"
+            [(ngModel)]="isDarkMode"
+            (change)="onDarkModeChange()"
+          />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
   <!-- Notification Settings Card -->
   <div class="card">
     <div class="card-header">

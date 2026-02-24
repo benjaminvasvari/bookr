@@ -44,7 +44,9 @@
 								</span>
 							</div>
 							<p class="service-desc">{{ service.description }}</p>
-						<div class="service-price">{{ formatPrice(service.price, service.currency) }}</div>
+							<div class="service-meta">
+								<span class="price">{{ formatPrice(service.price, service.currency) }}</span>
+							</div>
 							<div class="service-actions">
 								<button class="btn ghost" (click)="openEditServiceModal(service)">Szerkesztés</button>
 							</div>

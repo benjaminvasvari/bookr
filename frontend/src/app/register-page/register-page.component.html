@@ -174,25 +174,11 @@
 
               @if (currentStep > 0) {
                 <div class="wizard-meta">
-                  <button
-                    type="button"
-                    class="wizard-back-link"
-                    (click)="prevStep()"
-                    aria-label="Visszalépés"
-                    title="Visszalépés"
-                  >
-                    <i class="fas fa-arrow-left"></i>
-                    <span>Vissza</span>
-                  </button>
+                  <button type="button" class="wizard-back-link" (click)="prevStep()">Vissza</button>
                 </div>
               }
 
-              <div class="wizard-progress" [style.--progress]="stepProgress" aria-label="Regisztráció lépések">
-                <span class="wizard-progress-fill"></span>
-                <span class="wizard-progress-thumb" aria-hidden="true">
-                  <i class="fas fa-bolt"></i>
-                </span>
-              </div>
+              <div class="wizard-progress"><span [style.width.%]="stepProgress"></span></div>
             </div>
 
             <form [formGroup]="registerForm" class="register-form wizard-form" novalidate>
@@ -294,24 +280,24 @@
                   </div>
                 }
               </div>
-
-              <div class="wizard-actions">
-                <button
-                  type="button"
-                  class="btn-submit"
-                  (click)="nextStep()"
-                  [disabled]="isLoading || !canProceedStep()">
-                  @if (isLoading && currentStep === totalSteps - 1) {
-                    <span><i class="fas fa-spinner fa-spin"></i> REGISZTRÁCIÓ...</span>
-                  } @else {
-                    <span>{{ currentStep === totalSteps - 1 ? 'REGISZTRÁCIÓ' : 'TOVÁBB' }}</span>
-                  }
-                </button>
-              </div>
             </form>
           </div>
 
           <div class="wizard-bottom">
+            <div class="wizard-actions">
+              <button
+                type="button"
+                class="btn-submit"
+                (click)="nextStep()"
+                [disabled]="isLoading || !canProceedStep()">
+                @if (isLoading && currentStep === totalSteps - 1) {
+                  <span><i class="fas fa-spinner fa-spin"></i> REGISZTRÁCIÓ...</span>
+                } @else {
+                  <span>{{ currentStep === totalSteps - 1 ? 'REGISZTRÁCIÓ' : 'TOVÁBB' }}</span>
+                }
+              </button>
+            </div>
+
             <div class="divider"></div>
             <div class="login-section">
               <p class="login-text">Van már fiókod?</p>

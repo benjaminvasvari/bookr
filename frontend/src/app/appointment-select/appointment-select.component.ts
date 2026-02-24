@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { Subject } from 'rxjs';
@@ -98,7 +98,6 @@ export class AppointmentSelectComponent implements OnInit, OnDestroy {
 
   // Error handling
   errorMessage: string = '';
-
   // ========================================
   // KONSTANSOK
   // ========================================

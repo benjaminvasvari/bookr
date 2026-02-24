@@ -186,6 +186,34 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
     return Array(Math.floor(rating)).fill(0);
   }
 
+  getMainGalleryImage(): string {
+    if (!this.company) {
+      return '';
+    }
+
+    const mainImage = (this.company.imageUrl || '').trim();
+    if (mainImage) {
+      return mainImage;
+    }
+
+    const firstGalleryImage = (this.company.galleryImages ?? []).find((image) => !!image?.trim());
+    return firstGalleryImage ?? '';
+  }
+
+  getThumbnailGalleryImages(): string[] {
+    if (!this.company) {
+      return [];
+    }
+
+    const mainImage = this.getMainGalleryImage();
+    const gallery = (this.company.galleryImages ?? [])
+      .map((image) => image?.trim() ?? '')
+      .filter((image) => image.length > 0 && image !== mainImage);
+
+    const thumbnails = gallery.slice(0, 3);
+    return thumbnails;
+  }
+
   getMapUrl(): SafeResourceUrl {
     if (!this.company?.addressDetails) {
       return '';

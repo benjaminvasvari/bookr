@@ -65,20 +65,20 @@
 }
 
 .reviews-toolbar {
-	display: flex;
+	display: grid;
+	grid-template-columns: 1.4fr repeat(2, minmax(180px, 1fr));
+	gap: 12px;
 	align-items: center;
-	gap: 24px;
 	background: #ffffff;
 	border: 1px solid var(--owner-border);
 	border-radius: 14px;
-	padding: 12px 16px;
+	padding: 12px;
 	box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
 	margin-bottom: 20px;
 }
 
 .search-input {
-	flex: 0 0 auto;
-	width: 400px;
+	width: 100%;
 }
 
 .search-input input {
@@ -91,70 +91,13 @@
 	color: #111827;
 }
 
-.sort-options {
-	display: flex;
-	align-items: center;
-	gap: 10px;
-	margin-left: auto;
-}
-
-.toolbar-divider {
-	width: 1px;
-	height: 24px;
-	background: #e5e7eb;
-	flex-shrink: 0;
-}
-
-.star-filter {
-	display: flex;
-	gap: 4px;
-	align-items: center;
-}
-
-.sort-option {
-	background: none;
-	border: none;
-	color: #6b7280;
+.filter-select {
+	background: #f9fafb;
+	border: 1px solid var(--owner-border);
+	border-radius: 12px;
+	padding: 10px 12px;
 	font-size: 14px;
-	font-weight: 500;
-	cursor: pointer;
-	padding: 0;
-	transition: color 0.2s ease;
-}
-
-.sort-option:hover {
 	color: #111827;
-}
-
-.sort-option.active {
-	color: #38a179;
-	font-weight: 600;
-}
-
-.separator {
-	color: #d1d5db;
-	font-size: 14px;
-	user-select: none;
-}
-
-.star-button {
-	background: none;
-	border: none;
-	font-size: 24px;
-	color: #d1d5db;
-	cursor: pointer;
-	padding: 0;
-	line-height: 1;
-	transition: all 0.2s ease;
-	user-select: none;
-}
-
-.star-button:hover {
-	transform: scale(1.15);
-}
-
-.star-button.filled {
-	color: #fbbf24;
 }
 
 .reviews-list {

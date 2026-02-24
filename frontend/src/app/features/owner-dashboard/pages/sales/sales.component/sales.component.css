@@ -145,7 +145,7 @@
 .kpi-trend {
 	margin: 0;
 	font-size: 13px;
-	color: #6b7280;
+	color: #e80211;
 }
 
 .kpi-trend.positive {
@@ -248,10 +248,27 @@
 	position: relative;
 }
 
+.bar-fill.closed {
+	background: repeating-linear-gradient(
+		135deg,
+		#9ca3af 0,
+		#9ca3af 6px,
+		#d1d5db 6px,
+		#d1d5db 12px
+	);
+	border: 1px solid #9ca3af;
+	border-radius: 6px;
+}
+
 .bar-label {
 	font-size: 10px;
 	color: #6b7280;
 	white-space: nowrap;
+}
+
+.bar-label.closed {
+	color: #4b5563;
+	font-weight: 700;
 }
 
 .bar-value {
@@ -263,6 +280,14 @@
 	pointer-events: none;
 	position: relative;
 	z-index: 1;
+}
+
+.bar-value.closed {
+	font-size: 12px;
+	letter-spacing: 0.2px;
+	text-transform: uppercase;
+	color: #111827;
+	text-shadow: none;
 }
 
 .chart-caption {

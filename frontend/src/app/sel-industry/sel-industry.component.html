@@ -4,16 +4,19 @@
   <!-- Képgaléria szekció -->
   <div class="gallery-section">
     <div class="main-image">
-      <img [src]="company.imageUrl" [alt]="company.name" loading="lazy" />
+      @if (getMainGalleryImage()) {
+      <img [src]="getMainGalleryImage()" [alt]="company.name" loading="lazy" />
+      }
     </div>
+    @if (getThumbnailGalleryImages().length > 0) {
     <div class="thumbnail-gallery">
-      @if (company.galleryImages && company.galleryImages.length > 0) { @for (image of
-      company.galleryImages; track $index) {
+      @for (image of getThumbnailGalleryImages(); track $index) {
       <div class="thumbnail">
-        <img [src]="image" [alt]="company.name" loading="lazy" />
+        <img [src]="image" [alt]="company.name + ' galéria kép ' + ($index + 2)" loading="lazy" />
       </div>
-      } }
+      }
     </div>
+    }
   </div>
 
   <!-- Cég információk szekció -->
