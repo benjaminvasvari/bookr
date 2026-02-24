@@ -13,77 +13,85 @@
 		<label class="search-input">
 			<input type="text" placeholder="Keresés ügyfél vagy szolgáltatás szerint" />
 		</label>
-		<select class="filter-select">
-			<option>Összes értékelés</option>
-			<option>5 csillag</option>
-			<option>4 csillag</option>
-			<option>3 csillag</option>
-			<option>2 csillag</option>
-			<option>1 csillag</option>
-		</select>
-		<select class="filter-select">
-			<option>Legfrissebb</option>
-			<option>Legmagasabb</option>
-			<option>Legalacsonyabb</option>
-		</select>
+
+		<div class="toolbar-right">
+			<!-- Sort Controls -->
+			<div class="sort-group">
+				@for (option of sortOptions; track option.id; let isFirst = $first) {
+					@if (!isFirst) {
+						<div class="sort-divider"></div>
+					}
+					<button
+						type="button"
+						class="sort-text"
+						[class.active]="option.isSelected"
+						(click)="toggleSort(option.id)"
+					>
+						{{ option.label }}
+					</button>
+				}
+			</div>
+
+			<!-- Star Rating Filter -->
+			<div class="star-rating">
+				@for (i of [0, 1, 2, 3, 4]; track i) {
+					<button
+						type="button"
+						class="star"
+						[class.filled]="getStarFillPercentage(i) > 0 || (ratingHoverIndex !== null && i < ratingHoverIndex)"
+						(mouseenter)="onStarHover(i)"
+						(mouseleave)="onStarHoverLeave()"
+						(click)="selectRating(i + 1)"
+						[attr.aria-label]="(i + 1) + ' csillag'"
+					>
+						<span 
+							class="star-inner" 
+							[style.--fill.%]="getStarFillPercentage(i) || (ratingHoverIndex !== null && i < ratingHoverIndex ? 100 : 0)"
+						>★</span>
+					</button>
+				}
+			</div>
+		</div>
 	</div>
 
 	<section class="reviews-list">
-		<article class="review-card">
-			<div class="review-head">
-				<div class="avatar">KA</div>
-				<div class="review-meta">
-					<h3>Kiss Anna</h3>
-					<p class="muted">Hajvágás · 2026.02.01</p>
-				</div>
-				<div class="rating">
-					<span>★★★★★</span>
-					<span class="rating-score">5.0</span>
-				</div>
+		@if (isLoading) {
+			<div class="loading-state">
+				<p>Betöltés folyamatban...</p>
 			</div>
-			<p class="review-text">Gyors és precíz munka, nagyon elégedett vagyok. Köszönöm!</p>
-			<div class="review-actions">
-				<button class="btn ghost">Válasz</button>
-				<button class="btn primary">Megtekintés</button>
-			</div>
-		</article>
+		}
 
-		<article class="review-card">
-			<div class="review-head">
-				<div class="avatar">GM</div>
-				<div class="review-meta">
-					<h3>Gábor Máté</h3>
-					<p class="muted">Relax masszázs · 2026.01.30</p>
-				</div>
-				<div class="rating">
-					<span>★★★★☆</span>
-					<span class="rating-score">4.0</span>
-				</div>
+		@if (errorMessage && !isLoading) {
+			<div class="error-state">
+				<p>{{ errorMessage }}</p>
 			</div>
-			<p class="review-text">Nagyon jó élmény volt, legközelebb is jövök.</p>
-			<div class="review-actions">
-				<button class="btn ghost">Válasz</button>
-				<button class="btn primary">Megtekintés</button>
-			</div>
-		</article>
+		}
 
-		<article class="review-card">
-			<div class="review-head">
-				<div class="avatar">SP</div>
-				<div class="review-meta">
-					<h3>Szabó Petra</h3>
-					<p class="muted">Festés · 2026.01.25</p>
-				</div>
-				<div class="rating">
-					<span>★★★☆☆</span>
-					<span class="rating-score">3.0</span>
-				</div>
+		@if (!isLoading && reviews.length === 0 && !errorMessage) {
+			<div class="empty-state">
+				<p>Nincsenek elérhető értékelések.</p>
 			</div>
-			<p class="review-text">Kicsit csúszott az időpont, de a végeredmény szép lett.</p>
-			<div class="review-actions">
-				<button class="btn ghost">Válasz</button>
-				<button class="btn primary">Megtekintés</button>
-			</div>
-		</article>
+		}
+
+		@for (review of reviews; track review.reviewId) {
+			<article class="review-card">
+				<div class="review-head">
+					<div class="avatar">{{ review.clientName.substring(0, 2).toUpperCase() }}</div>
+					<div class="review-meta">
+						<h3>{{ review.clientName }}</h3>
+						<p class="muted">{{ review.serviceName }} · {{ formatDate(review.appointmentDate) }}</p>
+					</div>
+					<div class="rating">
+						<span>{{ getRatingStars(review.rating).map(() => '★').join('') }}{{ (5 - review.rating > 0) ? (5 - review.rating).toString().split('').map(() => '☆').join('') : '' }}</span>
+						<span class="rating-score">{{ review.rating }}.0</span>
+					</div>
+				</div>
+				<p class="review-text">{{ review.comment }}</p>
+				<div class="review-actions">
+					<button class="btn ghost">Válasz</button>
+					<button class="btn primary">Megtekintés</button>
+				</div>
+			</article>
+		}
 	</section>
 </section>

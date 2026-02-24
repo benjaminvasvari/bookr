@@ -69,6 +69,7 @@ export const API_ENDPOINTS = {
     LIST: '/reviews',
     CREATE: '/reviews',
     BY_COMPANY: (companyId: number) => `/companies/${companyId}/reviews`,
+    OWNER_PANEL: '/reviews/getOwnerPanelReviews',
   },
 
   USER: {
