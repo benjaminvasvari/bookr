@@ -122,6 +122,11 @@ export class SalesComponent implements OnInit {
     private readonly companiesService: CompaniesService
   ) {}
 
+  isZeroBarValue(value: string): boolean {
+    const numeric = Number((value || '').replace(/[^\d.-]/g, ''));
+    return Number.isFinite(numeric) && numeric === 0;
+  }
+
   ngOnInit(): void {
     this.chartBarsByPeriod.weekly = [...this.data.weekly.bars];
     this.chartBarsByPeriod.monthly = [...this.data.monthly.bars];
@@ -515,11 +520,19 @@ export class SalesComponent implements OnInit {
   }
 
   private formatCurrency(value: number): string {
-    return `${new Intl.NumberFormat('hu-HU').format(Math.round(value))} Ft`;
+    return `${this.formatThousands(value)} Ft`;
   }
 
   private formatInteger(value: number): string {
-    return new Intl.NumberFormat('hu-HU').format(Math.round(value));
+    return this.formatThousands(value);
+  }
+
+  private formatThousands(value: number): string {
+    const rounded = Math.round(value);
+    const sign = rounded < 0 ? '-' : '';
+    const digits = Math.abs(rounded).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+
+    return `${sign}${digits}`;
   }
 
   private createMonthlyBars(dailyRevenue: number[]): BarData[] {

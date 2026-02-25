@@ -474,6 +474,36 @@
     justify-content: center;
 }
 
+/* Dark Mode */
+:host-context(body.dark-mode) .form-label {
+  color: #cbd5e1;
+}
+
+:host-context(body.dark-mode) .form-input {
+  background-color: #223246;
+  border-color: #36506b;
+  color: #e2e8f0;
+}
+
+:host-context(body.dark-mode) .form-input::placeholder {
+  color: #94a3b8;
+}
+
+:host-context(body.dark-mode) .form-input:focus {
+  background-color: #1f2b3a;
+  border-color: #38a179;
+}
+
+:host-context(body.dark-mode) .form-input.disabled {
+  background-color: #1f2b3a;
+  border-color: #2b3b4d;
+  color: #94a3b8;
+}
+
+:host-context(body.dark-mode) .avatar-info {
+  color: #cbd5e1;
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
   /* Tablet: Stack columns vertically */

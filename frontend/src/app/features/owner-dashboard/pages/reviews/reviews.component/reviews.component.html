@@ -4,14 +4,17 @@
 			<h1>Értékelések</h1>
 			<p class="subtitle">Ügyfél visszajelzések gyors áttekintése.</p>
 		</div>
-		<div class="actions">
-			<button class="btn ghost">Szűrés</button>
-		</div>
 	</header>
 
 	<div class="reviews-toolbar">
 		<label class="search-input">
-			<input type="text" placeholder="Keresés ügyfél vagy szolgáltatás szerint" />
+			<input
+				#searchInput
+				type="text"
+				placeholder="Keresés ügyfél vagy szolgáltatás szerint"
+				[value]="searchTerm"
+				(input)="onSearchChange(searchInput.value)"
+			/>
 		</label>
 
 		<div class="toolbar-right">
@@ -51,46 +54,63 @@
 					</button>
 				}
 			</div>
+
+			<button
+				type="button"
+				class="clear-filters-btn"
+				(click)="clearAllFilters()"
+				[disabled]="!hasActiveFilters"
+			>
+				Szűrések törlése
+			</button>
 		</div>
 	</div>
 
-	<section class="reviews-list">
-		@if (isLoading) {
+	<section class="reviews-list" [class.is-refreshing]="isLoading && displayedReviews.length > 0">
+		@if (isLoading && displayedReviews.length === 0) {
 			<div class="loading-state">
 				<p>Betöltés folyamatban...</p>
 			</div>
 		}
 
-		@if (errorMessage && !isLoading) {
+		@if (errorMessage && !isLoading && displayedReviews.length === 0) {
 			<div class="error-state">
 				<p>{{ errorMessage }}</p>
 			</div>
 		}
 
-		@if (!isLoading && reviews.length === 0 && !errorMessage) {
+		@if (!isLoading && displayedReviews.length === 0 && !errorMessage) {
 			<div class="empty-state">
 				<p>Nincsenek elérhető értékelések.</p>
 			</div>
 		}
 
-		@for (review of reviews; track review.reviewId) {
+		@for (review of displayedReviews; track review.reviewId) {
 			<article class="review-card">
 				<div class="review-head">
-					<div class="avatar">{{ review.clientName.substring(0, 2).toUpperCase() }}</div>
+					<div class="avatar">{{ getHungarianName(review.clientName).substring(0, 2).toUpperCase() }}</div>
 					<div class="review-meta">
-						<h3>{{ review.clientName }}</h3>
-						<p class="muted">{{ review.serviceName }} · {{ formatDate(review.appointmentDate) }}</p>
+						<h3>{{ getHungarianName(review.clientName) }}</h3>
+						<p class="muted">Értékelés dátuma: {{ formatDate(review.createdAt) }}</p>
 					</div>
 					<div class="rating">
-						<span>{{ getRatingStars(review.rating).map(() => '★').join('') }}{{ (5 - review.rating > 0) ? (5 - review.rating).toString().split('').map(() => '☆').join('') : '' }}</span>
+						<div class="rating-stars" [attr.aria-label]="review.rating + ' csillag'">
+							@for (star of [1, 2, 3, 4, 5]; track star) {
+								<span class="rating-star" [class.active]="star <= review.rating">★</span>
+							}
+						</div>
 						<span class="rating-score">{{ review.rating }}.0</span>
 					</div>
 				</div>
-				<p class="review-text">{{ review.comment }}</p>
-				<div class="review-actions">
-					<button class="btn ghost">Válasz</button>
-					<button class="btn primary">Megtekintés</button>
+				<div class="review-pills">
+					<span class="review-pill service-pill">{{ review.serviceName }}</span>
+					<span class="review-pill date-pill">{{ formatDate(review.appointmentDate) }}</span>
 				</div>
+				@if (review.comment && review.comment.trim().length > 0) {
+					<p class="review-text">{{ review.comment }}</p>
+				} @else {
+					<div class="review-text-spacer" aria-hidden="true"></div>
+				}
 			</article>
 		}
 	</section>

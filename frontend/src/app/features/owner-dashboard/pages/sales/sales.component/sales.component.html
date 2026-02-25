@@ -49,8 +49,8 @@
 			<div class="chart-placeholder">
 				<div class="chart-bars" [style.--bar-count]="currentBars.length">
 					<div class="bar-col" *ngFor="let bar of currentBars" [class.closed]="bar.isClosed">
-						<span class="bar-fill" [class.closed]="bar.isClosed" [style.height.%]="bar.height">
-							<span class="bar-value" [class.closed]="bar.isClosed">{{ bar.value }}</span>
+						<span class="bar-fill" [class.closed]="bar.isClosed" [class.zero]="isZeroBarValue(bar.value)" [style.height.%]="bar.height">
+							<span class="bar-value" [class.closed]="bar.isClosed" [class.zero]="isZeroBarValue(bar.value)">{{ bar.value }}</span>
 						</span>
 						<span class="bar-label" [class.closed]="bar.isClosed">{{ bar.label }}</span>
 					</div>

@@ -109,10 +109,24 @@
   border-bottom: 1px solid #e9ecef;
 }
 
+.appearance-settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
 .appearance-setting {
   padding-top: 4px;
   padding-bottom: 4px;
   border-bottom: none;
+}
+
+.setting-item.disabled {
+  opacity: 0.65;
+}
+
+.setting-item.disabled .toggle-switch {
+  cursor: not-allowed;
 }
 
 .setting-item:last-child {

@@ -49,6 +49,10 @@
   font-weight: 500;
 }
 
+:host-context(body.dark-mode) .register-subtitle {
+  color: rgba(248, 250, 252, 0.92);
+}
+
 .register-form {
   width: 100%;
   max-width: 450px;
@@ -113,6 +117,10 @@
   padding: 0 0.25rem;
 }
 
+:host-context(body.dark-mode) .input-group label {
+  color: rgba(248, 250, 252, 0.88);
+}
+
 /* LABEL - Floating állapot (focus vagy van érték) */
 .input-group input:focus + label,
 .input-group input:not(:placeholder-shown) + label {
@@ -139,6 +147,10 @@
   font-size: 1.1rem;
   pointer-events: none;
   transition: color 0.3s ease;
+}
+
+:host-context(body.dark-mode) .input-icon {
+  color: rgba(248, 250, 252, 0.86);
 }
 
 /* INPUT ICON - Focus-ban zöld */
@@ -172,6 +184,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+:host-context(body.dark-mode) .toggle-password {
+  color: rgba(248, 250, 252, 0.86);
 }
 
 .toggle-password:hover {
@@ -392,6 +408,10 @@
   margin-bottom: 0.5rem;
 }
 
+:host-context(body.dark-mode) .login-text {
+  color: rgba(248, 250, 252, 0.94);
+}
+
 .login-link {
   color: white;
   font-size: 1rem;
@@ -435,6 +455,10 @@
   color: rgba(255, 255, 255, 0.85);
   font-size: 0.86rem;
   font-weight: 600;
+}
+
+:host-context(body.dark-mode) .wizard-meta {
+  color: rgba(248, 250, 252, 0.92);
 }
 
 .wizard-back-link {
@@ -887,17 +911,6 @@
 
   .wizard-form .input-group {
     width: 100%;
-  }
-
-  .input-group input {
-    /* Use symmetrical padding to center content vertically */
-    padding: 0.68rem 2.4rem 0.68rem 2.4rem;
-    font-size: 0.84rem;
-    line-height: normal;
-    text-align: left;
-    display: block;
-    /* Ensure enough height for the input */
-    min-height: 2.5rem;
   }
 
   .input-group input {
