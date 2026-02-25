@@ -397,7 +397,7 @@ public class Images implements Serializable {
             spq.registerStoredProcedureParameter("urlIN", String.class, ParameterMode.IN);
 
             spq.setParameter("userIdIN", userId);
-            spq.setParameter("urlIN", relativePath);
+            spq.setParameter("urlIN", "uploads/" + relativePath);
 
             spq.execute();
 

@@ -671,7 +671,7 @@ public class AppointmentsService {
                 JSONObject datObj = new JSONObject();
                 datObj.put("date", record.getDate());
                 datObj.put("dayName", record.getDayName());
-                datObj.put("revenue", record.getRevenue());
+                datObj.put("revenue", record.getRevenue() != null ? record.getRevenue() : JSONObject.NULL);
                 datObj.put("currency", record.getCurrency());
 
                 resultList.add(datObj);

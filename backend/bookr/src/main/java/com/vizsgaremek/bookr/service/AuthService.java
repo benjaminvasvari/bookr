@@ -106,84 +106,6 @@ public class AuthService {
         return toReturn;
     }
 
-    public JSONObject staffRegister(Users staffRegistered) {
-        JSONObject toReturn = new JSONObject();
-        String status = "success";
-        Integer statusCode = 200;
-
-        // Validálás
-        if (ValidationUtil.isValidEmail(staffRegistered.getEmail()) == false) {
-            status = "InvalidEmail";
-            statusCode = 417;
-
-        } else if (ValidationUtil.isValidPassword(staffRegistered.getPassword()) == false) {
-            status = "InvalidPassword";
-            statusCode = 417;
-
-        } else {
-            // ========== JELSZÓ HASHELÉS ==========
-            String plainPassword = staffRegistered.getPassword();
-            String hashedPassword = passwordHasher.hashPassword(plainPassword);
-
-            // Hashelt jelszó beállítása a User objektumba
-            staffRegistered.setPassword(hashedPassword);
-            // =====================================
-
-            // Mentés adatbázisba a hashelt jelszóval
-            Users registrationResult = Users.staffRegister(staffRegistered);
-
-            if (registrationResult == null) {
-                status = "serverError";
-                statusCode = 500;
-            } else {
-                // ========== AUDIT LOG ==========
-                try {
-                    AuditLogs auditLog = new AuditLogs(
-                            registrationResult.getId(),
-                            "client",
-                            staffRegistered.getEmail(),
-                            "user",
-                            "register"
-                    );
-                    auditLog.setCompanyId(staffRegistered.getCompanyId() != null ? staffRegistered.getCompanyId() : null);
-                    auditLog.addNewValue("user_id", registrationResult.getId());
-                    auditLog.addNewValue("email", staffRegistered.getEmail());
-                    auditLog.addNewValue("first_name", staffRegistered.getFirstName());
-                    auditLog.addNewValue("last_name", staffRegistered.getLastName());
-                    auditLog.addNewValue("role", "staff");
-                    auditLog.addNewValue("company_id", staffRegistered.getCompanyId() != null ? staffRegistered.getCompanyId() : null);
-
-                    auditLogService.logAudit(auditLog);
-                } catch (Exception ex) {
-                    // Log the error but don't fail the registration
-                    ex.printStackTrace();
-                }
-                // ===============================
-
-                // ========== EMAIL KÜLDÉS ==========
-                try {
-                    emailService.sendVerificationEmail(
-                            staffRegistered.getEmail(),
-                            staffRegistered.getFirstName(),
-                            registrationResult.getRegToken()
-                    );
-                } catch (Exception ex) {
-                    // Log the error but don't fail the registration
-                    System.err.println("Failed to send verification email: " + ex.getMessage());
-                    ex.printStackTrace();
-                }
-                // ==================================
-
-                toReturn.put("userId", registrationResult.getId());
-                toReturn.put("regToken", registrationResult.getRegToken());
-            }
-        }
-
-        toReturn.put("status", status);
-        toReturn.put("statusCode", statusCode);
-        return toReturn;
-    }
-
     public JSONObject login(Users loginUser) {
         JSONObject toReturn = new JSONObject();
         String status = "success";
@@ -516,12 +438,12 @@ public class AuthService {
 
     public JSONObject logout(String jwtToken) {
         JSONObject toReturn = new JSONObject();
-        
+
         Integer userId = JWT.getUserIdFromAccessToken(jwtToken);
         Integer companyId = JWT.getCompanyIdFromAccessToken(jwtToken);
         String userEmail = JWT.getEmailFromAccessToken(jwtToken);
         String userBestRole = JWT.getUserBestRoleFromAccessToken(jwtToken);
-        
+
         try {
             auditLogService.logSimpleAction(
                     userId,

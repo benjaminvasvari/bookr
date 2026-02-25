@@ -615,61 +615,6 @@ public class Users implements Serializable {
         }
     }
 
-    public static Users staffRegister(Users staffRegistered) {
-        EntityManager em = emf.createEntityManager();
-
-        try {
-
-            StoredProcedureQuery spq = em.createStoredProcedureQuery("registerStaff");
-            spq.registerStoredProcedureParameter("firstNameIN", String.class, ParameterMode.IN);
-            spq.registerStoredProcedureParameter("lastNameIN", String.class, ParameterMode.IN);
-            spq.registerStoredProcedureParameter("emailIN", String.class, ParameterMode.IN);
-            spq.registerStoredProcedureParameter("passwordIN", String.class, ParameterMode.IN);
-            spq.registerStoredProcedureParameter("phoneIN", String.class, ParameterMode.IN);
-            spq.registerStoredProcedureParameter("companyIdIN", String.class, ParameterMode.IN);
-
-            spq.setParameter("firstNameIN", staffRegistered.getFirstName());
-            spq.setParameter("lastNameIN", staffRegistered.getLastName());
-            spq.setParameter("emailIN", staffRegistered.getEmail());
-            spq.setParameter("passwordIN", staffRegistered.getPassword());
-            spq.setParameter("phoneIN", staffRegistered.getPhone());
-            spq.setParameter("companyIdIN", staffRegistered.getCompanyId());
-
-            spq.execute();
-
-            // Get the result set with user_id, staff_id and reg_token
-            List<Object[]> resultList = spq.getResultList();
-
-            if (resultList.isEmpty()) {
-                return null;
-            }
-
-            Object[] result = resultList.get(0);
-            int userId = Integer.parseInt(result[0].toString());
-            // result[1] is staff_id, we don't need it for RegistrationResult
-            String regToken = result[2].toString();
-
-            return Users.forRegistration(userId, regToken);
-
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            return null;
-        } finally {
-            if (em != null && em.isOpen()) {
-                em.close();
-            }
-        }
-    }
-
-    /**
-     * Login method - retrieves user data by email (password verification
-     * happens in Service layer)
-     *
-     * @param loginUser User object containing email (and password for service
-     * verification)
-     * @return Users object with all data including hashed password and roles as
-     * String
-     */
     public static Users login(Users loginUser) {
         EntityManager em = emf.createEntityManager();
 
@@ -732,6 +677,10 @@ public class Users implements Serializable {
         } catch (Exception ex) {
             ex.printStackTrace();
             return false;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
         }
     }
 
@@ -752,6 +701,10 @@ public class Users implements Serializable {
         } catch (Exception ex) {
             ex.printStackTrace();
             return false;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
         }
     }
 
@@ -962,6 +915,10 @@ public class Users implements Serializable {
         } catch (Exception ex) {
             ex.printStackTrace();
             return false;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
         }
     }
 
@@ -1047,6 +1004,10 @@ public class Users implements Serializable {
         } catch (Exception ex) {
             ex.printStackTrace();
             return false;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
         }
     }
 

@@ -764,7 +764,9 @@ public class Appointments implements Serializable {
             ex.printStackTrace();
             return null;
         } finally {
-            em.close();
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
         }
     }
 
@@ -865,6 +867,10 @@ public class Appointments implements Serializable {
         } catch (Exception ex) {
             ex.printStackTrace();
             return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
         }
     }
 
@@ -1283,7 +1289,7 @@ public class Appointments implements Serializable {
                 OwnerPanelDTO.SalesRevenueChartDTO s = new OwnerPanelDTO.SalesRevenueChartDTO(
                         record[0].toString(),
                         record[1].toString(),
-                        Double.parseDouble(record[2].toString()),
+                        record[2] != null ? Double.parseDouble(record[2].toString()) : null,
                         record[3].toString()
                 );
                 toReturn.add(s);

@@ -9,6 +9,7 @@ import com.vizsgaremek.bookr.security.JWT;
 import com.vizsgaremek.bookr.service.UsersService;
 import static com.vizsgaremek.bookr.util.ErrorResponseBuilder.buildErrorResponse;
 import com.vizsgaremek.bookr.util.RoleChecker;
+import java.util.Objects;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.Consumes;
@@ -195,21 +196,20 @@ public class UsersController {
         // 3. Role check
         String userRoles = JWT.getRolesFromAccessToken(jwtToken);
         Integer userCompanyId = JWT.getCompanyIdFromAccessToken(jwtToken);
-        
+
         if (RoleChecker.hasAnyRole(userRoles, "owner") && !RoleChecker.hasAnyRole(userRoles, "superadmin")) {
-            if (userCompanyId != companyId) {
+            if (!Objects.equals(userCompanyId, companyId)) {
                 return buildErrorResponse(400, "invalidCompanyId");
             }
         }
-        
-        
+
         boolean hasPermission = RoleChecker.hasAllRoles(userRoles, "client", "owner") || RoleChecker.hasAllRoles(userRoles, "client", "superadmin");
         if (!hasPermission) {
             return buildErrorResponse(403, "forbidden");
         }
 
         // 4. Kötelező mezők validálása
-        if (companyId== null || companyId <= 0 || page== null || page <= 0 || pageSize== null || pageSize <= 0) {
+        if (companyId == null || companyId <= 0 || page == null || page <= 0 || pageSize == null || pageSize <= 0) {
             return buildErrorResponse(400, "invalidParam");
         }
 

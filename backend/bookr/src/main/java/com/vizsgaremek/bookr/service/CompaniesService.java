@@ -74,7 +74,7 @@ public class CompaniesService {
                 reviewObj.put("userName", review.getUserName());
                 reviewObj.put("userImage", review.getUserImage());
                 reviewObj.put("rating", review.getRating());
-                reviewObj.put("comment", review.getComment());
+                reviewObj.put("comment", review.getComment() != null ? review.getComment() : JSONObject.NULL);
                 reviewObj.put("date", sdf.format(review.getCreatedAt()));
                 reviews.put(reviewObj);
             }

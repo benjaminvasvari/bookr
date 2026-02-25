@@ -180,7 +180,6 @@ public class ImagesService {
                 }
             }
 
-            // ezt még néézd át
             FileValidator.validateUploadedFile(filename, fileSize, mimeType);
 
             String uniqueFilename = FileStorageUtil.generateUniqueFilename(filename);

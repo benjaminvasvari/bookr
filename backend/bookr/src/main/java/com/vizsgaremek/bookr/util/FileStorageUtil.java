@@ -99,6 +99,7 @@ public class FileStorageUtil {
             return relativePath;
 
         } catch (IOException ex) {
+            ex.printStackTrace();
             return null;
 
         } finally {
