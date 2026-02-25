@@ -9,12 +9,21 @@ import {
   OwnerDashboardUpcomingAppointment,
   OwnerDashboardData,
 } from '../../../../../core/models/owner-dashboard.model';
+import { AuthService } from '../../../../../core/services/auth.service';
 import { OwnerDashboardService } from '../../../../../core/services/owner-dashboard.service';
+import {
+  OwnerSalesService,
+  SalesRevenueChartPoint,
+} from '../../../../../core/services/owner-sales.service';
+import {
+  RevenueChartBar,
+  RevenueChartComponent,
+} from '../../../components/revenue-chart/revenue-chart.component';
 
 @Component({
   selector: 'app-overview',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, RevenueChartComponent],
   templateUrl: './overview.component.html',
   styleUrl: './overview.component.css',
 })
@@ -22,11 +31,19 @@ export class OverviewComponent implements OnInit {
   dashboardData: OwnerDashboardData | null = null;
   isLoading = true;
   errorMessage = '';
+  isRevenueChartLoading = false;
+  revenueChartError = '';
+  revenueChartBars: RevenueChartBar[] = [];
 
-  constructor(private ownerDashboardService: OwnerDashboardService) {}
+  constructor(
+    private readonly ownerDashboardService: OwnerDashboardService,
+    private readonly authService: AuthService,
+    private readonly ownerSalesService: OwnerSalesService
+  ) {}
 
   ngOnInit(): void {
     this.loadDashboard();
+    this.loadRevenueChart();
   }
 
   get todayBookings(): number {
@@ -270,6 +287,98 @@ export class OverviewComponent implements OnInit {
     const minute = Number(match[2]);
     if (!Number.isFinite(hour) || !Number.isFinite(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
     return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+  }
+
+  private loadRevenueChart(): void {
+    const user = this.authService.getCurrentUser();
+
+    if (!user?.companyId) {
+      this.revenueChartError = 'Nem található cégazonosító a grafikonhoz.';
+      return;
+    }
+
+    this.isRevenueChartLoading = true;
+    this.revenueChartError = '';
+
+    this.ownerSalesService
+      .getSalesRevenueChart(user.companyId, 'week')
+      .pipe(finalize(() => (this.isRevenueChartLoading = false)))
+      .subscribe({
+        next: (points) => {
+          this.revenueChartBars = this.mapWeeklyPointsToBars(points);
+        },
+        error: () => {
+          this.revenueChartBars = [];
+          this.revenueChartError = 'Nem sikerült betölteni a bevételi grafikont.';
+        },
+      });
+  }
+
+  private mapWeeklyPointsToBars(points: SalesRevenueChartPoint[]): RevenueChartBar[] {
+    const datedPoints = points
+      .map((point) => ({ point, date: this.tryParseDate(point.label) }))
+      .filter((item): item is { point: SalesRevenueChartPoint; date: Date } => item.date !== null)
+      .sort((a, b) => a.date.getTime() - b.date.getTime());
+
+    const referenceDate = datedPoints.length > 0 ? datedPoints[datedPoints.length - 1].date : new Date();
+    const rangeDates = this.buildLastSevenDates(referenceDate);
+    const valuesByDate = new Map<string, number>();
+
+    for (const item of datedPoints) {
+      valuesByDate.set(this.toDateKey(item.date), item.point.value);
+    }
+
+    const maxValue = Math.max(...rangeDates.map((date) => valuesByDate.get(this.toDateKey(date)) ?? 0), 1);
+
+    return rangeDates.map((date) => {
+      const value = valuesByDate.get(this.toDateKey(date)) ?? 0;
+      const height = value > 0 ? Math.max(20, Math.round((value / maxValue) * 90)) : 8;
+
+      return {
+        height,
+        label: date.toLocaleDateString('hu-HU', { weekday: 'long' }),
+        value: this.formatInteger(value),
+      };
+    });
+  }
+
+  private buildLastSevenDates(endDate: Date): Date[] {
+    const normalizedEnd = new Date(endDate);
+    normalizedEnd.setHours(0, 0, 0, 0);
+
+    const dates: Date[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const day = new Date(normalizedEnd);
+      day.setDate(normalizedEnd.getDate() - i);
+      dates.push(day);
+    }
+
+    return dates;
+  }
+
+  private toDateKey(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private tryParseDate(value: string): Date | null {
+    if (!value || typeof value !== 'string') {
+      return null;
+    }
+
+    const normalized = value.includes('T') ? value : `${value}T00:00:00`;
+    const date = new Date(normalized);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  private formatInteger(value: number): string {
+    const rounded = Math.round(value);
+    const sign = rounded < 0 ? '-' : '';
+    const digits = Math.abs(rounded).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+
+    return `${sign}${digits}`;
   }
 
 }

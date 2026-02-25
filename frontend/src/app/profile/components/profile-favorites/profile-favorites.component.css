@@ -354,3 +354,56 @@
     justify-content: center;
   }
 }
+
+/* Favorites dark mode kontraszt */
+:host-context(body.dark-mode) .section-header {
+  background: #0f1720;
+}
+
+:host-context(body.dark-mode) .section-subtitle,
+:host-context(body.dark-mode) .empty-text,
+:host-context(body.dark-mode) .company-category,
+:host-context(body.dark-mode) .review-count,
+:host-context(body.dark-mode) .detail-item,
+:host-context(body.dark-mode) .detail-icon,
+:host-context(body.dark-mode) .loading,
+:host-context(body.dark-mode) .added-date,
+:host-context(body.dark-mode) .btn-secondary {
+  color: #e2e8f0;
+  fill: #e2e8f0;
+}
+
+:host-context(body.dark-mode) .empty-icon {
+  fill: #94a3b8;
+}
+
+:host-context(body.dark-mode) .empty-state,
+:host-context(body.dark-mode) .error-state {
+  background: #1f2b3a;
+  border: 1px solid #2b3b4d;
+}
+
+:host-context(body.dark-mode) .empty-title {
+  color: #f1f5f9;
+}
+
+:host-context(body.dark-mode) .error-state p {
+  color: #f87171;
+}
+
+:host-context(body.dark-mode) .favorite-actions {
+  background-color: #1f2b3a;
+  border-top-color: #2b3b4d;
+}
+
+:host-context(body.dark-mode) .btn-secondary {
+  border-color: #3c556d;
+}
+
+:host-context(body.dark-mode) .btn-secondary:hover {
+  background-color: #243447;
+}
+
+:host-context(body.dark-mode) .favorite-button {
+  background-color: rgba(15, 23, 32, 0.8);
+}

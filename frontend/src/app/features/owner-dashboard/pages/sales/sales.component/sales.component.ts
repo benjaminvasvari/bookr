@@ -10,6 +10,10 @@ import {
 import { AuthService } from '../../../../../core/services/auth.service';
 import { CompaniesService } from '../../../../../core/services/companies.service';
 import { OpeningHours } from '../../../../../core/models/opening-hours.model';
+import {
+  RevenueChartBar,
+  RevenueChartComponent,
+} from '../../../components/revenue-chart/revenue-chart.component';
 
 export type Period = 'weekly' | 'monthly' | 'yearly';
 
@@ -26,13 +30,6 @@ interface KpiData {
   bookingsTrendClass: 'positive' | 'negative' | '';
   returningTrend: string;
   returningTrendClass: 'positive' | 'negative' | '';
-}
-
-interface BarData {
-  height: number;
-  label: string;
-  value: string;
-  isClosed?: boolean;
 }
 
 interface BreakdownRow {
@@ -58,7 +55,7 @@ interface Transaction {
 @Component({
   selector: 'app-sales',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RevenueChartComponent],
   templateUrl: './sales.component.html',
   styleUrl: './sales.component.css',
 })
@@ -80,14 +77,14 @@ export class SalesComponent implements OnInit {
     yearly: this.createDefaultKpi(),
   };
 
-  private readonly chartBarsByPeriod: Record<Period, BarData[]> = {
+  private readonly chartBarsByPeriod: Record<Period, RevenueChartBar[]> = {
     weekly: [],
     monthly: [],
     yearly: [],
   };
 
   private readonly data: Record<Period, {
-    bars: BarData[];
+    bars: RevenueChartBar[];
     chartCaption: string;
     breakdown: BreakdownRow[];
     services: ServiceRow[];
@@ -166,7 +163,7 @@ export class SalesComponent implements OnInit {
     return this.kpiByPeriod[this.selectedPeriod];
   }
 
-  get currentBars(): BarData[] {
+  get currentBars(): RevenueChartBar[] {
     return this.chartBarsByPeriod[this.selectedPeriod];
   }
 
@@ -298,7 +295,7 @@ export class SalesComponent implements OnInit {
       });
   }
 
-  private mapChartPointsToBars(points: SalesRevenueChartPoint[], period: Period): BarData[] {
+  private mapChartPointsToBars(points: SalesRevenueChartPoint[], period: Period): RevenueChartBar[] {
     if (points.length === 0) {
       return [];
     }
@@ -327,7 +324,7 @@ export class SalesComponent implements OnInit {
     });
   }
 
-  private mapWeeklyPointsToDailyBars(points: SalesRevenueChartPoint[]): BarData[] {
+  private mapWeeklyPointsToDailyBars(points: SalesRevenueChartPoint[]): RevenueChartBar[] {
     const datedPoints = points
       .map((point) => ({
         point,
@@ -393,7 +390,7 @@ export class SalesComponent implements OnInit {
     return `${year}-${month}-${day}`;
   }
 
-  private mapMonthlyPointsToWeeklyBars(points: SalesRevenueChartPoint[]): BarData[] {
+  private mapMonthlyPointsToWeeklyBars(points: SalesRevenueChartPoint[]): RevenueChartBar[] {
     const bucketSize = 7;
     const grouped: Array<{ value: number; label: string }> = [];
     const now = new Date();
@@ -515,14 +512,22 @@ export class SalesComponent implements OnInit {
   }
 
   private formatCurrency(value: number): string {
-    return `${new Intl.NumberFormat('hu-HU').format(Math.round(value))} Ft`;
+    return `${this.formatThousands(value)} Ft`;
   }
 
   private formatInteger(value: number): string {
-    return new Intl.NumberFormat('hu-HU').format(Math.round(value));
+    return this.formatThousands(value);
   }
 
-  private createMonthlyBars(dailyRevenue: number[]): BarData[] {
+  private formatThousands(value: number): string {
+    const rounded = Math.round(value);
+    const sign = rounded < 0 ? '-' : '';
+    const digits = Math.abs(rounded).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+
+    return `${sign}${digits}`;
+  }
+
+  private createMonthlyBars(dailyRevenue: number[]): RevenueChartBar[] {
     const bucketTotals = this.bucketByDays(dailyRevenue, 7);
     const maxTotal = Math.max(...bucketTotals, 1);
 

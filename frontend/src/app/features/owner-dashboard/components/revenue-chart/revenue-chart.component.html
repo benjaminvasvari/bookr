@@ -1,0 +1,54 @@
+<div class="chart-placeholder">
+	<div class="line-chart" [ngClass]="chartVariantClass" *ngIf="!isLoading && !errorMessage && hasRenderableData">
+		<div class="line-chart-canvas">
+		<svg class="line-chart-svg" [attr.viewBox]="viewBox" preserveAspectRatio="none" aria-hidden="true">
+			<defs>
+				<linearGradient [attr.id]="areaGradientId" x1="0" y1="0" x2="0" y2="1">
+					<stop offset="0%" stop-color="#38a179" stop-opacity="0.24" />
+					<stop offset="100%" stop-color="#38a179" stop-opacity="0" />
+				</linearGradient>
+				<clipPath [attr.id]="clipPathId">
+					<rect
+						[attr.x]="axisStartX - 8"
+						[attr.y]="axisTopY - 8"
+						[attr.width]="(axisEndX - axisStartX) + 16"
+						[attr.height]="(axisBottomY - axisTopY) + 16"
+					></rect>
+				</clipPath>
+			</defs>
+
+			<line *ngFor="let tick of yTicks" [attr.x1]="axisStartX" [attr.y1]="tick.y" [attr.x2]="axisEndX" [attr.y2]="tick.y" class="grid-line" />
+			<text *ngFor="let tick of yTicks" [attr.x]="axisStartX - 8" [attr.y]="tick.y" class="y-label" text-anchor="end" dominant-baseline="middle">{{ tick.label }}</text>
+
+			<line [attr.x1]="axisStartX" [attr.y1]="axisBottomY" [attr.x2]="axisEndX" [attr.y2]="axisBottomY" class="axis-line" />
+			<line [attr.x1]="axisStartX" [attr.y1]="axisTopY" [attr.x2]="axisStartX" [attr.y2]="axisBottomY" class="axis-line" />
+
+			<g [attr.clip-path]="'url(#' + clipPathId + ')'">
+				<path class="area-path" [attr.d]="areaPath" [attr.fill]="'url(#' + areaGradientId + ')'" />
+				<path class="line-path" [attr.d]="linePath" />
+
+				<circle
+					*ngFor="let point of points; let i = index; trackBy: trackByPointIndex"
+					[attr.cx]="point.x"
+					[attr.cy]="point.y"
+					r="4.8"
+					class="point-dot"
+				/>
+			</g>
+
+			<text
+				*ngFor="let tick of xTicks; trackBy: trackByPointIndex"
+				[attr.x]="tick.x"
+				[attr.y]="axisBottomY + 26"
+				class="x-label"
+				text-anchor="middle"
+			>{{ tick.label }}</text>
+		</svg>
+		</div>
+	</div>
+
+	<p class="chart-caption" *ngIf="isLoading">Grafikon adatok betöltése...</p>
+	<p class="chart-caption" *ngIf="!isLoading && errorMessage">{{ errorMessage }}</p>
+	<p class="chart-caption" *ngIf="!isLoading && !errorMessage && !hasRenderableData">Nincs megjeleníthető adat.</p>
+	<p class="chart-caption" *ngIf="!isLoading && !errorMessage && caption">{{ caption }}</p>
+</div>

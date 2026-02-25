@@ -1,8 +1,8 @@
 <section class="settings-panel">
 	<header class="settings-topbar">
-		<div>
+		<div class="title-wrap">
 			<h1>Beállítások</h1>
-			<p class="subtitle">Vállalkozás, munkatársak és működési szabályok kezelése.</p>
+			<p class="subtitle">Itt kezelheted a cégprofil adatait és a működési szabályokat.</p>
 		</div>
 		<div class="actions">
 			<button class="btn ghost">Visszaállítás</button>
@@ -10,81 +10,144 @@
 		</div>
 	</header>
 
-	<section class="settings-stack">
-		<article class="settings-section">
+	<section class="content-grid">
+		<article class="settings-section settings-section-wide">
 			<header class="section-header">
 				<div>
-					<h2>Cégadatok</h2>
-					<p class="section-subtitle">Alap információk a vállalkozásról.</p>
+					<h2>Céginformációk</h2>
+					<p class="section-subtitle">Cégprofil adatai</p>
 				</div>
 				<button class="link-btn">Szerkesztés</button>
 			</header>
-			<div class="section-grid">
-				<div class="info-block">
-					<p class="label">Cégnév</p>
-					<p class="value">Bookr Studio</p>
+
+			<div class="company-layout">
+				<div class="company-top-grid">
+					<section class="company-main-card">
+						<p class="label">Cégnév</p>
+						<p class="company-name">Bookr Studio</p>
+						<div class="company-main-divider"></div>
+						<p class="label">Leírás</p>
+						<p class="value value-regular">Időpontfoglalásra optimalizált modern szalon, prémium szolgáltatásokkal.</p>
+					</section>
+
+					<div class="company-side-stack">
+						<section class="company-group-card">
+							<h3 class="group-title">Alapadatok</h3>
+							<div class="details-grid details-grid-2">
+								<div class="detail-item">
+									<p class="label">Üzleti kategória</p>
+									<p class="value">Szépségipar</p>
+								</div>
+								<div class="detail-item">
+									<p class="label">Weboldal</p>
+									<p class="value">https://bookr.hu</p>
+								</div>
+							</div>
+						</section>
+
+						<section class="company-group-card">
+							<h3 class="group-title">Tulajdonos adatai</h3>
+							<div class="details-grid details-grid-2">
+								<div class="detail-item">
+									<p class="label">Név</p>
+									<p class="value">Kiss Anna</p>
+								</div>
+								<div class="detail-item">
+									<p class="label">Szerepkör</p>
+									<p class="value">Tulajdonos</p>
+								</div>
+							</div>
+						</section>
+					</div>
 				</div>
-				<div class="info-block">
-					<p class="label">Adószám</p>
-					<p class="value">12345678-1-42</p>
-				</div>
-				<div class="info-block">
-					<p class="label">Kapcsolattartó</p>
-					<p class="value">Kiss Anna · +36 30 123 4567</p>
-				</div>
-				<div class="info-block">
-					<p class="label">Weboldal</p>
-					<p class="value">bookr.hu</p>
+
+				<div class="company-bottom-grid">
+					<section class="company-group-card">
+						<h3 class="group-title">Címadatok</h3>
+						<div class="details-grid details-grid-2">
+							<div class="detail-item detail-item-wide-2">
+								<p class="label">Utca és házszám</p>
+								<p class="value">Andrássy út 12.</p>
+							</div>
+							<div class="detail-item">
+								<p class="label">Város</p>
+								<p class="value">Budapest</p>
+							</div>
+							<div class="detail-item">
+								<p class="label">Irányítószám</p>
+								<p class="value">1061</p>
+							</div>
+							<div class="detail-item detail-item-wide-2">
+								<p class="label">Ország</p>
+								<p class="value">Magyarország</p>
+							</div>
+						</div>
+					</section>
+
+					<section class="company-group-card">
+						<h3 class="group-title">Kapcsolat</h3>
+						<div class="details-grid details-grid-2">
+							<div class="detail-item">
+								<p class="label">Telefonszám</p>
+								<p class="value">+36 30 123 4567</p>
+							</div>
+							<div class="detail-item">
+								<p class="label">Email cím</p>
+								<p class="value">info@bookr.hu</p>
+							</div>
+						</div>
+					</section>
 				</div>
 			</div>
 		</article>
 
-		<article class="settings-section">
+		<article class="settings-section row-equal-card">
 			<header class="section-header">
 				<div>
-					<h2>Telephelyek</h2>
-					<p class="section-subtitle">Nyitvatartások és címek kezelése.</p>
+					<h2>Képek</h2>
+					<p class="section-subtitle">Profilképek</p>
 				</div>
-				<button class="link-btn">Új telephely</button>
+				<button class="link-btn">Képek kezelése</button>
 			</header>
-			<div class="section-list">
-				<div class="row">
-					<div>
-						<p class="value">Budapest, Andrássy út 12.</p>
-						<p class="label">H-P: 09:00-20:00 · Szo: 09:00-16:00</p>
-					</div>
-					<span class="pill">Fő</span>
-				</div>
-				<div class="row">
-					<div>
-						<p class="value">Budapest, Bartók Béla út 44.</p>
-						<p class="label">H-P: 10:00-19:00 · Szo: 10:00-14:00</p>
-					</div>
-					<button class="btn ghost small">Szerkesztés</button>
-				</div>
+
+			<div class="image-layout">
+				<div class="image-main">Főkép</div>
+				<div class="image-thumb">Kép 2</div>
+				<div class="image-thumb">Kép 3</div>
+				<div class="image-thumb">Kép 4</div>
 			</div>
+			<p class="hint">Maximum 4 kép, az első lesz a kiemelt főkép.</p>
 		</article>
 
-		<article class="settings-section">
+		<article class="settings-section row-equal-card">
 			<header class="section-header">
 				<div>
-					<h2>Foglalási szabályok</h2>
-					<p class="section-subtitle">Automatikus szabályok a foglalásokhoz.</p>
+					<h2>Üzleti szabályok</h2>
+					<p class="section-subtitle">Foglalási és fizetési beállítások</p>
 				</div>
 				<button class="link-btn">Módosítás</button>
 			</header>
-			<div class="section-list">
-				<div class="row">
-					<span>Előleg kötelező</span>
-					<span class="toggle on"></span>
+
+			<div class="rule-list">
+				<div class="rule-row">
+					<p>Maximum előre foglalás</p>
+					<strong>90 nap</strong>
 				</div>
-				<div class="row">
-					<span>Lemondási határidő</span>
-					<span class="value">24 óra</span>
+				<div class="rule-row">
+					<p>Lemondási határidő</p>
+					<strong>24 óra</strong>
 				</div>
-				<div class="row">
-					<span>Maximum előre foglalás</span>
-					<span class="value">30 nap</span>
+				<div class="rule-row">
+					<p>Minimum előzetes foglalás (azonos napon)</p>
+					<strong>2 óra</strong>
+				</div>
+				<div class="rule-row">
+					<p>Fizetési mód</p>
+					<strong>Helyszíni fizetés</strong>
+				</div>
+				<div class="rule-row">
+					<p>Pénznem</p>
+					<strong>HUF</strong>
 				</div>
 			</div>
 		</article>
@@ -92,73 +155,75 @@
 		<article class="settings-section">
 			<header class="section-header">
 				<div>
-					<h2>Munkatárs hozzáférések</h2>
-					<p class="section-subtitle">Jogosultságok és szerepkörök.</p>
-				</div>
-				<button class="link-btn">Kezelés</button>
-			</header>
-			<div class="section-list">
-				<div class="row">
-					<div>
-						<p class="value">Barni Kiss</p>
-						<p class="label">Tulajdonos · Teljes hozzáférés</p>
-					</div>
-					<span class="pill success">Aktív</span>
-				</div>
-				<div class="row">
-					<div>
-						<p class="value">Anna Kovács</p>
-						<p class="label">Menedzser · Szolgáltatás és naptár</p>
-					</div>
-					<button class="btn ghost small">Jogosultság</button>
-				</div>
-			</div>
-		</article>
-
-		<article class="settings-section">
-			<header class="section-header">
-				<div>
-					<h2>Értesítések</h2>
-					<p class="section-subtitle">Email és SMS értesítések beállítása.</p>
+					<h2>Nyitvatartás</h2>
+					<p class="section-subtitle">Heti nyitvatartási rend</p>
 				</div>
 				<button class="link-btn">Szerkesztés</button>
 			</header>
-			<div class="section-list">
-				<div class="row">
-					<span>Új foglalás email</span>
-					<span class="toggle on"></span>
+
+			<div class="hours-table">
+				<div class="hours-row">
+					<span>Hétfő</span>
+					<span>09:00 - 17:00</span>
+					<span class="status open">Nyitva</span>
 				</div>
-				<div class="row">
-					<span>SMS emlékeztető ügyfeleknek</span>
-					<span class="toggle"></span>
+				<div class="hours-row">
+					<span>Kedd</span>
+					<span>09:00 - 17:00</span>
+					<span class="status open">Nyitva</span>
 				</div>
-				<div class="row">
-					<span>Napi összefoglaló</span>
-					<span class="toggle on"></span>
+				<div class="hours-row">
+					<span>Szerda</span>
+					<span>09:00 - 17:00</span>
+					<span class="status open">Nyitva</span>
+				</div>
+				<div class="hours-row">
+					<span>Csütörtök</span>
+					<span>09:00 - 17:00</span>
+					<span class="status open">Nyitva</span>
+				</div>
+				<div class="hours-row">
+					<span>Péntek</span>
+					<span>09:00 - 17:00</span>
+					<span class="status open">Nyitva</span>
+				</div>
+				<div class="hours-row">
+					<span>Szombat</span>
+					<span>-</span>
+					<span class="status closed">Zárva</span>
+				</div>
+				<div class="hours-row">
+					<span>Vasárnap</span>
+					<span>-</span>
+					<span class="status closed">Zárva</span>
 				</div>
 			</div>
 		</article>
 
-		<article class="settings-section">
+		<article class="settings-section auto-height-card">
 			<header class="section-header">
 				<div>
-					<h2>Számlázás</h2>
-					<p class="section-subtitle">Csomagok és fizetési módok.</p>
+					<h2>Ideiglenes zárvatartások</h2>
+					<p class="section-subtitle">Szabadság, ünnep vagy felújítás miatti zárvatartás</p>
 				</div>
-				<button class="link-btn">Kezelés</button>
+				<button class="btn ghost" type="button" (click)="addTemporaryClosure()">+ Új időszak</button>
 			</header>
-			<div class="section-grid">
-				<div class="info-block">
-					<p class="label">Csomag</p>
-					<p class="value">Pro · havi 19 900 Ft</p>
-				</div>
-				<div class="info-block">
-					<p class="label">Fizetési mód</p>
-					<p class="value">Végződés: 4242</p>
-				</div>
-				<div class="info-block">
-					<p class="label">Következő számlázás</p>
-					<p class="value">2026.02.15</p>
+
+			<div class="temporary-list">
+				<div class="temporary-row" *ngFor="let period of temporaryClosures; let i = index">
+					<div class="field-group start-field">
+						<label [for]="'start-' + i">Kezdő dátum</label>
+						<input [id]="'start-' + i" type="date" [(ngModel)]="period.startDate" />
+					</div>
+					<div class="field-group end-field">
+						<label [for]="'end-' + i">Záró dátum</label>
+						<input [id]="'end-' + i" type="date" [(ngModel)]="period.endDate" />
+					</div>
+					<div class="field-group reason-field">
+						<label [for]="'reason-' + i">Megjegyzés</label>
+						<input [id]="'reason-' + i" type="text" [(ngModel)]="period.reason" placeholder="pl. Nyári szabadság" />
+					</div>
+					<button class="remove-btn remove-field" type="button" (click)="removeTemporaryClosure(i)">Törlés</button>
 				</div>
 			</div>
 		</article>

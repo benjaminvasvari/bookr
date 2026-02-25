@@ -67,9 +67,7 @@
 			<h2>Bevétel (heti)</h2>
 			<button class="link-btn">Részletek</button>
 		</div>
-		<div class="chart-placeholder">
-			<span>Grafikon helye</span>
-		</div>
+		<app-revenue-chart variant="overview" [bars]="revenueChartBars" [isLoading]="isRevenueChartLoading" [errorMessage]="revenueChartError" caption="Utolsó 7 nap bevétele"></app-revenue-chart>
 	</div>
 
 	<div class="panel">

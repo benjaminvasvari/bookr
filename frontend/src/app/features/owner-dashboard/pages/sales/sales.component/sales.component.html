@@ -46,18 +46,7 @@
 				<h2>Bevétel alakulása</h2>
 				<span class="panel-pill">{{ periodLabel }}</span>
 			</header>
-			<div class="chart-placeholder">
-				<div class="chart-bars" [style.--bar-count]="currentBars.length">
-					<div class="bar-col" *ngFor="let bar of currentBars" [class.closed]="bar.isClosed">
-						<span class="bar-fill" [class.closed]="bar.isClosed" [style.height.%]="bar.height">
-							<span class="bar-value" [class.closed]="bar.isClosed">{{ bar.value }}</span>
-						</span>
-						<span class="bar-label" [class.closed]="bar.isClosed">{{ bar.label }}</span>
-					</div>
-				</div>
-				<p class="chart-caption" *ngIf="isChartLoading">Grafikon adatok betöltése...</p>
-				<p class="chart-caption">{{ current.chartCaption }}</p>
-			</div>
+			<app-revenue-chart variant="sales" [bars]="currentBars" [isLoading]="isChartLoading" [caption]="current.chartCaption"></app-revenue-chart>
 		</article>
 
 		<article class="panel summary-panel">

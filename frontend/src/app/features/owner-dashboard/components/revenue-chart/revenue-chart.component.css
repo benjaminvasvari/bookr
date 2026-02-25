@@ -1,0 +1,104 @@
+.chart-placeholder {
+	background: linear-gradient(180deg, #f8fafc 0%, #f4f6fb 100%);
+	border-radius: 12px;
+	border: 1px solid #dbe4ff;
+	padding: 16px;
+	display: grid;
+	gap: 12px;
+}
+
+.line-chart {
+	display: grid;
+	gap: 10px;
+}
+
+.line-chart-canvas {
+	width: 100%;
+}
+
+.line-chart.sales .line-chart-canvas {
+	max-width: 980px;
+	margin: 0 auto;
+}
+
+.line-chart-svg {
+	width: 100%;
+	height: 236px;
+}
+
+.line-chart.overview .line-chart-svg {
+	height: 252px;
+}
+
+.line-chart.sales .line-chart-svg {
+	height: 296px;
+}
+
+.grid-line {
+	stroke: #d1fae5;
+	stroke-width: 1;
+	stroke-opacity: 0.8;
+}
+
+.axis-line {
+	stroke: #111827;
+	stroke-width: 1.4;
+}
+
+.y-label {
+	fill: #2d3748;
+	font-size: 10px;
+	font-weight: 500;
+}
+
+.area-path {
+	opacity: 0.95;
+}
+
+.line-path {
+	fill: none;
+	stroke: #38a179;
+	stroke-width: 3.4;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	filter: drop-shadow(0 2px 2px rgba(56, 161, 121, 0.18));
+}
+
+.point-dot {
+	fill: #2f8d66;
+	stroke: #ffffff;
+	stroke-width: 2.6;
+}
+
+.x-label {
+	font-size: 10.5px;
+	color: #111827;
+	font-weight: 500;
+	white-space: nowrap;
+	fill: #111827;
+}
+
+.line-chart.overview .x-label {
+	font-size: 13px;
+	font-weight: 700;
+}
+
+.chart-caption {
+	margin: 0;
+	font-size: 13px;
+	color: #6b7280;
+}
+
+@media (max-width: 768px) {
+	.line-chart.sales .line-chart-canvas {
+		max-width: 100%;
+	}
+
+	.line-chart-svg {
+		height: 210px;
+	}
+
+	.x-label {
+		font-size: 11px;
+	}
+}

@@ -10,19 +10,39 @@
       <h2 class="card-title">Megjelenés</h2>
     </div>
     <div class="card-body">
-      <div class="setting-item appearance-setting">
-        <div class="setting-info">
-          <h3 class="setting-title">Dark mode</h3>
-          <p class="setting-description">Sötét téma az összes oldalon</p>
+      <div class="appearance-settings-group">
+        <div class="setting-item appearance-setting" [class.disabled]="followSystemTheme">
+          <div class="setting-info">
+            <h3 class="setting-title">Dark mode</h3>
+            <p class="setting-description">
+              {{ followSystemTheme ? 'A rendszer beállítása vezérli ezt a kapcsolót' : 'Sötét téma az összes oldalon' }}
+            </p>
+          </div>
+          <label class="toggle-switch">
+            <input
+              type="checkbox"
+              [(ngModel)]="isDarkMode"
+              (change)="onDarkModeChange()"
+              [disabled]="followSystemTheme"
+            />
+            <span class="toggle-slider"></span>
+          </label>
         </div>
-        <label class="toggle-switch">
-          <input
-            type="checkbox"
-            [(ngModel)]="isDarkMode"
-            (change)="onDarkModeChange()"
-          />
-          <span class="toggle-slider"></span>
-        </label>
+
+        <div class="setting-item appearance-setting">
+          <div class="setting-info">
+            <h3 class="setting-title">Rendszer téma követése</h3>
+            <p class="setting-description">Automatikusan a rendszer világos/sötét témáját használja</p>
+          </div>
+          <label class="toggle-switch">
+            <input
+              type="checkbox"
+              [(ngModel)]="followSystemTheme"
+              (change)="onFollowSystemThemeChange()"
+            />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
       </div>
     </div>
   </div>

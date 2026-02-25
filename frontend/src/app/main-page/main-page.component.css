@@ -739,3 +739,44 @@
     font-size: 15px;
   }
 }
+
+/* Main page dark mode kontraszt */
+:host-context(body.dark-mode) .search-icon,
+:host-context(body.dark-mode) .review-count,
+:host-context(body.dark-mode) .service-address,
+:host-context(body.dark-mode) .review-title,
+:host-context(body.dark-mode) .loading-text,
+:host-context(body.dark-mode) .error-message,
+:host-context(body.dark-mode) .empty-state {
+  color: #e2e8f0;
+}
+
+:host-context(body.dark-mode) .search-input {
+  background-color: #243447;
+  border-color: #334a60;
+  color: #f8fafc;
+}
+
+:host-context(body.dark-mode) .btn-book {
+  background-color: #334155;
+  color: #f1f5f9;
+}
+
+:host-context(body.dark-mode) .btn-book:hover {
+  background-color: #38a179;
+  color: #f8fafc;
+}
+
+:host-context(body.dark-mode) .reviews-nav {
+  background: #1f2b3a;
+  border-color: #334a60;
+  color: #e2e8f0;
+}
+
+:host-context(body.dark-mode) .reviews-dot {
+  background: #475569;
+}
+
+:host-context(body.dark-mode) .reviews-dot.active {
+  background: #38a179;
+}

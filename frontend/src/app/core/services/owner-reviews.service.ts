@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
@@ -45,14 +45,22 @@ export class OwnerReviewsService {
     companyId: number,
     request: OwnerReviewsRequest
   ): Observable<OwnerReviewsResponse> {
-    // POST a backend által várt formátumban
-    const url = `${this.apiUrl}${API_ENDPOINTS.REVIEWS.OWNER_PANEL}?companyId=${companyId}`;
-    console.log('🌐 Request to:', url);
-    console.log('📦 Body:', request);
-    
-    return this.http.post<OwnerReviewsResponse>(
-      url,
-      request
-    );
+    const url = `${this.apiUrl}${API_ENDPOINTS.REVIEWS.OWNER_PANEL}`;
+    let params = new HttpParams().set('companyId', companyId.toString());
+
+    if (request.search !== null) {
+      params = params.set('search', request.search);
+    }
+
+    if (request.ratingFilter !== null) {
+      params = params.set('ratingFilter', request.ratingFilter);
+    }
+
+    params = params
+      .set('sortBy', request.sortBy)
+      .set('page', request.page.toString())
+      .set('pageSize', request.pageSize.toString());
+
+    return this.http.get<OwnerReviewsResponse>(url, { params });
   }
 }
