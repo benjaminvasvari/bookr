@@ -206,7 +206,7 @@ public class StaffWorkingHours implements Serializable {
         return "com.vizsgaremek.bookr.model.StaffWorkingHours[ id=" + id + " ]";
     }
 
-    public static ArrayList<StaffWorkingHours> getStaffWorkingHours(Integer companyId) {
+    public static ArrayList<StaffWorkingHours> getStaffWorkingHours(Integer staffId) {
         EntityManager em = emf.createEntityManager();
 
         try {
@@ -215,7 +215,7 @@ public class StaffWorkingHours implements Serializable {
 
             spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
 
-            spq.setParameter("staffIdIN", companyId);
+            spq.setParameter("staffIdIN", staffId);
 
             spq.execute();
 
@@ -239,6 +239,34 @@ public class StaffWorkingHours implements Serializable {
             }
 
             return toReturn;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+
+        } finally {
+            em.close();
+        }
+    }
+
+    public static String createStaffWorkingHours(Integer staffId, Integer companyId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("createStaffWorkingHours");
+
+            spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("staffIdIN", staffId);
+            spq.setParameter("companyIdIN", companyId);
+
+            spq.execute();
+
+            String result = spq.getSingleResult() != null ? spq.getSingleResult().toString() : null;
+
+            return result;
 
         } catch (Exception ex) {
             ex.printStackTrace();

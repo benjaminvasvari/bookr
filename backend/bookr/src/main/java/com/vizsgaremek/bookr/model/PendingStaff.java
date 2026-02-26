@@ -256,12 +256,13 @@ public class PendingStaff implements Serializable {
         EntityManager em = emf.createEntityManager();
 
         try {
-            StoredProcedureQuery spq = em.createStoredProcedureQuery("acceptStaffInvite");
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("acceptPendingStaffInvite");
             spq.registerStoredProcedureParameter("tokenIN", String.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
 
             spq.setParameter("tokenIN", token);
-            spq.setParameter("userIdIN", userId);
+
+            StoredProcedureUtil.setNullableParameter(spq, "userIdIN", userId);
 
             spq.execute();
 

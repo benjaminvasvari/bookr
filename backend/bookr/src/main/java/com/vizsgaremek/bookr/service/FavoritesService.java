@@ -7,6 +7,7 @@ package com.vizsgaremek.bookr.service;
 import com.vizsgaremek.bookr.model.Companies;
 import com.vizsgaremek.bookr.model.Favorites;
 import com.vizsgaremek.bookr.security.JWT;
+import com.vizsgaremek.bookr.util.FileStorageUtil;
 import java.util.List;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -83,7 +84,7 @@ public class FavoritesService {
                     actualCompanyObject.put("address", fullAddress);
                     actualCompanyObject.put("rating", companyModelResult.getRating());
                     actualCompanyObject.put("reviewCount", companyModelResult.getReviewCount());
-                    actualCompanyObject.put("imageUrl", companyModelResult.getImageUrl());
+                    actualCompanyObject.put("imageUrl", FileStorageUtil.buildFullUrl(companyModelResult.getImageUrl()));
                     actualFavObject.put("company", actualCompanyObject);
                     result.put(actualFavObject);
                 }

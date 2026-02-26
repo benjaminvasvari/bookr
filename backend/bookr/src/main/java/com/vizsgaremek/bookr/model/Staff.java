@@ -501,4 +501,38 @@ public class Staff implements Serializable {
             em.close();
         }
     }
+
+    public static Staff createStaff(Integer userId, Integer companyId, String position) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("createStaff");
+
+            spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("specialtiesIN", String.class, ParameterMode.IN);
+
+            spq.setParameter("userIdIN", userId);
+            spq.setParameter("companyIdIN", companyId);
+            spq.setParameter("specialtiesIN", position);
+
+            spq.execute();
+
+            Integer staffId = Integer.valueOf(spq.getSingleResult().toString());
+
+            Staff staff = new Staff(
+                    staffId
+            );
+
+            return staff;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+
+        } finally {
+            em.close();
+        }
+    }
 }

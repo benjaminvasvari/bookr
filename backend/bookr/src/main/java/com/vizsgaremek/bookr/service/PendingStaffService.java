@@ -8,13 +8,18 @@ import com.vizsgaremek.bookr.DTO.checkStaffInviteTokenDTO;
 import com.vizsgaremek.bookr.model.AuditLogs;
 import com.vizsgaremek.bookr.model.Companies;
 import com.vizsgaremek.bookr.model.PendingStaff;
+import com.vizsgaremek.bookr.model.Staff;
+import com.vizsgaremek.bookr.model.StaffWorkingHours;
 import com.vizsgaremek.bookr.model.Tokens;
+import com.vizsgaremek.bookr.model.UserXRole;
 import com.vizsgaremek.bookr.model.Users;
 import com.vizsgaremek.bookr.security.JWT;
+import com.vizsgaremek.bookr.util.ErrorResponseBuilder;
 import java.time.ZoneId;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
+import org.hibernate.engine.jdbc.connections.internal.UserSuppliedConnectionProviderImpl;
 import org.json.JSONObject;
 
 /**
@@ -28,6 +33,7 @@ public class PendingStaffService {
     private Companies Companies = new Companies();
     private UsersService UsersService = new UsersService();
     private Tokens Tokens = new Tokens();
+    private Staff Staff = new Staff();
     private AuditLogService AuditLogService = new AuditLogService();
     private EmailService EmailService = new EmailService();
 
@@ -38,8 +44,8 @@ public class PendingStaffService {
         EntityManager em = null;
 
         JSONObject toReturn = new JSONObject();
-        String status = "success";
-        Integer statusCode = 200;
+        String status = "created";
+        Integer statusCode = 201;
 
         // EntityManager létrehozása
         em = emf.createEntityManager();
@@ -254,11 +260,114 @@ public class PendingStaffService {
             result.put("checkStatus", tokenCheckMResult.getResult());
             result.put("userId", tokenCheckMResult.getUserId() != null ? tokenCheckMResult.getUserId() : JSONObject.NULL);
             result.put("expiresAt", tokenCheckMResult.getExpiresAt() != null ? tokenCheckMResult.getExpiresAt() : JSONObject.NULL);
-            result.put("email", tokenCheckMResult.getEmail() != null ? tokenCheckMResult.getEmail(): JSONObject.NULL);
+            result.put("email", tokenCheckMResult.getEmail() != null ? tokenCheckMResult.getEmail() : JSONObject.NULL);
             result.put("companyId", tokenCheckMResult.getCompanyId() != null ? tokenCheckMResult.getCompanyId() : JSONObject.NULL);
             result.put("position", tokenCheckMResult.getPosition() != null ? tokenCheckMResult.getPosition() : JSONObject.NULL);
 
             toReturn.put("result", result);
+
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            status = "InternalServerError";
+            statusCode = 500;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+        }
+
+        return toReturn;
+    }
+
+    public JSONObject acceptInvite(String token) {
+
+        EntityManager em = null;
+
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        // EntityManager létrehozása
+        em = emf.createEntityManager();
+
+        // Tranzakció indítása
+        em.getTransaction().begin();
+
+        try {
+
+            // Adatbázis lekérdezés
+            checkStaffInviteTokenDTO tokenCheckMResult = Tokens.checkStaffInviteToken(token);
+
+            if (tokenCheckMResult == null) {
+                em.getTransaction().rollback();
+                return ErrorResponseBuilder.buildErrorResponseJSON(500, "InternalServerError");
+            }
+
+            if (!"valid".equals(tokenCheckMResult.getResult()) || tokenCheckMResult == null) {
+                em.getTransaction().rollback();
+
+                return ErrorResponseBuilder.buildErrorResponseJSON(401, "Unouthorized");
+
+            }
+
+            Boolean companyExist = CompaniesService.validateCompanyExist(tokenCheckMResult.getCompanyId());
+
+            if (!companyExist) {
+                em.getTransaction().rollback();
+                return ErrorResponseBuilder.buildErrorResponseJSON(404, "NotFound");
+            }
+
+            String tokenRevokedStatus = Tokens.acceptPendingStaffToken(token);
+
+            if (tokenRevokedStatus == null || "not_found".equals(tokenRevokedStatus)) {
+                em.getTransaction().rollback();
+                return ErrorResponseBuilder.buildErrorResponseJSON(404, "NotFound");
+            }
+
+            String pendingStaffAccept = PendingStaff.acceptInvite(tokenCheckMResult.getUserId(), token);
+
+            if ("expired".equals(pendingStaffAccept)) {
+                em.getTransaction().rollback();
+                return ErrorResponseBuilder.buildErrorResponseJSON(403, "Forbidden");
+            } else if ("not_found".equals(pendingStaffAccept)) {
+                em.getTransaction().rollback();
+                return ErrorResponseBuilder.buildErrorResponseJSON(400, "BadRequest");
+            }
+
+            // IF HAS USER
+            if (tokenCheckMResult.getUserId() != null && tokenCheckMResult.getUserId() > 0) {
+                Staff createdStaff = Staff.createStaff(tokenCheckMResult.getUserId(), tokenCheckMResult.getCompanyId(), tokenCheckMResult.getPosition());
+
+                if (createdStaff == null) {
+                    em.getTransaction().rollback();
+                    return ErrorResponseBuilder.buildErrorResponseJSON(500, "InternalServerError");
+                }
+
+                String createStaffWorkingHoursResult = StaffWorkingHours.createStaffWorkingHours(createdStaff.getId(), tokenCheckMResult.getCompanyId());
+
+                if (createStaffWorkingHoursResult == null) {
+                    em.getTransaction().rollback();
+                    return ErrorResponseBuilder.buildErrorResponseJSON(500, "InternalServerError");
+                }
+
+                Boolean isUserAssignedToCompany = Users.assignCompanyToUser(tokenCheckMResult.getUserId(), tokenCheckMResult.getCompanyId());
+                if (!isUserAssignedToCompany) {
+                    em.getTransaction().rollback();
+                    return ErrorResponseBuilder.buildErrorResponseJSON(500, "InternalServerError");
+                }
+
+                Boolean isUserAssignedToRole = UserXRole.assignRole(tokenCheckMResult.getUserId(), 3);
+                if (!isUserAssignedToRole) {
+                    em.getTransaction().rollback();
+                    return ErrorResponseBuilder.buildErrorResponseJSON(500, "InternalServerError");
+                }
+            }
+
+
+            em.getTransaction().commit();
+
+            toReturn.put("result", "accepted");
 
             toReturn.put("status", status);
             toReturn.put("statusCode", statusCode);

@@ -11,6 +11,7 @@ import static com.vizsgaremek.bookr.util.ErrorResponseBuilder.buildErrorResponse
 import com.vizsgaremek.bookr.util.RoleChecker;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.Produces;
@@ -125,10 +126,10 @@ public class StaffController {
     }
 
     @GET
-    @Path("getAllByCompanyAndAppointments")
+    @Path("getAllStaffForOwnerWithAppointments")
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response getStaffByCompanyAndAppointments(@HeaderParam("Authorization") String authHeader, @QueryParam("companyId") Integer companyId) {
+    public Response getAllStaffForOwnerWithAppointments(@HeaderParam("Authorization") String authHeader, @QueryParam("companyId") Integer companyId) {
 
         // 1. Auth header check
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -148,17 +149,16 @@ public class StaffController {
         String userRoles = JWT.getRolesFromAccessToken(jwtToken);
         boolean hasPermission = RoleChecker.hasAllRoles(userRoles, "client", "owner") || RoleChecker.hasAllRoles(userRoles, "client", "superadmin");
         if (!hasPermission) {
-            return buildErrorResponse(403, "forbidden");
+            return buildErrorResponse(403, "Forbidden");
         }
 
-        // 4. Kötelező mezők validálása
         Integer userCompanyId = JWT.getCompanyIdFromAccessToken(jwtToken);
 
-        if (userCompanyId == null || userCompanyId <= 0) {
-            return buildErrorResponse(400, "invalidCompany");
+        if (!Objects.equals(companyId, userCompanyId)) {
+            return buildErrorResponse(403, "Forbidden");
         }
 
-        Boolean isCompanyExist = CompaniesService.validateCompanyExist(userCompanyId);
+        Boolean isCompanyExist = CompaniesService.validateCompanyExist(companyId);
 
         if (!isCompanyExist) {
             return buildErrorResponse(400, "CompanyNotExist");
@@ -173,54 +173,5 @@ public class StaffController {
                 .type(MediaType.APPLICATION_JSON)
                 .build();
     }
-    
-    @POST
-    @Path("inviteStaff")
-    @Produces(MediaType.APPLICATION_JSON)
-    @Consumes(MediaType.APPLICATION_JSON)
-    public Response inviteStaff(@HeaderParam("Authorization") String authHeader, @QueryParam("companyId") Integer companyId) {
 
-        // 1. Auth header check
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return buildErrorResponse(401, "missingToken");
-        }
-
-        String jwtToken = authHeader.substring(7);
-        Boolean validJwt = JWT.validateAccessToken(jwtToken);
-
-        if (validJwt == null) {
-            return buildErrorResponse(401, "tokenExpired");
-        } else if (validJwt == false) {
-            return buildErrorResponse(401, "invalidToken");
-        }
-
-        // 3. Role check
-        String userRoles = JWT.getRolesFromAccessToken(jwtToken);
-        boolean hasPermission = RoleChecker.hasAllRoles(userRoles, "client", "owner") || RoleChecker.hasAllRoles(userRoles, "client", "superadmin");
-        if (!hasPermission) {
-            return buildErrorResponse(403, "forbidden");
-        }
-
-        // 4. Kötelező mezők validálása
-        Integer userCompanyId = JWT.getCompanyIdFromAccessToken(jwtToken);
-
-        if (userCompanyId == null || userCompanyId <= 0) {
-            return buildErrorResponse(400, "invalidCompany");
-        }
-
-        Boolean isCompanyExist = CompaniesService.validateCompanyExist(userCompanyId);
-
-        if (!isCompanyExist) {
-            return buildErrorResponse(400, "CompanyNotExist");
-        } else if (isCompanyExist == null) {
-            return buildErrorResponse(500, "InternalServerError");
-        }
-
-        JSONObject toReturn = layer.getStaffByCompanyAndAppointments(companyId);
-
-        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
-                .entity(toReturn.toString())
-                .type(MediaType.APPLICATION_JSON)
-                .build();
-    }
 }

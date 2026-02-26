@@ -477,8 +477,33 @@ public class Tokens implements Serializable {
                     record[4] != null ? Integer.valueOf(record[4].toString()) : null,
                     record[5] != null ? record[5].toString() : null
             );
-
+            
             return data;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public String acceptPendingStaffToken(String token) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("acceptPendingStaffToken");
+            spq.registerStoredProcedureParameter("tokenIN", String.class, ParameterMode.IN);
+
+            spq.setParameter("tokenIN", token);
+
+            spq.execute();
+
+            String result = spq.getSingleResult().toString();
+
+            return result;
 
         } catch (Exception ex) {
             ex.printStackTrace();
