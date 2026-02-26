@@ -17,8 +17,12 @@
 }
 
 .line-chart.sales .line-chart-canvas {
-	max-width: 980px;
-	margin: 0 auto;
+	max-width: 100%;
+	margin: 0;
+}
+
+.line-chart.sales .x-label {
+	font-size: 9.5px;
 }
 
 .line-chart-svg {

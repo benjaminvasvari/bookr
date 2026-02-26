@@ -843,6 +843,27 @@ export class CalendarComponent implements OnInit, OnDestroy {
     this.updateWeekDays();
   }
 
+  canGoToPreviousMobileWeek(): boolean {
+    const thisWeekMonday = this.getMonday(new Date());
+    return this.currentWeekStart.getTime() > thisWeekMonday.getTime();
+  }
+
+  previousMobileWeek(): void {
+    if (!this.canGoToPreviousMobileWeek()) {
+      return;
+    }
+
+    this.currentWeekStart = new Date(this.currentWeekStart);
+    this.currentWeekStart.setDate(this.currentWeekStart.getDate() - 7);
+    this.updateWeekDays();
+  }
+
+  nextMobileWeek(): void {
+    this.currentWeekStart = new Date(this.currentWeekStart);
+    this.currentWeekStart.setDate(this.currentWeekStart.getDate() + 7);
+    this.updateWeekDays();
+  }
+
   // Mobile navigation methods
   previousMobileDay(): void {
     if (this.currentMobileDayIndex > 0) {

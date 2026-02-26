@@ -664,7 +664,7 @@ body.dark-mode .company-details-container .icon-button.favorite.active:hover {
   max-width: 100%;
   overflow: visible;
   padding: 4px 2px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .calendar-container .week-dot {
@@ -702,10 +702,11 @@ body.dark-mode .company-details-container .icon-button.favorite.active:hover {
 }
 
 .calendar-container .mobile-day-nav {
-  display: flex;
+  display: grid;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  grid-template-columns: 30px 10ch 30px;
+  justify-content: center;
+  gap: 8px;
   max-width: 100%;
   overflow-x: hidden;
 }
@@ -715,14 +716,14 @@ body.dark-mode .company-details-container .icon-button.favorite.active:hover {
   color: #ffffff;
   border: none;
   border-radius: 8px;
-  width: 40px;
-  height: 40px;
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s;
-  font-size: 16px;
+  font-size: 12px;
 }
 
 .calendar-container .mobile-nav-btn:hover:not(:disabled) {
@@ -737,20 +738,20 @@ body.dark-mode .company-details-container .icon-button.favorite.active:hover {
 }
 
 .calendar-container .mobile-day-title {
-  flex: 1;
+  width: 10ch;
   text-align: center;
 }
 
 .calendar-container .mobile-day-name {
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 600;
   color: #6b7280;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
 }
 
 .calendar-container .mobile-day-date {
-  font-size: 24px;
+  font-size: 16px;
   font-weight: 800;
   color: #111827;
 }
@@ -808,7 +809,9 @@ body.dark-mode .company-details-container .icon-button.favorite.active:hover {
   }
 
   .calendar-container .mobile-header {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
     padding: 20px 12px 10px;
     max-width: 100vw;
     width: 100%;
@@ -817,7 +820,15 @@ body.dark-mode .company-details-container .icon-button.favorite.active:hover {
   }
 
   .calendar-container .mobile-week-dots {
-    margin-top: 2px;
+    margin-top: 0;
+    margin-bottom: 0;
+    justify-content: space-between;
+    gap: 4px;
+    padding: 0;
+  }
+
+  .calendar-container .mobile-staff-filter {
+    margin-top: 0;
   }
 
   .calendar-container .day-header,

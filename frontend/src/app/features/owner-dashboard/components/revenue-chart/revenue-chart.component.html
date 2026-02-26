@@ -39,9 +39,9 @@
 			<text
 				*ngFor="let tick of xTicks; trackBy: trackByPointIndex"
 				[attr.x]="tick.x"
-				[attr.y]="axisBottomY + 26"
+				[attr.y]="xLabelY"
 				class="x-label"
-				text-anchor="middle"
+				[attr.text-anchor]="tick.anchor"
 			>{{ tick.label }}</text>
 		</svg>
 		</div>

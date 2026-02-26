@@ -18,6 +18,7 @@ interface ChartPoint {
 interface XTick {
   x: number;
   label: string;
+  anchor: 'start' | 'middle' | 'end';
 }
 
 interface YTick {
@@ -48,15 +49,17 @@ export class RevenueChartComponent {
   @Input() caption = '';
   @Input() variant: RevenueChartVariant = 'overview';
 
-  private readonly svgWidth = 700;
-  private readonly svgHeight = 238;
-  private readonly axisLeft = 72;
-  private readonly axisRight = 14;
-  private readonly axisTop = 10;
-  private readonly axisBottom = 188;
+  private readonly svgWidth = 860;
+  private readonly svgHeight = 276;
+  private readonly axisLeft = 54;
+  private readonly axisRight = 78;
+  private readonly axisTop = 14;
+  private readonly axisBottom = 212;
   private static nextId = 0;
   private readonly chartId = ++RevenueChartComponent.nextId;
   private readonly yTickCount = 4;
+  private readonly salesYAxisMaxValue = 100_000;
+  private readonly salesTickValues = [100_000, 80_000, 60_000, 40_000, 20_000];
 
   get axisStartX(): number {
     return this.axisLeft;
@@ -72,6 +75,10 @@ export class RevenueChartComponent {
 
   get axisBottomY(): number {
     return this.axisBottom;
+  }
+
+  get xLabelY(): number {
+    return this.axisBottomY + (this.variant === 'sales' ? 40 : 28);
   }
 
   get areaGradientId(): string {
@@ -125,6 +132,21 @@ export class RevenueChartComponent {
   }
 
   get yTicks(): YTick[] {
+    if (this.variant === 'sales') {
+      const plotHeight = this.axisBottomY - this.axisTopY;
+      const maxValue = this.salesYAxisMaxValue;
+
+      return this.salesTickValues.map((value) => {
+        const ratio = value / maxValue;
+        const y = this.axisBottomY - ratio * plotHeight;
+
+        return {
+          y,
+          label: this.formatForint(value, true),
+        };
+      });
+    }
+
     const plotHeight = this.axisBottomY - this.axisTopY;
     const maxValue = this.maxYAxisValue;
     const useShortFormat = this.variant === 'overview';
@@ -142,6 +164,10 @@ export class RevenueChartComponent {
   }
 
   get maxYAxisValue(): number {
+    if (this.variant === 'sales') {
+      return this.salesYAxisMaxValue;
+    }
+
     const values = this.normalizedValues;
 
     if (values.length === 0) {
@@ -166,9 +192,12 @@ export class RevenueChartComponent {
   }
 
   get xTicks(): XTick[] {
+    const lastIndex = this.points.length - 1;
+
     return this.points.map((point, index) => ({
       x: point.x,
       label: this.displayLabel(this.bars[index]?.label ?? ''),
+      anchor: index === 0 ? 'start' : index === lastIndex ? 'end' : 'middle',
     }));
   }
 
