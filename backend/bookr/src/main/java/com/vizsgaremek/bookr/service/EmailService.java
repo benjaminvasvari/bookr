@@ -153,6 +153,61 @@ public class EmailService {
         System.out.println("✅ Staff invite email sent to: " + toEmail);
     }
 
+    public void sendStaffInviteAcceptedEmail(
+            String toEmail,
+            String ownerName,
+            String staffName,
+            String staffEmail,
+            String companyName,
+            String roleName,
+            String dashboardLink
+    ) throws MessagingException, UnsupportedEncodingException, SMTPSendFailedException {
+        if (!EmailConfig.isEmailEnabled()) {
+            System.out.println("Email sending is disabled. Would send staff invite accepted email to: " + toEmail);
+            return;
+        }
+
+        String subject = "✅ " + staffName + " elfogadta a meghívót – " + companyName + " | Bookr";
+        String htmlContent = EmailHtmlTemplates.createStaffInviteAcceptedEmailHTML(
+                ownerName,
+                staffName,
+                staffEmail,
+                companyName,
+                roleName,
+                dashboardLink
+        );
+
+        sendEmail(toEmail, subject, htmlContent);
+        System.out.println("✅ Staff invite accepted notification sent to owner: " + toEmail);
+    }
+
+    public void sendStaffInviteDeclinedEmail(
+            String toEmail,
+            String ownerName,
+            String staffName,
+            String staffEmail,
+            String companyName,
+            String roleName
+    ) throws MessagingException, UnsupportedEncodingException, SMTPSendFailedException {
+        if (!EmailConfig.isEmailEnabled()) {
+            System.out.println("Email sending is disabled. Would send staff invite declined email to: " + toEmail);
+            return;
+        }
+
+        String displayName = (staffName != null && !staffName.isEmpty()) ? staffName : staffEmail;
+        String subject = "❌ " + displayName + " elutasította a meghívót – " + companyName + " | Bookr";
+        String htmlContent = EmailHtmlTemplates.createStaffInviteDeclinedEmailHTML(
+                ownerName,
+                staffName,
+                staffEmail,
+                companyName,
+                roleName
+        );
+
+        sendEmail(toEmail, subject, htmlContent);
+        System.out.println("✅ Staff invite declined notification sent to owner: " + toEmail);
+    }
+
     /**
      * Send email via SMTP
      */

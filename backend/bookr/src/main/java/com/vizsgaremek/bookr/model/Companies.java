@@ -158,6 +158,12 @@ public class Companies implements Serializable {
     @Transient
     private Integer ownerIdInt;
 
+    @Transient
+    private String ownerName;
+
+    @Transient
+    private String ownerEmail;
+
     public Companies() {
     }
 
@@ -260,6 +266,13 @@ public class Companies implements Serializable {
         this.cancellationHours = cancellationHours;
         this.allowSameDayBooking = allowSameDayBooking;
         this.minimumBookingHoursAhead = minimumBookingHoursAhead;
+    }
+
+    // getCompanyInfoForEmail
+    public Companies(String name, String ownerName, String ownerEmail) {
+        this.name = name;
+        this.ownerName = ownerName;
+        this.ownerEmail = ownerEmail;
     }
 
     public Integer getId() {
@@ -495,6 +508,22 @@ public class Companies implements Serializable {
 
     public void setOwnerIdInt(Integer ownerIdInt) {
         this.ownerIdInt = ownerIdInt;
+    }
+
+    public String getOwnerName() {
+        return ownerName;
+    }
+
+    public void setOwnerName(String ownerName) {
+        this.ownerName = ownerName;
+    }
+
+    public String getOwnerEmail() {
+        return ownerEmail;
+    }
+
+    public void setOwnerEmail(String ownerEmail) {
+        this.ownerEmail = ownerEmail;
     }
 
     @Override
@@ -961,6 +990,44 @@ public class Companies implements Serializable {
             Integer companyId = Integer.valueOf(singleResult.toString());
 
             return companyId;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static Companies getCompanyInfoForEmail(Integer companyId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getCompanyInfoForEmail");
+
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("companyIdIN", companyId);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            Object[] record = resultList.get(0);
+
+            Companies company = new Companies(
+                    record[0].toString(),
+                    record[1].toString(),
+                    record[2].toString()
+            );
+
+            return company;
 
         } catch (Exception ex) {
             ex.printStackTrace();

@@ -425,4 +425,8 @@ public class EnvConfig {
     public static int getCompanyMaxImages() {
         return Integer.parseInt(get("COMPANY_MAX_IMAGES"));
     }
+
+    public static String getAppBaseUrl() {
+        return getRequired("APP_BASE_URL");
+    }
 }

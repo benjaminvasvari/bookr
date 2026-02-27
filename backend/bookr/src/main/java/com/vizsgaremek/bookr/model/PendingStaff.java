@@ -5,6 +5,7 @@ import static com.vizsgaremek.bookr.model.Users.emf;
 import static com.vizsgaremek.bookr.model.Users.formatter;
 import com.vizsgaremek.bookr.util.StoredProcedureUtil;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import javax.persistence.Basic;
@@ -24,6 +25,7 @@ import javax.persistence.StoredProcedureQuery;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
+import javax.persistence.Transient;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import javax.xml.bind.annotation.XmlRootElement;
@@ -79,6 +81,15 @@ public class PendingStaff implements Serializable {
     @ManyToOne
     private Users userId;
 
+    @Transient
+    private Integer companyIdInt;
+
+    @Transient
+    private Integer userIdInt;
+
+    @Transient
+    private Integer tokenIdInt;
+
     public PendingStaff() {
     }
 
@@ -96,6 +107,22 @@ public class PendingStaff implements Serializable {
     // invite request
     public PendingStaff(String email, String position) {
         this.email = email;
+        this.position = position;
+    }
+
+    public PendingStaff(Integer id, String email, Integer companyIdInt, Integer userIdInt, Integer tokenIdInt, String position, String status, Date createdAt) {
+        this.id = id;
+        this.email = email;
+        this.companyIdInt = companyIdInt;
+        this.userIdInt = userIdInt;
+        this.tokenIdInt = tokenIdInt;
+        this.position = position;
+        this.status = status;
+        this.createdAt = createdAt;
+    }
+
+    public PendingStaff(Integer companyIdInt, String position) {
+        this.companyIdInt = companyIdInt;
         this.position = position;
     }
 
@@ -161,6 +188,19 @@ public class PendingStaff implements Serializable {
 
     public void setUserId(Users userId) {
         this.userId = userId;
+    }
+
+    //CUSTOMS GETTERs ONLY
+    public Integer getCompanyIdInt() {
+        return companyIdInt;
+    }
+
+    public Integer getUserIdInt() {
+        return userIdInt;
+    }
+
+    public Integer getTokenIdInt() {
+        return tokenIdInt;
     }
 
     @Override
@@ -280,4 +320,87 @@ public class PendingStaff implements Serializable {
         }
     }
 
+    public static List<PendingStaff> getPendingStaffByCompany(Integer companyId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getPendingStaffByCompany");
+
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("companyIdIN", companyId);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            // Empty list if no results
+            if (resultList.isEmpty()) {
+                return new ArrayList<>();
+            }
+
+            List<PendingStaff> staffList = new ArrayList<>();
+
+            for (Object[] record : resultList) {
+                PendingStaff staff = new PendingStaff(
+                        Integer.valueOf(record[0].toString()),
+                        record[1].toString(),
+                        Integer.valueOf(record[2].toString()),
+                        record[3] != null ? Integer.valueOf(record[3].toString()) : null,
+                        Integer.valueOf(record[4].toString()),
+                        record[5].toString(),
+                        record[6].toString(),
+                        formatter.parse(record[7].toString())
+                );
+                staffList.add(staff);
+            }
+            return staffList;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return new ArrayList<>();
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static PendingStaff getPendingStaffByEmailForSetUp(String email) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getPendingStaffByEmailForSetUp");
+
+            spq.registerStoredProcedureParameter("emailIN", String.class, ParameterMode.IN);
+
+            spq.setParameter("emailIN", email);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            // Empty list if no results
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            Object[] record = resultList.get(0);
+
+            PendingStaff staff = new PendingStaff(
+                    Integer.valueOf(record[0].toString()),
+                    record[1].toString()
+            );
+
+            return staff;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
 }

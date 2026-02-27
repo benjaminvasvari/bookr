@@ -5,6 +5,7 @@
 package com.vizsgaremek.bookr.service;
 
 import com.vizsgaremek.bookr.DTO.checkStaffInviteTokenDTO;
+import com.vizsgaremek.bookr.config.EnvConfig;
 import com.vizsgaremek.bookr.model.AuditLogs;
 import com.vizsgaremek.bookr.model.Companies;
 import com.vizsgaremek.bookr.model.PendingStaff;
@@ -19,7 +20,6 @@ import java.time.ZoneId;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
-import org.hibernate.engine.jdbc.connections.internal.UserSuppliedConnectionProviderImpl;
 import org.json.JSONObject;
 
 /**
@@ -36,6 +36,7 @@ public class PendingStaffService {
     private Staff Staff = new Staff();
     private AuditLogService AuditLogService = new AuditLogService();
     private EmailService EmailService = new EmailService();
+    private EnvConfig EnvConfig = new EnvConfig();
 
     private static EntityManagerFactory emf = Persistence.createEntityManagerFactory("com.vizsgaremek_bookr_war_1.0-SNAPSHOTPU");
 
@@ -335,9 +336,12 @@ public class PendingStaffService {
                 return ErrorResponseBuilder.buildErrorResponseJSON(400, "BadRequest");
             }
 
+            Users staffUser = null;
+
             // IF HAS USER
             if (tokenCheckMResult.getUserId() != null && tokenCheckMResult.getUserId() > 0) {
                 Staff createdStaff = Staff.createStaff(tokenCheckMResult.getUserId(), tokenCheckMResult.getCompanyId(), tokenCheckMResult.getPosition());
+                staffUser = Users.getUserProfile(tokenCheckMResult.getUserId());
 
                 if (createdStaff == null) {
                     em.getTransaction().rollback();
@@ -364,6 +368,50 @@ public class PendingStaffService {
                 }
             }
 
+            // ========== EMAIL KÜLDÉS ==========
+            try {
+                Companies companyResult = Companies.getCompanyInfoForEmail(tokenCheckMResult.getCompanyId());
+
+                String dashboardAddress = EnvConfig.getAppBaseUrl() + "/owner/staff";
+
+                EmailService.sendStaffInviteAcceptedEmail(
+                        companyResult.getEmail(),
+                        companyResult.getOwnerName(),
+                        staffUser != null ? staffUser.getLastName() + staffUser.getFirstName() : null,
+                        status,
+                        companyResult.getName(),
+                        tokenCheckMResult.getPosition(),
+                        dashboardAddress
+                );
+            } catch (Exception ex) {
+                // Log the error but don't fail the registration
+                System.err.println("Failed to send verification email: " + ex.getMessage());
+                ex.printStackTrace();
+            }
+            // ==================================
+
+            // ========== AUDIT LOG ==========
+            try {
+
+                AuditLogs auditLog = new AuditLogs(
+                        tokenCheckMResult.getUserId() != null ? tokenCheckMResult.getUserId() : null,
+                        "client",
+                        tokenCheckMResult.getUserId(),
+                        tokenCheckMResult.getEmail() != null ? tokenCheckMResult.getEmail() : null,
+                        "staff",
+                        "invite_accepted"
+                );
+
+                auditLog.addNewValue("company", tokenCheckMResult.getCompanyId());
+                auditLog.addNewValue("specialty", tokenCheckMResult.getPosition());
+
+                AuditLogService.logAudit(auditLog);
+
+            } catch (Exception ex) {
+                em.getTransaction().rollback();
+                ex.printStackTrace();
+                return ErrorResponseBuilder.buildErrorResponseJSON(500, "InternalServerError");
+            }
 
             em.getTransaction().commit();
 
@@ -382,4 +430,5 @@ public class PendingStaffService {
 
         return toReturn;
     }
+
 }

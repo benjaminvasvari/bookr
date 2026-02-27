@@ -5,10 +5,12 @@
 package com.vizsgaremek.bookr.service;
 
 import com.vizsgaremek.bookr.model.Appointments;
+import com.vizsgaremek.bookr.model.PendingStaff;
 import com.vizsgaremek.bookr.model.Staff;
 import static com.vizsgaremek.bookr.service.AppointmentsService.timeFormatter;
 import com.vizsgaremek.bookr.util.FileStorageUtil;
 import java.util.ArrayList;
+import java.util.List;
 import javax.enterprise.context.ApplicationScoped;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -21,6 +23,7 @@ import org.json.JSONObject;
 public class StaffService {
 
     private Staff layer = new Staff();
+    private PendingStaff PendingStaff = new PendingStaff();
 
     public JSONObject getFilteredStaffByServices(Integer companyId, String serviceIds) {
 
@@ -81,8 +84,9 @@ public class StaffService {
         } else if (modelResult.isEmpty()) {
             status = "NoRecordFound";
         } else {
-            JSONArray result = new JSONArray();
+            JSONObject result = new JSONObject();
 
+            JSONArray actualStaffArray = new JSONArray();
             for (Staff actualStaff : modelResult) {
                 JSONObject staffObject = new JSONObject();
                 staffObject.put("id", actualStaff.getId());
@@ -121,21 +125,38 @@ public class StaffService {
                         apptObject.put("startTime", timeFormatter.format(appt.getStartTime()));
                         apptObject.put("serviceName", appt.getServiceName());
                         apptObject.put("clientName", appt.getClientName());
-
-                        if (appt.getImageUrl() == null) {
-                            apptObject.put("clientImageUrl", JSONObject.NULL);
-                        } else {
-                            apptObject.put("clientImageUrl", FileStorageUtil.buildFullUrl(appt.getImageUrl()));
-                        }
+                        apptObject.put("clientImageUrl", appt.getImageUrl() == null ? JSONObject.NULL : appt.getImageUrl());
 
                         appointmentsArray.put(apptObject);
                     }
                 }
 
                 staffObject.put("upcomingAppointments", appointmentsArray);
-                result.put(staffObject);
+                actualStaffArray.put(staffObject);
             }
 
+            // PENDING STAFFs
+            List<PendingStaff> pendingStaffModelResult = PendingStaff.getPendingStaffByCompany(companyId);
+
+            JSONArray pendingStaffArray = new JSONArray();
+            if (!pendingStaffArray.isEmpty()) {
+                for (PendingStaff staff : pendingStaffModelResult) {
+
+                    JSONObject pstaffObj = new JSONObject();
+                    pstaffObj.put("id", staff.getId());
+                    pstaffObj.put("email", staff.getEmail());
+                    pstaffObj.put("companyId", staff.getCompanyIdInt());
+                    pstaffObj.put("userId", staff.getUserIdInt() == null ? JSONObject.NULL : staff.getUserIdInt());
+                    pstaffObj.put("position", staff.getPosition());
+                    pstaffObj.put("status", staff.getStatus());
+                    pstaffObj.put("createdAt", staff.getCreatedAt());
+
+                    pendingStaffArray.put(pstaffObj);
+                }
+            }
+            result.put("actualStaff", actualStaffArray);
+            result.put("pendingStaff", pendingStaffArray);
+            
             toReturn.put("result", result);
         }
 

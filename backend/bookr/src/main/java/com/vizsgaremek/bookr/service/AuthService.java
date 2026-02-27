@@ -3,7 +3,11 @@ package com.vizsgaremek.bookr.service;
 import com.vizsgaremek.bookr.security.PasswordHasher;
 import com.vizsgaremek.bookr.util.ValidationUtil;
 import com.vizsgaremek.bookr.model.AuditLogs;
+import com.vizsgaremek.bookr.model.PendingStaff;
+import com.vizsgaremek.bookr.model.Staff;
+import com.vizsgaremek.bookr.model.StaffWorkingHours;
 import com.vizsgaremek.bookr.model.Tokens;
+import com.vizsgaremek.bookr.model.UserXRole;
 import com.vizsgaremek.bookr.model.Users;
 import com.vizsgaremek.bookr.security.JWT;
 import com.vizsgaremek.bookr.util.FileStorageUtil;
@@ -27,6 +31,9 @@ public class AuthService {
     private AuditLogService auditLogService = new AuditLogService();
     private UsersService UsersService = new UsersService();
     private TokensService TokensService = new TokensService();
+    private PendingStaff PendingStaff = new PendingStaff();
+    private StaffWorkingHours StaffWorkingHours = new StaffWorkingHours();
+    private UserXRole UserXRole = new UserXRole();
 
     private final PasswordHasher passwordHasher = new PasswordHasher();
 
@@ -268,6 +275,8 @@ public class AuthService {
         String status = "success";
         Integer statusCode = 200;
 
+        Users user = null;
+
         // ========== 1. TOKEN FORMÁTUM VALIDÁLÁS ==========
         if (token == null || token.trim().isEmpty()) {
             status = "MissingToken";
@@ -331,7 +340,7 @@ public class AuthService {
 
                 // ========== 5. AUDIT LOG ==========
                 try {
-                    Users user = Users.getUserProfile(tokenInfo.getUserIdInt());
+                    user = Users.getUserProfile(tokenInfo.getUserIdInt());
 
                     auditLogService.logSimpleAction(
                             user.getId(),
@@ -347,6 +356,22 @@ public class AuthService {
                 }
                 // ==================================
             }
+
+        } catch (Exception e) {
+            status = "serverError";
+            statusCode = 500;
+            e.printStackTrace();
+        }
+
+        try {
+            PendingStaff pStaffResult = PendingStaff.getPendingStaffByEmailForSetUp(user.getEmail());
+            Staff createdStaff = Staff.createStaff(user.getId(), pStaffResult.getCompanyIdInt(), pStaffResult.getPosition());
+
+            String createStaffWorkingHoursResult = StaffWorkingHours.createStaffWorkingHours(createdStaff.getId(), pStaffResult.getCompanyIdInt());
+
+            Boolean isUserAssignedToCompany = Users.assignCompanyToUser(user.getId(), pStaffResult.getCompanyIdInt());
+
+            Boolean isUserAssignedToRole = UserXRole.assignRole(user.getId(), 3);
 
         } catch (Exception e) {
             status = "serverError";
