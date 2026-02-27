@@ -1,206 +1,202 @@
 <section class="settings-panel">
+	<div class="settings-shell">
 	<header class="settings-topbar">
 		<div class="title-wrap">
+			<span class="topbar-kicker">Owner Dashboard</span>
 			<h1>Beállítások</h1>
-			<p class="subtitle">Itt kezelheted a cégprofil adatait és a működési szabályokat.</p>
+			<p class="subtitle">Itt kezelheted a cégprofil adatait, képeket és foglalási szabályokat.</p>
+			<div class="topbar-pills">
+				<span class="pill">Mock adatok</span>
+				<span class="pill">Inline szerkesztés</span>
+				<span class="pill">Backend nélkül</span>
+			</div>
 		</div>
 		<div class="actions">
-			<button class="btn ghost">Visszaállítás</button>
-			<button class="btn primary">Mentés</button>
+			<button class="btn ghost" type="button" (click)="resetAll()">Visszaállítás</button>
+			<button class="btn primary" type="button" (click)="saveAllMock()">Mentés</button>
 		</div>
 	</header>
 
 	<section class="content-grid">
-		<article class="settings-section settings-section-wide">
+		<article class="settings-section settings-section-wide section-company" [class.conflict-card]="conflictedSection === 'company'">
 			<header class="section-header">
 				<div>
 					<h2>Céginformációk</h2>
 					<p class="section-subtitle">Cégprofil adatai</p>
 				</div>
-				<button class="link-btn">Szerkesztés</button>
+				@if (!editMode.company) {
+				<button class="link-btn" type="button" (click)="startEdit('company')">Szerkesztés</button>
+				} @else {
+				<div class="inline-actions">
+					<button class="btn ghost" type="button" (click)="cancelEdit('company')">Mégse</button>
+					<button class="btn primary" type="button" (click)="saveEdit('company')">Mentés</button>
+				</div>
+				}
 			</header>
+			@if (conflictedSection === 'company' && editMode.company) {
+			<div class="edit-conflict-message">
+				Előbb mentsd el a módosításokat ezen a kártyán, mielőtt másikat szerkesztenél.
+			</div>
+			}
 
 			<div class="company-layout">
-				<div class="company-top-grid">
-					<section class="company-main-card">
-						<p class="label">Cégnév</p>
-						<p class="company-name">Bookr Studio</p>
-						<div class="company-main-divider"></div>
-						<p class="label">Leírás</p>
-						<p class="value value-regular">Időpontfoglalásra optimalizált modern szalon, prémium szolgáltatásokkal.</p>
-					</section>
+				<section class="hero-card">
+					<p class="label">Cégnév</p>
+					@if (!editMode.company) {
+					<p class="company-name">{{ companyData.companyName }}</p>
+					} @else {
+					<input class="edit-input card-input card-input-title" type="text" [(ngModel)]="companyDraft.companyName" />
+					}
+					<p class="label">Leírás</p>
+					@if (!editMode.company) {
+					<p class="value value-regular">{{ companyData.description }}</p>
+					} @else {
+					<textarea class="edit-input edit-textarea card-input" [(ngModel)]="companyDraft.description"></textarea>
+					}
+				</section>
 
-					<div class="company-side-stack">
-						<section class="company-group-card">
-							<h3 class="group-title">Alapadatok</h3>
-							<div class="details-grid details-grid-2">
-								<div class="detail-item">
-									<p class="label">Üzleti kategória</p>
-									<p class="value">Szépségipar</p>
-								</div>
-								<div class="detail-item">
-									<p class="label">Weboldal</p>
-									<p class="value">https://bookr.hu</p>
-								</div>
-							</div>
-						</section>
-
-						<section class="company-group-card">
-							<h3 class="group-title">Tulajdonos adatai</h3>
-							<div class="details-grid details-grid-2">
-								<div class="detail-item">
-									<p class="label">Név</p>
-									<p class="value">Kiss Anna</p>
-								</div>
-								<div class="detail-item">
-									<p class="label">Szerepkör</p>
-									<p class="value">Tulajdonos</p>
-								</div>
-							</div>
-						</section>
-					</div>
-				</div>
-
-				<div class="company-bottom-grid">
-					<section class="company-group-card">
-						<h3 class="group-title">Címadatok</h3>
-						<div class="details-grid details-grid-2">
-							<div class="detail-item detail-item-wide-2">
-								<p class="label">Utca és házszám</p>
-								<p class="value">Andrássy út 12.</p>
-							</div>
-							<div class="detail-item">
-								<p class="label">Város</p>
-								<p class="value">Budapest</p>
-							</div>
-							<div class="detail-item">
-								<p class="label">Irányítószám</p>
-								<p class="value">1061</p>
-							</div>
-							<div class="detail-item detail-item-wide-2">
-								<p class="label">Ország</p>
-								<p class="value">Magyarország</p>
-							</div>
-						</div>
-					</section>
-
-					<section class="company-group-card">
-						<h3 class="group-title">Kapcsolat</h3>
-						<div class="details-grid details-grid-2">
-							<div class="detail-item">
-								<p class="label">Telefonszám</p>
-								<p class="value">+36 30 123 4567</p>
-							</div>
-							<div class="detail-item">
-								<p class="label">Email cím</p>
-								<p class="value">info@bookr.hu</p>
-							</div>
-						</div>
-					</section>
+				<div class="details-grid details-grid-3">
+					<div class="detail-item"><p class="label">Kategória</p>@if (!editMode.company) {<p class="value">{{ companyData.category }}</p>} @else {<input class="edit-input card-input" type="text" [(ngModel)]="companyDraft.category" />}</div>
+					<div class="detail-item"><p class="label">Weboldal</p>@if (!editMode.company) {<p class="value">{{ companyData.website }}</p>} @else {<input class="edit-input card-input" type="text" [(ngModel)]="companyDraft.website" />}</div>
+					<div class="detail-item"><p class="label">Tulajdonos</p>@if (!editMode.company) {<p class="value">{{ companyData.ownerName }}</p>} @else {<input class="edit-input card-input" type="text" [(ngModel)]="companyDraft.ownerName" />}</div>
+					<div class="detail-item"><p class="label">Szerepkör</p>@if (!editMode.company) {<p class="value">{{ companyData.ownerRole }}</p>} @else {<input class="edit-input card-input" type="text" [(ngModel)]="companyDraft.ownerRole" />}</div>
+					<div class="detail-item"><p class="label">Telefonszám</p>@if (!editMode.company) {<p class="value">{{ companyData.phone }}</p>} @else {<input class="edit-input card-input" type="text" [(ngModel)]="companyDraft.phone" />}</div>
+					<div class="detail-item"><p class="label">Email</p>@if (!editMode.company) {<p class="value">{{ companyData.email }}</p>} @else {<input class="edit-input card-input" type="email" [(ngModel)]="companyDraft.email" />}</div>
+					<div class="detail-item"><p class="label">Utca</p>@if (!editMode.company) {<p class="value">{{ companyData.street }}</p>} @else {<input class="edit-input card-input" type="text" [(ngModel)]="companyDraft.street" />}</div>
+					<div class="detail-item"><p class="label">Város</p>@if (!editMode.company) {<p class="value">{{ companyData.city }}</p>} @else {<input class="edit-input card-input" type="text" [(ngModel)]="companyDraft.city" />}</div>
+					<div class="detail-item"><p class="label">Irányítószám</p>@if (!editMode.company) {<p class="value">{{ companyData.zipCode }}</p>} @else {<input class="edit-input card-input" type="text" [(ngModel)]="companyDraft.zipCode" />}</div>
+					<div class="detail-item"><p class="label">Ország</p>@if (!editMode.company) {<p class="value">{{ companyData.country }}</p>} @else {<input class="edit-input card-input" type="text" [(ngModel)]="companyDraft.country" />}</div>
 				</div>
 			</div>
 		</article>
 
-		<article class="settings-section row-equal-card">
+		<article class="settings-section section-gallery" [class.conflict-card]="conflictedSection === 'gallery'">
 			<header class="section-header">
 				<div>
 					<h2>Képek</h2>
 					<p class="section-subtitle">Profilképek</p>
 				</div>
-				<button class="link-btn">Képek kezelése</button>
+				@if (!editMode.gallery) {
+				<button class="link-btn" type="button" (click)="startEdit('gallery')">Képek kezelése</button>
+				} @else {
+				<div class="inline-actions">
+					<button class="btn ghost" type="button" (click)="cancelEdit('gallery')">Mégse</button>
+					<button class="btn primary" type="button" (click)="saveEdit('gallery')">Mentés</button>
+				</div>
+				}
 			</header>
-
-			<div class="image-layout">
-				<div class="image-main">Főkép</div>
-				<div class="image-thumb">Kép 2</div>
-				<div class="image-thumb">Kép 3</div>
-				<div class="image-thumb">Kép 4</div>
+			@if (conflictedSection === 'gallery' && editMode.gallery) {
+			<div class="edit-conflict-message">
+				Előbb mentsd el a módosításokat ezen a kártyán, mielőtt másikat szerkesztenél.
 			</div>
-			<p class="hint">Maximum 4 kép, az első lesz a kiemelt főkép.</p>
+			}
+
+			@if (!editMode.gallery) {
+			<div class="image-layout">
+				<div class="image-main">{{ galleryData.images[0].title }}</div>
+				<div class="image-thumb" *ngFor="let image of galleryData.images; let i = index" [class.hidden-thumb]="i === 0">
+					{{ image.title }}
+				</div>
+			</div>
+			} @else {
+			<div class="gallery-edit-list" cdkDropList [cdkDropListData]="galleryDraft.images" (cdkDropListDropped)="onGalleryDrop($event)">
+				<div class="gallery-edit-item" cdkDrag *ngFor="let image of galleryDraft.images; let i = index">
+					<div class="drag-handle" cdkDragHandle title="Húzd a sor rendezéséhez">
+						<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+							<path d="M4 7h16v2H4V7zm0 4h16v2H4v-2zm0 4h16v2H4v-2z" />
+						</svg>
+					</div>
+					<div class="gallery-item-head">
+						<p class="gallery-slot">{{ image.slotName }}</p>
+						@if (i === 0) {
+						<span class="cover-badge">Főkép</span>
+						}
+					</div>
+
+					<div class="gallery-file-row">
+						<p class="gallery-file-name">{{ image.fileName || 'Nincs kiválasztott fájl' }}</p>
+						<label class="btn ghost file-pick-btn" [for]="'gallery-file-' + i">Fájl kiválasztása</label>
+						<input class="gallery-file-input" [id]="'gallery-file-' + i" type="file" accept="image/*" (change)="onGalleryFileSelected(i, $event)" />
+					</div>
+				</div>
+			</div>
+			}
+
+			<p class="hint">Szerkesztéskor a sorrend módosítható, és helyi fájl is kiválasztható (mock, backend nélkül).</p>
 		</article>
 
-		<article class="settings-section row-equal-card">
+		<article class="settings-section section-rules" [class.conflict-card]="conflictedSection === 'rules'">
 			<header class="section-header">
 				<div>
 					<h2>Üzleti szabályok</h2>
 					<p class="section-subtitle">Foglalási és fizetési beállítások</p>
 				</div>
-				<button class="link-btn">Módosítás</button>
+				@if (!editMode.rules) {
+				<button class="link-btn" type="button" (click)="startEdit('rules')">Módosítás</button>
+				} @else {
+				<div class="inline-actions">
+					<button class="btn ghost" type="button" (click)="cancelEdit('rules')">Mégse</button>
+					<button class="btn primary" type="button" (click)="saveEdit('rules')">Mentés</button>
+				</div>
+				}
 			</header>
+			@if (conflictedSection === 'rules' && editMode.rules) {
+			<div class="edit-conflict-message">
+				Előbb mentsd el a módosításokat ezen a kártyán, mielőtt másikat szerkesztenél.
+			</div>
+			}
 
 			<div class="rule-list">
-				<div class="rule-row">
-					<p>Maximum előre foglalás</p>
-					<strong>90 nap</strong>
-				</div>
-				<div class="rule-row">
-					<p>Lemondási határidő</p>
-					<strong>24 óra</strong>
-				</div>
-				<div class="rule-row">
-					<p>Minimum előzetes foglalás (azonos napon)</p>
-					<strong>2 óra</strong>
-				</div>
-				<div class="rule-row">
-					<p>Fizetési mód</p>
-					<strong>Helyszíni fizetés</strong>
-				</div>
-				<div class="rule-row">
-					<p>Pénznem</p>
-					<strong>HUF</strong>
-				</div>
+				<div class="rule-row"><p>Maximum előre foglalás</p>@if (!editMode.rules) {<strong>{{ businessRulesData.maxAdvanceBookingDays }} nap</strong>} @else {<input class="edit-input card-input rule-input" type="number" [(ngModel)]="businessRulesDraft.maxAdvanceBookingDays" />}</div>
+				<div class="rule-row"><p>Lemondási határidő</p>@if (!editMode.rules) {<strong>{{ businessRulesData.cancellationDeadlineHours }} óra</strong>} @else {<input class="edit-input card-input rule-input" type="number" [(ngModel)]="businessRulesDraft.cancellationDeadlineHours" />}</div>
+				<div class="rule-row"><p>Minimum előzetes foglalás (azonos napon)</p>@if (!editMode.rules) {<strong>{{ businessRulesData.sameDayMinimumHours }} óra</strong>} @else {<input class="edit-input card-input rule-input" type="number" [(ngModel)]="businessRulesDraft.sameDayMinimumHours" />}</div>
+				<div class="rule-row"><p>Fizetési mód</p>@if (!editMode.rules) {<strong>{{ businessRulesData.paymentMethod }}</strong>} @else {<select class="edit-input card-input rule-input" [(ngModel)]="businessRulesDraft.paymentMethod"><option *ngFor="let method of paymentMethods" [value]="method">{{ method }}</option></select>}</div>
+				<div class="rule-row"><p>Pénznem</p>@if (!editMode.rules) {<strong>{{ businessRulesData.currency }}</strong>} @else {<select class="edit-input card-input rule-input" [(ngModel)]="businessRulesDraft.currency"><option *ngFor="let currency of currencies" [value]="currency">{{ currency }}</option></select>}</div>
 			</div>
 		</article>
 
-		<article class="settings-section">
+		<article class="settings-section section-hours" [class.conflict-card]="conflictedSection === 'hours'">
 			<header class="section-header">
 				<div>
 					<h2>Nyitvatartás</h2>
 					<p class="section-subtitle">Heti nyitvatartási rend</p>
 				</div>
-				<button class="link-btn">Szerkesztés</button>
+				@if (!editMode.hours) {
+				<button class="link-btn" type="button" (click)="startEdit('hours')">Szerkesztés</button>
+				} @else {
+				<div class="inline-actions">
+					<button class="btn ghost" type="button" (click)="cancelEdit('hours')">Mégse</button>
+					<button class="btn primary" type="button" (click)="saveEdit('hours')">Mentés</button>
+				</div>
+				}
 			</header>
+			@if (conflictedSection === 'hours' && editMode.hours) {
+			<div class="edit-conflict-message">
+				Előbb mentsd el a módosításokat ezen a kártyán, mielőtt másikat szerkesztenél.
+			</div>
+			}
 
 			<div class="hours-table">
-				<div class="hours-row">
-					<span>Hétfő</span>
-					<span>09:00 - 17:00</span>
-					<span class="status open">Nyitva</span>
-				</div>
-				<div class="hours-row">
-					<span>Kedd</span>
-					<span>09:00 - 17:00</span>
-					<span class="status open">Nyitva</span>
-				</div>
-				<div class="hours-row">
-					<span>Szerda</span>
-					<span>09:00 - 17:00</span>
-					<span class="status open">Nyitva</span>
-				</div>
-				<div class="hours-row">
-					<span>Csütörtök</span>
-					<span>09:00 - 17:00</span>
-					<span class="status open">Nyitva</span>
-				</div>
-				<div class="hours-row">
-					<span>Péntek</span>
-					<span>09:00 - 17:00</span>
-					<span class="status open">Nyitva</span>
-				</div>
-				<div class="hours-row">
-					<span>Szombat</span>
-					<span>-</span>
-					<span class="status closed">Zárva</span>
-				</div>
-				<div class="hours-row">
-					<span>Vasárnap</span>
-					<span>-</span>
-					<span class="status closed">Zárva</span>
+				<div class="hours-row" *ngFor="let hour of (editMode.hours ? openingHoursDraft : openingHoursData)">
+					<span>{{ hour.day }}</span>
+					@if (!editMode.hours) {
+					<span>{{ hour.isOpen ? hour.openTime + ' - ' + hour.closeTime : '-' }}</span>
+					} @else {
+					<div class="hours-inline-inputs">
+						<input class="edit-input card-input" type="time" [(ngModel)]="hour.openTime" [disabled]="!hour.isOpen" />
+						<input class="edit-input card-input" type="time" [(ngModel)]="hour.closeTime" [disabled]="!hour.isOpen" />
+					</div>
+					}
+					@if (!editMode.hours) {
+					<span class="status" [class.open]="hour.isOpen" [class.closed]="!hour.isOpen">{{ hour.isOpen ? 'Nyitva' : 'Zárva' }}</span>
+					} @else {
+					<label class="toggle-wrap"><input type="checkbox" [(ngModel)]="hour.isOpen" /> Nyitva</label>
+					}
 				</div>
 			</div>
 		</article>
 
-		<article class="settings-section auto-height-card">
+		<article class="settings-section section-closures">
 			<header class="section-header">
 				<div>
 					<h2>Ideiglenes zárvatartások</h2>
@@ -213,19 +209,20 @@
 				<div class="temporary-row" *ngFor="let period of temporaryClosures; let i = index">
 					<div class="field-group start-field">
 						<label [for]="'start-' + i">Kezdő dátum</label>
-						<input [id]="'start-' + i" type="date" [(ngModel)]="period.startDate" />
+						<input [id]="'start-' + i" class="edit-input" type="date" [(ngModel)]="period.startDate" />
 					</div>
 					<div class="field-group end-field">
 						<label [for]="'end-' + i">Záró dátum</label>
-						<input [id]="'end-' + i" type="date" [(ngModel)]="period.endDate" />
+						<input [id]="'end-' + i" class="edit-input" type="date" [(ngModel)]="period.endDate" />
 					</div>
 					<div class="field-group reason-field">
 						<label [for]="'reason-' + i">Megjegyzés</label>
-						<input [id]="'reason-' + i" type="text" [(ngModel)]="period.reason" placeholder="pl. Nyári szabadság" />
+						<input [id]="'reason-' + i" class="edit-input" type="text" [(ngModel)]="period.reason" placeholder="pl. Nyári szabadság" />
 					</div>
 					<button class="remove-btn remove-field" type="button" (click)="removeTemporaryClosure(i)">Törlés</button>
 				</div>
 			</div>
 		</article>
 	</section>
+	</div>
 </section>

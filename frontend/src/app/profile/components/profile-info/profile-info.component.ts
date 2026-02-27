@@ -86,18 +86,20 @@ export class ProfileInfoComponent implements OnInit, OnDestroy {
     this.passwordForm = this.fb.group({
       currentPassword: ['', [Validators.required, Validators.minLength(8)]],
     });
+
+    this.setProfileEditState(false);
   }
 
   // ==================== PROFILE EDIT ====================
 
   enableProfileEdit(): void {
-    this.isEditingProfile = true;
+    this.setProfileEditState(true);
     this.profileSaveSuccess = false;
     this.profileSaveError = '';
   }
 
   cancelProfileEdit(): void {
-    this.isEditingProfile = false;
+    this.setProfileEditState(false);
     this.profileForm.reset({
       firstName: this.currentUser?.firstName,
       lastName: this.currentUser?.lastName,
@@ -116,7 +118,7 @@ export class ProfileInfoComponent implements OnInit, OnDestroy {
         next: (updatedUser) => {
           this.currentUser = updatedUser;
           this.profileSaveSuccess = true;
-          this.isEditingProfile = false;
+          this.setProfileEditState(false);
           this.profileSaveError = '';
 
           // Success message hide after 3 seconds
@@ -334,5 +336,16 @@ export class ProfileInfoComponent implements OnInit, OnDestroy {
   triggerFileInput(): void {
     const fileInput = document.getElementById('avatarFileInput') as HTMLInputElement;
     fileInput?.click();
+  }
+
+  private setProfileEditState(isEditing: boolean): void {
+    this.isEditingProfile = isEditing;
+
+    if (isEditing) {
+      this.profileForm.enable({ emitEvent: false });
+      return;
+    }
+
+    this.profileForm.disable({ emitEvent: false });
   }
 }
