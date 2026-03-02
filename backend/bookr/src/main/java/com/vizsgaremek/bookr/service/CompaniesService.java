@@ -590,4 +590,56 @@ public class CompaniesService {
             return null;
         }
     }
+
+    public JSONObject getCompanyById(Integer id) {
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        try {
+
+            // Adatbázis lekérdezés
+            Companies modelResult = Companies.getCompanyById(id);
+
+            // NULL ELLENŐRZÉS
+            if (modelResult == null) {
+                status = "NotFound";
+                statusCode = 404;
+                toReturn.put("status", status);
+                toReturn.put("statusCode", statusCode);
+                toReturn.put("message", "No company found");
+                return toReturn;
+            }
+
+            // Sikeres válasz összeállítása
+            JSONObject result = new JSONObject();
+
+
+            result.put("id", modelResult.getId());
+            result.put("name", modelResult.getName());
+            result.put("description", modelResult.getDescription());
+            result.put("address", modelResult.getAddress());
+            result.put("city", modelResult.getCity());
+            result.put("postalCode", modelResult.getPostalCode());
+            result.put("country", modelResult.getCountry());
+            result.put("phone", modelResult.getPhone());
+            result.put("email", modelResult.getEmail());
+            result.put("website", modelResult.getWebsite() != null ? modelResult.getWebsite() : JSONObject.NULL);
+            result.put("createdAt", modelResult.getCancellationHours());
+
+            toReturn.put("result", result);
+
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            status = "InternalServerError";
+            statusCode = 500;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+        }
+
+        return toReturn;
+    }
 }

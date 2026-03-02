@@ -581,7 +581,7 @@ public class Companies implements Serializable {
                     record[6].toString(),
                     record[7].toString(),
                     record[8].toString(),
-                    record[9].toString(),
+                    record[9] != null ? record[9].toString() : null,
                     Integer.valueOf(record[10].toString()),
                     Integer.valueOf(record[11].toString()),
                     formatter.parse(record[12].toString()),

@@ -153,12 +153,11 @@ public class CompaniesController {
     @Consumes(MediaType.APPLICATION_JSON)
     public Response createFull(@HeaderParam("Authorization") String authHeader, CompanyRegisterRequest request) {
 
-        
         // 1. Auth header check
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return buildErrorResponse(401, "missingToken");
         }
-        
+
         // 2. Request body check
         if (request == null) {
             return buildErrorResponse(400, "missingBody");
@@ -200,4 +199,44 @@ public class CompaniesController {
                 .build();
     }
 
+    @GET
+    @Path("getById")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response getCompanyById(@HeaderParam("Authorization") String authHeader, @QueryParam("id") Integer companyId) {
+
+        // 1. Auth header check
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return buildErrorResponse(401, "missingToken");
+        }
+
+        // 2. Request body check
+        if (companyId == null || companyId <= 0) {
+            return buildErrorResponse(400, "InvalidParam");
+        }
+
+        String jwtToken = authHeader.substring(7);
+        Boolean validJwt = JWT.validateAccessToken(jwtToken);
+
+        if (validJwt == null) {
+            return buildErrorResponse(401, "tokenExpired");
+        } else if (validJwt == false) {
+            return buildErrorResponse(401, "invalidToken");
+        }
+
+        // 3. Role check
+        String userRoles = JWT.getRolesFromAccessToken(jwtToken);
+        boolean hasPermission = RoleChecker.hasAnyRole(userRoles, "client", "owner");
+        if (!hasPermission) {
+            return buildErrorResponse(403, "Forbidden");
+        }
+
+        // 5. Service hívás
+        JSONObject toReturn = layer.getCompanyById(companyId);
+
+        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                .entity(toReturn.toString())
+                .type(MediaType.APPLICATION_JSON)
+                .build();
+    }
 }
