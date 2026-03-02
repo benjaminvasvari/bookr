@@ -200,6 +200,7 @@ public class PendingStaffService {
 
             JSONObject result = new JSONObject();
 
+            result.put("id", pendingStaffModelResult.getId());
             result.put("firstName", isUserExist ? userModelResult.getFirstName() : JSONObject.NULL);
             result.put("lastName", isUserExist ? userModelResult.getLastName() : JSONObject.NULL);
             result.put("email", request.getEmail());
@@ -431,4 +432,34 @@ public class PendingStaffService {
         return toReturn;
     }
 
+    public JSONObject deleteInvite(Integer pStaffId) {
+
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        try {
+            String modelResult = layer.deleteInvite(pStaffId);
+
+            if (!"success".equals(modelResult)) {
+                JSONObject error = new JSONObject();
+                error.put("statusCode", 404);
+                error.put("status", "NotFound");
+                error.put("message", "Invite not found with ID: " + pStaffId);
+                return error;
+            }
+
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            status = "InternalServerError";
+            statusCode = 500;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+        }
+
+        return toReturn;
+    }
 }

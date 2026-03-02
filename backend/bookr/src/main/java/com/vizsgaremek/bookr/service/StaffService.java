@@ -139,7 +139,7 @@ public class StaffService {
             List<PendingStaff> pendingStaffModelResult = PendingStaff.getPendingStaffByCompany(companyId);
 
             JSONArray pendingStaffArray = new JSONArray();
-            if (!pendingStaffArray.isEmpty()) {
+            if (!pendingStaffModelResult.isEmpty()) {
                 for (PendingStaff staff : pendingStaffModelResult) {
 
                     JSONObject pstaffObj = new JSONObject();

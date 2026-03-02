@@ -12,6 +12,7 @@ import com.vizsgaremek.bookr.util.RoleChecker;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.Produces;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
@@ -142,7 +143,7 @@ public class PendingStaffController {
     @Produces(MediaType.APPLICATION_JSON)
     public Response acceptInvite(String body) {
         JSONObject bodyObj = new JSONObject(body);
-        
+
         String token = bodyObj.getString("token");
 
         if (token == null) {
@@ -150,6 +151,56 @@ public class PendingStaffController {
         } else {
 
             JSONObject toReturn = layer.acceptInvite(token);
+            return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                    .entity(toReturn.toString())
+                    .type(MediaType.APPLICATION_JSON)
+                    .build();
+        }
+
+    }
+
+    @DELETE
+    @Path("cancel-invite")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response cancelInvite(@HeaderParam("Authorization") String authHeader, @QueryParam("id") Integer id) {
+
+        // Extract token from "Bearer <token>"
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            System.out.println("Missing or invalid Authorization header");
+            return buildErrorResponse(401, "missingToken");
+        }
+
+        if (id == null || id <= 0) {
+            return buildErrorResponse(400, "InvalidParam");
+        }
+
+        String jwtToken = authHeader.substring(7);
+        Boolean validJwt = JWT.validateAccessToken(jwtToken);
+
+        if (validJwt == null) {
+            // Lejárt JWT
+            return buildErrorResponse(401, "tokenExpired");
+        } else if (validJwt == false) {
+            // Invalid JWT
+            return buildErrorResponse(401, "invalidToken");
+        } else {
+            // Valid token
+            Integer companyId = JWT.getCompanyIdFromAccessToken(jwtToken);
+
+            // Validation
+            if (companyId == null || companyId <= 0) {
+                return buildErrorResponse(400, "InvalidInvite");
+            }
+
+            String userRoles = JWT.getRolesFromAccessToken(jwtToken);
+            boolean hasPermission = RoleChecker.hasAllRoles(userRoles, "client", "owner");
+
+            if (!hasPermission) {
+                return buildErrorResponse(403, "forbidden");
+            }
+
+            JSONObject toReturn = layer.deleteInvite(id);
             return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
                     .entity(toReturn.toString())
                     .type(MediaType.APPLICATION_JSON)

@@ -402,5 +402,32 @@ public class PendingStaff implements Serializable {
                 em.close();
             }
         }
+
     }
+
+    public static String deleteInvite(Integer pendingStaffId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("deletePendingStaffInvite");
+            spq.registerStoredProcedureParameter("pendingStaffIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("pendingStaffIdIN", pendingStaffId);
+
+            spq.execute();
+
+            String result = spq.getSingleResult().toString();
+
+            return result;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
 }
