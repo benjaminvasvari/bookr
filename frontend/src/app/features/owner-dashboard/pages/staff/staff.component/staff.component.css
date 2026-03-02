@@ -40,6 +40,7 @@
 	transition: all 0.2s ease;
 	background: #ffffff;
 	color: #1f2937;
+	
 }
 
 .btn.primary {
@@ -66,7 +67,7 @@
 
 .staff-toolbar {
 	display: grid;
-	grid-template-columns: auto 1fr auto auto;
+	grid-template-columns: auto minmax(260px, 1fr) minmax(190px, 220px) auto;
 	gap: 12px;
 	align-items: center;
 	background: #ffffff;
@@ -91,21 +92,43 @@
 
 .search-input input {
 	width: 100%;
-	background: #f9fafb;
-	border: 1px solid var(--owner-border);
+	background: #ffffff;
+	border: 1px solid #d6deea;
 	border-radius: 10px;
 	padding: 10px 12px;
 	font-size: 14px;
 	color: #111827;
 }
 
+.search-input input:focus,
+.filter-select:focus {
+	outline: none;
+	border-color: #38a179;
+	box-shadow: 0 0 0 3px rgba(56, 161, 121, 0.16);
+}
+
 .filter-select {
-	background: #f9fafb;
-	border: 1px solid var(--owner-border);
+	appearance: none;
+	background-color: #ffffff;
+	background-image: linear-gradient(45deg, transparent 50%, #64748b 50%), linear-gradient(135deg, #64748b 50%, transparent 50%);
+	background-position: calc(100% - 16px) calc(50% - 2px), calc(100% - 10px) calc(50% - 2px);
+	background-size: 6px 6px, 6px 6px;
+	background-repeat: no-repeat;
+	border: 1px solid #d6deea;
 	border-radius: 10px;
-	padding: 10px 12px;
+	padding: 10px 34px 10px 12px;
 	font-size: 14px;
 	color: #111827;
+}
+
+.toolbar-clear {
+	white-space: nowrap;
+	border-color: #d6deea;
+}
+
+.toolbar-clear:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
 }
 
 .staff-scroll {
@@ -141,6 +164,17 @@
 	min-width: 320px;
 }
 
+.loading-card,
+.error-card,
+.empty-card {
+	min-width: 100%;
+	grid-column: 1 / -1;
+}
+
+.error-card {
+	gap: 10px;
+}
+
 .card-header {
 	display: grid;
 	grid-template-columns: auto 1fr auto;
@@ -158,6 +192,13 @@
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
+	overflow: hidden;
+}
+
+.avatar-image {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
 }
 
 .staff-info h3 {
@@ -264,6 +305,31 @@
 	height: 100%;
 	background: linear-gradient(90deg, rgba(56, 161, 121, 0.05), rgba(56, 161, 121, 0.7), rgba(56, 161, 121, 0.05));
 	animation: pendingBar 1.4s ease-in-out infinite;
+}
+
+.pending-header-actions {
+	display: grid;
+	justify-items: end;
+	gap: 8px;
+}
+
+.pending-remove-btn {
+	height: 30px;
+	padding: 0 12px;
+	font-size: 12px;
+	border-color: #fecaca;
+	color: #b91c1c;
+	background: #fff7f7;
+}
+
+.pending-remove-btn:hover:not(:disabled) {
+	background: #fee2e2;
+	border-color: #fca5a5;
+}
+
+.pending-remove-btn:disabled {
+	opacity: 0.65;
+	cursor: not-allowed;
 }
 
 .pending-table tbody td {
@@ -651,4 +717,33 @@
 	.modal-content {
 		max-width: 100%;
 	}
+}
+
+:host-context(body.dark-mode) .staff-toolbar .pill {
+	background: #22344a !important;
+	color: #b7cdee !important;
+	border: 1px solid rgba(107, 142, 187, 0.45) !important;
+}
+
+:host-context(body.dark-mode) .status.pending {
+	background: #21364f !important;
+	color: #9fc0f5 !important;
+	border: 1px solid rgba(96, 139, 205, 0.5) !important;
+}
+
+:host-context(body.dark-mode) .pending-remove-btn {
+	background: #3a232b !important;
+	border-color: rgba(220, 119, 137, 0.55) !important;
+	color: #f1a8b6 !important;
+}
+
+:host-context(body.dark-mode) .pending-remove-btn:hover:not(:disabled) {
+	background: #4a2c36 !important;
+	border-color: rgba(236, 146, 162, 0.75) !important;
+	color: #ffd0d8 !important;
+}
+
+:host-context(body.dark-mode) .pending-remove-btn:disabled {
+	opacity: 0.65 !important;
+	cursor: not-allowed;
 }

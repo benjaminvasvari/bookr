@@ -87,6 +87,11 @@ export const API_ENDPOINTS = {
   STAFF: {
     BY_COMPANY_AND_SERVICES: '/staff/by-company-and-services',
     DASHBOARD: (userId: number) => `/staff/dashboard/${userId}`,
+    OWNER_WITH_APPOINTMENTS: '/staff/getAllStaffForOwnerWithAppointments',
+  },
+  PENDING_STAFF: {
+    INVITE: '/pending-staff/invite',
+    CANCEL_INVITE: (id: number) => `/pending-staff/cancel-invite?id=${id}`,
   },
   DASHBOARDS: {
     OWNER: '/dashboards/owner',

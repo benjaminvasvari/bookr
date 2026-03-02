@@ -6,7 +6,14 @@ import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { API_ENDPOINTS } from '../constants/api-endpoints';
-import { StaffByServicesResponse, StaffDashboardResponse } from '../models/staff.model';
+import {
+  PendingStaffCancelInviteResponse,
+  PendingStaffInviteRequest,
+  PendingStaffInviteResponse,
+  OwnerStaffWithAppointmentsResponse,
+  StaffByServicesResponse,
+  StaffDashboardResponse,
+} from '../models/staff.model';
 
 @Injectable({
   providedIn: 'root'
@@ -43,6 +50,28 @@ export class StaffService {
     return this.http.get<StaffDashboardResponse>(
       `${this.apiUrl}${API_ENDPOINTS.STAFF.DASHBOARD(userId)}`,
       { params }
+    );
+  }
+
+  getAllStaffForOwnerWithAppointments(companyId: number): Observable<OwnerStaffWithAppointmentsResponse> {
+    const params = new HttpParams().set('companyId', companyId.toString());
+
+    return this.http.get<OwnerStaffWithAppointmentsResponse>(
+      `${this.apiUrl}${API_ENDPOINTS.STAFF.OWNER_WITH_APPOINTMENTS}`,
+      { params }
+    );
+  }
+
+  invitePendingStaff(payload: PendingStaffInviteRequest): Observable<PendingStaffInviteResponse> {
+    return this.http.post<PendingStaffInviteResponse>(
+      `${this.apiUrl}${API_ENDPOINTS.PENDING_STAFF.INVITE}`,
+      payload
+    );
+  }
+
+  deletePendingStaff(id: number): Observable<PendingStaffCancelInviteResponse> {
+    return this.http.delete<PendingStaffCancelInviteResponse>(
+      `${this.apiUrl}${API_ENDPOINTS.PENDING_STAFF.CANCEL_INVITE(id)}`
     );
   }
 }

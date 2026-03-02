@@ -538,9 +538,14 @@ body.dark-mode .company-details-container .review-comment,
 body.dark-mode .company-details-container .loading,
 body.dark-mode .company-details-container .no-reviews,
 body.dark-mode .company-details-container .no-services,
-body.dark-mode .company-details-container .error-message p,
-body.dark-mode .company-details-container .avatar-placeholder {
+body.dark-mode .company-details-container .error-message p {
   color: #e2e8f0;
+}
+
+body.dark-mode .company-details-container .avatar-placeholder {
+  color: #f8fafc;
+  background-color: #334a60;
+  border: 1px solid #5d7084;
 }
 
 body.dark-mode .company-details-container .tab-button {
@@ -1552,6 +1557,14 @@ body.dark-mode .owner-dashboard .popup-header p,
 body.dark-mode .owner-dashboard .popup-tile span,
 body.dark-mode .owner-dashboard .notes p {
   color: #cbd5e1 !important;
+}
+
+body.dark-mode .owner-dashboard .kpi-trend.positive {
+  color: #38a179 !important;
+}
+
+body.dark-mode .owner-dashboard .kpi-trend.negative {
+  color: #dc2626 !important;
 }
 
 body.dark-mode .owner-dashboard .search-input,

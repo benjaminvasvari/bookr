@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 
@@ -171,6 +171,15 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
     if (event.target === event.currentTarget) {
       this.closeImagePreview();
     }
+  }
+
+  @HostListener('document:keydown.escape')
+  handleEscapeKey(): void {
+    if (!this.selectedImagePreview) {
+      return;
+    }
+
+    this.closeImagePreview();
   }
 
   loadCompanyDetails(): void {
@@ -417,7 +426,7 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
       }
 
       void this.initializeMap();
-    }, 0);
+    }, 80);
   }
 
   private async initializeMap(): Promise<void> {
@@ -427,6 +436,11 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
 
     const container = this.mapElement?.nativeElement;
     if (!container) {
+      this.scheduleMapInitialization();
+      return;
+    }
+
+    if (container.clientWidth === 0 || container.clientHeight === 0) {
       this.scheduleMapInitialization();
       return;
     }
@@ -441,18 +455,20 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const coordinates =
-      (await this.geocodeAddress(address)) ??
-      this.getCityFallbackCoordinates() ??
-      this.defaultMapCoordinates;
+    const fallbackCoordinates = this.getCityFallbackCoordinates() ?? this.defaultMapCoordinates;
+    const coordinates = await this.resolveCoordinates(address, fallbackCoordinates);
 
     try {
       const L = await this.getLeaflet();
       this.destroyMap();
 
       this.map = L.map(container, {
-        zoomControl: true,
+        zoomControl: false,
         scrollWheelZoom: false,
+        doubleClickZoom: false,
+        boxZoom: false,
+        touchZoom: false,
+        keyboard: false,
       }).setView([coordinates.lat, coordinates.lng], 15);
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -480,11 +496,34 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
 
       this.isMapLoading = false;
       setTimeout(() => this.map?.invalidateSize(), 50);
+      setTimeout(() => this.map?.invalidateSize(), 250);
     } catch (error) {
       console.error('Map initialization error:', error);
       this.isMapLoading = false;
       this.mapError = 'A térkép betöltése közben hiba történt.';
     }
+  }
+
+  private async resolveCoordinates(
+    address: string,
+    fallbackCoordinates: { lat: number; lng: number }
+  ): Promise<{ lat: number; lng: number }> {
+    try {
+      const geocodedCoordinates = await Promise.race([
+        this.geocodeAddress(address),
+        this.waitForMs(2500).then(() => null),
+      ]);
+
+      return geocodedCoordinates ?? fallbackCoordinates;
+    } catch {
+      return fallbackCoordinates;
+    }
+  }
+
+  private waitForMs(milliseconds: number): Promise<void> {
+    return new Promise((resolve) => {
+      window.setTimeout(resolve, milliseconds);
+    });
   }
 
   private async getLeaflet(): Promise<LeafletModule> {

@@ -1,7 +1,10 @@
-import { Component, HostListener } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, HostListener, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
+import { CompaniesService } from '../../../../../core/services/companies.service';
+import { AuthService } from '../../../../../core/services/auth.service';
+import { Company } from '../../../../../core/models/company.model';
+import { BusinessCategory } from '../../../../../core/models/business-category.model';
 
 interface TemporaryClosingPeriod {
   startDate: string;
@@ -28,6 +31,7 @@ interface GalleryImage {
   slotName: string;
   title: string;
   fileName: string;
+  previewUrl: string | null;
 }
 
 interface GallerySettings {
@@ -42,6 +46,13 @@ interface BusinessRules {
   currency: string;
 }
 
+interface CompanyApiData extends Partial<Company> {
+  city?: string;
+  postalCode?: string;
+  country?: string;
+  address?: string;
+}
+
 interface OpeningHour {
   day: string;
   isOpen: boolean;
@@ -54,14 +65,22 @@ type SectionType = 'company' | 'gallery' | 'rules' | 'hours';
 @Component({
   selector: 'app-settings.component',
   standalone: true,
-  imports: [CommonModule, FormsModule, DragDropModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './settings.component.html',
   styleUrls: ['./settings.component.css'],
 })
-export class SettingsComponent {
+export class SettingsComponent implements AfterViewInit, OnInit {
+  @ViewChild('hoursSection') hoursSection?: ElementRef<HTMLElement>;
+  @ViewChild('closuresSection') closuresSection?: ElementRef<HTMLElement>;
+  @ViewChild('closuresHeader') closuresHeader?: ElementRef<HTMLElement>;
+
   readonly paymentMethods = ['Helyszíni fizetés'];
   readonly currencies = ['HUF'];
+  businessCategories: BusinessCategory[] = [];
+  selectedCategoryId: number | null = null;
+  selectedCategoryIdDraft: number | null = null;
   conflictedSection: SectionType | null = null;
+  temporaryListMaxHeight = 430;
 
   editMode: Record<SectionType, boolean> = {
     company: false,
@@ -74,7 +93,7 @@ export class SettingsComponent {
     companyName: 'Bookr Studio',
     description: 'Időpontfoglalásra optimalizált modern szalon, prémium szolgáltatásokkal.',
     category: 'Szépségipar',
-    website: 'https://bookr.hu',
+    website: '',
     ownerName: 'Kiss Anna',
     ownerRole: 'Tulajdonos',
     street: 'Andrássy út 12.',
@@ -89,10 +108,10 @@ export class SettingsComponent {
 
   galleryData: GallerySettings = {
     images: [
-      { slotName: 'Főkép', title: 'Főkép', fileName: 'recepcio.jpg' },
-      { slotName: 'Kép 2', title: 'Kép 2', fileName: 'hajvago.jpg' },
-      { slotName: 'Kép 3', title: 'Kép 3', fileName: 'kozmetika.jpg' },
-      { slotName: 'Kép 4', title: 'Kép 4', fileName: 'termekpolc.jpg' },
+      { slotName: 'Főkép', title: 'Főkép', fileName: '', previewUrl: null },
+      { slotName: 'Kép 2', title: 'Kép 2', fileName: '', previewUrl: null },
+      { slotName: 'Kép 3', title: 'Kép 3', fileName: '', previewUrl: null },
+      { slotName: 'Kép 4', title: 'Kép 4', fileName: '', previewUrl: null },
     ],
   };
 
@@ -128,6 +147,20 @@ export class SettingsComponent {
     },
   ];
 
+  constructor(
+    private companiesService: CompaniesService,
+    private authService: AuthService
+  ) {}
+
+  ngOnInit(): void {
+    this.loadBusinessCategories();
+    this.loadCompanyInfo();
+  }
+
+  ngAfterViewInit(): void {
+    this.scheduleTemporaryListHeightSync();
+  }
+
   startEdit(section: SectionType): void {
     const activeSection = this.getActiveEditSection();
 
@@ -140,6 +173,7 @@ export class SettingsComponent {
 
     if (section === 'company') {
       this.companyDraft = this.clone(this.companyData);
+      this.selectedCategoryIdDraft = this.selectedCategoryId;
     }
 
     if (section === 'gallery') {
@@ -179,12 +213,18 @@ export class SettingsComponent {
   }
 
   cancelEdit(section: SectionType): void {
+    if (section === 'company') {
+      this.selectedCategoryIdDraft = this.selectedCategoryId;
+    }
+
     this.editMode[section] = false;
     this.conflictedSection = null;
   }
 
   saveEdit(section: SectionType): void {
     if (section === 'company') {
+      this.selectedCategoryId = this.selectedCategoryIdDraft;
+      this.companyDraft.category = this.getCategoryNameById(this.selectedCategoryId) || '';
       this.companyData = this.clone(this.companyDraft);
     }
 
@@ -242,6 +282,8 @@ export class SettingsComponent {
       endDate: '',
       reason: '',
     });
+
+    this.scheduleTemporaryListHeightSync();
   }
 
   removeTemporaryClosure(index: number): void {
@@ -251,18 +293,17 @@ export class SettingsComponent {
         endDate: '',
         reason: '',
       };
+      this.scheduleTemporaryListHeightSync();
       return;
     }
 
     this.temporaryClosures.splice(index, 1);
+    this.scheduleTemporaryListHeightSync();
   }
 
-  onGalleryDrop(event: CdkDragDrop<GalleryImage[]>): void {
-    if (event.previousIndex === event.currentIndex) {
-      return;
-    }
-
-    moveItemInArray(this.galleryDraft.images, event.previousIndex, event.currentIndex);
+  @HostListener('window:resize')
+  onWindowResize(): void {
+    this.scheduleTemporaryListHeightSync();
   }
 
   onGalleryFileSelected(index: number, event: Event): void {
@@ -273,12 +314,52 @@ export class SettingsComponent {
       return;
     }
 
-    this.galleryDraft.images[index].fileName = file.name;
+    if (!file.type.startsWith('image/')) {
+      input.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (loadEvent) => {
+      this.galleryDraft.images[index].previewUrl = (loadEvent.target?.result as string) || null;
+      this.galleryDraft.images[index].fileName = file.name;
+    };
+    reader.readAsDataURL(file);
+
     input.value = '';
+  }
+
+  clearGalleryImage(index: number): void {
+    this.galleryDraft.images[index].previewUrl = null;
+    this.galleryDraft.images[index].fileName = '';
   }
 
   private clone<T>(value: T): T {
     return JSON.parse(JSON.stringify(value));
+  }
+
+  private scheduleTemporaryListHeightSync(): void {
+    requestAnimationFrame(() => this.syncTemporaryListHeight());
+  }
+
+  private syncTemporaryListHeight(): void {
+    const hoursElement = this.hoursSection?.nativeElement;
+    const closuresElement = this.closuresSection?.nativeElement;
+    const closuresHeaderElement = this.closuresHeader?.nativeElement;
+
+    if (!hoursElement || !closuresElement || !closuresHeaderElement) {
+      return;
+    }
+
+    const hoursHeight = hoursElement.getBoundingClientRect().height;
+    const closuresStyles = window.getComputedStyle(closuresElement);
+    const closuresPaddingTop = Number.parseFloat(closuresStyles.paddingTop) || 0;
+    const closuresPaddingBottom = Number.parseFloat(closuresStyles.paddingBottom) || 0;
+    const closuresGap = Number.parseFloat(closuresStyles.rowGap || closuresStyles.gap) || 0;
+    const closuresHeaderHeight = closuresHeaderElement.getBoundingClientRect().height;
+
+    const nextMaxHeight = hoursHeight - closuresPaddingTop - closuresPaddingBottom - closuresHeaderHeight - closuresGap;
+    this.temporaryListMaxHeight = Math.max(180, Math.floor(nextMaxHeight));
   }
 
   private getActiveEditSection(): SectionType | null {
@@ -299,6 +380,136 @@ export class SettingsComponent {
     }
 
     return null;
+  }
+
+  private loadCompanyInfo(): void {
+    const user = this.authService.getCurrentUser();
+    const companyId = user?.companyId;
+
+    if (!companyId) {
+      return;
+    }
+
+    this.companiesService.getCompanyById(companyId).subscribe({
+      next: (response) => {
+        const company = this.unwrapCompanyResponse(response);
+        this.companyData = {
+          companyName: company.name?.trim() || this.companyData.companyName,
+          description: company.description?.trim() || this.companyData.description,
+          category: company.category?.trim() || '',
+          website: company.website?.trim() ?? '',
+          ownerName: this.getOwnerDisplayName(),
+          ownerRole: this.companyData.ownerRole,
+          street: company.addressDetails?.street?.trim() || company.address?.trim() || this.companyData.street,
+          city: company.addressDetails?.city?.trim() || company.city?.trim() || this.companyData.city,
+          zipCode: company.addressDetails?.postalCode?.trim() || company.postalCode?.trim() || this.companyData.zipCode,
+          country: company.addressDetails?.country?.trim() || company.country?.trim() || this.companyData.country,
+          phone: company.phone?.trim() || this.companyData.phone,
+          email: company.email?.trim() || this.companyData.email,
+        };
+
+        this.selectedCategoryId = this.resolveCategoryId(company);
+        this.selectedCategoryIdDraft = this.selectedCategoryId;
+
+        const categoryName = this.getCategoryNameById(this.selectedCategoryId);
+        if (categoryName) {
+          this.companyData.category = categoryName;
+        }
+
+        this.companyDraft = this.clone(this.companyData);
+      },
+      error: (error) => {
+        console.error('Nem sikerült betölteni a céginformációkat a beállítások oldalon:', error);
+      },
+    });
+  }
+
+  onCategoryDropdownChange(event: Event): void {
+    const selectElement = event.target as HTMLSelectElement;
+    const selectedId = Number.parseInt(selectElement.value, 10);
+    this.selectedCategoryIdDraft = Number.isFinite(selectedId) ? selectedId : null;
+    this.companyDraft.category = this.getCategoryNameById(this.selectedCategoryIdDraft) || '';
+  }
+
+  private loadBusinessCategories(): void {
+    this.companiesService.getBusinessCategories().subscribe({
+      next: (categories) => {
+        this.businessCategories = categories;
+
+        if (this.selectedCategoryId === null && this.companyData.category.trim()) {
+          this.selectedCategoryId = this.resolveCategoryIdFromText(this.companyData.category);
+          this.selectedCategoryIdDraft = this.selectedCategoryId;
+        }
+
+        const selectedName = this.getCategoryNameById(this.selectedCategoryId);
+        if (selectedName) {
+          this.companyData.category = selectedName;
+          this.companyDraft.category = this.companyData.category;
+        }
+      },
+      error: (error) => {
+        console.error('Nem sikerült betölteni az üzleti kategóriákat:', error);
+      },
+    });
+  }
+
+  private resolveCategoryId(company: CompanyApiData): number | null {
+    if (Number.isFinite(company.businessCategoryId)) {
+      return company.businessCategoryId as number;
+    }
+
+    const categoryText = company.category?.trim() ?? '';
+    if (!categoryText) {
+      return null;
+    }
+
+    return this.resolveCategoryIdFromText(categoryText);
+  }
+
+  private getCategoryNameById(categoryId: number | null): string | null {
+    if (categoryId === null || this.businessCategories.length === 0) {
+      return null;
+    }
+
+    const category = this.businessCategories.find((item) => item.id === categoryId);
+    return category?.name ?? null;
+  }
+
+  private resolveCategoryIdFromText(categoryText: string): number | null {
+    if (!categoryText.trim() || this.businessCategories.length === 0) {
+      return null;
+    }
+
+    const firstName = categoryText
+      .split(',')
+      .map((name) => name.trim())
+      .find((name) => name.length > 0);
+
+    if (!firstName) {
+      return null;
+    }
+
+    const match = this.businessCategories.find(
+      (category) => category.name.toLowerCase() === firstName.toLowerCase()
+    );
+
+    return match?.id ?? null;
+  }
+
+  private getOwnerDisplayName(): string {
+    const user = this.authService.getCurrentUser();
+    const firstName = user?.firstName?.trim() || '';
+    const lastName = user?.lastName?.trim() || '';
+    const fullName = `${firstName} ${lastName}`.trim();
+    return fullName || this.companyData.ownerName;
+  }
+
+  private unwrapCompanyResponse(response: Company | { result?: CompanyApiData }): CompanyApiData {
+    if (response && typeof response === 'object' && 'result' in response && response.result) {
+      return response.result;
+    }
+
+    return response as CompanyApiData;
   }
 
 }

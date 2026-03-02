@@ -5,14 +5,8 @@
 			<span class="topbar-kicker">Owner Dashboard</span>
 			<h1>Beállítások</h1>
 			<p class="subtitle">Itt kezelheted a cégprofil adatait, képeket és foglalási szabályokat.</p>
-			<div class="topbar-pills">
-				<span class="pill">Mock adatok</span>
-				<span class="pill">Inline szerkesztés</span>
-				<span class="pill">Backend nélkül</span>
-			</div>
 		</div>
 		<div class="actions">
-			<button class="btn ghost" type="button" (click)="resetAll()">Visszaállítás</button>
 			<button class="btn primary" type="button" (click)="saveAllMock()">Mentés</button>
 		</div>
 	</header>
@@ -56,10 +50,21 @@
 				</section>
 
 				<div class="details-grid details-grid-3">
-					<div class="detail-item"><p class="label">Kategória</p>@if (!editMode.company) {<p class="value">{{ companyData.category }}</p>} @else {<input class="edit-input card-input" type="text" [(ngModel)]="companyDraft.category" />}</div>
-					<div class="detail-item"><p class="label">Weboldal</p>@if (!editMode.company) {<p class="value">{{ companyData.website }}</p>} @else {<input class="edit-input card-input" type="text" [(ngModel)]="companyDraft.website" />}</div>
+					<div class="detail-item">
+						<p class="label">Kategória</p>
+						@if (!editMode.company) {
+						<p class="value">{{ companyData.category || 'Nincs megadva' }}</p>
+						} @else {
+						<select class="edit-input card-input category-select" (change)="onCategoryDropdownChange($event)">
+							<option [selected]="selectedCategoryIdDraft === null" value="">Válassz kategóriát</option>
+							@for (category of businessCategories; track category.id) {
+							<option [value]="category.id" [selected]="selectedCategoryIdDraft === category.id">{{ category.name }}</option>
+							}
+						</select>
+						}
+					</div>
+					<div class="detail-item"><p class="label">Weboldal</p>@if (!editMode.company) {<p class="value">{{ companyData.website || 'Nincs megadva' }}</p>} @else {<input class="edit-input card-input" type="text" [(ngModel)]="companyDraft.website" />}</div>
 					<div class="detail-item"><p class="label">Tulajdonos</p>@if (!editMode.company) {<p class="value">{{ companyData.ownerName }}</p>} @else {<input class="edit-input card-input" type="text" [(ngModel)]="companyDraft.ownerName" />}</div>
-					<div class="detail-item"><p class="label">Szerepkör</p>@if (!editMode.company) {<p class="value">{{ companyData.ownerRole }}</p>} @else {<input class="edit-input card-input" type="text" [(ngModel)]="companyDraft.ownerRole" />}</div>
 					<div class="detail-item"><p class="label">Telefonszám</p>@if (!editMode.company) {<p class="value">{{ companyData.phone }}</p>} @else {<input class="edit-input card-input" type="text" [(ngModel)]="companyDraft.phone" />}</div>
 					<div class="detail-item"><p class="label">Email</p>@if (!editMode.company) {<p class="value">{{ companyData.email }}</p>} @else {<input class="edit-input card-input" type="email" [(ngModel)]="companyDraft.email" />}</div>
 					<div class="detail-item"><p class="label">Utca</p>@if (!editMode.company) {<p class="value">{{ companyData.street }}</p>} @else {<input class="edit-input card-input" type="text" [(ngModel)]="companyDraft.street" />}</div>
@@ -93,36 +98,45 @@
 
 			@if (!editMode.gallery) {
 			<div class="image-layout">
-				<div class="image-main">{{ galleryData.images[0].title }}</div>
-				<div class="image-thumb" *ngFor="let image of galleryData.images; let i = index" [class.hidden-thumb]="i === 0">
+				<div class="image-main">
+					@if (galleryData.images[0].previewUrl) {
+					<img [src]="galleryData.images[0].previewUrl" alt="Főkép" class="gallery-preview-image" />
+					} @else {
+					{{ galleryData.images[0].title }}
+					}
+				</div>
+				<div class="image-thumb" *ngFor="let image of galleryData.images.slice(1)">
+					@if (image.previewUrl) {
+					<img [src]="image.previewUrl" [alt]="image.title" class="gallery-preview-image" />
+					} @else {
 					{{ image.title }}
+					}
 				</div>
 			</div>
 			} @else {
-			<div class="gallery-edit-list" cdkDropList [cdkDropListData]="galleryDraft.images" (cdkDropListDropped)="onGalleryDrop($event)">
-				<div class="gallery-edit-item" cdkDrag *ngFor="let image of galleryDraft.images; let i = index">
-					<div class="drag-handle" cdkDragHandle title="Húzd a sor rendezéséhez">
-						<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-							<path d="M4 7h16v2H4V7zm0 4h16v2H4v-2zm0 4h16v2H4v-2z" />
-						</svg>
+			<div class="gallery-edit-grid">
+				<div class="gallery-slot-card" *ngFor="let image of galleryDraft.images; let i = index" [class.slot-main]="i === 0">
+					@if (image.previewUrl) {
+					<img [src]="image.previewUrl" [alt]="image.title" class="gallery-preview-image" />
+					<div class="gallery-slot-overlay">
+						<button class="slot-action danger" type="button" (click)="clearGalleryImage(i)">Törlés</button>
+						<label class="slot-action" [for]="'gallery-file-' + i">Csere</label>
 					</div>
-					<div class="gallery-item-head">
-						<p class="gallery-slot">{{ image.slotName }}</p>
-						@if (i === 0) {
-						<span class="cover-badge">Főkép</span>
-						}
-					</div>
-
-					<div class="gallery-file-row">
-						<p class="gallery-file-name">{{ image.fileName || 'Nincs kiválasztott fájl' }}</p>
-						<label class="btn ghost file-pick-btn" [for]="'gallery-file-' + i">Fájl kiválasztása</label>
-						<input class="gallery-file-input" [id]="'gallery-file-' + i" type="file" accept="image/*" (change)="onGalleryFileSelected(i, $event)" />
-					</div>
+					} @else {
+					<label class="gallery-slot-empty" [for]="'gallery-file-' + i">
+						<span class="gallery-empty-plus">+</span>
+						<span>{{ i === 0 ? 'Főkép' : image.slotName }}</span>
+					</label>
+					}
+					@if (i === 0) {
+					<span class="cover-badge">Főkép</span>
+					}
+					<input class="gallery-file-input" [id]="'gallery-file-' + i" type="file" accept="image/*" (change)="onGalleryFileSelected(i, $event)" />
 				</div>
 			</div>
 			}
 
-			<p class="hint">Szerkesztéskor a sorrend módosítható, és helyi fájl is kiválasztható (mock, backend nélkül).</p>
+			<p class="hint">Szerkesztéskor képet adhatsz hozzá, cserélhetsz vagy törölhetsz.</p>
 		</article>
 
 		<article class="settings-section section-rules" [class.conflict-card]="conflictedSection === 'rules'">
@@ -155,7 +169,7 @@
 			</div>
 		</article>
 
-		<article class="settings-section section-hours" [class.conflict-card]="conflictedSection === 'hours'">
+		<article class="settings-section section-hours" [class.conflict-card]="conflictedSection === 'hours'" #hoursSection>
 			<header class="section-header">
 				<div>
 					<h2>Nyitvatartás</h2>
@@ -190,14 +204,18 @@
 					@if (!editMode.hours) {
 					<span class="status" [class.open]="hour.isOpen" [class.closed]="!hour.isOpen">{{ hour.isOpen ? 'Nyitva' : 'Zárva' }}</span>
 					} @else {
-					<label class="toggle-wrap"><input type="checkbox" [(ngModel)]="hour.isOpen" /> Nyitva</label>
+					<label class="toggle-wrap" [class.is-open]="hour.isOpen" [class.is-closed]="!hour.isOpen">
+						<input type="checkbox" [(ngModel)]="hour.isOpen" />
+						<span class="toggle-indicator"></span>
+						<span class="toggle-text">{{ hour.isOpen ? 'Nyitva' : 'Zárva' }}</span>
+					</label>
 					}
 				</div>
 			</div>
 		</article>
 
-		<article class="settings-section section-closures">
-			<header class="section-header">
+		<article class="settings-section section-closures" #closuresSection>
+			<header class="section-header" #closuresHeader>
 				<div>
 					<h2>Ideiglenes zárvatartások</h2>
 					<p class="section-subtitle">Szabadság, ünnep vagy felújítás miatti zárvatartás</p>
@@ -205,7 +223,7 @@
 				<button class="btn ghost" type="button" (click)="addTemporaryClosure()">+ Új időszak</button>
 			</header>
 
-			<div class="temporary-list">
+			<div class="temporary-list" [style.max-height.px]="temporaryListMaxHeight">
 				<div class="temporary-row" *ngFor="let period of temporaryClosures; let i = index">
 					<div class="field-group start-field">
 						<label [for]="'start-' + i">Kezdő dátum</label>
