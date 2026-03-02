@@ -2,9 +2,11 @@ import { AfterViewInit, Component, ElementRef, HostListener, OnInit, ViewChild }
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CompaniesService } from '../../../../../core/services/companies.service';
+import { CompanyImage } from '../../../../../core/services/companies.service';
 import { AuthService } from '../../../../../core/services/auth.service';
 import { Company } from '../../../../../core/models/company.model';
 import { BusinessCategory } from '../../../../../core/models/business-category.model';
+import { environment } from '../../../../../../environments/environment';
 
 interface TemporaryClosingPeriod {
   startDate: string;
@@ -81,6 +83,10 @@ export class SettingsComponent implements AfterViewInit, OnInit {
   selectedCategoryIdDraft: number | null = null;
   conflictedSection: SectionType | null = null;
   temporaryListMaxHeight = 430;
+  isImagePreviewOpen = false;
+  imagePreviewUrl: string | null = null;
+  private companyMainImageUrl: string | null = null;
+  private companyGalleryApiImages: CompanyImage[] = [];
 
   editMode: Record<SectionType, boolean> = {
     company: false,
@@ -155,6 +161,7 @@ export class SettingsComponent implements AfterViewInit, OnInit {
   ngOnInit(): void {
     this.loadBusinessCategories();
     this.loadCompanyInfo();
+    this.loadCompanyImages();
   }
 
   ngAfterViewInit(): void {
@@ -306,6 +313,13 @@ export class SettingsComponent implements AfterViewInit, OnInit {
     this.scheduleTemporaryListHeightSync();
   }
 
+  @HostListener('document:keydown.escape')
+  onEscapePress(): void {
+    if (this.isImagePreviewOpen) {
+      this.closeImagePreview();
+    }
+  }
+
   onGalleryFileSelected(index: number, event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
@@ -332,6 +346,20 @@ export class SettingsComponent implements AfterViewInit, OnInit {
   clearGalleryImage(index: number): void {
     this.galleryDraft.images[index].previewUrl = null;
     this.galleryDraft.images[index].fileName = '';
+  }
+
+  openImagePreview(imageUrl: string | null): void {
+    if (!imageUrl) {
+      return;
+    }
+
+    this.imagePreviewUrl = imageUrl;
+    this.isImagePreviewOpen = true;
+  }
+
+  closeImagePreview(): void {
+    this.isImagePreviewOpen = false;
+    this.imagePreviewUrl = null;
   }
 
   private clone<T>(value: T): T {
@@ -417,11 +445,70 @@ export class SettingsComponent implements AfterViewInit, OnInit {
         }
 
         this.companyDraft = this.clone(this.companyData);
+        this.companyMainImageUrl = company.imageUrl?.trim()
+          ? this.toAbsoluteImageUrl(company.imageUrl)
+          : null;
+        this.syncGalleryFromApiSources();
       },
       error: (error) => {
         console.error('Nem sikerült betölteni a céginformációkat a beállítások oldalon:', error);
       },
     });
+  }
+
+  private loadCompanyImages(): void {
+    const user = this.authService.getCurrentUser();
+    const companyId = user?.companyId;
+
+    if (!companyId) {
+      return;
+    }
+
+    this.companiesService.getCompanyImages(companyId).subscribe({
+      next: (images) => {
+        this.companyGalleryApiImages = images;
+        this.syncGalleryFromApiSources();
+      },
+      error: (error) => {
+        console.error('Nem sikerült betölteni a cég képeit a beállítások oldalon:', error);
+      },
+    });
+  }
+
+  private syncGalleryFromApiSources(): void {
+    const defaultSlots: GalleryImage[] = [
+      { slotName: 'Főkép', title: 'Főkép', fileName: '', previewUrl: null },
+      { slotName: 'Kép 2', title: 'Kép 2', fileName: '', previewUrl: null },
+      { slotName: 'Kép 3', title: 'Kép 3', fileName: '', previewUrl: null },
+      { slotName: 'Kép 4', title: 'Kép 4', fileName: '', previewUrl: null },
+    ];
+
+    const normalizedApiImages = this.companyGalleryApiImages
+      .map((image) => ({
+        ...image,
+        absoluteUrl: this.toAbsoluteImageUrl(image.url || ''),
+      }))
+      .filter((image) => Boolean(image.absoluteUrl));
+
+    const mainFromApi = normalizedApiImages.find((image) => image.isMain)?.absoluteUrl || null;
+    const otherApiUrls = normalizedApiImages
+      .map((image) => image.absoluteUrl)
+      .filter((url) => url !== mainFromApi);
+
+    const preferredMain = mainFromApi || this.companyMainImageUrl;
+    const mergedUrls = [preferredMain, ...otherApiUrls].filter((url): url is string => Boolean(url));
+    const uniqueUrls = Array.from(new Set(mergedUrls)).slice(0, defaultSlots.length);
+
+    uniqueUrls.forEach((url, index) => {
+      defaultSlots[index].previewUrl = url;
+      defaultSlots[index].fileName = this.extractFileName(url);
+    });
+
+    this.galleryData = { images: defaultSlots };
+
+    if (!this.editMode.gallery) {
+      this.galleryDraft = this.clone(this.galleryData);
+    }
   }
 
   onCategoryDropdownChange(event: Event): void {
@@ -510,6 +597,26 @@ export class SettingsComponent implements AfterViewInit, OnInit {
     }
 
     return response as CompanyApiData;
+  }
+
+  private toAbsoluteImageUrl(url: string): string {
+    const trimmedUrl = url.trim();
+
+    if (!trimmedUrl) {
+      return '';
+    }
+
+    if (/^https?:\/\//i.test(trimmedUrl)) {
+      return trimmedUrl;
+    }
+
+    const apiRoot = environment.apiUrl.replace(/\/api\/?$/, '');
+    const relativePath = trimmedUrl.startsWith('/') ? trimmedUrl : `/${trimmedUrl}`;
+    return `${apiRoot}${relativePath}`;
+  }
+
+  private extractFileName(url: string): string {
+    return url.split('/').pop() || '';
   }
 
 }

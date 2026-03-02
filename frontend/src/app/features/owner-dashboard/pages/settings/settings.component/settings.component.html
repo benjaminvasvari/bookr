@@ -2,7 +2,6 @@
 	<div class="settings-shell">
 	<header class="settings-topbar">
 		<div class="title-wrap">
-			<span class="topbar-kicker">Owner Dashboard</span>
 			<h1>Beállítások</h1>
 			<p class="subtitle">Itt kezelheted a cégprofil adatait, képeket és foglalási szabályokat.</p>
 		</div>
@@ -98,14 +97,14 @@
 
 			@if (!editMode.gallery) {
 			<div class="image-layout">
-				<div class="image-main">
+				<div class="image-main" [class.previewable]="!!galleryData.images[0].previewUrl" (click)="openImagePreview(galleryData.images[0].previewUrl)">
 					@if (galleryData.images[0].previewUrl) {
 					<img [src]="galleryData.images[0].previewUrl" alt="Főkép" class="gallery-preview-image" />
 					} @else {
 					{{ galleryData.images[0].title }}
 					}
 				</div>
-				<div class="image-thumb" *ngFor="let image of galleryData.images.slice(1)">
+				<div class="image-thumb" *ngFor="let image of galleryData.images.slice(1)" [class.previewable]="!!image.previewUrl" (click)="openImagePreview(image.previewUrl)">
 					@if (image.previewUrl) {
 					<img [src]="image.previewUrl" [alt]="image.title" class="gallery-preview-image" />
 					} @else {
@@ -117,6 +116,11 @@
 			<div class="gallery-edit-grid">
 				<div class="gallery-slot-card" *ngFor="let image of galleryDraft.images; let i = index" [class.slot-main]="i === 0">
 					@if (image.previewUrl) {
+					<button class="image-preview-icon-btn" type="button" (click)="openImagePreview(image.previewUrl)">
+						<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+							<path d="M4 9V4h5v2H6v3H4Zm10-5h6v6h-2V6h-4V4ZM4 15h2v3h3v2H4v-5Zm14 3v-3h2v5h-5v-2h3Z"></path>
+						</svg>
+					</button>
 					<img [src]="image.previewUrl" [alt]="image.title" class="gallery-preview-image" />
 					<div class="gallery-slot-overlay">
 						<button class="slot-action danger" type="button" (click)="clearGalleryImage(i)">Törlés</button>
@@ -137,6 +141,15 @@
 			}
 
 			<p class="hint">Szerkesztéskor képet adhatsz hozzá, cserélhetsz vagy törölhetsz.</p>
+
+			@if (isImagePreviewOpen && imagePreviewUrl) {
+			<div class="image-preview-modal" (click)="closeImagePreview()">
+				<div class="image-preview-dialog" (click)="$event.stopPropagation()">
+					<button class="image-preview-close" type="button" (click)="closeImagePreview()" aria-label="Kép bezárása">×</button>
+					<img [src]="imagePreviewUrl" alt="Nagyított kép" class="image-preview-full" />
+				</div>
+			</div>
+			}
 		</article>
 
 		<article class="settings-section section-rules" [class.conflict-card]="conflictedSection === 'rules'">

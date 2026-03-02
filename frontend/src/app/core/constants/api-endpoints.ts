@@ -84,6 +84,10 @@ export const API_ENDPOINTS = {
       `/users/getClientsByCompany?companyId=${companyId}&page=${page}&pageSize=${pageSize}`,
   },
 
+  IMAGES: {
+    BY_COMPANY: (companyId: number) => `/images/getCompanyImages?companyId=${companyId}`,
+  },
+
   STAFF: {
     BY_COMPANY_AND_SERVICES: '/staff/by-company-and-services',
     DASHBOARD: (userId: number) => `/staff/dashboard/${userId}`,

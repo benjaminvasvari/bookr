@@ -10,6 +10,16 @@ import { ServiceCategory } from '../models/service.model';
 import { CompanyRegistrationRequest } from '../models/company-registration.model';
 import { BusinessCategory } from '../models/business-category.model';
 
+export interface CompanyImage {
+  id: number;
+  isMain: boolean;
+  uploadedAt?: string;
+  url: string;
+}
+
+interface CompanyImagesResponse {
+  result?: CompanyImage[];
+}
 
 
 @Injectable({
@@ -112,5 +122,11 @@ export class CompaniesService {
    */
   registerCompany(data: CompanyRegistrationRequest): Observable<any> {
     return this.http.post(`${this.apiUrl}${API_ENDPOINTS.COMPANIES.REGISTER}`, data);
+  }
+
+  getCompanyImages(companyId: number): Observable<CompanyImage[]> {
+    return this.http
+      .get<CompanyImagesResponse>(`${this.apiUrl}${API_ENDPOINTS.IMAGES.BY_COMPANY(companyId)}`)
+      .pipe(map((response) => response.result || []));
   }
 }
