@@ -184,15 +184,14 @@ public class StaffService {
 
             JSONArray result = new JSONArray();
 
-            for (Staff actualStaff : modelResult) {
+            for (int i = modelResult.size() - 1; i >= 0; i--) {
+                Staff actualStaff = modelResult.get(i);
                 JSONObject actualStaffObject = new JSONObject();
-
                 actualStaffObject.put("id", actualStaff.getId());
                 actualStaffObject.put("displayName", actualStaff.getDisplayName());
                 actualStaffObject.put("specialties", actualStaff.getSpecialties());
                 actualStaffObject.put("bio", actualStaff.getBio() != null ? actualStaff.getBio() : JSONObject.NULL);
                 actualStaffObject.put("imageUrl", actualStaff.getImageUrl() != null ? FileStorageUtil.buildFullUrl(actualStaff.getImageUrl()) : null);
-
                 result.put(actualStaffObject);
             }
 
