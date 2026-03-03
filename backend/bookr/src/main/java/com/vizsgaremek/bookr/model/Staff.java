@@ -165,6 +165,13 @@ public class Staff implements Serializable {
 
     }
 
+    public Staff(Integer id, String displayName, String specialties, String bio) {
+        this.id = id;
+        this.displayName = displayName;
+        this.specialties = specialties;
+        this.bio = bio;
+    }
+
     public Integer getId() {
         return id;
     }
@@ -535,4 +542,6 @@ public class Staff implements Serializable {
             em.close();
         }
     }
+
+
 }

@@ -16,8 +16,10 @@ import com.vizsgaremek.bookr.security.JWT;
 import static com.vizsgaremek.bookr.util.ErrorResponseBuilder.buildErrorResponseJSON;
 import com.vizsgaremek.bookr.util.FileStorageUtil;
 import java.text.SimpleDateFormat;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
@@ -614,7 +616,6 @@ public class CompaniesService {
             // Sikeres válasz összeállítása
             JSONObject result = new JSONObject();
 
-
             result.put("id", modelResult.getId());
             result.put("name", modelResult.getName());
             result.put("description", modelResult.getDescription());
@@ -628,6 +629,92 @@ public class CompaniesService {
             result.put("createdAt", modelResult.getCancellationHours());
 
             toReturn.put("result", result);
+
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            status = "InternalServerError";
+            statusCode = 500;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+        }
+
+        return toReturn;
+    }
+
+    public JSONObject getCompanyBookingRules(Integer id) {
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        try {
+
+            // Adatbázis lekérdezés
+            Companies modelResult = Companies.getCompanyBookingRules(id);
+
+            // NULL ELLENŐRZÉS
+            if (modelResult == null) {
+                status = "NotFound";
+                statusCode = 404;
+                toReturn.put("status", status);
+                toReturn.put("statusCode", statusCode);
+                toReturn.put("message", "No company found");
+                return toReturn;
+            }
+
+            // Sikeres válasz összeállítása
+            JSONObject result = new JSONObject();
+
+            result.put("bookingAdvanceDays", modelResult.getBookingAdvanceDays());
+            result.put("cancellationHours", modelResult.getCancellationHours());
+            if (modelResult.getAllowSameDayBooking()) {
+                result.put("minimumBookingHoursAhead", modelResult.getMinimumBookingHoursAhead());
+            } else {
+                result.put("minimumBookingHoursAhead", JSONObject.NULL);
+            }
+
+            toReturn.put("result", result);
+
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            status = "InternalServerError";
+            statusCode = 500;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+        }
+
+        return toReturn;
+    }
+
+    public JSONObject updateCompanyBookingRules(Integer id, Companies request) {
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        try {
+
+            if (request.getMinimumBookingHoursAhead() == null) {
+                request.setAllowSameDayBooking(Boolean.FALSE);
+            } else if (request.getMinimumBookingHoursAhead() != null && request.getMinimumBookingHoursAhead() > 0) {
+                request.setAllowSameDayBooking(Boolean.TRUE);
+            }
+
+            // Adatbázis lekérdezés
+            Boolean modelResult = Companies.updateCompanyBookingRules(id, request);
+
+            // NULL ELLENŐRZÉS
+            if (modelResult == null || !modelResult) {
+                status = "NotFound";
+                statusCode = 404;
+                toReturn.put("status", status);
+                toReturn.put("statusCode", statusCode);
+                return toReturn;
+            }
 
             toReturn.put("status", status);
             toReturn.put("statusCode", statusCode);

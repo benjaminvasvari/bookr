@@ -174,4 +174,26 @@ public class StaffController {
                 .build();
     }
 
+    @GET
+    @Path("getForIndustryPage")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response getStaffByCompanyForIndustryPage(@QueryParam("companyId") Integer companyId) {
+
+        Boolean isCompanyExist = CompaniesService.validateCompanyExist(companyId);
+
+        if (!isCompanyExist) {
+            return buildErrorResponse(400, "CompanyNotExist");
+        } else if (isCompanyExist == null) {
+            return buildErrorResponse(500, "InternalServerError");
+        }
+
+        JSONObject toReturn = layer.getStaffByCompanyForIndustryPage(companyId);
+
+        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                .entity(toReturn.toString())
+                .type(MediaType.APPLICATION_JSON)
+                .build();
+    }
+
 }

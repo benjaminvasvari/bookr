@@ -473,4 +473,87 @@ public class OpeningHours implements Serializable {
             }
         }
     }
+
+    public static Boolean updateOpeningHours(Integer companyId, Map<String, String> openingHoursMap) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            // Feldolgozzuk a Map-et és átadjuk a stored procedure-nek
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("updateOpeningHours");
+
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("mondayOpenIN", Time.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("mondayCloseIN", Time.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("mondayClosedIN", Boolean.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("tuesdayOpenIN", Time.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("tuesdayCloseIN", Time.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("tuesdayClosedIN", Boolean.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("wednesdayOpenIN", Time.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("wednesdayCloseIN", Time.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("wednesdayClosedIN", Boolean.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("thursdayOpenIN", Time.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("thursdayCloseIN", Time.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("thursdayClosedIN", Boolean.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("fridayOpenIN", Time.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("fridayCloseIN", Time.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("fridayClosedIN", Boolean.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("saturdayOpenIN", Time.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("saturdayCloseIN", Time.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("saturdayClosedIN", Boolean.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("sundayOpenIN", Time.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("sundayCloseIN", Time.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("sundayClosedIN", Boolean.class, ParameterMode.IN);
+
+            spq.setParameter("companyIdIN", companyId);
+
+            // Feldolgozzuk minden napot
+            String[] days = {"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"};
+
+            for (String day : days) {
+                String dayHours = openingHoursMap.get(day);
+
+                if (dayHours == null || dayHours.trim().isEmpty() || dayHours.equalsIgnoreCase("closed")) {
+                    // Zárva van - HELPER METÓDUS használata NULL-okhoz
+                    StoredProcedureUtil.setNullableParameter(spq, day + "OpenIN", null);
+                    StoredProcedureUtil.setNullableParameter(spq, day + "CloseIN", null);
+                    spq.setParameter(day + "ClosedIN", true);  // Ez nem NULL, simán beállítható
+                } else {
+                    // Nyitva van, feldolgozzuk az időt (pl. "09:00-17:00")
+                    String[] times = dayHours.split("-");
+
+                    if (times.length == 2) {
+                        try {
+                            Time openTime = Time.valueOf(times[0].trim() + ":00");
+                            Time closeTime = Time.valueOf(times[1].trim() + ":00");
+
+                            spq.setParameter(day + "OpenIN", openTime);
+                            spq.setParameter(day + "CloseIN", closeTime);
+                            spq.setParameter(day + "ClosedIN", false);
+                        } catch (IllegalArgumentException e) {
+                            // Hibás formátum esetén zárva van - HELPER METÓDUS használata
+                            StoredProcedureUtil.setNullableParameter(spq, day + "OpenIN", null);
+                            StoredProcedureUtil.setNullableParameter(spq, day + "CloseIN", null);
+                            spq.setParameter(day + "ClosedIN", true);
+                        }
+                    } else {
+                        // Hibás formátum esetén zárva van - HELPER METÓDUS használata
+                        StoredProcedureUtil.setNullableParameter(spq, day + "OpenIN", null);
+                        StoredProcedureUtil.setNullableParameter(spq, day + "CloseIN", null);
+                        spq.setParameter(day + "ClosedIN", true);
+                    }
+                }
+            }
+
+            spq.execute();
+            return true;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return false;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
 }

@@ -51,7 +51,7 @@ public class StaffService {
                 actualStaffObject.put("userId", actualStaff.getUserIdInt());
                 actualStaffObject.put("displayName", actualStaff.getDisplayName());
                 actualStaffObject.put("specialties", actualStaff.getSpecialties());
-                actualStaffObject.put("bio", actualStaff.getBio());
+                actualStaffObject.put("bio", actualStaff.getBio() != null ? actualStaff.getBio() : JSONObject.NULL);
                 actualStaffObject.put("isActive", actualStaff.getIsActive());
                 actualStaffObject.put("companyId", actualStaff.getCompanyIdInt());
                 actualStaffObject.put("firstName", actualStaff.getFirstName());
@@ -93,7 +93,7 @@ public class StaffService {
                 staffObject.put("userId", actualStaff.getUserIdInt());
                 staffObject.put("displayName", actualStaff.getDisplayName());
                 staffObject.put("specialties", actualStaff.getSpecialties());
-                staffObject.put("bio", actualStaff.getBio());
+                staffObject.put("bio", actualStaff.getBio() != null ? actualStaff.getBio() : JSONObject.NULL);
 
                 if (actualStaff.getColor() == null || actualStaff.getColor().isEmpty()) {
                     staffObject.put("color", JSONObject.NULL);
@@ -156,7 +156,46 @@ public class StaffService {
             }
             result.put("actualStaff", actualStaffArray);
             result.put("pendingStaff", pendingStaffArray);
-            
+
+            toReturn.put("result", result);
+        }
+
+        toReturn.put("status", status);
+        toReturn.put("statusCode", statusCode);
+        return toReturn;
+    }
+
+    public JSONObject getStaffByCompanyForIndustryPage(Integer companyId) {
+
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        //code
+        ArrayList<Staff> modelResult = Staff.getAllActiveStaffByCompany(companyId);
+
+        if (modelResult == null) {
+            statusCode = 500;
+            status = "ModelException";
+        } else if (modelResult.isEmpty()) {
+            statusCode = 200;
+            status = "NoRecordFound";
+        } else {
+
+            JSONArray result = new JSONArray();
+
+            for (Staff actualStaff : modelResult) {
+                JSONObject actualStaffObject = new JSONObject();
+
+                actualStaffObject.put("id", actualStaff.getId());
+                actualStaffObject.put("displayName", actualStaff.getDisplayName());
+                actualStaffObject.put("specialties", actualStaff.getSpecialties());
+                actualStaffObject.put("bio", actualStaff.getBio() != null ? actualStaff.getBio() : JSONObject.NULL);
+                actualStaffObject.put("imageUrl", actualStaff.getImageUrl() != null ? FileStorageUtil.buildFullUrl(actualStaff.getImageUrl()) : null);
+
+                result.put(actualStaffObject);
+            }
+
             toReturn.put("result", result);
         }
 

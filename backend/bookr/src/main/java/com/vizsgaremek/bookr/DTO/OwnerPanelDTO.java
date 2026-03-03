@@ -7,6 +7,7 @@ package com.vizsgaremek.bookr.DTO;
 import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 /**
  *
@@ -614,4 +615,66 @@ public class OwnerPanelDTO {
         }
 
     }
+
+    public static class updateOpeningHoursDTO {
+
+        private Map<String, String> openingHours;
+
+        public Map<String, String> getOpeningHours() {
+            return openingHours;
+        }
+    }
+
+    public static class createTemporaryClosedPeriodDTO {
+
+        private Integer id;
+        private String startDate;
+        private String endDate;
+        private String openTime;
+        private String closeTime;
+        private String reason;
+
+        public createTemporaryClosedPeriodDTO(String startDate, String endDate, String openTime, String closeTime, String reason) {
+            this.startDate = startDate;
+            this.endDate = endDate;
+            this.openTime = openTime;
+            this.closeTime = closeTime;
+            this.reason = reason;
+        }
+
+        public createTemporaryClosedPeriodDTO(Integer id, String startDate, String endDate, String openTime, String closeTime, String reason) {
+            this.id = id;
+            this.startDate = startDate;
+            this.endDate = endDate;
+            this.openTime = openTime;
+            this.closeTime = closeTime;
+            this.reason = reason;
+        }
+
+        public Integer getId() {
+            return id;
+        }
+
+        public String getStartDate() {
+            return startDate;
+        }
+
+        public String getEndDate() {
+            return endDate;
+        }
+
+        public String getOpenTime() {
+            return openTime;
+        }
+
+        public String getCloseTime() {
+            return closeTime;
+        }
+
+        public String getReason() {
+            return reason;
+        }
+
+    }
+
 }

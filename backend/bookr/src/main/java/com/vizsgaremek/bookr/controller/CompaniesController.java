@@ -5,8 +5,10 @@
 package com.vizsgaremek.bookr.controller;
 
 import com.vizsgaremek.bookr.DTO.CompanyRegisterRequest;
+import com.vizsgaremek.bookr.model.Companies;
 import com.vizsgaremek.bookr.security.JWT;
 import com.vizsgaremek.bookr.service.CompaniesService;
+import static com.vizsgaremek.bookr.util.ErrorResponseBuilder.buildErrorResponse;
 import com.vizsgaremek.bookr.util.RoleChecker;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.UriInfo;
@@ -20,6 +22,7 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import netscape.javascript.JSObject;
 import org.json.JSONObject;
 
 /**
@@ -233,6 +236,109 @@ public class CompaniesController {
 
         // 5. Service hívás
         JSONObject toReturn = layer.getCompanyById(companyId);
+
+        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                .entity(toReturn.toString())
+                .type(MediaType.APPLICATION_JSON)
+                .build();
+    }
+
+    @GET
+    @Path("getCompanyBookingRules")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response getCompanyBookingRules(@HeaderParam("Authorization") String authHeader) {
+
+        // 1. Auth header check
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return buildErrorResponse(401, "missingToken");
+        }
+
+        String jwtToken = authHeader.substring(7);
+        Boolean validJwt = JWT.validateAccessToken(jwtToken);
+
+        if (validJwt == null) {
+            return buildErrorResponse(401, "tokenExpired");
+        } else if (validJwt == false) {
+            return buildErrorResponse(401, "invalidToken");
+        }
+
+        Integer companyId = JWT.getCompanyIdFromAccessToken(jwtToken);
+
+        Boolean isCompanyExist = layer.validateCompanyExist(companyId);
+
+        if (!isCompanyExist) {
+            return buildErrorResponse(400, "CompanyNotExist");
+        } else if (isCompanyExist == null) {
+            return buildErrorResponse(500, "InternalServerError");
+        }
+
+        // 3. Role check
+        String userRoles = JWT.getRolesFromAccessToken(jwtToken);
+        boolean hasPermission = RoleChecker.hasAnyRole(userRoles, "client", "owner");
+        if (!hasPermission) {
+            return buildErrorResponse(403, "Forbidden");
+        }
+
+        // 5. Service hívás
+        JSONObject toReturn = layer.getCompanyBookingRules(companyId);
+
+        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                .entity(toReturn.toString())
+                .type(MediaType.APPLICATION_JSON)
+                .build();
+    }
+
+    @PUT
+    @Path("updateCompanyBookingRules")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response updateCompanyBookingRules(@HeaderParam("Authorization") String authHeader, String body) {
+        JSONObject bodyObj = new JSONObject(body);
+
+        // 1. Auth header check
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return buildErrorResponse(401, "missingToken");
+        }
+
+        String jwtToken = authHeader.substring(7);
+        Boolean validJwt = JWT.validateAccessToken(jwtToken);
+
+        if (validJwt == null) {
+            return buildErrorResponse(401, "tokenExpired");
+        } else if (validJwt == false) {
+            return buildErrorResponse(401, "invalidToken");
+        }
+
+        Integer companyId = JWT.getCompanyIdFromAccessToken(jwtToken);
+
+        Boolean isCompanyExist = layer.validateCompanyExist(companyId);
+
+        if (!isCompanyExist) {
+            return buildErrorResponse(400, "CompanyNotExist");
+        } else if (isCompanyExist == null) {
+            return buildErrorResponse(500, "InternalServerError");
+        }
+
+        // 3. Role check
+        String userRoles = JWT.getRolesFromAccessToken(jwtToken);
+        boolean hasPermission = RoleChecker.hasAnyRole(userRoles, "client", "owner");
+        if (!hasPermission) {
+            return buildErrorResponse(403, "Forbidden");
+        }
+
+        Integer minimumBookingHoursAhead = null;
+        if (bodyObj.has("minimumBookingHoursAhead") && !bodyObj.isNull("minimumBookingHoursAhead")) {
+            minimumBookingHoursAhead = bodyObj.getInt("minimumBookingHoursAhead");
+        }
+
+        Companies request = new Companies(
+                bodyObj.getInt("bookingAdvanceDays"),
+                bodyObj.getInt("cancellationHours"),
+                minimumBookingHoursAhead
+        );
+
+        JSONObject toReturn = layer.updateCompanyBookingRules(companyId, request);
 
         return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
                 .entity(toReturn.toString())

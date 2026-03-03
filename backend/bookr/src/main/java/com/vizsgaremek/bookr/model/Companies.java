@@ -275,6 +275,22 @@ public class Companies implements Serializable {
         this.ownerEmail = ownerEmail;
     }
 
+    public Companies(Integer bookingAdvanceDays, Integer cancellationHours, Boolean allowSameDayBooking, Integer minimumBookingHoursAhead) {
+        this.bookingAdvanceDays = bookingAdvanceDays;
+        this.cancellationHours = cancellationHours;
+        this.allowSameDayBooking = allowSameDayBooking;
+        this.minimumBookingHoursAhead = minimumBookingHoursAhead;
+    }
+
+    // updateRules request
+    public Companies(Integer bookingAdvanceDays, Integer cancellationHours, Integer minimumBookingHoursAhead) {
+        this.bookingAdvanceDays = bookingAdvanceDays;
+        this.cancellationHours = cancellationHours;
+        this.minimumBookingHoursAhead = minimumBookingHoursAhead;
+    }
+    
+    
+
     public Integer getId() {
         return id;
     }
@@ -1028,6 +1044,84 @@ public class Companies implements Serializable {
             );
 
             return company;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static Companies getCompanyBookingRules(Integer companyId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getCompanyBookingRules");
+
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("companyIdIN", companyId);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            Object[] record = resultList.get(0);
+
+            Companies company = new Companies(
+                    Integer.valueOf(record[0].toString()),
+                    Integer.valueOf(record[1].toString()),
+                    Boolean.parseBoolean(record[2].toString()),
+                    record[3] != null ? Integer.valueOf(record[3].toString()) : null
+            );
+
+            return company;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static Boolean updateCompanyBookingRules(Integer id, Companies request) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("updateCompanyBookingRules");
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("bookingAdvanceDaysIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("cancellationHoursIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("allowSameDayBookingIN", Boolean.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("minimumBookingHoursAheadIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("companyIdIN", id);
+            spq.setParameter("bookingAdvanceDaysIN", request.getBookingAdvanceDays());
+            spq.setParameter("cancellationHoursIN", request.getCancellationHours());
+            spq.setParameter("allowSameDayBookingIN", request.getAllowSameDayBooking());
+            StoredProcedureUtil.setNullableParameter(spq, "minimumBookingHoursAheadIN", request.getMinimumBookingHoursAhead());
+
+            spq.execute();
+
+            Object singleResult = spq.getSingleResult();
+
+            if (singleResult == null) {
+                return null;
+            }
+
+            String result = singleResult.toString();
+
+            return "success".equals(result);
 
         } catch (Exception ex) {
             ex.printStackTrace();
