@@ -112,4 +112,78 @@ public class TemporaryClosedPeriodsService {
 
         return toReturn;
     }
+
+    public JSONObject updateTemporaryClosedPeriod(Integer periodId, createTemporaryClosedPeriodDTO request) {
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        try {
+            // Adatbázis lekérdezés
+            createTemporaryClosedPeriodDTO modelResult = layer.updateTemporaryClosedPeriod(periodId, request);
+
+            // NULL ELLENŐRZÉS
+            if (modelResult == null) {
+                status = "NotFound";
+                statusCode = 404;
+                toReturn.put("status", status);
+                toReturn.put("statusCode", statusCode);
+                return toReturn;
+            }
+
+            JSONObject result = new JSONObject();
+            result.put("id", modelResult.getId());
+            result.put("startDate", modelResult.getStartDate());
+            result.put("endDate", modelResult.getEndDate());
+            result.put("openTime", modelResult.getOpenTime() != null ? modelResult.getOpenTime() : JSONObject.NULL);
+            result.put("closeTime", modelResult.getCloseTime() != null ? modelResult.getCloseTime() : JSONObject.NULL);
+            result.put("reason", modelResult.getReason() != null ? modelResult.getReason() : JSONObject.NULL);
+
+            toReturn.put("result", result);
+
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            status = "InternalServerError";
+            statusCode = 500;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+        }
+
+        return toReturn;
+    }
+
+    public JSONObject deleteTemporaryClosedPeriod(Integer periodId) {
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        try {
+            // Adatbázis lekérdezés
+            Boolean modelResult = layer.deleteTemporaryClosedPeriod(periodId);
+
+            // NULL ELLENŐRZÉS
+            if (modelResult == null || !modelResult) {
+                status = "NotFound";
+                statusCode = 404;
+                toReturn.put("status", status);
+                toReturn.put("statusCode", statusCode);
+                return toReturn;
+            }
+
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            status = "InternalServerError";
+            statusCode = 500;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+        }
+
+        return toReturn;
+    }
 }

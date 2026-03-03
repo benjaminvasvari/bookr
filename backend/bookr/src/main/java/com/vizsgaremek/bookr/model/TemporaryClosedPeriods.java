@@ -49,7 +49,8 @@ import javax.xml.bind.annotation.XmlRootElement;
     @NamedQuery(name = "TemporaryClosedPeriods.findByCloseTime", query = "SELECT t FROM TemporaryClosedPeriods t WHERE t.closeTime = :closeTime"),
     @NamedQuery(name = "TemporaryClosedPeriods.findByReason", query = "SELECT t FROM TemporaryClosedPeriods t WHERE t.reason = :reason"),
     @NamedQuery(name = "TemporaryClosedPeriods.findByCreatedAt", query = "SELECT t FROM TemporaryClosedPeriods t WHERE t.createdAt = :createdAt"),
-    @NamedQuery(name = "TemporaryClosedPeriods.findByUpdatedAt", query = "SELECT t FROM TemporaryClosedPeriods t WHERE t.updatedAt = :updatedAt")})
+    @NamedQuery(name = "TemporaryClosedPeriods.findByUpdatedAt", query = "SELECT t FROM TemporaryClosedPeriods t WHERE t.updatedAt = :updatedAt"),
+    @NamedQuery(name = "TemporaryClosedPeriods.findByIsDeleted", query = "SELECT t FROM TemporaryClosedPeriods t WHERE t.isDeleted = :isDeleted")})
 public class TemporaryClosedPeriods implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -84,6 +85,13 @@ public class TemporaryClosedPeriods implements Serializable {
     @Column(name = "updated_at")
     @Temporal(TemporalType.TIMESTAMP)
     private Date updatedAt;
+    @Basic(optional = false)
+    @NotNull
+    @Column(name = "is_deleted")
+    private Boolean isDeleted;
+    @Column(name = "deleted_at")
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date deletedAt;
     @JoinColumn(name = "company_id", referencedColumnName = "id")
     @ManyToOne(optional = false)
     private Companies companyId;
@@ -103,6 +111,8 @@ public class TemporaryClosedPeriods implements Serializable {
     private String createdAtStr;
     @Transient
     private String updatedAtStr;
+    @Transient
+    private String deletedAtStr;
 
     public TemporaryClosedPeriods() {
     }
@@ -194,6 +204,22 @@ public class TemporaryClosedPeriods implements Serializable {
         this.updatedAt = updatedAt;
     }
 
+    public Boolean getIsDeleted() {
+        return isDeleted;
+    }
+
+    public void setIsDeleted(Boolean isDeleted) {
+        this.isDeleted = isDeleted;
+    }
+
+    public Date getDeletedAt() {
+        return deletedAt;
+    }
+
+    public void setDeletedAt(Date deletedAt) {
+        this.deletedAt = deletedAt;
+    }
+
     public Companies getCompanyId() {
         return companyId;
     }
@@ -235,6 +261,10 @@ public class TemporaryClosedPeriods implements Serializable {
         return updatedAtStr;
     }
 
+    public String getDeletedAtStr() {
+        return deletedAtStr;
+    }
+
     @Override
     public int hashCode() {
         int hash = 0;
@@ -244,7 +274,6 @@ public class TemporaryClosedPeriods implements Serializable {
 
     @Override
     public boolean equals(Object object) {
-        // TODO: Warning - this method won't work in the case the id fields are not set
         if (!(object instanceof TemporaryClosedPeriods)) {
             return false;
         }
@@ -286,7 +315,7 @@ public class TemporaryClosedPeriods implements Serializable {
                         record[4] != null ? record[4].toString() : null,
                         record[5] != null ? record[5].toString() : null,
                         record[6] != null ? record[6].toString() : null,
-                         record[7].toString(),
+                        record[7].toString(),
                         record[8] != null ? record[8].toString() : null
                 );
 
@@ -307,9 +336,6 @@ public class TemporaryClosedPeriods implements Serializable {
 
     public static createTemporaryClosedPeriodDTO createTemporaryClosedPeriod(Integer id, createTemporaryClosedPeriodDTO request) {
         EntityManager em = emf.createEntityManager();
-
-        SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd");
-        SimpleDateFormat timeFormatter = new SimpleDateFormat("HH:mm:ss");
 
         try {
             StoredProcedureQuery spq = em.createStoredProcedureQuery("createTemporaryClosedPeriod");
@@ -351,6 +377,79 @@ public class TemporaryClosedPeriods implements Serializable {
         } catch (Exception ex) {
             ex.printStackTrace();
             return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static createTemporaryClosedPeriodDTO updateTemporaryClosedPeriod(Integer periodId, createTemporaryClosedPeriodDTO request) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("updateTemporaryClosedPeriod");
+            spq.registerStoredProcedureParameter("idIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("startDateIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("endDateIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("openTimeIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("closeTimeIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("reasonIN", String.class, ParameterMode.IN);
+
+            spq.setParameter("idIN", periodId);
+            spq.setParameter("startDateIN", request.getStartDate());
+            spq.setParameter("endDateIN", request.getEndDate());
+            StoredProcedureUtil.setNullableParameter(spq, "openTimeIN", request.getOpenTime());
+            StoredProcedureUtil.setNullableParameter(spq, "closeTimeIN", request.getCloseTime());
+            StoredProcedureUtil.setNullableParameter(spq, "reasonIN", request.getReason());
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            Object[] record = resultList.get(0);
+
+            createTemporaryClosedPeriodDTO dolog = new createTemporaryClosedPeriodDTO(
+                    Integer.valueOf(record[0].toString()),
+                    record[1].toString(),
+                    record[2].toString(),
+                    record[3] != null ? record[3].toString() : null,
+                    record[4] != null ? record[4].toString() : null,
+                    record[5] != null ? record[5].toString() : null
+            );
+
+            return dolog;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static boolean deleteTemporaryClosedPeriod(Integer periodId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("deleteTemporaryClosedPeriod");
+            spq.registerStoredProcedureParameter("idIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("idIN", periodId);
+
+            spq.execute();
+
+            return true;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return false;
         } finally {
             if (em != null && em.isOpen()) {
                 em.close();
