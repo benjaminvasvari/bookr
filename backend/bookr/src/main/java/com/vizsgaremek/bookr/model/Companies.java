@@ -288,6 +288,19 @@ public class Companies implements Serializable {
         this.cancellationHours = cancellationHours;
         this.minimumBookingHoursAhead = minimumBookingHoursAhead;
     }
+
+    public Companies(String name, String description, String address, String city, String postalCode, String country, String phone, String email, String website, Integer businessCategoryIdInt) {
+        this.name = name;
+        this.description = description;
+        this.address = address;
+        this.city = city;
+        this.postalCode = postalCode;
+        this.country = country;
+        this.phone = phone;
+        this.email = email;
+        this.website = website;
+        this.businessCategoryIdInt = businessCategoryIdInt;
+    }
     
     
 
@@ -1122,6 +1135,49 @@ public class Companies implements Serializable {
             String result = singleResult.toString();
 
             return "success".equals(result);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static Boolean updateCompany(Integer id, Companies request) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("updateCompany");
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("nameIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("descriptionIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("addressIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("cityIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("postalCodeIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("countryIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("phoneIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("emailIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("websiteIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("businessCategoryIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("companyIdIN", id);
+            spq.setParameter("nameIN", request.getName());
+            spq.setParameter("descriptionIN", request.getDescription());
+            spq.setParameter("addressIN", request.getAddress());
+            spq.setParameter("cityIN", request.getCity());
+            spq.setParameter("postalCodeIN", request.getPostalCode());
+            spq.setParameter("countryIN", request.getCountry());
+            spq.setParameter("phoneIN", request.getPhone());
+            spq.setParameter("emailIN", request.getEmail());
+            StoredProcedureUtil.setNullableParameter(spq, "websiteIN", request.getWebsite());
+            spq.setParameter("businessCategoryIdIN", request.getBusinessCategoryIdInt());
+
+            spq.execute();
+
+            return true;
 
         } catch (Exception ex) {
             ex.printStackTrace();

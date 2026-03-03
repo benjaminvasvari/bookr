@@ -435,7 +435,7 @@ public class PendingStaffService {
     public JSONObject deleteInvite(Integer pStaffId) {
 
         JSONObject toReturn = new JSONObject();
-        String status = "success";
+        String status = "success"; 
         Integer statusCode = 200;
 
         try {

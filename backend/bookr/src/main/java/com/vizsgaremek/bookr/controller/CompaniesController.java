@@ -345,4 +345,68 @@ public class CompaniesController {
                 .type(MediaType.APPLICATION_JSON)
                 .build();
     }
+
+    @PUT
+    @Path("updateCompany")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response updateCompanyByIdOwner(@HeaderParam("Authorization") String authHeader, String body) {
+        JSONObject bodyObj = new JSONObject(body);
+
+        // 1. Auth header check
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return buildErrorResponse(401, "missingToken");
+        }
+
+        String jwtToken = authHeader.substring(7);
+        Boolean validJwt = JWT.validateAccessToken(jwtToken);
+
+        if (validJwt == null) {
+            return buildErrorResponse(401, "tokenExpired");
+        } else if (validJwt == false) {
+            return buildErrorResponse(401, "invalidToken");
+        }
+
+        Integer companyId = JWT.getCompanyIdFromAccessToken(jwtToken);
+
+        Boolean isCompanyExist = layer.validateCompanyExist(companyId);
+
+        if (!isCompanyExist) {
+            return buildErrorResponse(400, "CompanyNotExist");
+        } else if (isCompanyExist == null) {
+            return buildErrorResponse(500, "InternalServerError");
+        }
+
+        // 3. Role check
+        String userRoles = JWT.getRolesFromAccessToken(jwtToken);
+        boolean hasPermission = RoleChecker.hasAnyRole(userRoles, "client", "owner");
+        if (!hasPermission) {
+            return buildErrorResponse(403, "Forbidden");
+        }
+
+        String website = null;
+        if (bodyObj.has("website") && !bodyObj.isNull("website")) {
+            website = bodyObj.getString("website");
+        }
+
+        Companies request = new Companies(
+                bodyObj.getString("name"),
+                bodyObj.getString("description"),
+                bodyObj.getString("address"),
+                bodyObj.getString("city"),
+                bodyObj.getString("postalCode"),
+                bodyObj.getString("country"),
+                bodyObj.getString("phone"),
+                bodyObj.getString("email"),
+                website,
+                bodyObj.getInt("businessCategoryId")
+        );
+
+        JSONObject toReturn = layer.updateCompany(companyId, request);
+
+        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                .entity(toReturn.toString())
+                .type(MediaType.APPLICATION_JSON)
+                .build();
+    }
 }

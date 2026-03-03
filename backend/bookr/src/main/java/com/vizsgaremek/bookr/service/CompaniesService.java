@@ -15,11 +15,13 @@ import com.vizsgaremek.bookr.model.Users;
 import com.vizsgaremek.bookr.security.JWT;
 import static com.vizsgaremek.bookr.util.ErrorResponseBuilder.buildErrorResponseJSON;
 import com.vizsgaremek.bookr.util.FileStorageUtil;
+import com.vizsgaremek.bookr.util.ValidationUtil;
+import static com.vizsgaremek.bookr.util.ValidationUtil.isValidEmail;
+import static com.vizsgaremek.bookr.util.ValidationUtil.isValidHungarianPhone;
+import static com.vizsgaremek.bookr.util.ValidationUtil.isValidUrl;
 import java.text.SimpleDateFormat;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
@@ -706,6 +708,50 @@ public class CompaniesService {
 
             // Adatbázis lekérdezés
             Boolean modelResult = Companies.updateCompanyBookingRules(id, request);
+
+            // NULL ELLENŐRZÉS
+            if (modelResult == null || !modelResult) {
+                status = "NotFound";
+                statusCode = 404;
+                toReturn.put("status", status);
+                toReturn.put("statusCode", statusCode);
+                return toReturn;
+            }
+
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            status = "InternalServerError";
+            statusCode = 500;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+        }
+
+        return toReturn;
+    }
+
+    public JSONObject updateCompany(Integer id, Companies request) {
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        try {
+
+            if (!isValidEmail(request.getEmail())) {
+                return buildErrorResponseJSON(417, "InvalidEmail");
+            }
+            if (!isValidHungarianPhone(request.getPhone())) {
+                return buildErrorResponseJSON(417, "InvalidPhone");
+            }
+            if (request.getWebsite() != null) {
+                if (!isValidUrl(request.getWebsite())) {
+                    return buildErrorResponseJSON(417, "InvalidWebsite");
+                }
+            }
+
+            Boolean modelResult = Companies.updateCompany(id, request);
 
             // NULL ELLENŐRZÉS
             if (modelResult == null || !modelResult) {
