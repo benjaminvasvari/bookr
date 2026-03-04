@@ -172,6 +172,12 @@ public class Staff implements Serializable {
         this.bio = bio;
     }
 
+    public Staff(String color) {
+        this.color = color;
+    }
+    
+    
+
     public Integer getId() {
         return id;
     }
@@ -543,5 +549,89 @@ public class Staff implements Serializable {
         }
     }
 
+    public static Integer getUserIdByStaffId(Integer staffId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getUserIdByStaffId");
+
+            spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("staffIdIN", staffId);
+
+            spq.execute();
+
+            Integer userId = Integer.valueOf(spq.getSingleResult().toString());
+
+            return userId;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+
+        } finally {
+            em.close();
+        }
+    }
+
+    public static Staff getStaffColor(Integer staffId, Integer companyId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getStaffColor");
+
+            spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("staffIdIN", staffId);
+            spq.setParameter("companyIdIN", companyId);
+
+            spq.execute();
+
+            String color = spq.getSingleResult() != null ? spq.getSingleResult().toString() : null;
+            
+            Staff staff = new Staff(
+                    color
+            );
+            
+            return staff;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            em.close();
+        }
+    }
+
+    public static Boolean updateStaffColor(Integer staffId, Integer companyId, String color) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("updateStaffColor");
+
+            spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("colorIN", String.class, ParameterMode.IN);
+
+            spq.setParameter("staffIdIN", staffId);
+            spq.setParameter("companyIdIN", companyId);
+            spq.setParameter("colorIN", color);
+
+            spq.execute();
+
+            return true;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return false;
+
+        } finally {
+            em.close();
+        }
+    }
 
 }

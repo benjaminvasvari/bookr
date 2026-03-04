@@ -5,9 +5,12 @@
 package com.vizsgaremek.bookr.service;
 
 import com.vizsgaremek.bookr.model.Appointments;
+import com.vizsgaremek.bookr.model.AuditLogs;
 import com.vizsgaremek.bookr.model.PendingStaff;
 import com.vizsgaremek.bookr.model.Staff;
+import com.vizsgaremek.bookr.security.JWT;
 import static com.vizsgaremek.bookr.service.AppointmentsService.timeFormatter;
+import com.vizsgaremek.bookr.util.ErrorResponseBuilder;
 import com.vizsgaremek.bookr.util.FileStorageUtil;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +27,7 @@ public class StaffService {
 
     private Staff layer = new Staff();
     private PendingStaff PendingStaff = new PendingStaff();
+    private AuditLogService AuditLogService = new AuditLogService();
 
     public JSONObject getFilteredStaffByServices(Integer companyId, String serviceIds) {
 
@@ -196,6 +200,63 @@ public class StaffService {
             }
 
             toReturn.put("result", result);
+        }
+
+        toReturn.put("status", status);
+        toReturn.put("statusCode", statusCode);
+        return toReturn;
+    }
+
+    public JSONObject updateStaffColor(Integer staffId, Integer companyId, String color, String token) {
+
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        try {
+            //code
+            Staff oldColor = layer.getStaffColor(staffId, companyId);
+
+            if (oldColor == null) {
+                return ErrorResponseBuilder.buildErrorResponseJSON(500, "InternalServerError");
+            }
+
+            Boolean modelResult = Staff.updateStaffColor(staffId, companyId, color);
+
+            if (modelResult == null || !modelResult) {
+                return ErrorResponseBuilder.buildErrorResponseJSON(500, "InternalServerError");
+            }
+
+            // ========== AUDIT LOG ==========
+            try {
+
+                Integer affectedUserId = layer.getUserIdByStaffId(staffId);
+
+                Integer ownerUserId = JWT.getUserIdFromAccessToken(token);
+                String ownerEmail = JWT.getEmailFromAccessToken(token);
+
+                AuditLogs auditLog = new AuditLogs(
+                        ownerUserId,
+                        "owner",
+                        affectedUserId,
+                        ownerEmail,
+                        "staff",
+                        "change_color"
+                );
+
+                auditLog.addOldValue("color", oldColor.getColor());
+                auditLog.addNewValue("color", color);
+
+                AuditLogService.logAudit(auditLog);
+
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                return ErrorResponseBuilder.buildErrorResponseJSON(500, "InternalServerError");
+            }
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return ErrorResponseBuilder.buildErrorResponseJSON(500, "InternalServerError");
         }
 
         toReturn.put("status", status);

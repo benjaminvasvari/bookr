@@ -196,4 +196,57 @@ public class StaffController {
                 .build();
     }
 
+    @PUT
+    @Path("update-color")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response updateStaffColor(@HeaderParam("Authorization") String authHeader, @QueryParam("staffId") Integer staffId, String body) {
+        JSONObject bodyObj = new JSONObject(body);
+
+        // 1. Auth header check
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return buildErrorResponse(401, "missingToken");
+        }
+
+        String jwtToken = authHeader.substring(7);
+        Boolean validJwt = JWT.validateAccessToken(jwtToken);
+
+        if (validJwt == null) {
+            return buildErrorResponse(401, "tokenExpired");
+        } else if (validJwt == false) {
+            return buildErrorResponse(401, "invalidToken");
+        }
+
+        // 3. Role check
+        String userRoles = JWT.getRolesFromAccessToken(jwtToken);
+        boolean hasPermission = RoleChecker.hasAllRoles(userRoles, "client", "owner");
+        if (!hasPermission) {
+            return buildErrorResponse(403, "Forbidden");
+        }
+
+        Integer userCompanyId = JWT.getCompanyIdFromAccessToken(jwtToken);
+
+        Integer companyId = bodyObj.getInt("companyId");
+
+        if (!Objects.equals(companyId, userCompanyId)) {
+            return buildErrorResponse(403, "Forbidden");
+        }
+
+        Boolean isCompanyExist = CompaniesService.validateCompanyExist(companyId);
+
+        if (!isCompanyExist) {
+            return buildErrorResponse(400, "CompanyNotExist");
+        } else if (isCompanyExist == null) {
+            return buildErrorResponse(500, "InternalServerError");
+        }
+
+        String color = bodyObj.getString("color");
+
+        JSONObject toReturn = layer.updateStaffColor(staffId, companyId, color, jwtToken);
+
+        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                .entity(toReturn.toString())
+                .type(MediaType.APPLICATION_JSON)
+                .build();
+    }
 }
