@@ -429,4 +429,5 @@ public class EnvConfig {
     public static String getAppBaseUrl() {
         return getRequired("APP_BASE_URL");
     }
+
 }

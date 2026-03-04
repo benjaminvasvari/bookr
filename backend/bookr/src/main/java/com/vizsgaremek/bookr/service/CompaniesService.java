@@ -628,7 +628,7 @@ public class CompaniesService {
             result.put("phone", modelResult.getPhone());
             result.put("email", modelResult.getEmail());
             result.put("website", modelResult.getWebsite() != null ? modelResult.getWebsite() : JSONObject.NULL);
-            result.put("createdAt", modelResult.getCancellationHours());
+            result.put("createdAt", modelResult.getCreatedAt());
 
             toReturn.put("result", result);
 

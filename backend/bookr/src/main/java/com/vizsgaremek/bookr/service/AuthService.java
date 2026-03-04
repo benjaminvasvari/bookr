@@ -321,7 +321,7 @@ public class AuthService {
             // ====================================================================
 
             // ========== 3. ELLENŐRZÉS: MÁR AKTIVÁLVA VAN-E ==========
-            if (tokenInfo.getIsRevoked() && tokenInfo.getIsRevoked() != null) {
+            if (tokenInfo.getIsRevoked() != null && tokenInfo.getIsRevoked()) {
                 status = "AlreadyVerified";
                 statusCode = 409;
                 toReturn.put("status", status);
@@ -363,20 +363,18 @@ public class AuthService {
             e.printStackTrace();
         }
 
-        try {
-            PendingStaff pStaffResult = PendingStaff.getPendingStaffByEmailForSetUp(user.getEmail());
-            Staff createdStaff = Staff.createStaff(user.getId(), pStaffResult.getCompanyIdInt(), pStaffResult.getPosition());
-
-            String createStaffWorkingHoursResult = StaffWorkingHours.createStaffWorkingHours(createdStaff.getId(), pStaffResult.getCompanyIdInt());
-
-            Boolean isUserAssignedToCompany = Users.assignCompanyToUser(user.getId(), pStaffResult.getCompanyIdInt());
-
-            Boolean isUserAssignedToRole = UserXRole.assignRole(user.getId(), 3);
-
-        } catch (Exception e) {
-            status = "serverError";
-            statusCode = 500;
-            e.printStackTrace();
+        if (user != null) {
+            try {
+                PendingStaff pStaffResult = PendingStaff.getPendingStaffByEmailForSetUp(user.getEmail());
+                if (pStaffResult != null) {
+                    Staff createdStaff = Staff.createStaff(user.getId(), pStaffResult.getCompanyIdInt(), pStaffResult.getPosition());
+                    StaffWorkingHours.createStaffWorkingHours(createdStaff.getId(), pStaffResult.getCompanyIdInt());
+                    Users.assignCompanyToUser(user.getId(), pStaffResult.getCompanyIdInt());
+                    UserXRole.assignRole(user.getId(), 3);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
 
         toReturn.put("status", status);

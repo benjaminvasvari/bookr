@@ -367,6 +367,25 @@ public class Images implements Serializable {
         }
     }
 
+    public static Boolean softDeleteUserImage(Integer userId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("deleteUserImage");
+            spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
+            spq.setParameter("userIdIN", userId);
+            spq.execute();
+            return true;
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return false;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
     public static Boolean softDeleteCompanyImage(Integer companyId, Integer imageId) {
         EntityManager em = emf.createEntityManager();
 

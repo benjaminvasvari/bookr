@@ -108,6 +108,12 @@ public class ImagesController {
                     return buildErrorResponse(403, "forbidden");
                 }
 
+                Integer jwtCompanyId = JWT.getCompanyIdFromAccessToken(jwtToken);
+                boolean isSuperadmin = RoleChecker.hasAnyRole(userRoles, "superadmin");
+                if (!isSuperadmin && (jwtCompanyId == null || !jwtCompanyId.equals(companyId))) {
+                    return buildErrorResponse(403, "forbidden");
+                }
+
                 // Apache Commons FileUpload
                 ServletFileUpload upload = new ServletFileUpload();
                 FileItemIterator iterator = upload.getItemIterator(request);
@@ -163,7 +169,7 @@ public class ImagesController {
 
         } catch (Exception e) {
             e.printStackTrace();
-            return buildErrorResponse(500, "internalError: " + e.getMessage());
+            return buildErrorResponse(500, "internalError");
         }
     }
 
@@ -179,7 +185,7 @@ public class ImagesController {
         }
 
         if (companyId <= 0 || imageId <= 0) {
-            return buildErrorResponse(417, "invalidParam");
+            return buildErrorResponse(400, "invalidParam");
         }
 
         // Remove "Bearer " prefix
@@ -290,7 +296,7 @@ public class ImagesController {
 
         } catch (Exception e) {
             e.printStackTrace();
-            return buildErrorResponse(500, "internalError: " + e.getMessage());
+            return buildErrorResponse(500, "internalError");
         }
     }
 
@@ -306,7 +312,7 @@ public class ImagesController {
         }
 
         if (userId <= 0 || imageId <= 0) {
-            return buildErrorResponse(417, "invalidParam");
+            return buildErrorResponse(400, "invalidParam");
         }
 
         // Remove "Bearer " prefix
@@ -328,6 +334,12 @@ public class ImagesController {
             boolean hasPermission = RoleChecker.hasAnyRole(userRoles, "client", "superadmin");
 
             if (!hasPermission) {
+                return buildErrorResponse(403, "forbidden");
+            }
+
+            boolean isSuperadmin = RoleChecker.hasAnyRole(userRoles, "superadmin");
+            Integer jwtUserId = JWT.getUserIdFromAccessToken(jwtToken);
+            if (!isSuperadmin && (jwtUserId == null || !jwtUserId.equals(userId))) {
                 return buildErrorResponse(403, "forbidden");
             }
 

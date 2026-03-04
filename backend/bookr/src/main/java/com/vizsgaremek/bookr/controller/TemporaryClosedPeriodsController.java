@@ -246,6 +246,10 @@ public class TemporaryClosedPeriodsController {
                 reason
         );
 
+        if (periodId == null || periodId <= 0) {
+            return buildErrorResponse(400, "InvalidParam");
+        }
+
         JSONObject toReturn = layer.updateTemporaryClosedPeriod(periodId, request);
 
         return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
@@ -291,7 +295,7 @@ public class TemporaryClosedPeriodsController {
             return buildErrorResponse(500, "InternalServerError");
         }
         
-        if (periodId <= 0) {
+        if (periodId == null || periodId <= 0) {
             return buildErrorResponse(400, "InvalidParam");
         }
 

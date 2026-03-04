@@ -188,8 +188,16 @@ public class AppointmentsService {
         String status = "success";
         Integer statusCode = 200;
 
-        Timestamp startTime = Timestamp.valueOf(startTimeString);
-        Timestamp endTime = Timestamp.valueOf(endTimeString);
+        Timestamp startTime;
+        Timestamp endTime;
+        try {
+            startTime = Timestamp.valueOf(startTimeString);
+            endTime = Timestamp.valueOf(endTimeString);
+        } catch (IllegalArgumentException e) {
+            toReturn.put("status", "InvalidDateFormat");
+            toReturn.put("statusCode", 400);
+            return toReturn;
+        }
 
         //code
         Integer appointmentId = layer.createAppointment(companyId, serviceId, staffId, clientId, startTime, endTime, notes, price);

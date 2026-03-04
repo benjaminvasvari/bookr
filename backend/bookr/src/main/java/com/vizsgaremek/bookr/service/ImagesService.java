@@ -339,7 +339,7 @@ public class ImagesService {
             return toReturn;
         }
 
-        Boolean modelResult = Images.softDeleteCompanyImage(userId, imageId);
+        Boolean modelResult = Images.softDeleteUserImage(userId);
 
         if (modelResult == false) {
             status = "serverError";

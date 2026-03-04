@@ -51,6 +51,14 @@ public class UsersService {
         if (userId > 0) {
             Users modelResult = Users.getUserProfile(userId);
 
+            if (modelResult == null) {
+                status = "NotFound";
+                statusCode = 404;
+                toReturn.put("status", status);
+                toReturn.put("statusCode", statusCode);
+                return toReturn;
+            }
+
             JSONObject result = new JSONObject();
             result.put("id", modelResult.getId());
             result.put("firstName", modelResult.getFirstName());
@@ -185,7 +193,7 @@ public class UsersService {
                             // Log the error but don't fail the registration
                             ex.printStackTrace();
                         }
-                    } else if (performedUserRoles.split(",")[0].trim() == "superadmin") {
+                    } else if (performedUserRoles.split(",")[0].trim().equals("superadmin")) {
                         try {
                             AuditLogs auditLog = new AuditLogs(
                                     performedId,

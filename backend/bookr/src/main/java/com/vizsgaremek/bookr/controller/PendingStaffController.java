@@ -123,7 +123,7 @@ public class PendingStaffController {
     @GET
     @Path("checkInvite")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response checkInvite(String token) {
+    public Response checkInvite(@QueryParam("token") String token) {
 
         if (token == null) {
             return buildErrorResponse(400, "InvalidParam");

@@ -136,7 +136,7 @@ public class FavoritesController {
         }
 
         if (companyId <= 0) {
-            return buildErrorResponse(417, "invalidParam");
+            return buildErrorResponse(400, "invalidParam");
         }
 
         // Remove "Bearer " prefix
@@ -181,7 +181,7 @@ public class FavoritesController {
         }
 
         if (companyId <= 0) {
-            return buildErrorResponse(417, "invalidParam");
+            return buildErrorResponse(400, "invalidParam");
         }
 
         // Remove "Bearer " prefix
