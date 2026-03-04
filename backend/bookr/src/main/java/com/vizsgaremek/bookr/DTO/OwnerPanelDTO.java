@@ -677,4 +677,102 @@ public class OwnerPanelDTO {
 
     }
 
+    public static class calendarResponseDTO {
+
+        private Integer appointmentId;
+        private Integer staffId;
+        private String startTime;
+        private String endTime;
+        private String status;
+        private String notes;
+        private Double price;
+        private String currency;
+        private String serviceName;
+        private Integer durationMinutes;
+        private String staffColor;
+        private String staffDisplayName;
+        private String clientName;
+        private String clientPhone;
+        private String clientEmail;
+
+        public calendarResponseDTO(Integer appointmentId, Integer staffId, String startTime, String endTime, String status, String notes, Double price, String currency, String serviceName, Integer durationMinutes, String staffColor, String staffDisplayName, String clientName, String clientPhone, String clientEmail) {
+            this.appointmentId = appointmentId;
+            this.staffId = staffId;
+            this.startTime = startTime;
+            this.endTime = endTime;
+            this.status = status;
+            this.notes = notes;
+            this.price = price;
+            this.currency = currency;
+            this.serviceName = serviceName;
+            this.durationMinutes = durationMinutes;
+            this.staffColor = staffColor;
+            this.staffDisplayName = staffDisplayName;
+            this.clientName = clientName;
+            this.clientPhone = clientPhone;
+            this.clientEmail = clientEmail;
+        }
+
+        public Integer getAppointmentId() {
+            return appointmentId;
+        }
+
+        public Integer getStaffId() {
+            return staffId;
+        }
+
+        public String getStartTime() {
+            return startTime;
+        }
+
+        public String getEndTime() {
+            return endTime;
+        }
+
+        public String getStatus() {
+            return status;
+        }
+
+        public String getNotes() {
+            return notes;
+        }
+
+        public Double getPrice() {
+            return price;
+        }
+
+        public String getCurrency() {
+            return currency;
+        }
+
+        public String getServiceName() {
+            return serviceName;
+        }
+
+        public Integer getDurationMinutes() {
+            return durationMinutes;
+        }
+
+        public String getStaffColor() {
+            return staffColor;
+        }
+
+        public String getStaffDisplayName() {
+            return staffDisplayName;
+        }
+
+        public String getClientName() {
+            return clientName;
+        }
+
+        public String getClientPhone() {
+            return clientPhone;
+        }
+
+        public String getClientEmail() {
+            return clientEmail;
+        }
+
+    }
+
 }

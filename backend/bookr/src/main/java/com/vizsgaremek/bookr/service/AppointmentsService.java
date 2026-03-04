@@ -8,6 +8,7 @@ import com.vizsgaremek.bookr.model.Services;
 import com.vizsgaremek.bookr.model.Staff;
 import com.vizsgaremek.bookr.model.Users;
 import com.vizsgaremek.bookr.security.JWT;
+import static com.vizsgaremek.bookr.util.ErrorResponseBuilder.buildErrorResponseJSON;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
@@ -683,6 +684,70 @@ public class AppointmentsService {
         toReturn.put("status", status);
         toReturn.put("statusCode", statusCode);
 
+        return toReturn;
+    }
+
+    public JSONObject getWeeklyCalendarAppointments(Integer companyId, Integer staffId, String weekStartStr) {
+        JSONObject toReturn = new JSONObject();
+
+        ArrayList<OwnerPanelDTO.calendarResponseDTO> appointments = layer.getWeeklyCalendarAppointments(companyId, staffId, weekStartStr);
+        if (appointments == null) {
+            return buildErrorResponseJSON(500, "ModelException");
+        }
+
+        // Csoportosítás: dátum → staffId → appointments
+        LinkedHashMap<String, LinkedHashMap<Integer, JSONArray>> grouped = new LinkedHashMap<>();
+        LinkedHashMap<Integer, String[]> staffMeta = new LinkedHashMap<>(); // staffId → [name, color]
+
+        for (OwnerPanelDTO.calendarResponseDTO a : appointments) {
+            String date = a.getStartTime().substring(0, 10);
+            grouped.computeIfAbsent(date, k -> new LinkedHashMap<>())
+                    .computeIfAbsent(a.getStaffId(), k -> new JSONArray());
+
+            staffMeta.putIfAbsent(a.getStaffId(), new String[]{a.getStaffDisplayName(), a.getStaffColor()});
+
+            JSONObject entry = new JSONObject();
+            entry.put("id", a.getAppointmentId());
+            entry.put("startTime", a.getStartTime().substring(11));
+            entry.put("endTime", a.getEndTime().substring(11));
+            entry.put("status", a.getStatus());
+            entry.put("notes", a.getNotes() != null ? a.getNotes() : JSONObject.NULL);
+            entry.put("price", a.getPrice());
+            entry.put("currency", a.getCurrency());
+            entry.put("serviceName", a.getServiceName());
+            entry.put("durationMinutes", a.getDurationMinutes());
+            entry.put("clientName", a.getClientName());
+            entry.put("clientPhone", a.getClientPhone());
+            entry.put("clientEmail", a.getClientEmail());
+
+            grouped.get(date).get(a.getStaffId()).put(entry);
+        }
+
+        // Végső struktúra összerakása
+        JSONArray days = new JSONArray();
+        for (Map.Entry<String, LinkedHashMap<Integer, JSONArray>> dayEntry : grouped.entrySet()) {
+            JSONObject dayObj = new JSONObject();
+            dayObj.put("date", dayEntry.getKey());
+
+            JSONArray staffArray = new JSONArray();
+            for (Map.Entry<Integer, JSONArray> staffEntry : dayEntry.getValue().entrySet()) {
+                Integer staffId2 = staffEntry.getKey();
+                String[] meta = staffMeta.get(staffId2);
+                JSONObject staffObj = new JSONObject();
+                staffObj.put("staffId", staffId2);
+                staffObj.put("staffName", meta[0]);
+                staffObj.put("staffColor", meta[1] != null ? meta[1] : JSONObject.NULL);
+                staffObj.put("appointments", staffEntry.getValue());
+                staffArray.put(staffObj);
+            }
+
+            dayObj.put("staffAppointments", staffArray);
+            days.put(dayObj);
+        }
+
+        toReturn.put("status", "success");
+        toReturn.put("statusCode", 200);
+        toReturn.put("data", days);
         return toReturn;
     }
 }
