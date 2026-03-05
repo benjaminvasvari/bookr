@@ -2,7 +2,7 @@ package com.vizsgaremek.bookr.model;
 
 import com.vizsgaremek.bookr.DTO.checkStaffInviteTokenDTO;
 import static com.vizsgaremek.bookr.model.Users.emf;
-import static com.vizsgaremek.bookr.model.Users.formatter;
+import com.vizsgaremek.bookr.util.DateFormatterUtil;
 import com.vizsgaremek.bookr.util.StoredProcedureUtil;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -350,7 +350,7 @@ public class PendingStaff implements Serializable {
                         Integer.valueOf(record[4].toString()),
                         record[5].toString(),
                         record[6].toString(),
-                        formatter.parse(record[7].toString())
+                        DateFormatterUtil.parseTimestamp(record[7].toString())
                 );
                 staffList.add(staff);
             }

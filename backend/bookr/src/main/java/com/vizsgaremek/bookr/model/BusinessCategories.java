@@ -5,7 +5,7 @@
 package com.vizsgaremek.bookr.model;
 
 import static com.vizsgaremek.bookr.model.Users.emf;
-import static com.vizsgaremek.bookr.model.Users.formatter;
+import com.vizsgaremek.bookr.util.DateFormatterUtil;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -230,8 +230,8 @@ public class BusinessCategories implements Serializable {
                         Integer.valueOf(record[0].toString()),
                         record[1].toString(),
                         record[2].toString(),
-                        formatter.parse(record[3].toString()),
-                        record[4] != null ? formatter.parse(record[4].toString()) : null
+                        DateFormatterUtil.parseTimestamp(record[3].toString()),
+                        record[4] != null ? DateFormatterUtil.parseTimestamp(record[4].toString()) : null
                 );
 
                 businessCategoriesList.add(fav);
@@ -384,8 +384,8 @@ public class BusinessCategories implements Serializable {
                     Integer.valueOf(record[0].toString()),
                     record[1].toString(),
                     record[2].toString(),
-                    formatter.parse(record[3].toString()),
-                    record[4] != null ? formatter.parse(record[4].toString()) : null
+                    DateFormatterUtil.parseTimestamp(record[3].toString()),
+                    record[4] != null ? DateFormatterUtil.parseTimestamp(record[4].toString()) : null
             );
 
             return cat;

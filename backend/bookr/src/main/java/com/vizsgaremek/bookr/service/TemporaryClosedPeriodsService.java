@@ -8,7 +8,6 @@ import com.vizsgaremek.bookr.DTO.OwnerPanelDTO.createTemporaryClosedPeriodDTO;
 import com.vizsgaremek.bookr.model.Companies;
 import com.vizsgaremek.bookr.model.TemporaryClosedPeriods;
 import com.vizsgaremek.bookr.util.FileStorageUtil;
-import java.text.SimpleDateFormat;
 import java.util.List;
 import org.json.JSONArray;
 import org.json.JSONObject;

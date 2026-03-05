@@ -5,7 +5,7 @@
 package com.vizsgaremek.bookr.model;
 
 import static com.vizsgaremek.bookr.model.Users.emf;
-import static com.vizsgaremek.bookr.model.Users.formatter;
+import com.vizsgaremek.bookr.util.DateFormatterUtil;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
@@ -213,7 +213,7 @@ public class Favorites implements Serializable {
                         Integer.valueOf(record[0].toString()),
                         Integer.valueOf(record[1].toString()),
                         Integer.valueOf(record[2].toString()),
-                        formatter.parse(record[3].toString())
+                        DateFormatterUtil.parseTimestamp(record[3].toString())
                 );
 
                 favoritesList.add(fav);

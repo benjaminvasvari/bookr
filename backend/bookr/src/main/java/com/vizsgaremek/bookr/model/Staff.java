@@ -5,7 +5,7 @@
 package com.vizsgaremek.bookr.model;
 
 import static com.vizsgaremek.bookr.model.Users.emf;
-import static com.vizsgaremek.bookr.model.Users.formatter;
+import com.vizsgaremek.bookr.util.DateFormatterUtil;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -493,8 +493,8 @@ public class Staff implements Serializable {
                         record[3] != null ? record[3].toString() : null,
                         record[4] != null ? record[4].toString() : null,
                         record[5] != null ? record[5].toString() : null,
-                        formatter.parse(record[6].toString()),
-                        record[7] != null ? formatter.parse(record[7].toString()) : null,
+                        DateFormatterUtil.parseTimestamp(record[6].toString()),
+                        record[7] != null ? DateFormatterUtil.parseTimestamp(record[7].toString()) : null,
                         record[8].toString(),
                         record[9].toString(),
                         record[10] != null ? record[10].toString() : null

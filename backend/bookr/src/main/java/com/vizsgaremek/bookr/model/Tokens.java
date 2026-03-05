@@ -6,7 +6,7 @@ package com.vizsgaremek.bookr.model;
 
 import com.vizsgaremek.bookr.DTO.checkStaffInviteTokenDTO;
 import static com.vizsgaremek.bookr.model.Users.emf;
-import static com.vizsgaremek.bookr.model.Users.formatter;
+import com.vizsgaremek.bookr.util.DateFormatterUtil;
 import com.vizsgaremek.bookr.util.StoredProcedureUtil;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -272,7 +272,7 @@ public class Tokens implements Serializable {
 
             Tokens token = new Tokens(
                     record[0].toString(),
-                    formatter.parse(record[1].toString())
+                    DateFormatterUtil.parseTimestamp(record[1].toString())
             );
 
             return token;
@@ -308,7 +308,7 @@ public class Tokens implements Serializable {
 
             Tokens token = new Tokens(
                     record[0].toString(),
-                    formatter.parse(record[1].toString())
+                    DateFormatterUtil.parseTimestamp(record[1].toString())
             );
 
             return token;
@@ -347,7 +347,7 @@ public class Tokens implements Serializable {
                         Integer.valueOf(record[0].toString()),
                         record[1].toString(),
                         record[2].toString(),
-                        formatter.parse(record[3].toString()),
+                        DateFormatterUtil.parseTimestamp(record[3].toString()),
                         Boolean.parseBoolean(record[4].toString())
                 );
 
@@ -390,10 +390,10 @@ public class Tokens implements Serializable {
                     Integer.valueOf(record[1].toString()),
                     record[2].toString(),
                     record[3].toString(),
-                    formatter.parse(record[4].toString()),
+                    DateFormatterUtil.parseTimestamp(record[4].toString()),
                     record[5] != null ? Boolean.parseBoolean(record[5].toString()) : null,
-                    record[6] != null ? formatter.parse(record[6].toString()) : null,
-                    formatter.parse(record[7].toString())
+                    record[6] != null ? DateFormatterUtil.parseTimestamp(record[6].toString()) : null,
+                    DateFormatterUtil.parseTimestamp(record[7].toString())
             );
 
             return token;
@@ -435,7 +435,7 @@ public class Tokens implements Serializable {
             Tokens token = new Tokens(
                     Integer.valueOf(record[0].toString()),
                     record[1].toString(),
-                    formatter.parse(record[2].toString())
+                    DateFormatterUtil.parseTimestamp(record[2].toString())
             );
 
             return token;

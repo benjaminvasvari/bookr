@@ -5,7 +5,7 @@
 package com.vizsgaremek.bookr.model;
 
 import static com.vizsgaremek.bookr.model.Users.emf;
-import static com.vizsgaremek.bookr.model.Users.formatter;
+import com.vizsgaremek.bookr.util.DateFormatterUtil;
 import java.io.Serializable;
 import java.util.Date;
 import java.util.List;
@@ -284,8 +284,8 @@ public class NotificationSettings implements Serializable {
                     Boolean.parseBoolean(record[3].toString()),
                     Boolean.parseBoolean(record[4].toString()),
                     Boolean.parseBoolean(record[5].toString()),
-                    record[7] != null ? null : formatter.parse(record[6].toString()),
-                    formatter.parse(record[7].toString())
+                    record[7] != null ? null : DateFormatterUtil.parseTimestamp(record[6].toString()),
+                    DateFormatterUtil.parseTimestamp(record[7].toString())
             );
 
             return s;

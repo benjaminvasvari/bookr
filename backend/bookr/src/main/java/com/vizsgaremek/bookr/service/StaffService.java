@@ -9,7 +9,7 @@ import com.vizsgaremek.bookr.model.AuditLogs;
 import com.vizsgaremek.bookr.model.PendingStaff;
 import com.vizsgaremek.bookr.model.Staff;
 import com.vizsgaremek.bookr.security.JWT;
-import static com.vizsgaremek.bookr.service.AppointmentsService.timeFormatter;
+import com.vizsgaremek.bookr.util.DateFormatterUtil;
 import com.vizsgaremek.bookr.util.ErrorResponseBuilder;
 import com.vizsgaremek.bookr.util.FileStorageUtil;
 import java.util.ArrayList;
@@ -126,7 +126,7 @@ public class StaffService {
                     for (Appointments appt : appointments) {
                         JSONObject apptObject = new JSONObject();
                         apptObject.put("id", appt.getId());
-                        apptObject.put("startTime", timeFormatter.format(appt.getStartTime()));
+                        apptObject.put("startTime", DateFormatterUtil.format(appt.getStartTime(), DateFormatterUtil.TIME));
                         apptObject.put("serviceName", appt.getServiceName());
                         apptObject.put("clientName", appt.getClientName());
                         apptObject.put("clientImageUrl", appt.getImageUrl() == null ? JSONObject.NULL : appt.getImageUrl());

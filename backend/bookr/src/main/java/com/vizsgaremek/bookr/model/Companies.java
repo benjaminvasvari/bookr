@@ -5,7 +5,7 @@
 package com.vizsgaremek.bookr.model;
 
 import static com.vizsgaremek.bookr.model.Users.emf;
-import static com.vizsgaremek.bookr.model.Users.formatter;
+import com.vizsgaremek.bookr.util.DateFormatterUtil;
 import com.vizsgaremek.bookr.util.StoredProcedureUtil;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -613,8 +613,8 @@ public class Companies implements Serializable {
                     record[9] != null ? record[9].toString() : null,
                     Integer.valueOf(record[10].toString()),
                     Integer.valueOf(record[11].toString()),
-                    formatter.parse(record[12].toString()),
-                    record[13] == null ? null : formatter.parse(record[13].toString()), // updated_at
+                    DateFormatterUtil.parseTimestamp(record[12].toString()),
+                    record[13] == null ? null : DateFormatterUtil.parseTimestamp(record[13].toString()), // updated_at
                     Boolean.parseBoolean(record[14].toString())
             );
 

@@ -5,7 +5,7 @@
 package com.vizsgaremek.bookr.model;
 
 import static com.vizsgaremek.bookr.model.Users.emf;
-import static com.vizsgaremek.bookr.model.Users.formatter;
+import com.vizsgaremek.bookr.util.DateFormatterUtil;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
@@ -242,7 +242,7 @@ public class Images implements Serializable {
                         Integer.valueOf(record[0].toString()), // id
                         record[1] == null ? null : record[1].toString(), // url
                         Boolean.parseBoolean(record[2].toString()), // is_main
-                        record[3] == null ? null : formatter.parse(record[3].toString()) // uploaded_at
+                        record[3] == null ? null : DateFormatterUtil.parseTimestamp(record[3].toString()) // uploaded_at
                 );
 
                 imagesList.add(img);  // Hozzáadjuk a listához!
@@ -283,7 +283,7 @@ public class Images implements Serializable {
             Images image = new Images(
                     Integer.valueOf(record[0].toString()), // id
                     record[1].toString(), // url
-                    record[2] == null ? null : formatter.parse(record[2].toString()), // uploaded_at
+                    record[2] == null ? null : DateFormatterUtil.parseTimestamp(record[2].toString()), // uploaded_at
                     null, // companyIdInt - user profile picture has no company
                     Integer.valueOf(record[3].toString()) // userIdInt
             );

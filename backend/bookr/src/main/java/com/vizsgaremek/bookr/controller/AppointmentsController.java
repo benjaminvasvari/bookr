@@ -336,10 +336,15 @@ public class AppointmentsController {
     public Response getWeeklyCalendarAppointments(
             @HeaderParam("Authorization") String authHeader,
             @QueryParam("companyId") Integer companyId,
-            @QueryParam("staffId") Integer staffId,
+            @QueryParam("staffId") String staffIdStr,
             @QueryParam("weekStart") String weekStart) {
 
         JSONObject errorResponse = new JSONObject();
+
+        Integer staffId = null;
+        if (staffIdStr != null && !staffIdStr.isEmpty()) {
+            staffId = Integer.valueOf(staffIdStr);
+        }
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return buildErrorResponse(401, "missingToken");

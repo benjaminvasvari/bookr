@@ -8,7 +8,7 @@ import static com.vizsgaremek.bookr.model.Users.emf;
 import com.vizsgaremek.bookr.util.StoredProcedureUtil;
 import java.io.Serializable;
 import java.sql.Time;
-import java.text.SimpleDateFormat;
+import com.vizsgaremek.bookr.util.DateFormatterUtil;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -105,7 +105,7 @@ public class OpeningHours implements Serializable {
     @Transient
     private String sunday;
 
-    static SimpleDateFormat timeFormatter = new SimpleDateFormat("HH:mm");
+    // timeFormatter eltávolítva – használj DateFormatterUtil.parseTime() / DateFormatterUtil.format() hívásokat
 
     public OpeningHours() {
     }
@@ -309,7 +309,7 @@ public class OpeningHours implements Serializable {
                 if (isClosed) {
                     timeString = "Zárva";
                 } else if (openTime != null && closeTime != null) {
-                    timeString = timeFormatter.format(openTime) + " - " + timeFormatter.format(closeTime);
+                    timeString = DateFormatterUtil.format(openTime, DateFormatterUtil.TIME) + " - " + DateFormatterUtil.format(closeTime, DateFormatterUtil.TIME);
                 } else {
                     timeString = "Zárva";  // Ha nincs idő megadva
                 }
@@ -372,8 +372,8 @@ public class OpeningHours implements Serializable {
 
                 OpeningHours o = new OpeningHours(
                         record[0].toString(),
-                        record[1] != null ? timeFormatter.parse(record[1].toString()) : null,
-                        record[2] != null ? timeFormatter.parse(record[2].toString()) : null,
+                        record[1] != null ? DateFormatterUtil.parseTime(record[1].toString()) : null,
+                        record[2] != null ? DateFormatterUtil.parseTime(record[2].toString()) : null,
                         Boolean.parseBoolean(record[3].toString())
                 );
 

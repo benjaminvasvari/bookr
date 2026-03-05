@@ -2,13 +2,13 @@ package com.vizsgaremek.bookr.service;
 
 import com.sun.mail.smtp.SMTPSendFailedException;
 import com.vizsgaremek.bookr.config.EmailConfig;
+import com.vizsgaremek.bookr.util.DateFormatterUtil;
 import com.vizsgaremek.bookr.util.EmailHtmlTemplates;
 import java.io.UnsupportedEncodingException;
 import jakarta.mail.*;
 import jakarta.mail.internet.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -137,7 +137,7 @@ public class EmailService {
             return;
         }
 
-        String expiresAtFormatted = expiresAt.format(DateTimeFormatter.ofPattern("yyyy. MM. dd."));
+        String expiresAtFormatted = expiresAt.format(DateFormatterUtil.DATE_HU);
 
         String inviteeName = invitedName != null ? invitedName : null;
 
