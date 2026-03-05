@@ -11,6 +11,7 @@ import { Company } from '../core/models';
 import { CompaniesService } from '../core/services/companies.service';
 import { Service } from '../core/models/service.model';
 import { Favorite, FavoritesService } from '../core/services/favorites.service';
+import { IndustryPageStaffResponse, StaffService } from '../core/services/staff.service';
 import { combineLatest, Subscription } from 'rxjs';
 
 type LeafletModule = typeof import('leaflet');
@@ -36,6 +37,7 @@ interface TeamMember {
   initials: string;
   role: string;
   bio?: string;
+  imageUrl?: string;
 }
 
 @Component({
@@ -73,36 +75,7 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
   };
   private readonly expandedTeamBioIds = new Set<number>();
   private readonly expandedReviewIds = new Set<number>();
-  public readonly teamMembers: TeamMember[] = [
-    {
-      id: 1,
-      name: 'Kovács Anna',
-      initials: 'KA',
-      role: 'Senior Stylist',
-      bio: 'Precíz hajvágás és modern színtechnikák specialistája, vendégközpontú szemlélettel.',
-    },
-    {
-      id: 2,
-      name: 'Nagy Dániel',
-      initials: 'ND',
-      role: 'Barber & Grooming Expert',
-      bio: 'Férfi haj- és szakállformázásban erős, klasszikus és trendi vonalon egyaránt.',
-    },
-    {
-      id: 3,
-      name: 'Tóth Petra',
-      initials: 'TP',
-      role: 'Color Specialist',
-      bio: 'Kíméletes, tartós és természetes hatású színezések, kiemelt fókuszban a hajvédelem, személyre szabott otthoni rutinnal és hosszú távú hajegészség támogatással.',
-    },
-    {
-      id: 4,
-      name: 'Szabó Máté',
-      initials: 'SM',
-      role: 'Junior Stylist',
-      bio: '',
-    },
-  ];
+  teamMembers: TeamMember[] = [];
   private favoritesLoaded = false;
   private favorites: Favorite[] = [];
   private routeSubscription?: Subscription;
@@ -116,7 +89,8 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
     private router: Router,
     private companiesService: CompaniesService,
     private title: Title,
-    private favoritesService: FavoritesService
+    private favoritesService: FavoritesService,
+    private staffService: StaffService
   ) {}
 
   ngOnInit(): void {
@@ -124,6 +98,7 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
     this.routeSubscription = this.route.params.subscribe((params) => {
       this.companyId = +params['id'];
       this.loadCompanyDetails();
+      this.loadTeamMembers();
       this.updateFavoriteState();
     });
 
@@ -226,6 +201,56 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
         this.isLoading = false;
       },
     });
+  }
+
+  private loadTeamMembers(): void {
+    if (!this.companyId) {
+      this.teamMembers = [];
+      return;
+    }
+
+    this.staffService.getStaffForIndustryPage(this.companyId).subscribe({
+      next: (staffMembers) => {
+        this.expandedTeamBioIds.clear();
+        this.teamMembers = staffMembers.map((member) => this.mapStaffToTeamMember(member));
+      },
+      error: (error) => {
+        console.error('Hiba a csapattagok betöltése során:', error);
+        this.teamMembers = [];
+      },
+    });
+  }
+
+  private mapStaffToTeamMember(
+    staffMember: IndustryPageStaffResponse['result'][number]
+  ): TeamMember {
+    const displayName = staffMember.displayName?.trim() || 'Névtelen munkatárs';
+
+    return {
+      id: staffMember.id,
+      name: displayName,
+      initials: this.getInitials(displayName),
+      role: staffMember.specialties?.trim() || 'Munkatárs',
+      bio: staffMember.bio?.trim() || '',
+      imageUrl: staffMember.imageUrl?.trim() || '',
+    };
+  }
+
+  private getInitials(fullName: string): string {
+    const parts = fullName
+      .trim()
+      .split(/\s+/)
+      .filter((part) => part.length > 0);
+
+    if (parts.length === 0) {
+      return '??';
+    }
+
+    if (parts.length === 1) {
+      return parts[0].slice(0, 2).toUpperCase();
+    }
+
+    return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
   }
 
   selectCategory(categoryId: number): void {

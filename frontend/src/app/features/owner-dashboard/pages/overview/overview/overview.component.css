@@ -261,6 +261,33 @@
 	white-space: nowrap;
 }
 
+.review-rating {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 4px 10px;
+	border-radius: 999px;
+	background: #ffffff;
+	border: 1px solid #e2e8f0;
+	white-space: nowrap;
+}
+
+.review-stars {
+	gap: 1px;
+}
+
+.review-star {
+	font-size: 15px;
+}
+
+.review-rating-value {
+	font-size: 12px;
+	font-weight: 700;
+	color: #1f2937;
+	min-width: 24px;
+	text-align: right;
+}
+
 .empty-state {
 	margin: 8px 0 0;
 	font-size: 14px;

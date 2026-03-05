@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
@@ -17,6 +17,22 @@ export class OwnerDashboardService {
   getOwnerDashboard(): Observable<OwnerDashboardResponse> {
     return this.http.get<OwnerDashboardResponse>(
       `${this.apiUrl}${API_ENDPOINTS.DASHBOARDS.OWNER}`
+    );
+  }
+
+  getWeeklyCalendarAppointments(
+    companyId: number,
+    weekStart: string,
+    staffId?: number | null,
+  ): Observable<unknown> {
+    let params = new HttpParams()
+      .set('companyId', companyId.toString())
+      .set('weekStart', weekStart)
+      .set('staffId', staffId ? staffId.toString() : '');
+
+    return this.http.get<unknown>(
+      `${this.apiUrl}${API_ENDPOINTS.APPOINTMENTS.WEEKLY_CALENDAR}`,
+      { params }
     );
   }
 }

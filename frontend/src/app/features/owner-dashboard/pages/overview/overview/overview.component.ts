@@ -84,6 +84,22 @@ export class OverviewComponent implements OnInit {
     });
   }
 
+  getRatingStarArray(rating: number): ('full' | 'half' | 'empty')[] {
+    const normalized = Math.max(0, Math.min(5, Number(rating) || 0));
+
+    return Array.from({ length: 5 }, (_, i) => {
+      const diff = normalized - i;
+      if (diff >= 1) return 'full';
+      if (diff >= 0.5) return 'half';
+      return 'empty';
+    });
+  }
+
+  formatRating(rating: number): string {
+    const normalized = Math.max(0, Math.min(5, Number(rating) || 0));
+    return normalized.toFixed(1);
+  }
+
   get upcomingAppointments(): OwnerDashboardUpcomingAppointment[] {
     return this.dashboardData?.upcomingAppointmentsData ?? [];
   }

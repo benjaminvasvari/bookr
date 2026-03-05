@@ -143,6 +143,41 @@
 	font-weight: 600;
 }
 
+.save-feedback {
+	padding: 10px 12px;
+	border-radius: 10px;
+	border: 1px solid #dbe3ec;
+	background: #f8fafc;
+	font-size: 13px;
+	font-weight: 600;
+	color: #334155;
+}
+
+.save-feedback.warning {
+	border-color: #fde68a;
+	background: #fffbeb;
+	color: #92400e;
+}
+
+.save-feedback.success {
+	border-color: #bbf7d0;
+	background: #f0fdf4;
+	color: #166534;
+}
+
+.save-feedback.error {
+	border-color: #fecaca;
+	background: #fef2f2;
+	color: #b91c1c;
+}
+
+.section-closures .btn:disabled {
+	opacity: 0.55;
+	cursor: not-allowed;
+	transform: none;
+	box-shadow: none;
+}
+
 .settings-section::after {
 	display: none;
 }
@@ -175,6 +210,11 @@
 	gap: 14px;
 	align-self: start;
 	align-content: start;
+}
+
+.closures-feedback-container {
+	display: grid;
+	gap: 10px;
 }
 
 .section-hours {
@@ -365,8 +405,10 @@
 
 .edit-textarea {
 	height: 98px;
+	min-height: 98px;
 	padding: 12px;
 	resize: vertical;
+	overflow-y: hidden;
 	font-family: inherit;
 }
 
@@ -380,6 +422,16 @@
 	background: #f1f5f9;
 	color: #94a3b8;
 	cursor: not-allowed;
+}
+
+.edit-input.input-invalid {
+	border-color: #fca5a5;
+	background: #fef2f2;
+}
+
+.edit-input.input-invalid:focus {
+	border-color: #f87171;
+	box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.2);
 }
 
 .image-layout {
@@ -739,6 +791,42 @@
 	gap: 8px;
 }
 
+.rule-row .hours-inline-inputs {
+	display: inline-flex;
+	align-items: center;
+	justify-content: flex-end;
+	justify-self: end;
+	gap: 10px;
+	min-width: 220px;
+}
+
+.rule-minimum-controls {
+	display: grid;
+	justify-items: end;
+	align-content: center;
+	justify-self: end;
+	gap: 8px;
+	min-width: 220px;
+}
+
+.rule-minimum-controls .toggle-wrap {
+	height: 34px;
+}
+
+.rule-minimum-controls .hours-inline-inputs.is-disabled {
+	opacity: 0.55;
+}
+
+.rule-row .hours-inline-inputs .rule-input {
+	width: 170px;
+	min-width: 170px;
+}
+
+.rule-row .hours-inline-inputs .rule-input.rule-input-small {
+	width: 96px;
+	min-width: 96px;
+}
+
 .toggle-wrap {
 	display: inline-flex;
 	align-items: center;
@@ -814,7 +902,8 @@
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
 	grid-template-areas:
-		'start end remove'
+		'start end allday'
+		'fromtime totime remove'
 		'reason reason remove';
 	gap: 10px;
 	align-items: start;
@@ -836,6 +925,19 @@
 	grid-area: reason;
 }
 
+.temporary-row .all-day-field {
+	grid-area: allday;
+	align-self: end;
+}
+
+.temporary-row .from-time-field {
+	grid-area: fromtime;
+}
+
+.temporary-row .to-time-field {
+	grid-area: totime;
+}
+
 .temporary-row .field-group {
 	display: grid;
 	gap: 6px;
@@ -852,6 +954,10 @@
 	font-size: 12px;
 	font-weight: 700;
 	color: #64748b;
+}
+
+.temporary-row .all-day-field .closure-toggle {
+	justify-self: start;
 }
 
 .remove-btn {
@@ -964,11 +1070,31 @@
 		grid-template-columns: 1fr;
 	}
 
+	.rule-row .hours-inline-inputs {
+		display: grid;
+		justify-self: stretch;
+		gap: 8px;
+	}
+
+	.rule-minimum-controls {
+		display: grid;
+		justify-self: stretch;
+		gap: 8px;
+	}
+
+	.rule-row .hours-inline-inputs .rule-input {
+		width: 100%;
+		min-width: 0;
+	}
+
 	.temporary-row {
 		grid-template-columns: 1fr;
 		grid-template-areas:
 			'start'
 			'end'
+			'allday'
+			'fromtime'
+			'totime'
 			'reason'
 			'remove';
 	}
@@ -1022,6 +1148,7 @@
 :host-context(body.dark-mode) .detail-item,
 :host-context(body.dark-mode) .rule-row,
 :host-context(body.dark-mode) .hours-row,
+:host-context(body.dark-mode) .save-feedback,
 :host-context(body.dark-mode) .temporary-row,
 :host-context(body.dark-mode) .image-main,
 :host-context(body.dark-mode) .image-thumb,
@@ -1029,6 +1156,24 @@
 :host-context(body.dark-mode) .gallery-slot-card.slot-main {
 	background: #16253a;
 	border-color: rgba(78, 106, 145, 0.55);
+}
+
+:host-context(body.dark-mode) .save-feedback.warning {
+	background: rgba(146, 64, 14, 0.18);
+	border-color: rgba(234, 179, 8, 0.4);
+	color: #fcd34d;
+}
+
+:host-context(body.dark-mode) .save-feedback.success {
+	background: rgba(22, 101, 52, 0.2);
+	border-color: rgba(34, 197, 94, 0.45);
+	color: #86efac;
+}
+
+:host-context(body.dark-mode) .save-feedback.error {
+	background: rgba(153, 27, 27, 0.2);
+	border-color: rgba(248, 113, 113, 0.45);
+	color: #fca5a5;
 }
 
 :host-context(body.dark-mode) .cover-badge,
@@ -1081,4 +1226,14 @@
 :host-context(body.dark-mode) .edit-input:disabled {
 	background: #24364f;
 	color: #8fa3c2;
+}
+
+:host-context(body.dark-mode) .edit-input.input-invalid {
+	background: rgba(153, 27, 27, 0.16);
+	border-color: rgba(248, 113, 113, 0.45);
+}
+
+:host-context(body.dark-mode) .edit-input.input-invalid:focus {
+	border-color: rgba(252, 165, 165, 0.8);
+	box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.2);
 }

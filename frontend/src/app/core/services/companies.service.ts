@@ -9,6 +9,7 @@ import { Company, CompanyShort } from '../models/company.model';
 import { ServiceCategory } from '../models/service.model';
 import { CompanyRegistrationRequest } from '../models/company-registration.model';
 import { BusinessCategory } from '../models/business-category.model';
+import { OpeningHours } from '../models/opening-hours.model';
 
 export interface CompanyImage {
   id: number;
@@ -19,6 +20,70 @@ export interface CompanyImage {
 
 interface CompanyImagesResponse {
   result?: CompanyImage[];
+}
+
+interface OpeningHoursResponse {
+  result?: OpeningHours;
+}
+
+interface UpdateOpeningHoursRequest {
+  openingHours: OpeningHours;
+}
+
+interface BookingRulesResponse {
+  result?: {
+    cancellationHours?: number | null;
+    minimumBookingHoursAhead?: number | null;
+    bookingAdvanceDays?: number | null;
+  };
+}
+
+interface UpdateCompanyBookingRulesRequest {
+  bookingAdvanceDays: number;
+  cancellationHours: number;
+  minimumBookingHoursAhead: number | null;
+}
+
+export interface UpdateCompanyRequest {
+  name: string;
+  description: string;
+  address: string;
+  city: string;
+  postalCode: string;
+  country: string;
+  phone: string;
+  email: string;
+  website?: string | null;
+  businessCategoryId?: number;
+}
+
+export interface TemporaryClosedPeriod {
+  id?: number;
+  reason?: string;
+  startDate?: string;
+  endDate?: string;
+  openTime?: string | null;
+  closeTime?: string | null;
+}
+
+interface TemporaryClosedPeriodsResponse {
+  result?: TemporaryClosedPeriod[];
+}
+
+interface CreateTemporaryClosedPeriodRequest {
+  startDate: string;
+  endDate: string;
+  openTime: string | null;
+  closeTime: string | null;
+  reason: string;
+}
+
+interface CreateTemporaryClosedPeriodResponse {
+  result?: TemporaryClosedPeriod;
+}
+
+interface UpdateTemporaryClosedPeriodResponse {
+  result?: TemporaryClosedPeriod;
 }
 
 
@@ -128,5 +193,66 @@ export class CompaniesService {
     return this.http
       .get<CompanyImagesResponse>(`${this.apiUrl}${API_ENDPOINTS.IMAGES.BY_COMPANY(companyId)}`)
       .pipe(map((response) => response.result || []));
+  }
+
+  getOwnerPanelOpeningHours(): Observable<OpeningHours> {
+    return this.http
+      .get<OpeningHoursResponse>(`${this.apiUrl}${API_ENDPOINTS.OPENING_HOURS.OWNER_PANEL}`)
+      .pipe(map((response) => response.result || {}));
+  }
+
+  getCompanyBookingRules(): Observable<{
+    cancellationHours?: number | null;
+    minimumBookingHoursAhead?: number | null;
+    bookingAdvanceDays?: number | null;
+  }> {
+    return this.http
+      .get<BookingRulesResponse>(`${this.apiUrl}${API_ENDPOINTS.COMPANIES.BOOKING_RULES}`)
+      .pipe(map((response) => response.result || {}));
+  }
+
+  getTemporaryClosedPeriods(): Observable<TemporaryClosedPeriod[]> {
+    return this.http
+      .get<TemporaryClosedPeriodsResponse>(`${this.apiUrl}${API_ENDPOINTS.TEMPORARY_CLOSED.GET_ALL}`)
+      .pipe(map((response) => response.result || []));
+  }
+
+  createTemporaryClosedPeriod(
+    payload: CreateTemporaryClosedPeriodRequest
+  ): Observable<TemporaryClosedPeriod> {
+    return this.http
+      .post<CreateTemporaryClosedPeriodResponse>(
+        `${this.apiUrl}${API_ENDPOINTS.TEMPORARY_CLOSED.CREATE}`,
+        payload
+      )
+      .pipe(map((response) => response.result || {}));
+  }
+
+  updateTemporaryClosedPeriod(
+    id: number,
+    payload: CreateTemporaryClosedPeriodRequest
+  ): Observable<TemporaryClosedPeriod> {
+    return this.http
+      .put<UpdateTemporaryClosedPeriodResponse>(
+        `${this.apiUrl}${API_ENDPOINTS.TEMPORARY_CLOSED.UPDATE(id)}`,
+        payload
+      )
+      .pipe(map((response) => response.result || {}));
+  }
+
+  deleteTemporaryClosedPeriod(id: number): Observable<unknown> {
+    return this.http.delete(`${this.apiUrl}${API_ENDPOINTS.TEMPORARY_CLOSED.DELETE(id)}`);
+  }
+
+  updateCompanyBookingRules(payload: UpdateCompanyBookingRulesRequest): Observable<unknown> {
+    return this.http.put(`${this.apiUrl}${API_ENDPOINTS.COMPANIES.UPDATE_BOOKING_RULES}`, payload);
+  }
+
+  updateCompany(payload: UpdateCompanyRequest): Observable<unknown> {
+    return this.http.put(`${this.apiUrl}${API_ENDPOINTS.COMPANIES.UPDATE}`, payload);
+  }
+
+  updateOwnerPanelOpeningHours(payload: UpdateOpeningHoursRequest): Observable<unknown> {
+    return this.http.put(`${this.apiUrl}${API_ENDPOINTS.OPENING_HOURS.UPDATE}`, payload);
   }
 }

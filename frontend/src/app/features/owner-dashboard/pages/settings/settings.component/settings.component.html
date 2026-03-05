@@ -22,7 +22,7 @@
 				} @else {
 				<div class="inline-actions">
 					<button class="btn ghost" type="button" (click)="cancelEdit('company')">Mégse</button>
-					<button class="btn primary" type="button" (click)="saveEdit('company')">Mentés</button>
+					<button class="btn primary" type="button" [disabled]="isCompanySaving" (click)="saveEdit('company')">{{ isCompanySaving ? 'Mentés...' : 'Mentés' }}</button>
 				</div>
 				}
 			</header>
@@ -30,6 +30,9 @@
 			<div class="edit-conflict-message">
 				Előbb mentsd el a módosításokat ezen a kártyán, mielőtt másikat szerkesztenél.
 			</div>
+			}
+			@if (editMode.company && companyValidationMessage) {
+			<div class="save-feedback error">{{ companyValidationMessage }}</div>
 			}
 
 			<div class="company-layout">
@@ -44,7 +47,7 @@
 					@if (!editMode.company) {
 					<p class="value value-regular">{{ companyData.description }}</p>
 					} @else {
-					<textarea class="edit-input edit-textarea card-input" [(ngModel)]="companyDraft.description"></textarea>
+					<textarea #companyDescriptionTextarea class="edit-input edit-textarea card-input" [(ngModel)]="companyDraft.description" (input)="onCompanyDescriptionInput(companyDescriptionTextarea)" (mouseup)="onCompanyDescriptionResize(companyDescriptionTextarea)"></textarea>
 					}
 				</section>
 
@@ -62,14 +65,14 @@
 						</select>
 						}
 					</div>
-					<div class="detail-item"><p class="label">Weboldal</p>@if (!editMode.company) {<p class="value">{{ companyData.website || 'Nincs megadva' }}</p>} @else {<input class="edit-input card-input" type="text" [(ngModel)]="companyDraft.website" />}</div>
-					<div class="detail-item"><p class="label">Tulajdonos</p>@if (!editMode.company) {<p class="value">{{ companyData.ownerName }}</p>} @else {<input class="edit-input card-input" type="text" [(ngModel)]="companyDraft.ownerName" />}</div>
-					<div class="detail-item"><p class="label">Telefonszám</p>@if (!editMode.company) {<p class="value">{{ companyData.phone }}</p>} @else {<input class="edit-input card-input" type="text" [(ngModel)]="companyDraft.phone" />}</div>
-					<div class="detail-item"><p class="label">Email</p>@if (!editMode.company) {<p class="value">{{ companyData.email }}</p>} @else {<input class="edit-input card-input" type="email" [(ngModel)]="companyDraft.email" />}</div>
-					<div class="detail-item"><p class="label">Utca</p>@if (!editMode.company) {<p class="value">{{ companyData.street }}</p>} @else {<input class="edit-input card-input" type="text" [(ngModel)]="companyDraft.street" />}</div>
+					<div class="detail-item"><p class="label">Weboldal</p>@if (!editMode.company) {<p class="value">{{ companyData.website || 'Nincs megadva' }}</p>} @else {<input class="edit-input card-input" [class.input-invalid]="isCompanyWebsiteInvalid" type="text" [(ngModel)]="companyDraft.website" />}</div>
+					<div class="detail-item"><p class="label">Tulajdonos</p><p class="value">{{ companyData.ownerName }}</p></div>
+					<div class="detail-item"><p class="label">Telefonszám</p>@if (!editMode.company) {<p class="value">{{ formatCompanyPhone(companyData.phone) }}</p>} @else {<input class="edit-input card-input" [class.input-invalid]="isCompanyPhoneInvalid" type="text" [(ngModel)]="companyDraft.phone" />}</div>
+					<div class="detail-item"><p class="label">Email</p>@if (!editMode.company) {<p class="value">{{ companyData.email }}</p>} @else {<input class="edit-input card-input" [class.input-invalid]="isCompanyEmailInvalid" type="email" [(ngModel)]="companyDraft.email" />}</div>
+					<div class="detail-item"><p class="label">Ország</p>@if (!editMode.company) {<p class="value">{{ companyData.country }}</p>} @else {<select class="edit-input card-input" [(ngModel)]="companyDraft.country">@for (country of availableCountries; track country) {<option [value]="country">{{ country }}</option>}</select>}</div>
+					<div class="detail-item"><p class="label">Irányítószám</p>@if (!editMode.company) {<p class="value">{{ companyData.zipCode }}</p>} @else {<input class="edit-input card-input" type="text" maxlength="4" inputmode="numeric" [(ngModel)]="companyDraft.zipCode" (ngModelChange)="onCompanyZipCodeChange($event)" />}</div>
 					<div class="detail-item"><p class="label">Város</p>@if (!editMode.company) {<p class="value">{{ companyData.city }}</p>} @else {<input class="edit-input card-input" type="text" [(ngModel)]="companyDraft.city" />}</div>
-					<div class="detail-item"><p class="label">Irányítószám</p>@if (!editMode.company) {<p class="value">{{ companyData.zipCode }}</p>} @else {<input class="edit-input card-input" type="text" [(ngModel)]="companyDraft.zipCode" />}</div>
-					<div class="detail-item"><p class="label">Ország</p>@if (!editMode.company) {<p class="value">{{ companyData.country }}</p>} @else {<input class="edit-input card-input" type="text" [(ngModel)]="companyDraft.country" />}</div>
+					<div class="detail-item"><p class="label">Utca</p>@if (!editMode.company) {<p class="value">{{ companyData.street }}</p>} @else {<input class="edit-input card-input" type="text" [(ngModel)]="companyDraft.street" />}</div>
 				</div>
 			</div>
 		</article>
@@ -174,9 +177,9 @@
 			}
 
 			<div class="rule-list">
-				<div class="rule-row"><p>Maximum előre foglalás</p>@if (!editMode.rules) {<strong>{{ businessRulesData.maxAdvanceBookingDays }} nap</strong>} @else {<input class="edit-input card-input rule-input" type="number" [(ngModel)]="businessRulesDraft.maxAdvanceBookingDays" />}</div>
-				<div class="rule-row"><p>Lemondási határidő</p>@if (!editMode.rules) {<strong>{{ businessRulesData.cancellationDeadlineHours }} óra</strong>} @else {<input class="edit-input card-input rule-input" type="number" [(ngModel)]="businessRulesDraft.cancellationDeadlineHours" />}</div>
-				<div class="rule-row"><p>Minimum előzetes foglalás (azonos napon)</p>@if (!editMode.rules) {<strong>{{ businessRulesData.sameDayMinimumHours }} óra</strong>} @else {<input class="edit-input card-input rule-input" type="number" [(ngModel)]="businessRulesDraft.sameDayMinimumHours" />}</div>
+				<div class="rule-row"><p>Maximum előre foglalás</p>@if (!editMode.rules) {<strong>{{ businessRulesData.maxAdvanceBookingDays }} nap</strong>} @else {<div class="hours-inline-inputs"><input class="edit-input card-input rule-input rule-input-small" type="number" [(ngModel)]="businessRulesDraft.maxAdvanceBookingDays" /><span>nap</span></div>}</div>
+				<div class="rule-row"><p>Lemondási határidő</p>@if (!editMode.rules) {<strong>{{ businessRulesData.cancellationDeadlineHours }} óra</strong>} @else {<div class="hours-inline-inputs"><input class="edit-input card-input rule-input rule-input-small" type="number" [(ngModel)]="businessRulesDraft.cancellationDeadlineHours" /><span>óra</span></div>}</div>
+				<div class="rule-row"><p>Minimum előzetes foglalás (azonos napon)</p>@if (!editMode.rules) {<strong>{{ businessRulesData.sameDayMinimumHours === null ? 'Aznap nem foglalható' : businessRulesData.sameDayMinimumHours + ' óra' }}</strong>} @else {<div class="rule-minimum-controls"><label class="toggle-wrap" [class.is-open]="businessRulesDraft.sameDayMinimumHours !== null" [class.is-closed]="businessRulesDraft.sameDayMinimumHours === null"><input type="checkbox" [ngModel]="businessRulesDraft.sameDayMinimumHours === null" (ngModelChange)="onSameDayUnbookableToggle($event)" /><span class="toggle-indicator"></span><span class="toggle-text">Aznap nem foglalható</span></label><div class="hours-inline-inputs" [class.is-disabled]="businessRulesDraft.sameDayMinimumHours === null"><input class="edit-input card-input rule-input rule-input-small" type="number" [(ngModel)]="businessRulesDraft.sameDayMinimumHours" [disabled]="businessRulesDraft.sameDayMinimumHours === null" /><span>óra</span></div></div>}</div>
 				<div class="rule-row"><p>Fizetési mód</p>@if (!editMode.rules) {<strong>{{ businessRulesData.paymentMethod }}</strong>} @else {<select class="edit-input card-input rule-input" [(ngModel)]="businessRulesDraft.paymentMethod"><option *ngFor="let method of paymentMethods" [value]="method">{{ method }}</option></select>}</div>
 				<div class="rule-row"><p>Pénznem</p>@if (!editMode.rules) {<strong>{{ businessRulesData.currency }}</strong>} @else {<select class="edit-input card-input rule-input" [(ngModel)]="businessRulesDraft.currency"><option *ngFor="let currency of currencies" [value]="currency">{{ currency }}</option></select>}</div>
 			</div>
@@ -227,28 +230,68 @@
 			</div>
 		</article>
 
-		<article class="settings-section section-closures" #closuresSection>
+		<article class="settings-section section-closures" [class.conflict-card]="conflictedSection === 'closures'" #closuresSection>
 			<header class="section-header" #closuresHeader>
 				<div>
 					<h2>Ideiglenes zárvatartások</h2>
 					<p class="section-subtitle">Szabadság, ünnep vagy felújítás miatti zárvatartás</p>
 				</div>
-				<button class="btn ghost" type="button" (click)="addTemporaryClosure()">+ Új időszak</button>
+				<div class="inline-actions">
+					<button class="btn ghost" type="button" (click)="addTemporaryClosure()">+ Új időszak</button>
+					@if (hasTemporaryClosuresUnsavedChanges || temporaryClosuresSaveState === 'saving') {
+					<button class="btn ghost" type="button" [disabled]="temporaryClosuresSaveState === 'saving' || !hasTemporaryClosuresUnsavedChanges" (click)="cancelTemporaryClosuresChanges()">Mégse</button>
+					<button class="btn primary" type="button" [disabled]="temporaryClosuresSaveState === 'saving' || !hasTemporaryClosuresUnsavedChanges" (click)="saveTemporaryClosures()">{{ temporaryClosuresSaveState === 'saving' ? 'Mentés...' : 'Mentés' }}</button>
+					}
+				</div>
 			</header>
+			@if ((hasTemporaryClosuresUnsavedChanges || showTemporaryClosuresUnsavedWarning) || (temporaryClosuresSaveState !== 'idle' && temporaryClosuresSaveMessage)) {
+			<div class="closures-feedback-container" #closuresFeedback>
+				@if (hasTemporaryClosuresUnsavedChanges || showTemporaryClosuresUnsavedWarning) {
+				<div class="save-feedback warning">{{ showTemporaryClosuresUnsavedWarning ? 'A zárvatartás módosításai még nincsenek mentve.' : 'Mentetlen módosítások vannak. Ne felejtsd el menteni.' }}</div>
+				}
+				@if (temporaryClosuresSaveState === 'success' && temporaryClosuresSaveMessage) {
+				<div class="save-feedback success">{{ temporaryClosuresSaveMessage }}</div>
+				}
+				@if (temporaryClosuresSaveState === 'error' && temporaryClosuresSaveMessage) {
+				<div class="save-feedback error">{{ temporaryClosuresSaveMessage }}</div>
+				}
+			</div>
+			}
 
 			<div class="temporary-list" [style.max-height.px]="temporaryListMaxHeight">
 				<div class="temporary-row" *ngFor="let period of temporaryClosures; let i = index">
 					<div class="field-group start-field">
 						<label [for]="'start-' + i">Kezdő dátum</label>
-						<input [id]="'start-' + i" class="edit-input" type="date" [(ngModel)]="period.startDate" />
+						<input [id]="'start-' + i" class="edit-input" [class.input-invalid]="isTemporaryDateInPast(period.startDate) || isTemporaryDateRangeInvalid(period)" type="date" [min]="temporaryClosureMinDate" [(ngModel)]="period.startDate" (ngModelChange)="onTemporaryDateChange(period, 'startDate', $event)" />
 					</div>
 					<div class="field-group end-field">
 						<label [for]="'end-' + i">Záró dátum</label>
-						<input [id]="'end-' + i" class="edit-input" type="date" [(ngModel)]="period.endDate" />
+						<input [id]="'end-' + i" class="edit-input" [class.input-invalid]="isTemporaryDateInPast(period.endDate) || isTemporaryDateRangeInvalid(period)" type="date" [min]="getTemporaryClosureEndMinDate(period)" [(ngModel)]="period.endDate" (ngModelChange)="onTemporaryDateChange(period, 'endDate', $event)" />
 					</div>
+					<div class="field-group all-day-field">
+						<label class="toggle-wrap closure-toggle" [class.is-open]="period.isAllDay" [class.is-closed]="!period.isAllDay">
+							<input
+								type="checkbox"
+								[(ngModel)]="period.isAllDay"
+								(ngModelChange)="onTemporaryAllDayChange(period, $event)"
+							/>
+							<span class="toggle-indicator"></span>
+							<span class="toggle-text">Egész nap</span>
+						</label>
+					</div>
+					@if (!period.isAllDay) {
+					<div class="field-group from-time-field">
+						<label [for]="'from-time-' + i">Mettől</label>
+						<input [id]="'from-time-' + i" class="edit-input" type="time" [(ngModel)]="period.startTime" (ngModelChange)="markTemporaryClosuresChanged()" />
+					</div>
+					<div class="field-group to-time-field">
+						<label [for]="'to-time-' + i">Meddig</label>
+						<input [id]="'to-time-' + i" class="edit-input" type="time" [(ngModel)]="period.endTime" (ngModelChange)="markTemporaryClosuresChanged()" />
+					</div>
+					}
 					<div class="field-group reason-field">
 						<label [for]="'reason-' + i">Megjegyzés</label>
-						<input [id]="'reason-' + i" class="edit-input" type="text" [(ngModel)]="period.reason" placeholder="pl. Nyári szabadság" />
+						<input [id]="'reason-' + i" class="edit-input" type="text" [(ngModel)]="period.reason" (ngModelChange)="markTemporaryClosuresChanged()" placeholder="pl. Nyári szabadság" />
 					</div>
 					<button class="remove-btn remove-field" type="button" (click)="removeTemporaryClosure(i)">Törlés</button>
 				</div>

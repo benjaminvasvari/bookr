@@ -158,6 +158,11 @@
   <div class="team-section">
     <h2 class="section-title">Csapatunk</h2>
 
+    @if (teamMembers.length === 0) {
+    <div class="no-services">
+      <p>Jelenleg még nincs megjeleníthető munkatárs.</p>
+    </div>
+    } @else {
     <div class="team-grid">
       @for (member of teamMembers; track member.id) {
       <article class="team-card">
@@ -168,7 +173,11 @@
           </div>
 
           <div class="team-avatar" [attr.aria-label]="member.name">
+            @if (member.imageUrl) {
+            <img [src]="member.imageUrl" [alt]="member.name" loading="lazy" />
+            } @else {
             <span>{{ member.initials }}</span>
+            }
           </div>
         </div>
 
@@ -193,6 +202,7 @@
       </article>
       }
     </div>
+    }
   </div>
 
   <!-- Nyitvatartás és Értékelések szekció -->

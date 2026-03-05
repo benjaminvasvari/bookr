@@ -246,15 +246,17 @@ export class StaffComponent implements OnInit {
   }
 
   getAppointmentTimeLabel(appointment: OwnerUpcomingAppointment): string {
-    if (appointment.time) {
-      return appointment.time;
+    const normalized = this.normalizeOwnerUpcomingAppointment(appointment);
+
+    if (normalized.time) {
+      return normalized.time;
     }
 
-    if (!appointment.date) {
+    if (!normalized.date) {
       return '-';
     }
 
-    const parsed = new Date(appointment.date);
+    const parsed = new Date(normalized.date);
     if (Number.isNaN(parsed.getTime())) {
       return '-';
     }
@@ -352,7 +354,9 @@ export class StaffComponent implements OnInit {
   }
 
   private mapActualStaff(item: OwnerActualStaffMember): StaffCard {
-    const appointments = item.upcomingAppointments ?? [];
+    const appointments = (item.upcomingAppointments ?? []).map((appointment) =>
+      this.normalizeOwnerUpcomingAppointment(appointment)
+    );
 
     return {
       id: item.id,
@@ -360,6 +364,62 @@ export class StaffComponent implements OnInit {
       specialties: item.specialties || 'Nincs megadva',
       imageUrl: item.imageUrl,
       upcomingAppointments: appointments,
+    };
+  }
+
+  private normalizeOwnerUpcomingAppointment(
+    appointment: OwnerUpcomingAppointment
+  ): OwnerUpcomingAppointment {
+    const source = appointment as unknown as Record<string, unknown>;
+    const rawDate = this.getStringValue(source, ['date', 'appointmentDate', 'startDate']);
+    const rawTime = this.getStringValue(source, ['time', 'appointmentTime']);
+    const rawStartTime = this.getStringValue(source, [
+      'startTime',
+      'appointmentStartTime',
+      'start',
+      'startsAt',
+      'appointmentStart',
+    ]);
+
+    let date = (rawDate || appointment.date || '').trim();
+    let time = (rawTime || appointment.time || '').trim();
+
+    if (rawStartTime) {
+      const extracted = this.extractDateAndTime(rawStartTime);
+      if (!date) {
+        date = extracted.date;
+      }
+      if (!time) {
+        time = extracted.time;
+      }
+    }
+
+    if ((!date || !time) && rawDate) {
+      const extracted = this.extractDateAndTime(rawDate);
+      if (!date) {
+        date = extracted.date;
+      }
+      if (!time) {
+        time = extracted.time;
+      }
+    }
+
+    if (!date && time) {
+      date = this.getTodayDateString();
+    }
+
+    return {
+      ...appointment,
+      date: date || appointment.date,
+      time: time || appointment.time,
+      serviceName:
+        appointment.serviceName ||
+        this.getStringValue(source, ['serviceName', 'service', 'serviceNames']) ||
+        appointment.serviceName,
+      clientName:
+        appointment.clientName ||
+        this.getStringValue(source, ['clientName', 'customerName', 'userName']) ||
+        appointment.clientName,
     };
   }
 
@@ -382,12 +442,13 @@ export class StaffComponent implements OnInit {
   }
 
   private resolveAppointmentStart(appointment: OwnerUpcomingAppointment): Date | null {
-    if (!appointment?.date) {
+    const normalized = this.normalizeOwnerUpcomingAppointment(appointment);
+    if (!normalized?.date) {
       return null;
     }
 
-    const dateValue = appointment.date.trim();
-    const timeValue = appointment.time?.trim();
+    const dateValue = normalized.date.trim();
+    const timeValue = normalized.time?.trim();
 
     if (timeValue) {
       const parsed = new Date(`${dateValue}T${timeValue}`);
@@ -398,6 +459,91 @@ export class StaffComponent implements OnInit {
 
     const directParsed = new Date(dateValue);
     return Number.isNaN(directParsed.getTime()) ? null : directParsed;
+  }
+
+  private extractDateAndTime(value: string): { date: string; time: string } {
+    const normalized = value.trim();
+
+    if (!normalized) {
+      return { date: '', time: '' };
+    }
+
+    const timeOnlyMatch = normalized.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    if (timeOnlyMatch) {
+      const hour = timeOnlyMatch[1].padStart(2, '0');
+      const minute = timeOnlyMatch[2];
+      return {
+        date: '',
+        time: `${hour}:${minute}`,
+      };
+    }
+
+    const dateTimeMatch = normalized.match(/^(\d{4}-\d{2}-\d{2})[T\s](\d{2}:\d{2})/);
+    if (dateTimeMatch) {
+      return {
+        date: dateTimeMatch[1],
+        time: dateTimeMatch[2],
+      };
+    }
+
+    const parsed = new Date(normalized);
+    if (Number.isNaN(parsed.getTime())) {
+      return { date: '', time: '' };
+    }
+
+    const date = parsed.toISOString().slice(0, 10);
+    const time = parsed.toTimeString().slice(0, 5);
+    return { date, time };
+  }
+
+  private getTodayDateString(): string {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+  }
+
+  private getStringValue(source: Record<string, unknown>, keys: string[]): string {
+    const sourceEntries = Object.entries(source);
+
+    for (const key of keys) {
+      const normalizedKey = key.toLowerCase();
+      const matchedEntry = sourceEntries.find(([sourceKey]) => sourceKey.toLowerCase() === normalizedKey);
+      if (!matchedEntry) {
+        continue;
+      }
+
+      const value = matchedEntry[1];
+      const stringValue = this.toNonEmptyString(value);
+      if (stringValue) {
+        return stringValue;
+      }
+    }
+
+    return '';
+  }
+
+  private toNonEmptyString(value: unknown): string {
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+      return value.toISOString();
+    }
+
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      const asDate = new Date(value);
+      if (!Number.isNaN(asDate.getTime())) {
+        return asDate.toISOString();
+      }
+
+      return String(value);
+    }
+
+    return '';
   }
 
   private resolveAppointmentEnd(start: Date, appointment: OwnerUpcomingAppointment): Date {

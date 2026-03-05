@@ -361,6 +361,10 @@ export class AppointmentSelectComponent implements OnInit, OnDestroy {
       // Ellenőrizzük, hogy ez az időablak szabad-e
       const isAvailable = !this.isSlotOccupied(currentMinutes, slotEndMinutes, occupiedSlots);
 
+      if (!isAvailable) {
+        continue;
+      }
+
       slots.push({
         time: slotTime,
         available: isAvailable,

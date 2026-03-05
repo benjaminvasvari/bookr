@@ -100,7 +100,20 @@
 					<strong>{{ review.userName }}</strong>
 					<span class="muted">"{{ review.comment }}"</span>
 				</div>
-				<span class="badge">{{ review.rating }}★</span>
+				<div class="review-rating" [attr.aria-label]="review.rating + ' csillag'">
+					<div class="stars review-stars">
+						<span
+							*ngFor="let star of getRatingStarArray(review.rating)"
+							class="star review-star"
+							[class.star-full]="star === 'full'"
+							[class.star-half]="star === 'half'"
+							[class.star-empty]="star === 'empty'"
+						>
+							<span class="star-icon">★</span>
+						</span>
+					</div>
+					<span class="review-rating-value">{{ formatRating(review.rating) }}</span>
+				</div>
 			</li>
 		</ul>
 		<ng-template #noReviews>
