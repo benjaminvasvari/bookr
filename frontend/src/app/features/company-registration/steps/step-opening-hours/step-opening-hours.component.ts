@@ -1,6 +1,10 @@
 import { Component, EventEmitter, Output, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
+import { MatInputModule } from '@angular/material/input';
+import { MatTimepickerModule } from '@angular/material/timepicker';
+import { MatNativeDateModule } from '@angular/material/core';
 
 export interface DayOpeningHours {
   dayName: string;
@@ -13,7 +17,7 @@ export interface DayOpeningHours {
 @Component({
   selector: 'app-step-opening-hours',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, MatInputModule, MatTimepickerModule, MatNativeDateModule],
   templateUrl: './step-opening-hours.component.html',
   styleUrl: './step-opening-hours.component.css',
 })
@@ -119,5 +123,59 @@ export class StepOpeningHoursComponent implements OnInit {
   isFormValid(): boolean {
     // Az opening hours opcionális
     return true;
+  }
+
+  toTimeModel(value: string): Date | null {
+    const normalized = value?.trim() ?? '';
+    if (!/^\d{2}:\d{2}$/.test(normalized)) {
+      return null;
+    }
+
+    const [hoursRaw, minutesRaw] = normalized.split(':');
+    const hours = Number(hoursRaw);
+    const minutes = Number(minutesRaw);
+
+    if (
+      !Number.isInteger(hours) ||
+      !Number.isInteger(minutes) ||
+      hours < 0 ||
+      hours > 23 ||
+      minutes < 0 ||
+      minutes > 59
+    ) {
+      return null;
+    }
+
+    const date = new Date();
+    date.setHours(hours, minutes, 0, 0);
+    return date;
+  }
+
+  onOpenTimePickerChange(dayNumber: number, value: Date | null): void {
+    const formatted = this.formatTime(value);
+    if (!formatted) {
+      return;
+    }
+
+    this.onOpenTimeChange(dayNumber, formatted);
+  }
+
+  onCloseTimePickerChange(dayNumber: number, value: Date | null): void {
+    const formatted = this.formatTime(value);
+    if (!formatted) {
+      return;
+    }
+
+    this.onCloseTimeChange(dayNumber, formatted);
+  }
+
+  private formatTime(value: Date | null): string {
+    if (!value || Number.isNaN(value.getTime())) {
+      return '';
+    }
+
+    const hours = String(value.getHours()).padStart(2, '0');
+    const minutes = String(value.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
   }
 }

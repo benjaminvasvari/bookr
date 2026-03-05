@@ -434,6 +434,18 @@
 	box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.2);
 }
 
+.material-field {
+	width: 100%;
+}
+
+.material-field-compact {
+	width: 100%;
+}
+
+.material-field.input-invalid-field {
+	width: 100%;
+}
+
 .image-layout {
 	display: grid;
 	grid-template-columns: 1.6fr 1fr 1fr;

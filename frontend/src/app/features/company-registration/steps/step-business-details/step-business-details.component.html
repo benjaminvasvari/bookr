@@ -74,14 +74,19 @@
           </label>
           <div class="input-row">
             <input
-              type="time"
               id="minBookingHoursSameDay"
-              formControlName="minBookingHoursSameDay"
+              matInput
+              [matTimepicker]="minBookingPicker"
+              [ngModel]="minBookingHoursSameDayModel"
+              [ngModelOptions]="{ standalone: true }"
+              (ngModelChange)="onMinBookingHoursSameDayPickerChange($event)"
               class="form-control"
               max="12:00"
               [disabled]="businessForm.get('minBookingSameDayNone')?.value"
               [class.error]="isFieldInvalid('minBookingHoursSameDay')"
+              readonly
             />
+            <mat-timepicker #minBookingPicker></mat-timepicker>
             <label class="checkbox-inline">
               <input type="checkbox" formControlName="minBookingSameDayNone" />
               Nincs

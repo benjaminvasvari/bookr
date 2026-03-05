@@ -1,6 +1,12 @@
 import { AfterViewInit, Component, ElementRef, HostListener, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatTimepickerModule } from '@angular/material/timepicker';
+import { DateAdapter, MatNativeDateModule, NativeDateAdapter } from '@angular/material/core';
+import { MAT_DATE_FORMATS, MAT_DATE_LOCALE } from '@angular/material/core';
 import { CompaniesService, CompanyImage, TemporaryClosedPeriod, UpdateCompanyRequest } from '../../../../../core/services/companies.service';
 import { forkJoin, of } from 'rxjs';
 import { AuthService } from '../../../../../core/services/auth.service';
@@ -82,12 +88,108 @@ interface OpeningHour {
 type OpeningHourApiDay = keyof OpeningHours;
 type OpeningHoursUpdatePayload = { openingHours: Record<OpeningHourApiDay, string> };
 
+const SETTINGS_DATE_FORMATS = {
+  parse: {
+    dateInput: 'settingsDateInput',
+  },
+  display: {
+    dateInput: 'settingsDateInput',
+    monthYearLabel: { year: 'numeric', month: 'short' },
+    dateA11yLabel: { year: 'numeric', month: 'long', day: 'numeric' },
+    monthYearA11yLabel: { year: 'numeric', month: 'long' },
+  },
+};
+
+class SettingsDateAdapter extends NativeDateAdapter {
+  override parse(value: unknown): Date | null {
+    if (typeof value === 'string') {
+      const normalized = value.trim().replace(/\s+/g, '');
+
+      if (!normalized) {
+        return null;
+      }
+
+      const isoLikeMatch = normalized.match(/^(\d{4})[.\/-](\d{1,2})[.\/-](\d{1,2})$/);
+      if (isoLikeMatch) {
+        const year = Number(isoLikeMatch[1]);
+        const month = Number(isoLikeMatch[2]);
+        const day = Number(isoLikeMatch[3]);
+        return this.createValidatedDate(year, month, day);
+      }
+
+      const dayFirstMatch = normalized.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/);
+      if (dayFirstMatch) {
+        const day = Number(dayFirstMatch[1]);
+        const month = Number(dayFirstMatch[2]);
+        const year = Number(dayFirstMatch[3]);
+        return this.createValidatedDate(year, month, day);
+      }
+    }
+
+    return super.parse(value);
+  }
+
+  override format(date: Date, displayFormat: unknown): string {
+    if (displayFormat === 'settingsDateInput') {
+      if (!this.isValid(date)) {
+        return '';
+      }
+
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}.${month}.${day}`;
+    }
+
+    return super.format(date, displayFormat as object);
+  }
+
+  private createValidatedDate(year: number, month: number, day: number): Date | null {
+    if (
+      !Number.isInteger(year) ||
+      !Number.isInteger(month) ||
+      !Number.isInteger(day) ||
+      month < 1 ||
+      month > 12 ||
+      day < 1 ||
+      day > 31
+    ) {
+      return null;
+    }
+
+    const parsedDate = new Date(year, month - 1, day);
+
+    if (
+      parsedDate.getFullYear() !== year ||
+      parsedDate.getMonth() !== month - 1 ||
+      parsedDate.getDate() !== day
+    ) {
+      return null;
+    }
+
+    return parsedDate;
+  }
+}
+
 type SectionType = 'company' | 'gallery' | 'rules' | 'hours' | 'closures';
 
 @Component({
   selector: 'app-settings.component',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatDatepickerModule,
+    MatTimepickerModule,
+    MatNativeDateModule,
+  ],
+  providers: [
+    { provide: DateAdapter, useClass: SettingsDateAdapter, deps: [MAT_DATE_LOCALE] },
+    { provide: MAT_DATE_LOCALE, useValue: 'hu-HU' },
+    { provide: MAT_DATE_FORMATS, useValue: SETTINGS_DATE_FORMATS },
+  ],
   templateUrl: './settings.component.html',
   styleUrls: ['./settings.component.css'],
 })
@@ -110,6 +212,8 @@ export class SettingsComponent implements AfterViewInit, OnInit {
   imagePreviewUrl: string | null = null;
   private companyMainImageUrl: string | null = null;
   private companyGalleryApiImages: CompanyImage[] = [];
+  private readonly dateControlModels = new Map<string, { rawValue: string; value: Date | null }>();
+  private readonly timeControlModels = new Map<string, { rawValue: string; value: Date | null }>();
   private lastSameDayMinimumHours = 2;
   private readonly temporaryClosuresStorageKey = 'ownerSettingsTemporaryClosures';
   private temporaryClosuresSavedSnapshot = '';
@@ -226,6 +330,10 @@ export class SettingsComponent implements AfterViewInit, OnInit {
     return this.getTodayDateString();
   }
 
+  get temporaryClosureMinDateAsDate(): Date {
+    return this.parseDateString(this.temporaryClosureMinDate) ?? new Date();
+  }
+
   getTemporaryClosureEndMinDate(period: TemporaryClosingPeriod): string {
     const today = this.getTodayDateString();
     const startDate = period.startDate?.trim() ?? '';
@@ -235,6 +343,47 @@ export class SettingsComponent implements AfterViewInit, OnInit {
     }
 
     return startDate > today ? startDate : today;
+  }
+
+  getTemporaryClosureEndMinDateAsDate(period: TemporaryClosingPeriod): Date {
+    return (
+      this.parseDateString(this.getTemporaryClosureEndMinDate(period)) ??
+      this.temporaryClosureMinDateAsDate
+    );
+  }
+
+  toDateModel(controlKey: string, value: string): Date | null {
+    const normalizedValue = value?.trim() ?? '';
+    const cachedEntry = this.dateControlModels.get(controlKey);
+
+    if (cachedEntry && cachedEntry.rawValue === normalizedValue) {
+      return cachedEntry.value;
+    }
+
+    const parsedValue = this.parseDateString(normalizedValue);
+    this.dateControlModels.set(controlKey, {
+      rawValue: normalizedValue,
+      value: parsedValue,
+    });
+
+    return parsedValue;
+  }
+
+  toTimeModel(controlKey: string, value: string): Date | null {
+    const normalizedValue = value?.trim() ?? '';
+    const cachedEntry = this.timeControlModels.get(controlKey);
+
+    if (cachedEntry && cachedEntry.rawValue === normalizedValue) {
+      return cachedEntry.value;
+    }
+
+    const parsedValue = this.parseTimeString(normalizedValue);
+    this.timeControlModels.set(controlKey, {
+      rawValue: normalizedValue,
+      value: parsedValue,
+    });
+
+    return parsedValue;
   }
 
   isTemporaryDateInPast(value: string): boolean {
@@ -670,6 +819,41 @@ export class SettingsComponent implements AfterViewInit, OnInit {
     this.markTemporaryClosuresChanged();
   }
 
+  onTemporaryDatePickerChange(
+    period: TemporaryClosingPeriod,
+    field: 'startDate' | 'endDate',
+    value: Date | null
+  ): void {
+    this.onTemporaryDateChange(period, field, this.formatDateAsString(value));
+  }
+
+  onTemporaryTimePickerChange(
+    period: TemporaryClosingPeriod,
+    field: 'startTime' | 'endTime',
+    value: Date | null
+  ): void {
+    const formattedTime = this.formatTimeAsString(value);
+    if (!formattedTime) {
+      return;
+    }
+
+    period[field] = formattedTime;
+    this.markTemporaryClosuresChanged();
+  }
+
+  onOpeningHourTimePickerChange(
+    hour: OpeningHour,
+    field: 'openTime' | 'closeTime',
+    value: Date | null
+  ): void {
+    const formattedTime = this.formatTimeAsString(value);
+    if (!formattedTime) {
+      return;
+    }
+
+    hour[field] = formattedTime;
+  }
+
   onCompanyZipCodeChange(value: string): void {
     const normalizedZip = this.normalizePostalCode(value);
     this.companyDraft.zipCode = normalizedZip;
@@ -928,6 +1112,77 @@ export class SettingsComponent implements AfterViewInit, OnInit {
 
   private normalizePostalCode(value: string): string {
     return (value?.replace(/\D/g, '') ?? '').slice(0, 4);
+  }
+
+  private parseDateString(value: string | null | undefined): Date | null {
+    const normalizedValue = value?.trim() ?? '';
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(normalizedValue)) {
+      return null;
+    }
+
+    const [yearRaw, monthRaw, dayRaw] = normalizedValue.split('-');
+    const year = Number(yearRaw);
+    const month = Number(monthRaw);
+    const day = Number(dayRaw);
+    const parsedDate = new Date(year, month - 1, day);
+
+    if (
+      parsedDate.getFullYear() !== year ||
+      parsedDate.getMonth() !== month - 1 ||
+      parsedDate.getDate() !== day
+    ) {
+      return null;
+    }
+
+    parsedDate.setHours(0, 0, 0, 0);
+    return parsedDate;
+  }
+
+  private formatDateAsString(value: Date | null | undefined): string {
+    if (!value || Number.isNaN(value.getTime())) {
+      return this.getTodayDateString();
+    }
+
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private parseTimeString(value: string | null | undefined): Date | null {
+    const normalizedValue = value?.trim() ?? '';
+    if (!/^\d{2}:\d{2}$/.test(normalizedValue)) {
+      return null;
+    }
+
+    const [hoursRaw, minutesRaw] = normalizedValue.split(':');
+    const hours = Number(hoursRaw);
+    const minutes = Number(minutesRaw);
+
+    if (
+      !Number.isInteger(hours) ||
+      !Number.isInteger(minutes) ||
+      hours < 0 ||
+      hours > 23 ||
+      minutes < 0 ||
+      minutes > 59
+    ) {
+      return null;
+    }
+
+    const parsedTime = new Date();
+    parsedTime.setHours(hours, minutes, 0, 0);
+    return parsedTime;
+  }
+
+  private formatTimeAsString(value: Date | null | undefined): string {
+    if (!value || Number.isNaN(value.getTime())) {
+      return '';
+    }
+
+    const hours = String(value.getHours()).padStart(2, '0');
+    const minutes = String(value.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
   }
 
   private resolveCityFromPostalCode(postalCode: string): string | null {

@@ -213,8 +213,26 @@
 					<span>{{ hour.isOpen ? hour.openTime + ' - ' + hour.closeTime : '-' }}</span>
 					} @else {
 					<div class="hours-inline-inputs">
-						<input class="edit-input card-input" type="time" [(ngModel)]="hour.openTime" [disabled]="!hour.isOpen" />
-						<input class="edit-input card-input" type="time" [(ngModel)]="hour.closeTime" [disabled]="!hour.isOpen" />
+						<input
+							class="edit-input card-input"
+							matInput
+							[matTimepicker]="openingStartPicker"
+							[ngModel]="toTimeModel('opening-open-' + hour.day, hour.openTime)"
+							(ngModelChange)="onOpeningHourTimePickerChange(hour, 'openTime', $event)"
+							[disabled]="!hour.isOpen"
+							readonly
+						/>
+						<mat-timepicker #openingStartPicker></mat-timepicker>
+						<input
+							class="edit-input card-input"
+							matInput
+							[matTimepicker]="openingEndPicker"
+							[ngModel]="toTimeModel('opening-close-' + hour.day, hour.closeTime)"
+							(ngModelChange)="onOpeningHourTimePickerChange(hour, 'closeTime', $event)"
+							[disabled]="!hour.isOpen"
+							readonly
+						/>
+						<mat-timepicker #openingEndPicker></mat-timepicker>
 					</div>
 					}
 					@if (!editMode.hours) {
@@ -262,11 +280,35 @@
 				<div class="temporary-row" *ngFor="let period of temporaryClosures; let i = index">
 					<div class="field-group start-field">
 						<label [for]="'start-' + i">Kezdő dátum</label>
-						<input [id]="'start-' + i" class="edit-input" [class.input-invalid]="isTemporaryDateInPast(period.startDate) || isTemporaryDateRangeInvalid(period)" type="date" [min]="temporaryClosureMinDate" [(ngModel)]="period.startDate" (ngModelChange)="onTemporaryDateChange(period, 'startDate', $event)" />
+						<input
+							[id]="'start-' + i"
+							class="edit-input"
+							[class.input-invalid]="isTemporaryDateInPast(period.startDate) || isTemporaryDateRangeInvalid(period)"
+							matInput
+							[matDatepicker]="startDatePicker"
+							[min]="temporaryClosureMinDateAsDate"
+							[ngModel]="toDateModel('closure-start-' + i, period.startDate)"
+							(ngModelChange)="onTemporaryDatePickerChange(period, 'startDate', $event)"
+							(click)="startDatePicker.open()"
+							readonly
+						/>
+						<mat-datepicker #startDatePicker></mat-datepicker>
 					</div>
 					<div class="field-group end-field">
 						<label [for]="'end-' + i">Záró dátum</label>
-						<input [id]="'end-' + i" class="edit-input" [class.input-invalid]="isTemporaryDateInPast(period.endDate) || isTemporaryDateRangeInvalid(period)" type="date" [min]="getTemporaryClosureEndMinDate(period)" [(ngModel)]="period.endDate" (ngModelChange)="onTemporaryDateChange(period, 'endDate', $event)" />
+						<input
+							[id]="'end-' + i"
+							class="edit-input"
+							[class.input-invalid]="isTemporaryDateInPast(period.endDate) || isTemporaryDateRangeInvalid(period)"
+							matInput
+							[matDatepicker]="endDatePicker"
+							[min]="getTemporaryClosureEndMinDateAsDate(period)"
+							[ngModel]="toDateModel('closure-end-' + i, period.endDate)"
+							(ngModelChange)="onTemporaryDatePickerChange(period, 'endDate', $event)"
+							(click)="endDatePicker.open()"
+							readonly
+						/>
+						<mat-datepicker #endDatePicker></mat-datepicker>
 					</div>
 					<div class="field-group all-day-field">
 						<label class="toggle-wrap closure-toggle" [class.is-open]="period.isAllDay" [class.is-closed]="!period.isAllDay">
@@ -282,11 +324,29 @@
 					@if (!period.isAllDay) {
 					<div class="field-group from-time-field">
 						<label [for]="'from-time-' + i">Mettől</label>
-						<input [id]="'from-time-' + i" class="edit-input" type="time" [(ngModel)]="period.startTime" (ngModelChange)="markTemporaryClosuresChanged()" />
+						<input
+							[id]="'from-time-' + i"
+							class="edit-input"
+							matInput
+							[matTimepicker]="closureFromPicker"
+							[ngModel]="toTimeModel('closure-from-' + i, period.startTime)"
+							(ngModelChange)="onTemporaryTimePickerChange(period, 'startTime', $event)"
+							readonly
+						/>
+						<mat-timepicker #closureFromPicker></mat-timepicker>
 					</div>
 					<div class="field-group to-time-field">
 						<label [for]="'to-time-' + i">Meddig</label>
-						<input [id]="'to-time-' + i" class="edit-input" type="time" [(ngModel)]="period.endTime" (ngModelChange)="markTemporaryClosuresChanged()" />
+						<input
+							[id]="'to-time-' + i"
+							class="edit-input"
+							matInput
+							[matTimepicker]="closureToPicker"
+							[ngModel]="toTimeModel('closure-to-' + i, period.endTime)"
+							(ngModelChange)="onTemporaryTimePickerChange(period, 'endTime', $event)"
+							readonly
+						/>
+						<mat-timepicker #closureToPicker></mat-timepicker>
 					</div>
 					}
 					<div class="field-group reason-field">
