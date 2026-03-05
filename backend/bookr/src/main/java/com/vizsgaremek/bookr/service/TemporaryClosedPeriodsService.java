@@ -113,14 +113,14 @@ public class TemporaryClosedPeriodsService {
         return toReturn;
     }
 
-    public JSONObject updateTemporaryClosedPeriod(Integer periodId, createTemporaryClosedPeriodDTO request) {
+    public JSONObject updateTemporaryClosedPeriod(Integer periodId, Integer companyId, createTemporaryClosedPeriodDTO request) {
         JSONObject toReturn = new JSONObject();
         String status = "success";
         Integer statusCode = 200;
 
         try {
             // Adatbázis lekérdezés
-            createTemporaryClosedPeriodDTO modelResult = layer.updateTemporaryClosedPeriod(periodId, request);
+            createTemporaryClosedPeriodDTO modelResult = layer.updateTemporaryClosedPeriod(periodId, companyId, request);
 
             // NULL ELLENŐRZÉS
             if (modelResult == null) {

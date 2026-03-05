@@ -250,7 +250,7 @@ public class TemporaryClosedPeriodsController {
             return buildErrorResponse(400, "InvalidParam");
         }
 
-        JSONObject toReturn = layer.updateTemporaryClosedPeriod(periodId, request);
+        JSONObject toReturn = layer.updateTemporaryClosedPeriod(periodId, userCompanyId, request);
 
         return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
                 .entity(toReturn.toString())

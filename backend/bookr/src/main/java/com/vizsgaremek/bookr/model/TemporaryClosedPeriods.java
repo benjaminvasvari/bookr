@@ -384,12 +384,13 @@ public class TemporaryClosedPeriods implements Serializable {
         }
     }
 
-    public static createTemporaryClosedPeriodDTO updateTemporaryClosedPeriod(Integer periodId, createTemporaryClosedPeriodDTO request) {
+    public static createTemporaryClosedPeriodDTO updateTemporaryClosedPeriod(Integer periodId, Integer companyId, createTemporaryClosedPeriodDTO request) {
         EntityManager em = emf.createEntityManager();
 
         try {
             StoredProcedureQuery spq = em.createStoredProcedureQuery("updateTemporaryClosedPeriod");
             spq.registerStoredProcedureParameter("idIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("startDateIN", String.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("endDateIN", String.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("openTimeIN", String.class, ParameterMode.IN);
@@ -397,6 +398,7 @@ public class TemporaryClosedPeriods implements Serializable {
             spq.registerStoredProcedureParameter("reasonIN", String.class, ParameterMode.IN);
 
             spq.setParameter("idIN", periodId);
+            spq.setParameter("companyIdIN", companyId);
             spq.setParameter("startDateIN", request.getStartDate());
             spq.setParameter("endDateIN", request.getEndDate());
             StoredProcedureUtil.setNullableParameter(spq, "openTimeIN", request.getOpenTime());
