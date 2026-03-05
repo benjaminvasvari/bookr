@@ -7,7 +7,7 @@ package com.vizsgaremek.bookr.model;
 import com.vizsgaremek.bookr.DTO.OwnerPanelDTO;
 import com.vizsgaremek.bookr.DTO.OwnerPanelDTO.AverageRatingDTO;
 import static com.vizsgaremek.bookr.model.Users.emf;
-import com.vizsgaremek.bookr.util.DateFormatterUtil;
+import static com.vizsgaremek.bookr.model.Users.formatter;
 import com.vizsgaremek.bookr.util.StoredProcedureUtil;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -271,7 +271,7 @@ public class Reviews implements Serializable {
                         record[2] != null ? record[2].toString() : null,
                         Integer.valueOf(record[3].toString()),
                         record[4] != null ? record[4].toString() : null,
-                        DateFormatterUtil.parseTimestamp(record[5].toString())
+                        formatter.parse(record[5].toString())
                 );
 
                 reviewsList.add(review);  // Hozzáadjuk a listához!

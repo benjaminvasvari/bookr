@@ -6,9 +6,10 @@ package com.vizsgaremek.bookr.model;
 
 import com.vizsgaremek.bookr.DTO.OwnerPanelDTO.createTemporaryClosedPeriodDTO;
 import static com.vizsgaremek.bookr.model.Users.emf;
-import com.vizsgaremek.bookr.util.DateFormatterUtil;
+import static com.vizsgaremek.bookr.model.Users.formatter;
 import com.vizsgaremek.bookr.util.StoredProcedureUtil;
 import java.io.Serializable;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;

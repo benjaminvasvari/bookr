@@ -7,7 +7,7 @@ package com.vizsgaremek.bookr.model;
 import com.vizsgaremek.bookr.DTO.OwnerPanelDTO.ClientsByCompaniesDTO;
 import com.vizsgaremek.bookr.DTO.OwnerPanelDTO.ClientsByCompanyResultWrapper;
 import java.io.Serializable;
-import com.vizsgaremek.bookr.util.DateFormatterUtil;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -569,7 +569,7 @@ public class Users implements Serializable {
     }
 
     static EntityManagerFactory emf = Persistence.createEntityManagerFactory("com.vizsgaremek_bookr_war_1.0-SNAPSHOTPU");
-    // formatter eltávolítva – használj DateFormatterUtil.parseTimestamp() / DateFormatterUtil.format() hívásokat
+    static SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     // ----------- TÁROLT ELJÁRÁS MEGHÍVÁSOK------------
     public static Users clientRegister(Users clientRegistered) {
@@ -736,8 +736,8 @@ public class Users implements Serializable {
                     record[5] == null ? null : record[5].toString(), // imageUrl
                     record[6] == null ? null : Integer.valueOf(record[6].toString()), // company_id
                     record[7].toString(),
-                    DateFormatterUtil.parseTimestamp(record[8].toString()),
-                    record[9] == null ? null : DateFormatterUtil.parseTimestamp(record[9].toString()), // last login
+                    formatter.parse(record[8].toString()),
+                    record[9] == null ? null : formatter.parse(record[9].toString()), // last login
                     record[10] == null ? null : Boolean.parseBoolean(record[10].toString()),
                     record[11] == null ? null : Boolean.parseBoolean(record[11].toString())
             );
@@ -855,7 +855,7 @@ public class Users implements Serializable {
                     record[3].toString(), // email
                     record[4].toString(), // phone
                     record[5] == null ? null : record[5].toString(), // imageUrl
-                    DateFormatterUtil.parseTimestamp(record[6].toString())
+                    formatter.parse(record[6].toString())
             );
 
             return user;
@@ -1092,7 +1092,7 @@ public class Users implements Serializable {
                     record[4].toString(), // email
                     record[5].toString(), // phone
                     record[6] == null ? null : record[6].toString(), // imageUrl
-                    DateFormatterUtil.parseTimestamp(record[7].toString())
+                    formatter.parse(record[7].toString())
             );
 
             return user;

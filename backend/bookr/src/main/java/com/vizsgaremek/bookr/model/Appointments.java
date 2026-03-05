@@ -5,13 +5,16 @@
 package com.vizsgaremek.bookr.model;
 
 import com.vizsgaremek.bookr.DTO.OwnerPanelDTO;
+import static com.vizsgaremek.bookr.model.OpeningHours.timeFormatter;
 import static com.vizsgaremek.bookr.model.Users.emf;
-import com.vizsgaremek.bookr.util.DateFormatterUtil;
+import static com.vizsgaremek.bookr.model.Users.formatter;
 import com.vizsgaremek.bookr.util.StoredProcedureUtil;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -650,8 +653,8 @@ public class Appointments implements Serializable {
             Object[] record = resultList.get(0);
 
             Appointments workingHours = new Appointments(
-                    record[0] != null ? DateFormatterUtil.parseTime(record[0].toString()) : null, // startTime
-                    record[1] != null ? DateFormatterUtil.parseTime(record[1].toString()) : null, // endTime
+                    record[0] != null ? timeFormatter.parse(record[0].toString()) : null, // startTime
+                    record[1] != null ? timeFormatter.parse(record[1].toString()) : null, // endTime
                     Boolean.parseBoolean(record[2].toString()),
                     record[3] != null ? record[3].toString() : null // reason
             );
@@ -814,6 +817,8 @@ public class Appointments implements Serializable {
 
     public static JSONObject getAppointmentsByClient(Integer clientId, Integer page, Integer amount, Boolean isUpcoming) {
         EntityManager em = emf.createEntityManager();
+        SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
         try {
 
             StoredProcedureQuery spq = em.createStoredProcedureQuery("getAppointmentsByClient");
@@ -846,11 +851,11 @@ public class Appointments implements Serializable {
                 a.put("staffId", Integer.valueOf(record[2].toString()));
                 a.put("clientId", Integer.valueOf(record[3].toString()));
                 a.put("serviceId", Integer.valueOf(record[4].toString()));
-                a.put("startTime", DateFormatterUtil.format((java.sql.Timestamp) record[5], DateFormatterUtil.TIMESTAMP));
-                a.put("endTime", DateFormatterUtil.format((java.sql.Timestamp) record[6], DateFormatterUtil.TIMESTAMP));
+                a.put("startTime", dateFormatter.format((java.sql.Timestamp) record[5]));
+                a.put("endTime", dateFormatter.format((java.sql.Timestamp) record[6]));
                 a.put("status", record[7].toString());
-                a.put("createdAt", DateFormatterUtil.format((java.sql.Timestamp) record[8], DateFormatterUtil.TIMESTAMP));
-                a.put("updatedAt", record[9] != null ? DateFormatterUtil.format((java.sql.Timestamp) record[9], DateFormatterUtil.TIMESTAMP) : null);
+                a.put("createdAt", dateFormatter.format((java.sql.Timestamp) record[8]));
+                a.put("updatedAt", record[9] != null ? dateFormatter.format((java.sql.Timestamp) record[9]) : null);
 
                 appointments.put(a);
             }
@@ -1025,6 +1030,9 @@ public class Appointments implements Serializable {
 
     public static ArrayList<OwnerPanelDTO.AllFutureAppointmentsByCompanyDTO> getAllFutureAppointmentsByCompany(Integer companyId) {
         EntityManager em = emf.createEntityManager();
+        DateTimeFormatter dateOnlyFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        SimpleDateFormat timeParser = new SimpleDateFormat("HH:mm:ss");
+
         try {
             StoredProcedureQuery spq = em.createStoredProcedureQuery("getAllFutureAppointmentsByCompany");
             spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
@@ -1037,9 +1045,9 @@ public class Appointments implements Serializable {
             for (Object[] record : resultList) {
                 OwnerPanelDTO.AllFutureAppointmentsByCompanyDTO a = new OwnerPanelDTO.AllFutureAppointmentsByCompanyDTO(
                         Integer.valueOf(record[0].toString()),
-                        LocalDate.parse(record[1].toString(), DateFormatterUtil.DATE),
-                        DateFormatterUtil.parseTimeFull(record[2].toString()), // "12:00:00"
-                        DateFormatterUtil.parseTimeFull(record[3].toString()), // "13:00:00"
+                        LocalDate.parse(record[1].toString(), dateOnlyFormatter),
+                        timeParser.parse(record[2].toString()), // "12:00:00"
+                        timeParser.parse(record[3].toString()), // "13:00:00"
                         record[4].toString(),
                         record[5].toString(),
                         record[6] != null ? record[6].toString() : null,
@@ -1049,7 +1057,7 @@ public class Appointments implements Serializable {
                         record[10].toString(),
                         Double.parseDouble(record[11].toString()),
                         record[12].toString(),
-                        DateFormatterUtil.parseTimestamp(record[13].toString()) // created_at még teljes datetime
+                        formatter.parse(record[13].toString()) // created_at még teljes datetime
                 );
                 toReturn.add(a);
             }
@@ -1065,6 +1073,9 @@ public class Appointments implements Serializable {
 
     public static ArrayList<Appointments> getUpcomingAppointmentsByStaffLimited(Integer staffId, Integer limit) {
         EntityManager em = emf.createEntityManager();
+        DateTimeFormatter dateOnlyFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        SimpleDateFormat timeParser = new SimpleDateFormat("HH:mm:ss");
+
         try {
             StoredProcedureQuery spq = em.createStoredProcedureQuery("getUpcomingAppointmentsByStaffLimited");
             spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
@@ -1081,7 +1092,7 @@ public class Appointments implements Serializable {
             for (Object[] record : resultList) {
                 Appointments a = new Appointments(
                         Integer.valueOf(record[0].toString()),
-                        DateFormatterUtil.parseTimeFull(record[1].toString()), // "12:00:00"
+                        timeParser.parse(record[1].toString()), // "12:00:00"
                         record[2].toString(),
                         record[3].toString(),
                         record[4] != null ? record[4].toString() : null

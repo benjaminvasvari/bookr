@@ -19,7 +19,7 @@ import com.vizsgaremek.bookr.util.ValidationUtil;
 import static com.vizsgaremek.bookr.util.ValidationUtil.isValidEmail;
 import static com.vizsgaremek.bookr.util.ValidationUtil.isValidHungarianPhone;
 import static com.vizsgaremek.bookr.util.ValidationUtil.isValidUrl;
-import com.vizsgaremek.bookr.util.DateFormatterUtil;
+import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.Map;
 import javax.persistence.EntityManager;
@@ -70,6 +70,8 @@ public class CompaniesService {
             // 4. REVIEWS
             List<Reviews> reviewsList = Reviews.getReviewsByCompanyId(id, 10);
             JSONArray reviews = new JSONArray();
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy. MM. dd.");
+
             for (Reviews review : reviewsList) {
                 JSONObject reviewObj = new JSONObject();
                 reviewObj.put("id", review.getId());
@@ -77,7 +79,7 @@ public class CompaniesService {
                 reviewObj.put("userImage", review.getUserImage());
                 reviewObj.put("rating", review.getRating());
                 reviewObj.put("comment", review.getComment() != null ? review.getComment() : JSONObject.NULL);
-                reviewObj.put("date", DateFormatterUtil.format(review.getCreatedAt(), DateFormatterUtil.DATE_HU));
+                reviewObj.put("date", sdf.format(review.getCreatedAt()));
                 reviews.put(reviewObj);
             }
 

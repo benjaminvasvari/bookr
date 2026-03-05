@@ -9,9 +9,9 @@ import com.vizsgaremek.bookr.model.Staff;
 import com.vizsgaremek.bookr.model.Users;
 import com.vizsgaremek.bookr.security.JWT;
 import static com.vizsgaremek.bookr.util.ErrorResponseBuilder.buildErrorResponseJSON;
-import com.vizsgaremek.bookr.util.DateFormatterUtil;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Date;
@@ -31,6 +31,8 @@ public class AppointmentsService {
     private Services Services = new Services();
     private CompaniesService CompaniesService = new CompaniesService();
     private Appointments layer = new Appointments();
+
+    static SimpleDateFormat timeFormatter = new SimpleDateFormat("HH:mm");
 
     public JSONObject getUnavailableDates(Integer companyId, Integer staffId) {
 
@@ -78,11 +80,13 @@ public class AppointmentsService {
             } else {
                 // Van tiltott nap
                 JSONArray unavailableDatesArray = new JSONArray();
+                SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+
                 for (Appointments unavailableDate : modelResult) {
                     JSONObject dateObject = new JSONObject();
 
                     // Date objektumot formázzuk yyyy-MM-dd formátumúra
-                    dateObject.put("date", DateFormatterUtil.format(unavailableDate.getDate(), DateFormatterUtil.DATE));
+                    dateObject.put("date", dateFormat.format(unavailableDate.getDate()));
                     dateObject.put("dayOfWeek", unavailableDate.getDayOfWeek());
                     dateObject.put("reason", unavailableDate.getReason());
 
@@ -107,6 +111,8 @@ public class AppointmentsService {
         String status = "success";
         Integer statusCode = 200;
 
+        SimpleDateFormat timeFormatter = new SimpleDateFormat("HH:mm");
+
         // Model hívás
         Appointments workingHModelResult = layer.getWorkingHoursForDate(companyId, staffId, date);
 
@@ -124,8 +130,8 @@ public class AppointmentsService {
             JSONArray workingHoursArray = new JSONArray();
             JSONObject workingHoursObj = new JSONObject();
 
-            workingHoursObj.put("startTime", DateFormatterUtil.format(workingHModelResult.getStartTime(), DateFormatterUtil.TIME));
-            workingHoursObj.put("endTime", DateFormatterUtil.format(workingHModelResult.getEndTime(), DateFormatterUtil.TIME));
+            workingHoursObj.put("startTime", timeFormatter.format(workingHModelResult.getStartTime()));
+            workingHoursObj.put("endTime", timeFormatter.format(workingHModelResult.getEndTime()));
             workingHoursObj.put("isAvailable", workingHModelResult.getIsAvailable());
             workingHoursObj.put("reason", workingHModelResult.getReason());
 
@@ -155,8 +161,8 @@ public class AppointmentsService {
                         JSONObject slotObject = new JSONObject();
 
                         slotObject.put("appointmentId", occupiedSlot.getId());
-                        slotObject.put("startTime", DateFormatterUtil.format(occupiedSlot.getStartTime(), DateFormatterUtil.TIME));
-                        slotObject.put("endTime", DateFormatterUtil.format(occupiedSlot.getEndTime(), DateFormatterUtil.TIME));
+                        slotObject.put("startTime", timeFormatter.format(occupiedSlot.getStartTime()));
+                        slotObject.put("endTime", timeFormatter.format(occupiedSlot.getEndTime()));
                         slotObject.put("serviceId", occupiedSlot.getServiceIdInt());
                         slotObject.put("durationMinutes", occupiedSlot.getDurationMinutes());
 
@@ -256,6 +262,7 @@ public class AppointmentsService {
         JSONObject toReturn = new JSONObject();
         String status = "success";
         Integer statusCode = 200;
+        SimpleDateFormat timeFormatter = new SimpleDateFormat("HH:mm");
 
         // User validáció
         Boolean isUserExist = UsersService.validateUserExistById(userId);
@@ -429,8 +436,8 @@ public class AppointmentsService {
                 JSONObject appointmentObj = new JSONObject();
 
                 appointmentObj.put("id", app.getAppoinmentId());
-                appointmentObj.put("startTime", DateFormatterUtil.format(app.getStartTime(), DateFormatterUtil.TIME));
-                appointmentObj.put("endTime", DateFormatterUtil.format(app.getEndTime(), DateFormatterUtil.TIME));
+                appointmentObj.put("startTime", timeFormatter.format(app.getStartTime()));
+                appointmentObj.put("endTime", timeFormatter.format(app.getEndTime()));
                 appointmentObj.put("serviceName", app.getServiceName());
                 appointmentObj.put("staffName", app.getStaffName());
                 appointmentObj.put("staffImage", app.getStaffImage());
@@ -709,8 +716,8 @@ public class AppointmentsService {
 
             JSONObject entry = new JSONObject();
             entry.put("id", a.getAppointmentId());
-            entry.put("startTime", a.getStartTime().substring(11).replaceAll("\\.\\d+$", ""));
-            entry.put("endTime", a.getEndTime().substring(11).replaceAll("\\.\\d+$", ""));
+            entry.put("startTime", a.getStartTime().substring(11));
+            entry.put("endTime", a.getEndTime().substring(11));
             entry.put("status", a.getStatus());
             entry.put("notes", a.getNotes() != null ? a.getNotes() : JSONObject.NULL);
             entry.put("price", a.getPrice());

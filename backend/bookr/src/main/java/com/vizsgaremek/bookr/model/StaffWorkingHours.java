@@ -4,8 +4,9 @@
  */
 package com.vizsgaremek.bookr.model;
 
+import static com.vizsgaremek.bookr.model.OpeningHours.timeFormatter;
 import static com.vizsgaremek.bookr.model.Users.emf;
-import com.vizsgaremek.bookr.util.DateFormatterUtil;
+import static com.vizsgaremek.bookr.model.Users.formatter;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
@@ -227,11 +228,11 @@ public class StaffWorkingHours implements Serializable {
                         Integer.valueOf(record[0].toString()),
                         Integer.valueOf(record[1].toString()),
                         record[2].toString(),
-                        record[3] != null ? DateFormatterUtil.parseTime(record[3].toString()) : null,
-                        record[4] != null ? DateFormatterUtil.parseTime(record[4].toString()) : null,
+                        record[3] != null ? timeFormatter.parse(record[3].toString()) : null,
+                        record[4] != null ? timeFormatter.parse(record[4].toString()) : null,
                         Boolean.parseBoolean(record[5].toString()),
-                        record[6] != null ? DateFormatterUtil.parseTimestamp(record[6].toString()) : null,
-                        record[7] != null ? DateFormatterUtil.parseTimestamp(record[7].toString()) : null
+                        record[6] != null ? formatter.parse(record[6].toString()) : null,
+                        record[7] != null ? formatter.parse(record[7].toString()) : null
                 );
 
                 toReturn.add(s);

@@ -339,12 +339,12 @@ public class AppointmentsController {
             @QueryParam("staffId") String staffIdStr,
             @QueryParam("weekStart") String weekStart) {
 
-        JSONObject errorResponse = new JSONObject();
-
         Integer staffId = null;
         if (staffIdStr != null && !staffIdStr.isEmpty()) {
             staffId = Integer.valueOf(staffIdStr);
         }
+
+        JSONObject errorResponse = new JSONObject();
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return buildErrorResponse(401, "missingToken");

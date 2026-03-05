@@ -8,7 +8,7 @@ import com.vizsgaremek.bookr.DTO.OwnerPanelDTO.WeeklyRevenueDTO;
 import com.vizsgaremek.bookr.model.Appointments;
 import com.vizsgaremek.bookr.model.Reviews;
 import com.vizsgaremek.bookr.security.JWT;
-import com.vizsgaremek.bookr.util.DateFormatterUtil;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 import org.json.JSONArray;
@@ -114,6 +114,8 @@ public class DashboardsService {
             // 4. REVIEWS
             List<Reviews> reviewsList = Reviews.getReviewsByCompanyId(companyId, 2);
             JSONArray reviews = new JSONArray();
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy. MM. dd.");
+
             for (Reviews review : reviewsList) {
                 JSONObject reviewObj = new JSONObject();
                 reviewObj.put("id", review.getId());
@@ -121,7 +123,7 @@ public class DashboardsService {
                 reviewObj.put("userImage", review.getUserImage());
                 reviewObj.put("rating", review.getRating());
                 reviewObj.put("comment", review.getComment());
-                reviewObj.put("date", DateFormatterUtil.format(review.getCreatedAt(), DateFormatterUtil.DATE_HU));
+                reviewObj.put("date", sdf.format(review.getCreatedAt()));
                 reviews.put(reviewObj);
             }
 
