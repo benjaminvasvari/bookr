@@ -1,0 +1,83 @@
+<div class="chart-placeholder">
+	<ng-container *ngIf="!isLoading && !errorMessage && hasRenderableData">
+		<div class="overview-chart" *ngIf="isOverviewVariant; else salesChart">
+			<div class="overview-summary">
+				<div class="overview-stat-card">
+					<span class="overview-stat-label">Összesen</span>
+					<strong class="overview-stat-value">{{ totalValueLabel }}</strong>
+				</div>
+				<div class="overview-stat-card">
+					<span class="overview-stat-label">Átlag / nap</span>
+					<strong class="overview-stat-value">{{ averageValueLabel }}</strong>
+				</div>
+				<div class="overview-stat-card highlight">
+					<span class="overview-stat-label">Legjobb nap</span>
+					<strong class="overview-stat-value">{{ peakValueLabel }}</strong>
+					<span class="overview-stat-inline">{{ peakDayLabel }}</span>
+				</div>
+			</div>
+
+			<div class="overview-bars-panel">
+				<div class="overview-bars-head">
+					<div>
+						<p class="overview-bars-eyebrow">Heti ritmus</p>
+						<h3>Napi bevétel bontásban</h3>
+					</div>
+					<span class="overview-bars-badge">{{ activeDaysLabel }}</span>
+				</div>
+
+				<div class="overview-bars" role="img" aria-label="Az elmúlt hét napi bevétele oszlopdiagramon">
+					<div
+						*ngFor="let bar of overviewBars; trackBy: trackByOverviewBar"
+						class="overview-bar-column"
+						[class.peak]="bar.isPeak"
+						[class.closed]="bar.isClosed"
+						[attr.title]="bar.shortLabel + ': ' + bar.fullValueLabel"
+					>
+						<div class="overview-bar-value">{{ bar.displayValue }}</div>
+						<div class="overview-bar-track" [attr.aria-label]="bar.shortLabel + ': ' + bar.fullValueLabel">
+							<div class="overview-bar-fill" [style.height.%]="bar.heightPercent"></div>
+						</div>
+						<div class="overview-bar-meta">
+							<span class="overview-bar-day">{{ bar.shortLabel }}</span>
+							<span class="overview-bar-status">{{ bar.statusLabel }}</span>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<ng-template #salesChart>
+			<div class="sales-chart-shell">
+				<div class="sales-chart-summary">
+					<span class="sales-chart-chip">Összesen: {{ salesTotalLabel }}</span>
+					<span class="sales-chart-chip">Átlag: {{ salesAverageLabel }}</span>
+					<span class="sales-chart-chip highlight">Csúcs: {{ salesPeakLabel }}</span>
+				</div>
+
+				<div class="sales-bars-scroll">
+					<div class="sales-bars" role="img" aria-label="Bevétel alakulása oszlopdiagramon">
+						<div
+							*ngFor="let bar of salesBars; trackBy: trackBySalesBar"
+							class="sales-bar-column"
+							[class.peak]="bar.isPeak"
+							[class.closed]="bar.isClosed"
+							[attr.title]="bar.label + ': ' + bar.fullValueLabel"
+						>
+							<div class="sales-bar-value">{{ bar.displayValue }}</div>
+							<div class="sales-bar-track">
+								<div class="sales-bar-fill" [style.height.%]="bar.heightPercent"></div>
+							</div>
+							<div class="sales-bar-label">{{ bar.label }}</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</ng-template>
+	</ng-container>
+
+	<p class="chart-caption" *ngIf="isLoading">Grafikon adatok betöltése...</p>
+	<p class="chart-caption" *ngIf="!isLoading && errorMessage">{{ errorMessage }}</p>
+	<p class="chart-caption" *ngIf="!isLoading && !errorMessage && !hasRenderableData">Nincs megjeleníthető adat.</p>
+	<p class="chart-caption" *ngIf="!isLoading && !errorMessage && caption">{{ caption }}</p>
+</div>

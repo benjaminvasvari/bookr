@@ -53,6 +53,69 @@
   object-fit: cover;
 }
 
+.main-image img,
+.thumbnail img {
+  cursor: zoom-in;
+}
+
+.image-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(9, 18, 30, 0.82);
+  backdrop-filter: blur(2px);
+}
+
+.image-lightbox-dialog {
+  position: relative;
+  width: min(92vw, 980px);
+  max-height: 92vh;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #0f1720;
+  box-shadow: 0 24px 56px rgba(0, 0, 0, 0.5);
+}
+
+.image-lightbox-dialog img {
+  display: block;
+  width: 100%;
+  max-height: 92vh;
+  object-fit: contain;
+  background: #0f1720;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(15, 23, 32, 0.6);
+  color: #f8fafc;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.lightbox-close:hover {
+  background: rgba(15, 23, 32, 0.85);
+}
+
+.lightbox-close:focus-visible {
+  outline: 2px solid rgba(94, 200, 156, 0.95);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px rgba(15, 23, 32, 0.55);
+}
+
 /* Cég információk szekció */
 .company-info-section {
   background-color: #ffffff;
@@ -98,9 +161,24 @@
   gap: 0.25rem;
 }
 
-.stars fa-icon {
-  color: #ffd700;
+.star-shell {
+  position: relative;
+  display: inline-block;
+  line-height: 1;
   font-size: 1.2rem;
+}
+
+.star-base {
+  color: #d9e2ec;
+}
+
+.star-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  color: #ffd700;
 }
 
 .company-category {
@@ -327,6 +405,7 @@
 }
 
 .map-container {
+  position: relative;
   width: 450px;
   height: 450px;
   border-radius: 20px;
@@ -339,6 +418,36 @@
   display: block;
   width: 100%;
   height: 100%;
+}
+
+.map-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.map-overlay,
+.map-fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.map-overlay {
+  background: rgba(255, 255, 255, 0.68);
+  color: #2c3e50;
+  pointer-events: none;
+}
+
+.map-fallback {
+  background: rgba(255, 255, 255, 0.92);
+  color: #2c3e50;
 }
 
 /* Szöveges tartalom - jobb oldal */
@@ -358,6 +467,139 @@
   color: #2c3e50;
   margin: 0;
   font-weight: 500;
+}
+
+/* Csapatunk szekció */
+.team-section {
+  background-color: #ffffff;
+  padding: 2rem;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  margin-bottom: 3rem;
+}
+
+.team-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.team-card {
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 1rem;
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.team-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.team-title-wrap {
+  min-width: 0;
+}
+
+.team-name {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.team-role {
+  margin: 0.2rem 0 0;
+  font-size: 0.9rem;
+  color: #38a179;
+  font-weight: 600;
+}
+
+.team-avatar {
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+  border-radius: 999px;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #38a179;
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.team-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.team-info {
+  min-width: 0;
+}
+
+.team-bio {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: #2c3e50;
+}
+
+.team-bio-empty {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #7f8c8d;
+}
+
+@media (max-width: 1200px) {
+  .team-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 960px) {
+  .team-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .team-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+:host-context(body.dark-mode) .team-section {
+  background-color: #1b2532;
+  border: 1px solid #2b3b4d;
+}
+
+:host-context(body.dark-mode) .team-section .section-title {
+  color: #e2e8f0;
+}
+
+:host-context(body.dark-mode) .team-section .team-card {
+  border-color: #2b3b4d;
+  background: #1b2532;
+}
+
+:host-context(body.dark-mode) .team-section .team-name {
+  color: #e2e8f0;
+}
+
+:host-context(body.dark-mode) .team-section .team-bio {
+  color: #cbd5e1;
+}
+
+:host-context(body.dark-mode) .team-section .team-bio-empty,
+:host-context(body.dark-mode) .team-section .no-services {
+  color: #a8b7cf;
 }
 
 .open-hours-reviews-section {
@@ -702,371 +944,203 @@
     padding: 1rem;
   }
 
-  .gallery-section {
-    margin-top: 2rem;
-  }
-
+  /* Reset layout for mobile */
+  .gallery-section,
   .company-info-section {
-    margin-top: 1rem;
+    width: 100%;
+    margin-left: 0;
+    margin-top: 0;
+    padding: 0;
+    display: block;
+    box-shadow: none; /* Optional: cleaner look */
   }
 
+  .gallery-section {
+    margin-bottom: 2rem;
+  }
+
+  /* Adjust image sizes */
   .main-image {
-    height: 250px;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16/9;
+    margin-bottom: 0.5rem;
   }
 
   .thumbnail-gallery {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
   }
 
   .thumbnail {
-    height: 100px;
+    height: auto;
+    aspect-ratio: 16/9;
+  }
+
+  /* Company Info adjustments */
+  .company-info-section {
+    background: transparent; /* Remove card bg if desired, or keep it */
+    margin-bottom: 2rem;
   }
 
   .company-header {
     flex-direction: column;
-    gap: 1rem;
+    gap: 0.5rem;
   }
 
   .header-actions {
     width: 100%;
     justify-content: flex-start;
+    margin-top: 0.5rem;
   }
 
   .company-name {
     font-size: 1.75rem;
+    line-height: 1.2;
   }
 
   .book-now-button {
     margin-top: 1.5rem;
   }
 
+  /* Services */
   .section-title {
     font-size: 1.5rem;
-  }
-
-  .service-card {
-    flex-direction: column;
-    gap: 1rem;
-    align-items: flex-start;
-    padding: 1rem;
-  }
-
-  .book-button {
-    width: 100%;
   }
 
   .service-tabs {
     flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
     -webkit-overflow-scrolling: touch;
-  }
-
-  .map-container {
-    width: 100%;
-    height: 280px;
-    border-radius: 15px;
-  }
-
-  .about-text {
-    font-size: 0.95rem;
-    line-height: 1.6;
-  }
-
-  .title {
-    font-size: 1.5rem;
-  }
-
-  .hours-item {
-    padding: 1rem;
-  }
-
-  .day {
-    font-size: 1rem;
-  }
-
-  .time {
-    font-size: 0.9rem;
-  }
-
-  .review-card {
-    padding: 1rem;
-    min-height: 120px;
-  }
-
-  .user-avatar img,
-  .avatar-placeholder {
-    width: 45px;
-    height: 45px;
-  }
-
-  .avatar-placeholder {
-    font-size: 1.1rem;
-  }
-
-  .user-name {
-    font-size: 0.95rem;
-  }
-
-  .review-rating .star {
-    font-size: 0.85rem;
-  }
-
-  .review-date {
-    font-size: 0.75rem;
-  }
-
-  .review-comment {
-    font-size: 0.9rem;
-  }
-}
-
-/* Extra kis mobil - 371px OPTIMALIZÁLVA */
-@media (max-width: 480px) {
-  .company-details-container {
-    padding: 0.75rem;
-  }
-
-  .gallery-section {
-    margin-top: 1.5rem;
-    width: 100%;
-  }
-
-  .main-image {
-    width: 100%;
-    height: 220px;
-    border-radius: 12px;
-  }
-
-  .thumbnail-gallery {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.5rem;
-  }
-
-  .thumbnail {
-    height: 90px;
-    border-radius: 8px;
-  }
-
-  .company-info-section {
-    margin-top: 1rem;
-    padding: 1.25rem;
-  }
-
-  .company-name {
-    font-size: 1.5rem;
-  }
-
-  .rating-section {
-    font-size: 0.9rem;
-  }
-
-  .stars fa-icon {
-    font-size: 1rem;
-  }
-
-  .company-category {
-    font-size: 0.9rem;
-  }
-
-  .icon-button {
-    width: 40px;
-    height: 40px;
-    font-size: 1rem;
-  }
-
-  .company-description {
-    font-size: 0.9rem;
-  }
-
-  .book-now-button {
-    padding: 0.875rem;
-    font-size: 1rem;
-    margin-top: 1rem;
-  }
-
-  /* Szolgáltatások */
-  .services-section {
-    padding: 1.25rem;
-    margin-bottom: 2rem;
-  }
-
-  .section-title {
-    font-size: 1.25rem;
-    margin-bottom: 1rem;
-  }
-
-  .service-tabs {
-    gap: 0.35rem;
     margin-bottom: 1.5rem;
   }
 
-  .tab-button {
-    padding: 0.5rem 1rem;
-    font-size: 0.8rem;
-  }
-
   .service-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
     padding: 1rem;
   }
 
-  .service-name {
-    font-size: 1rem;
-  }
-
-  .service-duration {
-    font-size: 0.85rem;
-  }
-
-  .service-price {
-    font-size: 0.95rem;
-  }
-
   .book-button {
-    padding: 0.65rem 1.5rem;
-    font-size: 0.95rem;
+    width: 100%;
+    margin-top: 0.5rem;
   }
 
-  /* Rólunk szekció */
-  .about-container {
-    margin-bottom: 2rem;
-  }
-
+  /* About / Map */
   .about-content {
-    padding: 1.25rem;
-    gap: 1.5rem;
+    flex-direction: column;
+    padding: 0;
   }
 
   .map-section {
-    margin-top: 0;
-    margin-left: 0;
+    width: 100%;
+    margin: 0 0 1.5rem 0;
   }
 
   .map-container {
+    width: 100%;
     height: 250px;
-    border-radius: 12px;
-    border-width: 2px;
   }
 
   .text-section {
     margin-top: 0;
   }
 
-  .about-text {
-    font-size: 0.9rem;
-    line-height: 1.6;
-  }
-
-  /* Nyitvatartás és Értékelések */
+  /* Hours & Reviews */
   .open-hours-reviews-section {
+    flex-direction: column;
+    gap: 2rem;
     margin-top: 2rem;
-    gap: 1.5rem;
   }
 
-  .opening-hours-card {
-    padding: 1.25rem;
+  .opening-hours-card,
+  .reviews-container {
+    width: 100%;
     height: auto;
-    margin-bottom: 0;
+    max-height: none;
+    padding: 1.5rem;
   }
 
   .reviews-container {
-    padding: 0;
-    max-height: 450px;
+    max-height: 500px; /* Keep scroll for reviews */
   }
 
   .reviews-container .title {
-    padding: 1.25rem 1.25rem 1rem 1.25rem;
-    font-size: 1.25rem;
-    border-bottom: 2px solid #f0f0f0;
+    padding: 0 0 1rem 0;
   }
 
-  .title {
-    font-size: 1.25rem;
+  .reviews-list {
+    padding: 0;
+  }
+}
+
+/* Extra kis mobil - 480px */
+@media (max-width: 480px) {
+  .company-details-container {
+    padding: 0.75rem;
+  }
+  
+  .gallery-section {
+     margin-bottom: 1.5rem;
+     margin-top: 1rem;
   }
 
-  .hours-list {
+  .main-image {
+    height: 200px; /* Reduced height for small screens */
+  }
+
+  .thumbnail-gallery {
+    grid-template-columns: repeat(3, 1fr); 
     gap: 0.5rem;
   }
-
-  .hours-item {
-    padding: 0.875rem 1rem;
-    border-radius: 10px;
+  
+  .thumbnail {
+    height: auto;
+    aspect-ratio: 16/9;
   }
 
-  .day {
-    font-size: 0.95rem;
+  .company-info-section {
+    padding: 0; /* Remove padding to gain space */
+    margin-top: 1rem;
   }
 
-  .time {
-    font-size: 0.85rem;
-  }
-
-  /* Értékelések */
-  .reviews-list {
-    gap: 1rem;
-    padding: 0.75rem 1.25rem 1.25rem 1.25rem;
-  }
-
-  .review-card {
-    padding: 1rem;
-    min-height: 110px;
-    overflow: hidden; /* ← Biztosítja hogy semmi ne lógjon ki */
-  }
-
-  .review-header {
-    gap: 0.75rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .user-avatar img,
-  .avatar-placeholder {
-    width: 40px;
-    height: 40px;
-  }
-
-  .avatar-placeholder {
-    font-size: 1rem;
-  }
-
-  .user-name {
-    font-size: 0.9rem;
-  }
-
-  .review-rating {
-    gap: 0.15rem;
-  }
-
-  .review-rating .star {
-    font-size: 0.8rem;
-  }
-
-  .review-date {
-    font-size: 0.7rem;
-  }
-
-  .review-comment {
-    font-size: 0.85rem;
-    line-height: 1.4;
-    display: -webkit-box;
-    -webkit-line-clamp: 2; /* ← 3 helyett 2 sor maximum */
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    word-break: break-word; /* ← Hosszú szavak tördelése */
-  }
-
-  /* Hiba üzenet */
-  .error-container {
-    padding: 1rem;
-  }
-
-  .error-message {
-    padding: 2rem 1.5rem;
-  }
-
-  .error-message h2 {
+  .company-name {
     font-size: 1.5rem;
   }
 
-  .error-message p {
-    font-size: 0.95rem;
+  .tab-button {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+  }
+  
+  .service-card {
+     padding: 1rem;
+  }
+  
+  .map-container {
+    height: 200px;
+  }
+  
+  .opening-hours-card,
+  .reviews-container {
+     padding: 1rem;
+  }
+  
+  .title {
+    font-size: 1.25rem;
+  }
+  
+  .hours-item {
+    padding: 0.75rem;
+  }
+  
+  .day, .time {
+    font-size: 0.85rem;
+  }
+  
+  .review-card {
+    min-height: auto;
   }
 }

@@ -3,9 +3,10 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../../../../core/services/auth.service';
 import { CompaniesService } from '../../../../../core/services/companies.service';
+import { OwnerDashboardService } from '../../../../../core/services/owner-dashboard.service';
+import { StaffService } from '../../../../../core/services/staff.service';
 import { OpeningHours } from '../../../../../core/models/opening-hours.model';
 import { User } from '../../../../../core/models';
-import { Company } from '../../../../../core/models/company.model';
 import { StaffChipComponent } from './staff-chip.component';
 
 interface TimeSlot {
@@ -48,16 +49,37 @@ interface WeekDay {
   isToday: boolean;
 }
 
-interface StaffAvailability {
-  staffId: number;
+interface WeeklyCalendarResponse {
+  data?: WeeklyCalendarDay[];
+  status?: string;
+  statusCode?: number;
+}
+
+interface WeeklyCalendarDay {
+  date: string;
+  staffAppointments: WeeklyCalendarStaffAppointments[];
+}
+
+interface WeeklyCalendarStaffAppointments {
+  appointments: WeeklyCalendarAppointment[];
+  staffColor: string | null;
   staffName: string;
-  weeklyAvailability: {
-    [dayIndex: number]: {
-      isAvailable: boolean;
-      startTime?: string;
-      endTime?: string;
-    };
-  };
+  staffId: number;
+}
+
+interface WeeklyCalendarAppointment {
+  durationMinutes: number;
+  notes: string | null;
+  clientName: string;
+  clientEmail: string;
+  price: number;
+  startTime: string;
+  currency: string;
+  id: number;
+  endTime: string;
+  serviceName: string;
+  clientPhone: string;
+  status: string;
 }
 
 @Component({
@@ -70,12 +92,26 @@ interface StaffAvailability {
 export class CalendarComponent implements OnInit, OnDestroy {
   private authService = inject(AuthService);
   private companiesService = inject(CompaniesService);
+  private ownerDashboardService = inject(OwnerDashboardService);
+  private staffService = inject(StaffService);
+  private readonly generatedColorPalette: string[] = [
+    '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e',
+    '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1',
+    '#8b5cf6', '#d946ef', '#ec4899'
+  ];
+  private readonly colorPersistDebounceMs = 700;
+  private currentUserCompanyId: number | null = null;
+  private pendingColorPersistTimers = new Map<number, ReturnType<typeof setTimeout>>();
+  private pendingStaffColors = new Map<number, string>();
+  private lastPersistedStaffColors = new Map<number, string>();
   
   selectedStaffIds: number[] = []; // Empty = show all
   selectedAppointment: CalendarAppointment | null = null;
   currentTimePosition: number = 0;
   currentTimeInterval: any;
   currentWeekStart: Date = this.getMonday(new Date());
+  calendarStartHour: number = 8;
+  calendarEndHour: number = 19;
   currentMobileDayIndex: number = 1; // Start with today (Tuesday = index 1)
   mobileSelectedStaffId: number = 0;
   isMobileView: boolean = false;
@@ -90,617 +126,52 @@ export class CalendarComponent implements OnInit, OnDestroy {
     this.syncMobileSelectedStaffSelection();
   }
 
-  // Staff color mapping
-  staffColors: { [key: number]: string } = {
-    1: '#3b82f6', // Barni Kiss - blue
-    2: '#10b981', // Bálint László - green
-    3: '#ec4899', // Anna Kovács - pink
-    4: '#8b5cf6'  // Dóra Tóth - purple
-  };
+  staffColors: { [key: number]: string } = {};
 
-  weekDays: WeekDay[] = [
-    { name: 'Hétfő', shortName: 'H', date: '2026. február 16.', dayIndex: 0, dayNumber: 16, fullDate: new Date(2026, 1, 16), openingHours: '09:00–17:00', isClosed: false, isToday: false },
-    { name: 'Kedd', shortName: 'K', date: '2026. február 17.', dayIndex: 1, dayNumber: 17, fullDate: new Date(2026, 1, 17), openingHours: '09:00–17:00', isClosed: false, isToday: true },
-    { name: 'Szerda', shortName: 'Sze', date: '2026. február 18.', dayIndex: 2, dayNumber: 18, fullDate: new Date(2026, 1, 18), openingHours: '09:00–17:00', isClosed: false, isToday: false },
-    { name: 'Csütörtök', shortName: 'Cs', date: '2026. február 19.', dayIndex: 3, dayNumber: 19, fullDate: new Date(2026, 1, 19), openingHours: '09:00–17:00', isClosed: false, isToday: false },
-    { name: 'Péntek', shortName: 'P', date: '2026. február 20.', dayIndex: 4, dayNumber: 20, fullDate: new Date(2026, 1, 20), openingHours: '09:00–17:00', isClosed: false, isToday: false },
-    { name: 'Szombat', shortName: 'Szo', date: '2026. február 21.', dayIndex: 5, dayNumber: 21, fullDate: new Date(2026, 1, 21), openingHours: '', isClosed: true, isToday: false },
-    { name: 'Vasárnap', shortName: 'V', date: '2026. február 22.', dayIndex: 6, dayNumber: 22, fullDate: new Date(2026, 1, 22), openingHours: '', isClosed: true, isToday: false }
-  ];
+  weekDays: WeekDay[] = [];
 
-  timeSlots: TimeSlot[] = [
-    { time: '08:00', hour: 8 },
-    { time: '09:00', hour: 9 },
-    { time: '10:00', hour: 10 },
-    { time: '11:00', hour: 11 },
-    { time: '12:00', hour: 12 },
-    { time: '13:00', hour: 13 },
-    { time: '14:00', hour: 14 },
-    { time: '15:00', hour: 15 },
-    { time: '16:00', hour: 16 },
-    { time: '17:00', hour: 17 },
-    { time: '18:00', hour: 18 }
-  ];
+  timeSlots: TimeSlot[] = this.buildTimeSlots(this.calendarStartHour, this.calendarEndHour);
 
   staffMembers: StaffMember[] = [
-    { id: 0, name: 'Összes szakember', color: '#64748b' },
-    { id: 1, name: 'Barni Kiss', color: '#3b82f6' },
-    { id: 2, name: 'Bálint László', color: '#10b981' },
-    { id: 3, name: 'Anna Kovács', color: '#ec4899' },
-    { id: 4, name: 'Dóra Tóth', color: '#8b5cf6' }
+    { id: 0, name: 'Összes szakember', color: '#64748b' }
   ];
 
-  // Staff munkaidő adatok - a backend-től jövő adatok mockja
-  staffAvailabilityData: StaffAvailability[] = [
-    {
-      staffId: 1,
-      staffName: 'Barni Kiss',
-      weeklyAvailability: {
-        0: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
-        1: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
-        2: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
-        3: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
-        4: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
-        5: { isAvailable: false },
-        6: { isAvailable: false }
-      }
-    },
-    {
-      staffId: 2,
-      staffName: 'Bálint László',
-      weeklyAvailability: {
-        0: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
-        1: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
-        2: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
-        3: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
-        4: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
-        5: { isAvailable: false },
-        6: { isAvailable: false }
-      }
-    },
-    {
-      staffId: 3,
-      staffName: 'Anna Kovács',
-      weeklyAvailability: {
-        0: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
-        1: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
-        2: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
-        3: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
-        4: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
-        5: { isAvailable: false },
-        6: { isAvailable: false }
-      }
-    },
-    {
-      staffId: 4,
-      staffName: 'Dóra Tóth',
-      weeklyAvailability: {
-        0: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
-        1: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
-        2: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
-        3: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
-        4: { isAvailable: true, startTime: '09:00', endTime: '17:00' },
-        5: { isAvailable: false },
-        6: { isAvailable: false }
-      }
-    }
-  ];
-
-  allAppointments: CalendarAppointment[] = [
-    {
-      id: 1,
-      staffId: 1,
-      staffName: 'Barni Kiss',
-      title: 'Hajvágás',
-      clientName: 'Kovács Anna',
-      dayIndex: 0,
-      startTime: '09:00',
-      duration: 45,
-      color: '#3b82f6',
-      phone: '+36 30 123 4567',
-      service: 'Hajvágás',
-      price: 5000,
-      status: 'confirmed',
-      notes: ''
-    },
-    {
-      id: 2,
-      staffId: 2,
-      staffName: 'Bálint László',
-      title: 'Szakáll igazítás',
-      clientName: 'Nagy Péter',
-      dayIndex: 0,
-      startTime: '10:30',
-      duration: 30,
-      color: '#10b981',
-      phone: '+36 30 234 5678',
-      service: 'Szakáll igazítás',
-      price: 3500,
-      status: 'confirmed',
-      notes: ''
-    },
-    {
-      id: 3,
-      staffId: 3,
-      staffName: 'Anna Kovács',
-      title: 'Festés',
-      clientName: 'Szabó Petra',
-      dayIndex: 0,
-      startTime: '12:00',
-      duration: 90,
-      color: '#ec4899',
-      phone: '+36 30 345 6789',
-      service: 'Festés',
-      price: 12000,
-      status: 'pending',
-      notes: 'Világos barna'
-    },
-    {
-      id: 4,
-      staffId: 4,
-      staffName: 'Dóra Tóth',
-      title: 'Relax masszázs',
-      clientName: 'Kiss Zita',
-      dayIndex: 1,
-      startTime: '09:30',
-      duration: 60,
-      color: '#8b5cf6',
-      phone: '+36 30 456 7890',
-      service: 'Relax masszázs',
-      price: 8000,
-      status: 'confirmed',
-      notes: ''
-    },
-    {
-      id: 5,
-      staffId: 1,
-      staffName: 'Barni Kiss',
-      title: 'Hajvágás',
-      clientName: 'Horváth Dávid',
-      dayIndex: 1,
-      startTime: '11:00',
-      duration: 45,
-      color: '#3b82f6',
-      phone: '+36 30 567 8901',
-      service: 'Hajvágás',
-      price: 5000,
-      status: 'confirmed',
-      notes: ''
-    },
-    {
-      id: 6,
-      staffId: 2,
-      staffName: 'Bálint László',
-      title: 'Manikűr',
-      clientName: 'Varga Éva',
-      dayIndex: 2,
-      startTime: '10:00',
-      duration: 50,
-      color: '#10b981',
-      phone: '+36 30 678 9012',
-      service: 'Manikűr',
-      price: 6000,
-      status: 'completed',
-      notes: ''
-    },
-    // Overlapping appointments for testing
-    {
-      id: 7,
-      staffId: 4,
-      staffName: 'Dóra Tóth',
-      title: 'Pedikűr',
-      clientName: 'Molnár Rita',
-      dayIndex: 0,
-      startTime: '09:15',
-      duration: 45,
-      color: '#8b5cf6',
-      phone: '+36 30 789 0123',
-      service: 'Pedikűr',
-      price: 7000,
-      status: 'confirmed',
-      notes: ''
-    },
-    // More overlapping for testing
-    {
-      id: 8,
-      staffId: 2,
-      staffName: 'Bálint László',
-      title: 'Hajvágás',
-      clientName: 'Tóth Balázs',
-      dayIndex: 1,
-      startTime: '11:00',
-      duration: 60,
-      color: '#10b981',
-      phone: '+36 30 111 2222',
-      service: 'Hajvágás',
-      price: 5000,
-      status: 'confirmed',
-      notes: ''
-    },
-    {
-      id: 9,
-      staffId: 3,
-      staffName: 'Anna Kovács',
-      title: 'Manikűr',
-      clientName: 'Kiss Júlia',
-      dayIndex: 1,
-      startTime: '11:15',
-      duration: 50,
-      color: '#ec4899',
-      phone: '+36 30 222 3333',
-      service: 'Manikűr',
-      price: 6000,
-      status: 'pending',
-      notes: ''
-    },
-    {
-      id: 10,
-      staffId: 1,
-      staffName: 'Barni Kiss',
-      title: 'Szakáll igazítás',
-      clientName: 'Szabó Gábor',
-      dayIndex: 2,
-      startTime: '10:00',
-      duration: 30,
-      color: '#3b82f6',
-      phone: '+36 30 333 4444',
-      service: 'Szakáll igazítás',
-      price: 3500,
-      status: 'confirmed',
-      notes: ''
-    },
-    {
-      id: 11,
-      staffId: 4,
-      staffName: 'Dóra Tóth',
-      title: 'Masszázs',
-      clientName: 'Nagy Zsófia',
-      dayIndex: 2,
-      startTime: '10:15',
-      duration: 60,
-      color: '#8b5cf6',
-      phone: '+36 30 444 5555',
-      service: 'Masszázs',
-      price: 8000,
-      status: 'confirmed',
-      notes: ''
-    },
-    {
-      id: 12,
-      staffId: 2,
-      staffName: 'Bálint László',
-      title: 'Festés',
-      clientName: 'Varga Lilla',
-      dayIndex: 2,
-      startTime: '10:00',
-      duration: 90,
-      color: '#10b981',
-      phone: '+36 30 555 6666',
-      service: 'Festés',
-      price: 12000,
-      status: 'confirmed',
-      notes: ''
-    },
-    {
-      id: 13,
-      staffId: 1,
-      staffName: 'Barni Kiss',
-      title: 'Hajvágás',
-      clientName: 'Kovács Tamás',
-      dayIndex: 3,
-      startTime: '14:00',
-      duration: 45,
-      color: '#3b82f6',
-      phone: '+36 30 666 7777',
-      service: 'Hajvágás',
-      price: 5000,
-      status: 'pending',
-      notes: ''
-    },
-    {
-      id: 14,
-      staffId: 3,
-      staffName: 'Anna Kovács',
-      title: 'Manikűr',
-      clientName: 'Horváth Emma',
-      dayIndex: 3,
-      startTime: '14:30',
-      duration: 50,
-      color: '#ec4899',
-      phone: '+36 30 777 8888',
-      service: 'Manikűr',
-      price: 6000,
-      status: 'confirmed',
-      notes: ''
-    },
-    {
-      id: 15,
-      staffId: 4,
-      staffName: 'Dóra Tóth',
-      title: 'Pedikűr',
-      clientName: 'Molnár Anna',
-      dayIndex: 4,
-      startTime: '09:00',
-      duration: 60,
-      color: '#8b5cf6',
-      phone: '+36 30 888 9999',
-      service: 'Pedikűr',
-      price: 7000,
-      status: 'confirmed',
-      notes: ''
-    },
-    {
-      id: 16,
-      staffId: 2,
-      staffName: 'Bálint László',
-      title: 'Hajvágás',
-      clientName: 'Tóth István',
-      dayIndex: 4,
-      startTime: '09:30',
-      duration: 45,
-      color: '#10b981',
-      phone: '+36 30 999 0000',
-      service: 'Hajvágás',
-      price: 5000,
-      status: 'confirmed',
-      notes: ''
-    },
-    // More appointments for fuller calendar view
-    {
-      id: 17,
-      staffId: 1,
-      staffName: 'Barni Kiss',
-      title: 'Festés',
-      clientName: 'Kiss Laura',
-      dayIndex: 0,
-      startTime: '14:00',
-      duration: 90,
-      color: '#3b82f6',
-      phone: '+36 30 111 1111',
-      service: 'Festés',
-      price: 12000,
-      status: 'confirmed',
-      notes: ''
-    },
-    {
-      id: 18,
-      staffId: 3,
-      staffName: 'Anna Kovács',
-      title: 'Pedikűr',
-      clientName: 'Nagy Bea',
-      dayIndex: 0,
-      startTime: '14:15',
-      duration: 60,
-      color: '#ec4899',
-      phone: '+36 30 222 2222',
-      service: 'Pedikűr',
-      price: 7000,
-      status: 'confirmed',
-      notes: ''
-    },
-    {
-      id: 19,
-      staffId: 2,
-      staffName: 'Bálint László',
-      title: 'Hajvágás',
-      clientName: 'Szabó Máté',
-      dayIndex: 1,
-      startTime: '14:00',
-      duration: 45,
-      color: '#10b981',
-      phone: '+36 30 333 3333',
-      service: 'Hajvágás',
-      price: 5000,
-      status: 'pending',
-      notes: ''
-    },
-    {
-      id: 20,
-      staffId: 4,
-      staffName: 'Dóra Tóth',
-      title: 'Masszázs',
-      clientName: 'Varga Kata',
-      dayIndex: 1,
-      startTime: '14:30',
-      duration: 60,
-      color: '#8b5cf6',
-      phone: '+36 30 444 4444',
-      service: 'Masszázs',
-      price: 8000,
-      status: 'confirmed',
-      notes: ''
-    },
-    {
-      id: 21,
-      staffId: 1,
-      staffName: 'Barni Kiss',
-      title: 'Hajvágás',
-      clientName: 'Tóth Márk',
-      dayIndex: 2,
-      startTime: '13:00',
-      duration: 45,
-      color: '#3b82f6',
-      phone: '+36 30 555 5555',
-      service: 'Hajvágás',
-      price: 5000,
-      status: 'confirmed',
-      notes: ''
-    },
-    {
-      id: 22,
-      staffId: 3,
-      staffName: 'Anna Kovács',
-      title: 'Manikűr',
-      clientName: 'Kovács Réka',
-      dayIndex: 2,
-      startTime: '13:15',
-      duration: 50,
-      color: '#ec4899',
-      phone: '+36 30 666 6666',
-      service: 'Manikűr',
-      price: 6000,
-      status: 'confirmed',
-      notes: ''
-    },
-    {
-      id: 23,
-      staffId: 2,
-      staffName: 'Bálint László',
-      title: 'Szakáll igazítás',
-      clientName: 'Nagy András',
-      dayIndex: 3,
-      startTime: '09:00',
-      duration: 30,
-      color: '#10b981',
-      phone: '+36 30 777 7777',
-      service: 'Szakáll igazítás',
-      price: 3500,
-      status: 'confirmed',
-      notes: ''
-    },
-    {
-      id: 24,
-      staffId: 4,
-      staffName: 'Dóra Tóth',
-      title: 'Pedikűr',
-      clientName: 'Horváth Éva',
-      dayIndex: 3,
-      startTime: '09:15',
-      duration: 60,
-      color: '#8b5cf6',
-      phone: '+36 30 888 8888',
-      service: 'Pedikűr',
-      price: 7000,
-      status: 'pending',
-      notes: ''
-    },
-    {
-      id: 25,
-      staffId: 1,
-      staffName: 'Barni Kiss',
-      title: 'Hajvágás',
-      clientName: 'Kiss Dániel',
-      dayIndex: 3,
-      startTime: '09:30',
-      duration: 45,
-      color: '#3b82f6',
-      phone: '+36 30 999 9999',
-      service: 'Hajvágás',
-      price: 5000,
-      status: 'confirmed',
-      notes: ''
-    },
-    {
-      id: 26,
-      staffId: 3,
-      staffName: 'Anna Kovács',
-      title: 'Festés',
-      clientName: 'Szabó Nóra',
-      dayIndex: 4,
-      startTime: '13:00',
-      duration: 90,
-      color: '#ec4899',
-      phone: '+36 30 101 0101',
-      service: 'Festés',
-      price: 12000,
-      status: 'confirmed',
-      notes: 'Szőke árnyalat'
-    },
-    {
-      id: 27,
-      staffId: 2,
-      staffName: 'Bálint László',
-      title: 'Hajvágás',
-      clientName: 'Molnár Péter',
-      dayIndex: 4,
-      startTime: '13:15',
-      duration: 45,
-      color: '#10b981',
-      phone: '+36 30 202 0202',
-      service: 'Hajvágás',
-      price: 5000,
-      status: 'confirmed',
-      notes: ''
-    },
-    {
-      id: 28,
-      staffId: 4,
-      staffName: 'Dóra Tóth',
-      title: 'Masszázs',
-      clientName: 'Varga Zoltán',
-      dayIndex: 4,
-      startTime: '13:30',
-      duration: 60,
-      color: '#8b5cf6',
-      phone: '+36 30 303 0303',
-      service: 'Masszázs',
-      price: 8000,
-      status: 'confirmed',
-      notes: ''
-    },
-    {
-      id: 29,
-      staffId: 1,
-      staffName: 'Barni Kiss',
-      title: 'Szakáll igazítás',
-      clientName: 'Tóth Gergő',
-      dayIndex: 1,
-      startTime: '16:00',
-      duration: 30,
-      color: '#3b82f6',
-      phone: '+36 30 404 0404',
-      service: 'Szakáll igazítás',
-      price: 3500,
-      status: 'pending',
-      notes: ''
-    },
-    {
-      id: 30,
-      staffId: 3,
-      staffName: 'Anna Kovács',
-      title: 'Manikűr',
-      clientName: 'Kiss Eszter',
-      dayIndex: 1,
-      startTime: '16:15',
-      duration: 50,
-      color: '#ec4899',
-      phone: '+36 30 505 0505',
-      service: 'Manikűr',
-      price: 6000,
-      status: 'confirmed',
-      notes: ''
-    }
-  ];
+  allAppointments: CalendarAppointment[] = [];
 
   ngOnInit(): void {
     this.isMobileView = window.innerWidth <= 480;
     this.loadCompanyData();
     this.updateWeekDays();
+    this.loadWeeklyAppointments();
     this.updateCurrentTimePosition();
     this.currentTimeInterval = setInterval(() => {
       this.updateCurrentTimePosition();
-    }, 60000); // Update every minute
+    }, 60000);
   }
 
   loadCompanyData(): void {
     const user: User | null = this.authService.getCurrentUser();
-    if (user && user.companyId) {
-      this.companiesService.getCompanyById(user.companyId).subscribe({
-        next: (company: Company) => {
-          this.companyOpeningHours = company.openingHours || null;
-          this.updateWeekDays(); // Refresh with new data
-        },
-        error: (err: any) => {
-          console.error('Failed to load company data:', err);
-        }
-      });
-    }
+    this.currentUserCompanyId = user?.companyId ?? null;
+
+    this.companiesService.getOwnerPanelOpeningHours().subscribe({
+      next: (openingHours: OpeningHours) => {
+        this.companyOpeningHours = openingHours || null;
+        this.updateWeekDays();
+      },
+      error: (err: unknown) => {
+        console.error('Failed to load owner panel opening hours:', err);
+      },
+    });
   }
 
   ngOnDestroy(): void {
     if (this.currentTimeInterval) {
       clearInterval(this.currentTimeInterval);
     }
+
+    this.pendingColorPersistTimers.forEach((timer) => clearTimeout(timer));
+    this.pendingColorPersistTimers.clear();
+    this.pendingStaffColors.clear();
   }
 
   getMonday(date: Date): Date {
@@ -713,37 +184,30 @@ export class CalendarComponent implements OnInit, OnDestroy {
   updateWeekDays(): void {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const days = ['Hétfő', 'Kedd', 'Szerda', 'Csütörtök', 'Péntek', 'Szombat', 'Vasárnap'];
     const dayShortNames = ['H', 'K', 'Sze', 'Cs', 'P', 'Szo', 'V'];
     const dayKeys: (keyof OpeningHours)[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-    const months = ['január', 'február', 'március', 'április', 'május', 'június', 
-                    'július', 'augusztus', 'szeptember', 'október', 'november', 'december'];
-    
+    const months = ['január', 'február', 'március', 'április', 'május', 'június', 'július', 'augusztus', 'szeptember', 'október', 'november', 'december'];
+
     this.weekDays = [];
     let todayIndex: number | null = null;
-    
+
     for (let i = 0; i < 7; i++) {
       const date = new Date(this.currentWeekStart);
       date.setDate(date.getDate() + i);
       date.setHours(0, 0, 0, 0);
-      
+
       const isToday = date.getTime() === today.getTime();
       if (isToday) {
         todayIndex = i;
       }
-      
-      // Dinamikus zárt/nyitott állapot számítása staff availability adatok alapján
-      const isDayClosed = this.isDayClosedForAllStaff(i);
-      
-      // Nyitvatartási idő meghatározása
-      let openingHours = '';
-      if (!isDayClosed) {
-        // Ha van elérhető staff, gyűjtsük össze a munkaidőket
-        const availableHours = this.getAvailableHoursForDay(i);
-        openingHours = availableHours.length > 0 ? availableHours[0] : '09:00–17:00';
-      }
-      
+
+      const dayOpeningHoursRaw = this.companyOpeningHours?.[dayKeys[i]];
+      const normalizedDayOpeningHours = this.normalizeDayOpeningHours(dayOpeningHoursRaw);
+      const isDayClosed = this.isClosedFromOpeningHours(normalizedDayOpeningHours, i);
+      const openingHours = isDayClosed ? '' : this.formatOpeningHours(normalizedDayOpeningHours);
+
       this.weekDays.push({
         name: days[i],
         shortName: dayShortNames[i],
@@ -751,30 +215,26 @@ export class CalendarComponent implements OnInit, OnDestroy {
         dayIndex: i,
         dayNumber: date.getDate(),
         fullDate: date,
-        openingHours: openingHours,
+        openingHours,
         isClosed: isDayClosed,
-        isToday: isToday
+        isToday,
       });
     }
-    
-    // Set default focused day
+
     this.setDefaultFocusedDay(todayIndex);
     this.setDefaultMobileDay(todayIndex);
+    this.updateTimeRangeFromOpeningHours();
+    this.updateCurrentTimePosition();
   }
 
-  /**
-   * Alapértelmezett fókuszált nap beállítása
-   * - Ha a mai nap a héten van, az legyen fókuszban
-   * - Ha nincs, az első nyitott nap legyen fókuszban
-   */
   private setDefaultFocusedDay(todayIndex: number | null): void {
     if (todayIndex !== null && !this.weekDays[todayIndex]?.isClosed) {
       this.focusedDayIndices = [todayIndex];
-    } else {
-      // Keressük meg az első nyitott napot
-      const firstOpenDay = this.weekDays.findIndex(day => !day.isClosed);
-      this.focusedDayIndices = firstOpenDay !== -1 ? [firstOpenDay] : [];
+      return;
     }
+
+    const firstOpenDay = this.weekDays.findIndex(day => !day.isClosed);
+    this.focusedDayIndices = firstOpenDay !== -1 ? [firstOpenDay] : [];
   }
 
   private setDefaultMobileDay(todayIndex: number | null): void {
@@ -788,59 +248,150 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
     const firstOpenDay = this.weekDays.findIndex(day => !day.isClosed);
     this.currentMobileDayIndex = firstOpenDay !== -1 ? firstOpenDay : 0;
+
     if (this.isMobileView && this.weekDays[this.currentMobileDayIndex] && !this.weekDays[this.currentMobileDayIndex].isClosed) {
       this.focusedDayIndices = [this.currentMobileDayIndex];
     }
   }
 
-  /**
-   * Ellenőrzi, hogy egy adott nap zárt-e (minden staff unavailable)
-   */
-  private isDayClosedForAllStaff(dayIndex: number): boolean {
-    // Ha nincs staff adat, fallback a hétvégékre
-    if (this.staffAvailabilityData.length === 0) {
-      return dayIndex === 5 || dayIndex === 6; // Szombat/Vasárnap
+  private normalizeDayOpeningHours(dayOpeningHours: string | undefined): string {
+    if (!dayOpeningHours) {
+      return '';
     }
 
-    // Ha minden staff isAvailable = false, akkor zárt a nap
-    return this.staffAvailabilityData.every(staff => {
-      const dayData = staff.weeklyAvailability[dayIndex];
-      return !dayData || !dayData.isAvailable;
-    });
+    return dayOpeningHours.trim();
   }
 
-  /**
-   * Visszaadja az elérhető munkaidőket egy adott napra
-   */
-  private getAvailableHoursForDay(dayIndex: number): string[] {
-    const hours: string[] = [];
-    
-    this.staffAvailabilityData.forEach(staff => {
-      const dayData = staff.weeklyAvailability[dayIndex];
-      if (dayData && dayData.isAvailable && dayData.startTime && dayData.endTime) {
-        const timeRange = `${dayData.startTime}–${dayData.endTime}`;
-        if (!hours.includes(timeRange)) {
-          hours.push(timeRange);
-        }
-      }
-    });
-    
-    return hours;
+  private isClosedFromOpeningHours(dayOpeningHours: string, dayIndex: number): boolean {
+    if (!dayOpeningHours) {
+      return dayIndex === 5 || dayIndex === 6;
+    }
+
+    return dayOpeningHours.toLocaleLowerCase('hu').includes('zárva');
+  }
+
+  private formatOpeningHours(dayOpeningHours: string): string {
+    if (!dayOpeningHours) {
+      return '';
+    }
+
+    return dayOpeningHours.replace(/\s*-\s*/g, '–');
+  }
+
+  private updateTimeRangeFromOpeningHours(): void {
+    const dayValues = Object.values(this.companyOpeningHours ?? {});
+    const parsedRanges = dayValues
+      .map((value) => this.parseOpeningRange(this.normalizeDayOpeningHours(value)))
+      .filter((range): range is { startMinutes: number; endMinutes: number } => range !== null);
+
+    if (parsedRanges.length === 0) {
+      this.calendarStartHour = 8;
+      this.calendarEndHour = 19;
+      this.timeSlots = this.buildTimeSlots(this.calendarStartHour, this.calendarEndHour);
+      return;
+    }
+
+    const earliestStartMinutes = Math.min(...parsedRanges.map((range) => range.startMinutes));
+    const latestEndMinutes = Math.max(...parsedRanges.map((range) => range.endMinutes));
+
+    this.calendarStartHour = Math.floor(earliestStartMinutes / 60);
+    this.calendarEndHour = Math.max(this.calendarStartHour + 1, Math.ceil(latestEndMinutes / 60));
+    this.timeSlots = this.buildTimeSlots(this.calendarStartHour, this.calendarEndHour);
+  }
+
+  private parseOpeningRange(dayOpeningHours: string): { startMinutes: number; endMinutes: number } | null {
+    if (!dayOpeningHours || dayOpeningHours.toLocaleLowerCase('hu').includes('zárva')) {
+      return null;
+    }
+
+    const match = dayOpeningHours.match(/(\d{1,2}:\d{2})\s*[–-]\s*(\d{1,2}:\d{2})/);
+    if (!match) {
+      return null;
+    }
+
+    const startMinutes = this.parseTimeToMinutes(match[1]);
+    const endMinutes = this.parseTimeToMinutes(match[2]);
+
+    if (startMinutes === null || endMinutes === null || endMinutes <= startMinutes) {
+      return null;
+    }
+
+    return { startMinutes, endMinutes };
+  }
+
+  private buildTimeSlots(startHour: number, endHour: number): TimeSlot[] {
+    const slots: TimeSlot[] = [];
+    for (let hour = startHour; hour <= endHour; hour++) {
+      slots.push({
+        time: `${hour.toString().padStart(2, '0')}:00`,
+        hour,
+      });
+    }
+    return slots;
+  }
+
+  get gridTimeSlots(): TimeSlot[] {
+    return this.timeSlots.length > 1 ? this.timeSlots.slice(0, -1) : this.timeSlots;
+  }
+
+  private parseTimeToMinutes(time: string): number | null {
+    const parts = time.split(':').map(Number);
+    if (parts.length !== 2 || parts.some((value) => Number.isNaN(value))) {
+      return null;
+    }
+
+    const [hours, minutes] = parts;
+    return (hours * 60) + minutes;
+  }
+
+  private minutesFromCalendarStart(time: string): number {
+    const totalMinutes = this.parseTimeToMinutes(time);
+    if (totalMinutes === null) {
+      return 0;
+    }
+
+    return totalMinutes - (this.calendarStartHour * 60);
   }
 
   previousWeek(): void {
     this.currentWeekStart.setDate(this.currentWeekStart.getDate() - 7);
     this.updateWeekDays();
+    this.loadWeeklyAppointments();
   }
 
   nextWeek(): void {
     this.currentWeekStart.setDate(this.currentWeekStart.getDate() + 7);
     this.updateWeekDays();
+    this.loadWeeklyAppointments();
   }
 
   goToToday(): void {
     this.currentWeekStart = this.getMonday(new Date());
     this.updateWeekDays();
+    this.loadWeeklyAppointments();
+  }
+
+  canGoToPreviousMobileWeek(): boolean {
+    const thisWeekMonday = this.getMonday(new Date());
+    return this.currentWeekStart.getTime() > thisWeekMonday.getTime();
+  }
+
+  previousMobileWeek(): void {
+    if (!this.canGoToPreviousMobileWeek()) {
+      return;
+    }
+
+    this.currentWeekStart = new Date(this.currentWeekStart);
+    this.currentWeekStart.setDate(this.currentWeekStart.getDate() - 7);
+    this.updateWeekDays();
+    this.loadWeeklyAppointments();
+  }
+
+  nextMobileWeek(): void {
+    this.currentWeekStart = new Date(this.currentWeekStart);
+    this.currentWeekStart.setDate(this.currentWeekStart.getDate() + 7);
+    this.updateWeekDays();
+    this.loadWeeklyAppointments();
   }
 
   // Mobile navigation methods
@@ -901,11 +452,14 @@ export class CalendarComponent implements OnInit, OnDestroy {
     const now = new Date();
     const hours = now.getHours();
     const minutes = now.getMinutes();
-    
-    if (hours >= 8 && hours < 19) {
-      const totalMinutes = (hours - 8) * 60 + minutes;
-      this.currentTimePosition = (totalMinutes / 60) * 60; // 60px per hour
+
+    if (hours >= this.calendarStartHour && hours < this.calendarEndHour) {
+      const totalMinutes = (hours - this.calendarStartHour) * 60 + minutes;
+      this.currentTimePosition = totalMinutes;
+      return;
     }
+
+    this.currentTimePosition = 0;
   }
 
   get filteredAppointments(): CalendarAppointment[] {
@@ -980,7 +534,203 @@ export class CalendarComponent implements OnInit, OnDestroy {
   }
 
   private persistStaffColor(staffId: number, color: string): void {
-    console.info('Staff color saved locally', { staffId, color });
+    const normalizedColor = this.normalizeHexColor(color);
+    if (!normalizedColor) {
+      return;
+    }
+
+    const currentPersistedColor = this.lastPersistedStaffColors.get(staffId);
+    if (currentPersistedColor === normalizedColor) {
+      return;
+    }
+
+    this.pendingStaffColors.set(staffId, normalizedColor);
+
+    const existingTimer = this.pendingColorPersistTimers.get(staffId);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+
+    const timer = setTimeout(() => {
+      this.pendingColorPersistTimers.delete(staffId);
+      const queuedColor = this.pendingStaffColors.get(staffId);
+
+      if (!queuedColor || !this.currentUserCompanyId) {
+        return;
+      }
+
+      if (this.lastPersistedStaffColors.get(staffId) === queuedColor) {
+        this.pendingStaffColors.delete(staffId);
+        return;
+      }
+
+      this.pendingStaffColors.delete(staffId);
+      this.staffService.updateStaffColor(staffId, this.currentUserCompanyId, queuedColor).subscribe({
+        next: () => {
+          this.lastPersistedStaffColors.set(staffId, queuedColor);
+        },
+        error: (err: unknown) => {
+          console.error('Failed to update staff color:', err);
+        },
+      });
+    }, this.colorPersistDebounceMs);
+
+    this.pendingColorPersistTimers.set(staffId, timer);
+  }
+
+  private loadWeeklyAppointments(): void {
+    if (!this.currentUserCompanyId) {
+      return;
+    }
+
+    const weekStart = this.toIsoDate(this.currentWeekStart);
+
+    this.ownerDashboardService
+      .getWeeklyCalendarAppointments(this.currentUserCompanyId, weekStart, null)
+      .subscribe({
+        next: (response) => {
+          this.applyWeeklyCalendarResponse(response as WeeklyCalendarResponse);
+        },
+        error: (err: unknown) => {
+          console.error('Failed to load weekly calendar appointments:', err);
+          this.allAppointments = [];
+          this.staffMembers = [{ id: 0, name: 'Összes szakember', color: '#64748b' }];
+          this.staffColors = {};
+          this.selectedAppointment = null;
+        },
+      });
+  }
+
+  private applyWeeklyCalendarResponse(response: WeeklyCalendarResponse): void {
+    const calendarDays = Array.isArray(response?.data) ? response.data : [];
+    const staffMap = new Map<number, { name: string; color: string; generatedColor: boolean }>();
+    const mappedAppointments: CalendarAppointment[] = [];
+
+    for (const day of calendarDays) {
+      const dayIndex = this.getDayIndexForCurrentWeek(day.date);
+      if (dayIndex < 0) {
+        continue;
+      }
+
+      const staffAppointments = Array.isArray(day.staffAppointments) ? day.staffAppointments : [];
+      for (const staffEntry of staffAppointments) {
+        const normalizedApiColor = this.normalizeHexColor(staffEntry.staffColor);
+        const generatedColor = !normalizedApiColor;
+        const color = normalizedApiColor ?? this.getGeneratedColorForStaff(staffEntry.staffId);
+
+        if (!staffMap.has(staffEntry.staffId)) {
+          staffMap.set(staffEntry.staffId, {
+            name: staffEntry.staffName,
+            color,
+            generatedColor,
+          });
+        }
+
+        const appointments = Array.isArray(staffEntry.appointments) ? staffEntry.appointments : [];
+        for (const appointment of appointments) {
+          mappedAppointments.push({
+            id: appointment.id,
+            staffId: staffEntry.staffId,
+            staffName: staffEntry.staffName,
+            title: appointment.serviceName,
+            clientName: appointment.clientName,
+            dayIndex,
+            startTime: this.normalizeTime(appointment.startTime),
+            duration: appointment.durationMinutes,
+            color,
+            phone: appointment.clientPhone,
+            service: appointment.serviceName,
+            price: appointment.price,
+            status: appointment.status,
+            notes: appointment.notes ?? undefined,
+          });
+        }
+      }
+    }
+
+    this.allAppointments = mappedAppointments;
+    this.staffMembers = [
+      { id: 0, name: 'Összes szakember', color: '#64748b' },
+      ...Array.from(staffMap.entries())
+        .map(([id, data]) => ({ id, name: data.name, color: data.color }))
+        .sort((a, b) => a.name.localeCompare(b.name, 'hu')),
+    ];
+    this.staffColors = Array.from(staffMap.entries()).reduce<{ [key: number]: string }>((acc, [id, data]) => {
+      acc[id] = data.color;
+      return acc;
+    }, {});
+
+    for (const [staffId, staffData] of staffMap.entries()) {
+      if (!staffData.generatedColor) {
+        this.lastPersistedStaffColors.set(staffId, staffData.color);
+      }
+    }
+
+    if (this.selectedAppointment && !this.allAppointments.some(apt => apt.id === this.selectedAppointment?.id)) {
+      this.selectedAppointment = null;
+    }
+
+    this.persistGeneratedColors(staffMap);
+  }
+
+  private persistGeneratedColors(staffMap: Map<number, { name: string; color: string; generatedColor: boolean }>): void {
+    for (const [staffId, staffData] of staffMap.entries()) {
+      if (!staffData.generatedColor) {
+        continue;
+      }
+
+      this.persistStaffColor(staffId, staffData.color);
+    }
+  }
+
+  private getGeneratedColorForStaff(staffId: number): string {
+    const paletteIndex = Math.abs(staffId) % this.generatedColorPalette.length;
+    return this.generatedColorPalette[paletteIndex];
+  }
+
+  private normalizeHexColor(color: string | null | undefined): string | null {
+    if (!color) {
+      return null;
+    }
+
+    const trimmedColor = color.trim();
+    if (!trimmedColor) {
+      return null;
+    }
+
+    const prefixed = trimmedColor.startsWith('#') ? trimmedColor : `#${trimmedColor}`;
+    const validHex = /^#([a-fA-F0-9]{6})$/.test(prefixed);
+
+    return validHex ? prefixed.toLowerCase() : null;
+  }
+
+  private normalizeTime(time: string): string {
+    if (!time) {
+      return '';
+    }
+
+    return time.length >= 5 ? time.slice(0, 5) : time;
+  }
+
+  private getDayIndexForCurrentWeek(dateIso: string): number {
+    const parts = dateIso.split('-').map(Number);
+    if (parts.length !== 3 || parts.some(part => Number.isNaN(part))) {
+      return -1;
+    }
+
+    const [year, month, day] = parts;
+    const date = new Date(year, month - 1, day);
+    const weekStart = new Date(this.currentWeekStart.getFullYear(), this.currentWeekStart.getMonth(), this.currentWeekStart.getDate());
+    const diffInDays = Math.round((date.getTime() - weekStart.getTime()) / (1000 * 60 * 60 * 24));
+
+    return diffInDays >= 0 && diffInDays <= 6 ? diffInDays : -1;
+  }
+
+  private toIsoDate(date: Date): string {
+    const year = date.getFullYear();
+    const month = `${date.getMonth() + 1}`.padStart(2, '0');
+    const day = `${date.getDate()}`.padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   getShortName(fullName: string): string {
@@ -1005,8 +755,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
 
   // Column layout - overflow allowed for better visibility
   getAppointmentStyleWithOverlap(appointment: CalendarAppointment, dayIndex: number): any {
-    const [hours, minutes] = appointment.startTime.split(':').map(Number);
-    const startMinutes = (hours - 8) * 60 + minutes;
+    const startMinutes = this.minutesFromCalendarStart(appointment.startTime);
     const endMinutes = startMinutes + appointment.duration;
     const top = startMinutes;
     const height = appointment.duration;
@@ -1014,8 +763,7 @@ export class CalendarComponent implements OnInit, OnDestroy {
     // Find appointments that overlap in time
     const dayAppointments = this.getAppointmentsForDay(dayIndex);
     const overlapping = dayAppointments.filter(apt => {
-      const [aptHours, aptMinutes] = apt.startTime.split(':').map(Number);
-      const aptStart = (aptHours - 8) * 60 + aptMinutes;
+      const aptStart = this.minutesFromCalendarStart(apt.startTime);
       const aptEnd = aptStart + apt.duration;
       return apt.id !== appointment.id && aptStart < endMinutes && aptEnd > startMinutes;
     });
@@ -1139,17 +887,15 @@ export class CalendarComponent implements OnInit, OnDestroy {
   shouldShowService(appointment: CalendarAppointment, dayIndex: number): boolean {
     // Only show if duration >= 30 minutes AND no overlapping appointments
     if (appointment.duration < 30) return false;
-    
-    const [hours, minutes] = appointment.startTime.split(':').map(Number);
-    const startMinutes = (hours - 8) * 60 + minutes;
+
+    const startMinutes = this.minutesFromCalendarStart(appointment.startTime);
     const endMinutes = startMinutes + appointment.duration;
     
     const dayAppointments = this.getAppointmentsForDay(dayIndex);
     const hasOverlap = dayAppointments.some(apt => {
       if (apt.id === appointment.id) return false;
-      
-      const [aptHours, aptMinutes] = apt.startTime.split(':').map(Number);
-      const aptStart = (aptHours - 8) * 60 + aptMinutes;
+
+      const aptStart = this.minutesFromCalendarStart(apt.startTime);
       const aptEnd = aptStart + apt.duration;
       
       return aptStart < endMinutes && aptEnd > startMinutes;
@@ -1163,7 +909,9 @@ export class CalendarComponent implements OnInit, OnDestroy {
       'pending': 'Függőben',
       'confirmed': 'Megerősítve',
       'completed': 'Befejezve',
-      'cancelled': 'Lemondva'
+      'cancelled': 'Lemondva',
+      'booked': 'Foglalva',
+      'no_show': 'Nem jelent meg'
     };
     return labels[status || 'pending'] || status || '';
   }

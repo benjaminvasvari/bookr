@@ -218,11 +218,21 @@ export class MainPageComponent implements OnInit, AfterViewInit {
       return;
     }
 
-    const scrollAmount = Math.max(280, carouselElement.clientWidth * 0.85);
+    // Egy review card width-e + gap
+    const cardWidth = (carouselElement.clientWidth - 32) / 3 + 16;
+    const scrollAmount = cardWidth;
+
     carouselElement.scrollBy({
       left: direction === 'left' ? -scrollAmount : scrollAmount,
       behavior: 'smooth',
     });
+
+    // Next index frissítése iránya alapján
+    if (direction === 'right' && this.activeReviewIndex < this.reviews.length - 1) {
+      this.activeReviewIndex++;
+    } else if (direction === 'left' && this.activeReviewIndex > 0) {
+      this.activeReviewIndex--;
+    }
   }
 
   scrollToReview(index: number): void {

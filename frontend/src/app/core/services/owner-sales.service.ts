@@ -1,45 +1,17 @@
-export interface SalesTopService {
-  name: string;
-  bookings: number;
-  revenue: string;
-}
-
-  getSalesTopServices(companyId: number, period: SalesOverviewPeriod): Observable<SalesTopService[]> {
-    return this.http.get<any>(
-      `${this.apiUrl}${API_ENDPOINTS.APPOINTMENTS.SALES_TOP_SERVICES(companyId, period)}`
-    ).pipe(
-      map((response) => this.normalizeTopServices(response))
-    );
-  }
-
-  private normalizeTopServices(payload: any): SalesTopService[] {
-    if (Array.isArray(payload)) {
-      return payload.map(this.mapTopServiceItem);
-    }
-    if (payload && typeof payload === 'object') {
-      const arr = payload.data || payload.items || payload.result || Object.values(payload);
-      if (Array.isArray(arr)) {
-        return arr.map(this.mapTopServiceItem);
-      }
-    }
-    return [];
-  }
-
-  private mapTopServiceItem(item: any): SalesTopService {
-    return {
-      name: item.name || item.serviceName || '',
-      bookings: Number(item.bookings ?? item.count ?? 0),
-      revenue: typeof item.revenue === 'string' ? item.revenue : (item.revenue ? `${item.revenue} Ft` : '0 Ft'),
-    };
-  }
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, forkJoin, map } from 'rxjs';
+import { Observable, forkJoin, map, catchError, throwError } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 import { API_ENDPOINTS } from '../constants/api-endpoints';
 
 export type SalesOverviewPeriod = 'week' | 'month' | 'year';
+
+export interface SalesTopService {
+  name: string;
+  bookings: number;
+  revenue: string;
+}
 
 export interface SalesOverviewKpi {
   revenue: number;
@@ -79,10 +51,16 @@ export class OwnerSalesService {
     }
 
     private mapTopServiceItem(item: any): SalesTopService {
+      const rawRevenue = item.revenue ?? item.currency ?? item.totalRevenue;
+      const revenueValue =
+        typeof rawRevenue === 'number' || typeof rawRevenue === 'string'
+          ? `${new Intl.NumberFormat('hu-HU').format(Number(rawRevenue) || 0)} Ft`
+          : '0 Ft';
+
       return {
         name: item.name || item.serviceName || '',
-        bookings: Number(item.bookings ?? item.count ?? 0),
-        revenue: typeof item.revenue === 'string' ? item.revenue : (item.revenue ? `${item.revenue} Ft` : '0 Ft'),
+        bookings: Number(item.bookings ?? item.count ?? item.clientCount ?? 0),
+        revenue: revenueValue,
       };
     }
   private readonly apiUrl = environment.apiUrl;
@@ -117,11 +95,47 @@ export class OwnerSalesService {
     companyId: number,
     period: SalesOverviewPeriod
   ): Observable<SalesRevenueChartPoint[]> {
-    return this.http
-      .get<unknown>(
-        `${this.apiUrl}${API_ENDPOINTS.APPOINTMENTS.SALES_REVENUE_CHART(companyId, period)}`
-      )
-      .pipe(map((response) => this.extractChartPoints(response, period)));
+    const urls = this.buildSalesRevenueChartUrls(companyId, period);
+    return this.requestSalesRevenueChartWithFallback(urls, period, 0);
+  }
+
+  private requestSalesRevenueChartWithFallback(
+    urls: string[],
+    period: SalesOverviewPeriod,
+    index: number
+  ): Observable<SalesRevenueChartPoint[]> {
+    return this.http.get<unknown>(urls[index]).pipe(
+      map((response) => this.extractChartPoints(response, period)),
+      catchError((error: unknown) => {
+        const status = (error as { status?: number })?.status;
+        const canRetry = status !== undefined && status >= 500 && index < urls.length - 1;
+
+        if (canRetry) {
+          return this.requestSalesRevenueChartWithFallback(urls, period, index + 1);
+        }
+
+        return throwError(() => error);
+      })
+    );
+  }
+
+  private buildSalesRevenueChartUrls(companyId: number, period: SalesOverviewPeriod): string[] {
+    const basePath = '/appointments/getSalesRevenueChart';
+    const periodVariants = this.getPeriodVariants(period);
+
+    return periodVariants.map(
+      (periodValue) => `${this.apiUrl}${basePath}?companyId=${companyId}&period=${periodValue}`
+    );
+  }
+
+  private getPeriodVariants(period: SalesOverviewPeriod): string[] {
+    const legacyPeriod = period === 'week' ? 'weekly' : period === 'month' ? 'monthly' : 'yearly';
+    return [
+      period,
+      period.toUpperCase(),
+      legacyPeriod,
+      legacyPeriod.toUpperCase(),
+    ];
   }
 
   private getNumericValue(url: string): Observable<number> {

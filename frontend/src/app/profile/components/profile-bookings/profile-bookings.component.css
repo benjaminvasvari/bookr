@@ -464,6 +464,55 @@
     border-top: 1px solid #e9ecef;
 }
 
+/* Bookings dark mode kontraszt */
+:host-context(body.dark-mode) .section-header {
+    background: #0f1720;
+}
+
+:host-context(body.dark-mode) .tabs {
+    background: #1f2b3a;
+    box-shadow: none;
+}
+
+:host-context(body.dark-mode) .tab-button {
+    color: #cbd5e1;
+}
+
+:host-context(body.dark-mode) .tab-button:hover {
+    background-color: #243447;
+}
+
+:host-context(body.dark-mode) .empty-state {
+    background: #1f2b3a;
+    border: 1px solid #2b3b4d;
+}
+
+:host-context(body.dark-mode) .empty-icon {
+    fill: #94a3b8;
+}
+
+:host-context(body.dark-mode) .empty-title {
+    color: #f1f5f9;
+}
+
+:host-context(body.dark-mode) .empty-text {
+    color: #cbd5e1;
+}
+
+:host-context(body.dark-mode) .booking-actions {
+    background-color: #1f2b3a;
+    border-top-color: #2b3b4d;
+}
+
+:host-context(body.dark-mode) .btn-secondary {
+    color: #e2e8f0;
+    border-color: #3c556d;
+}
+
+:host-context(body.dark-mode) .btn-secondary:hover {
+    background-color: #243447;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .section-header {

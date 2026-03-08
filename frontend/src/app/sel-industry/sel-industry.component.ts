@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 
@@ -9,10 +9,36 @@ import { HungarianCurrencyPipe } from '../core/pipes/hungarian-currency.pipe';
 import { Company } from '../core/models';
 // Importáljuk a service-t
 import { CompaniesService } from '../core/services/companies.service';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Service } from '../core/models/service.model';
 import { Favorite, FavoritesService } from '../core/services/favorites.service';
+import { IndustryPageStaffResponse, StaffService } from '../core/services/staff.service';
 import { combineLatest, Subscription } from 'rxjs';
+
+type LeafletModule = typeof import('leaflet');
+
+interface GeocodeResult {
+  lat: string;
+  lon: string;
+}
+
+interface PhotonFeature {
+  geometry?: {
+    coordinates?: [number, number];
+  };
+}
+
+interface PhotonResponse {
+  features?: PhotonFeature[];
+}
+
+interface TeamMember {
+  id: number;
+  name: string;
+  initials: string;
+  role: string;
+  bio?: string;
+  imageUrl?: string;
+}
 
 @Component({
   selector: 'app-sel-industry',
@@ -22,24 +48,49 @@ import { combineLatest, Subscription } from 'rxjs';
   styleUrls: ['./sel-industry.component.css'],
 })
 export class SelIndustryComponent implements OnInit, OnDestroy {
+  @ViewChild('companyMap') private mapElement?: ElementRef<HTMLDivElement>;
+
   companyId: number | null = null;
   company: Company | null = null;
   selectedCategoryId: number | null = null;
   isLoading: boolean = false;
+  isMapLoading = false;
+  mapError = '';
   errorMessage: string = '';
   isFavorite: boolean = false;
+  selectedImagePreview: string | null = null;
+  selectedImageAlt = '';
+  private readonly teamBioPreviewLimit = 115;
+  private readonly reviewPreviewLimit = 120;
+  private readonly defaultMapCoordinates = { lat: 47.4979, lng: 19.0402 };
+  private readonly cityFallbackCoordinates: Record<string, { lat: number; lng: number }> = {
+    budapest: { lat: 47.4979, lng: 19.0402 },
+    pecs: { lat: 46.0727, lng: 18.2323 },
+    debrecen: { lat: 47.5316, lng: 21.6273 },
+    szeged: { lat: 46.2530, lng: 20.1414 },
+    gyor: { lat: 47.6875, lng: 17.6504 },
+    miskolc: { lat: 48.1035, lng: 20.7784 },
+    nyiregyhaza: { lat: 47.9495, lng: 21.7244 },
+    kecskemet: { lat: 46.8964, lng: 19.6897 },
+  };
+  private readonly expandedTeamBioIds = new Set<number>();
+  private readonly expandedReviewIds = new Set<number>();
+  teamMembers: TeamMember[] = [];
   private favoritesLoaded = false;
   private favorites: Favorite[] = [];
   private routeSubscription?: Subscription;
   private favoritesSubscription?: Subscription;
+  private map?: import('leaflet').Map;
+  private leaflet?: LeafletModule;
+  private mapInitId = 0;
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private companiesService: CompaniesService,
-    private sanitizer: DomSanitizer,
     private title: Title,
-    private favoritesService: FavoritesService
+    private favoritesService: FavoritesService,
+    private staffService: StaffService
   ) {}
 
   ngOnInit(): void {
@@ -47,6 +98,7 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
     this.routeSubscription = this.route.params.subscribe((params) => {
       this.companyId = +params['id'];
       this.loadCompanyDetails();
+      this.loadTeamMembers();
       this.updateFavoriteState();
     });
 
@@ -66,8 +118,43 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.mapInitId++;
     this.routeSubscription?.unsubscribe();
     this.favoritesSubscription?.unsubscribe();
+    this.destroyMap();
+    document.body.style.overflow = '';
+  }
+
+  openImagePreview(imageUrl: string | undefined, altText: string): void {
+    const source = imageUrl?.trim() ?? '';
+    if (!source) {
+      return;
+    }
+
+    this.selectedImagePreview = source;
+    this.selectedImageAlt = altText;
+    document.body.style.overflow = 'hidden';
+  }
+
+  closeImagePreview(): void {
+    this.selectedImagePreview = null;
+    this.selectedImageAlt = '';
+    document.body.style.overflow = '';
+  }
+
+  handleLightboxBackdropClick(event: MouseEvent): void {
+    if (event.target === event.currentTarget) {
+      this.closeImagePreview();
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  handleEscapeKey(): void {
+    if (!this.selectedImagePreview) {
+      return;
+    }
+
+    this.closeImagePreview();
   }
 
   loadCompanyDetails(): void {
@@ -87,6 +174,7 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
       next: (data: Company) => {
         this.company = data;
         this.isLoading = false;
+        this.mapError = '';
 
         this.title.setTitle(`${data.name} | Bookr`);
 
@@ -101,6 +189,7 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
         }
 
         this.updateFavoriteState();
+        this.scheduleMapInitialization();
 
         console.log('Cég adatok betöltve:', data);
       },
@@ -112,6 +201,56 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
         this.isLoading = false;
       },
     });
+  }
+
+  private loadTeamMembers(): void {
+    if (!this.companyId) {
+      this.teamMembers = [];
+      return;
+    }
+
+    this.staffService.getStaffForIndustryPage(this.companyId).subscribe({
+      next: (staffMembers) => {
+        this.expandedTeamBioIds.clear();
+        this.teamMembers = staffMembers.map((member) => this.mapStaffToTeamMember(member));
+      },
+      error: (error) => {
+        console.error('Hiba a csapattagok betöltése során:', error);
+        this.teamMembers = [];
+      },
+    });
+  }
+
+  private mapStaffToTeamMember(
+    staffMember: IndustryPageStaffResponse['result'][number]
+  ): TeamMember {
+    const displayName = staffMember.displayName?.trim() || 'Névtelen munkatárs';
+
+    return {
+      id: staffMember.id,
+      name: displayName,
+      initials: this.getInitials(displayName),
+      role: staffMember.specialties?.trim() || 'Munkatárs',
+      bio: staffMember.bio?.trim() || '',
+      imageUrl: staffMember.imageUrl?.trim() || '',
+    };
+  }
+
+  private getInitials(fullName: string): string {
+    const parts = fullName
+      .trim()
+      .split(/\s+/)
+      .filter((part) => part.length > 0);
+
+    if (parts.length === 0) {
+      return '??';
+    }
+
+    if (parts.length === 1) {
+      return parts[0].slice(0, 2).toUpperCase();
+    }
+
+    return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
   }
 
   selectCategory(categoryId: number): void {
@@ -178,12 +317,73 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
   }
 
   getRatingStars(): number[] {
-    const rating = this.company?.rating || 0;
-    return Array(Math.floor(rating)).fill(0);
+    const rating = Math.max(0, Math.min(5, this.company?.rating ?? 0));
+    return Array.from({ length: 5 }, (_, index) => {
+      const fill = rating - index;
+      return Math.max(0, Math.min(1, fill));
+    });
   }
 
   getReviewStars(rating: number): number[] {
     return Array(Math.floor(rating)).fill(0);
+  }
+
+  getReviewComment(review: { id: number; comment: string }): string {
+    const fullComment = review.comment?.trim() ?? '';
+
+    if (this.isReviewExpanded(review.id) || fullComment.length <= this.reviewPreviewLimit) {
+      return fullComment;
+    }
+
+    return `${fullComment.slice(0, this.reviewPreviewLimit).trimEnd()}...`;
+  }
+
+  hasLongReviewComment(comment: string | undefined): boolean {
+    return (comment?.trim().length ?? 0) > this.reviewPreviewLimit;
+  }
+
+  isReviewExpanded(reviewId: number): boolean {
+    return this.expandedReviewIds.has(reviewId);
+  }
+
+  toggleReviewComment(reviewId: number): void {
+    if (this.expandedReviewIds.has(reviewId)) {
+      this.expandedReviewIds.delete(reviewId);
+      return;
+    }
+
+    this.expandedReviewIds.add(reviewId);
+  }
+
+  getTeamBio(member: TeamMember): string {
+    const fullBio = member.bio?.trim() ?? '';
+
+    if (this.isTeamBioExpanded(member.id) || fullBio.length <= this.teamBioPreviewLimit) {
+      return fullBio;
+    }
+
+    return `${fullBio.slice(0, this.teamBioPreviewLimit).trimEnd()}...`;
+  }
+
+  hasTeamBio(member: TeamMember): boolean {
+    return (member.bio?.trim().length ?? 0) > 0;
+  }
+
+  hasLongTeamBio(member: TeamMember): boolean {
+    return (member.bio?.trim().length ?? 0) > this.teamBioPreviewLimit;
+  }
+
+  isTeamBioExpanded(memberId: number): boolean {
+    return this.expandedTeamBioIds.has(memberId);
+  }
+
+  toggleTeamBio(memberId: number): void {
+    if (this.expandedTeamBioIds.has(memberId)) {
+      this.expandedTeamBioIds.delete(memberId);
+      return;
+    }
+
+    this.expandedTeamBioIds.add(memberId);
   }
 
   getMainGalleryImage(): string {
@@ -214,25 +414,6 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
     return thumbnails;
   }
 
-  getMapUrl(): SafeResourceUrl {
-    if (!this.company?.addressDetails) {
-      return '';
-    }
-
-    const details = this.company.addressDetails;
-
-    // Összerakod a címet
-    const address = `${details.street}, ${details.postalCode} ${details.city}, ${details.country}`;
-
-    // URL encode
-    const encodedAddress = encodeURIComponent(address);
-
-    // Google Maps URL
-    const url = `https://maps.google.com/maps?q=${encodedAddress}&output=embed`;
-    // Sanitize
-    return this.sanitizer.bypassSecurityTrustResourceUrl(url);
-  }
-
   getMapTitle(): string {
     if (!this.company) return 'Térkép - Bookr';
 
@@ -259,6 +440,283 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
    */
   isToday(day: string): boolean {
     return this.getCurrentDay() === day.toLowerCase();
+  }
+
+  private scheduleMapInitialization(): void {
+    const initId = ++this.mapInitId;
+
+    setTimeout(() => {
+      if (initId !== this.mapInitId) {
+        return;
+      }
+
+      void this.initializeMap();
+    }, 80);
+  }
+
+  private async initializeMap(): Promise<void> {
+    if (!this.company) {
+      return;
+    }
+
+    const container = this.mapElement?.nativeElement;
+    if (!container) {
+      this.scheduleMapInitialization();
+      return;
+    }
+
+    if (container.clientWidth === 0 || container.clientHeight === 0) {
+      this.scheduleMapInitialization();
+      return;
+    }
+
+    this.isMapLoading = true;
+    this.mapError = '';
+
+    const address = this.getFullAddress();
+    if (!address) {
+      this.isMapLoading = false;
+      this.mapError = 'Ehhez a céghez még nincs cím megadva.';
+      return;
+    }
+
+    const fallbackCoordinates = this.getCityFallbackCoordinates() ?? this.defaultMapCoordinates;
+    const coordinates = await this.resolveCoordinates(address, fallbackCoordinates);
+
+    try {
+      const L = await this.getLeaflet();
+      this.destroyMap();
+
+      this.map = L.map(container, {
+        zoomControl: false,
+        scrollWheelZoom: false,
+        doubleClickZoom: false,
+        boxZoom: false,
+        touchZoom: false,
+        keyboard: false,
+      }).setView([coordinates.lat, coordinates.lng], 15);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap közreműködők',
+      }).addTo(this.map);
+
+      const markerIcon = L.divIcon({
+        className: 'company-location-marker',
+        html: '<span class="marker-pin"><span class="marker-pin-center"></span></span>',
+        iconSize: [30, 42],
+        iconAnchor: [15, 42],
+        popupAnchor: [0, -38],
+      });
+
+      L.marker([coordinates.lat, coordinates.lng], {
+        icon: markerIcon,
+      })
+        .addTo(this.map)
+        .bindPopup(this.getMapPopupContent(), {
+          className: 'company-map-popup',
+          maxWidth: 280,
+          autoPanPadding: [24, 24],
+          offset: [0, -8],
+        });
+
+      this.isMapLoading = false;
+      setTimeout(() => this.map?.invalidateSize(), 50);
+      setTimeout(() => this.map?.invalidateSize(), 250);
+    } catch (error) {
+      console.error('Map initialization error:', error);
+      this.isMapLoading = false;
+      this.mapError = 'A térkép betöltése közben hiba történt.';
+    }
+  }
+
+  private async resolveCoordinates(
+    address: string,
+    fallbackCoordinates: { lat: number; lng: number }
+  ): Promise<{ lat: number; lng: number }> {
+    try {
+      const geocodedCoordinates = await Promise.race([
+        this.geocodeAddress(address),
+        this.waitForMs(2500).then(() => null),
+      ]);
+
+      return geocodedCoordinates ?? fallbackCoordinates;
+    } catch {
+      return fallbackCoordinates;
+    }
+  }
+
+  private waitForMs(milliseconds: number): Promise<void> {
+    return new Promise((resolve) => {
+      window.setTimeout(resolve, milliseconds);
+    });
+  }
+
+  private async getLeaflet(): Promise<LeafletModule> {
+    if (!this.leaflet) {
+      this.leaflet = await import('leaflet');
+    }
+
+    return this.leaflet;
+  }
+
+  private async geocodeAddress(address: string): Promise<{ lat: number; lng: number } | null> {
+    const providers = [
+      () => this.geocodeWithPhoton(address),
+      () => this.geocodeWithNominatim(address),
+    ];
+
+    for (const provider of providers) {
+      const coordinates = await provider();
+      if (coordinates) {
+        return coordinates;
+      }
+    }
+
+    return null;
+  }
+
+  private async geocodeWithNominatim(address: string): Promise<{ lat: number; lng: number } | null> {
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`;
+      const response = await this.fetchWithTimeout(url, {
+        headers: {
+          'Accept-Language': 'hu',
+        },
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const results = (await response.json()) as GeocodeResult[];
+      const firstResult = results[0];
+      if (!firstResult) {
+        return null;
+      }
+
+      const lat = Number.parseFloat(firstResult.lat);
+      const lng = Number.parseFloat(firstResult.lon);
+
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        return null;
+      }
+
+      return { lat, lng };
+    } catch (error) {
+      console.warn('Nominatim geocoding failed:', error);
+      return null;
+    }
+  }
+
+  private async geocodeWithPhoton(address: string): Promise<{ lat: number; lng: number } | null> {
+    try {
+      const url = `https://photon.komoot.io/api/?limit=1&q=${encodeURIComponent(address)}`;
+      const response = await this.fetchWithTimeout(url, {
+        headers: {
+          'Accept-Language': 'hu',
+        },
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const data = (await response.json()) as PhotonResponse;
+      const coordinates = data.features?.[0]?.geometry?.coordinates;
+
+      if (!coordinates || coordinates.length < 2) {
+        return null;
+      }
+
+      const [lng, lat] = coordinates;
+
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        return null;
+      }
+
+      return { lat, lng };
+    } catch (error) {
+      console.warn('Photon geocoding failed:', error);
+      return null;
+    }
+  }
+
+  private async fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 6500);
+
+    try {
+      return await fetch(url, {
+        ...init,
+        signal: controller.signal,
+      });
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
+  }
+
+  private getCityFallbackCoordinates(): { lat: number; lng: number } | null {
+    const city = this.company?.addressDetails?.city?.trim();
+    if (!city) {
+      return null;
+    }
+
+    const normalizedCity = this.normalizeHungarianText(city);
+    return this.cityFallbackCoordinates[normalizedCity] ?? null;
+  }
+
+  private normalizeHungarianText(value: string): string {
+    return value
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  }
+
+  private getFullAddress(): string {
+    if (this.company?.addressDetails) {
+      const details = this.company.addressDetails;
+      return `${details.street}, ${details.postalCode} ${details.city}, ${details.country}`;
+    }
+
+    return this.company?.address?.trim() ?? '';
+  }
+
+  private getMapPopupContent(): string {
+    if (!this.company) {
+      return '';
+    }
+
+    const companyName = this.escapeHtml(this.company.name);
+
+    if (this.company.addressDetails) {
+      const details = this.company.addressDetails;
+      const line1 = this.escapeHtml(details.street || this.company.address || '');
+      const cityBlock = [details.postalCode, details.city].filter(Boolean).join(' ').trim();
+      const line2Raw = [cityBlock, details.country].filter(Boolean).join(', ').trim();
+      const line2 = this.escapeHtml(line2Raw);
+
+      return `<div class="company-map-popup-content"><p class="company-map-popup-name">${companyName}</p><p class="company-map-popup-address">${line1}</p>${line2 ? `<p class="company-map-popup-address">${line2}</p>` : ''}</div>`;
+    }
+
+    const fallbackAddress = this.escapeHtml(this.company.address?.trim() || 'Cím nem elérhető');
+
+    return `<div class="company-map-popup-content"><p class="company-map-popup-name">${companyName}</p><p class="company-map-popup-address">${fallbackAddress}</p></div>`;
+  }
+
+  private escapeHtml(value: string): string {
+    return value
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+  }
+
+  private destroyMap(): void {
+    if (this.map) {
+      this.map.remove();
+      this.map = undefined;
+    }
   }
 
 }

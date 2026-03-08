@@ -1,5 +1,5 @@
 import { ownerGuard } from './core/guards/owner-guard';
-import { Routes } from '@angular/router';
+import { CanDeactivateFn, Routes } from '@angular/router';
 
 
 import { MainPageComponent } from './main-page/main-page.component';
@@ -15,6 +15,9 @@ import { AppointmentPaymentComponent } from './appointment-payment/appointment-p
 import { authGuard } from './core/guards/auth.guard';
 import { roleGuard } from './core/guards/role.guard';
 import { ResetPasswordComponent } from './reset-password/reset-password.component';
+
+const settingsLeaveGuard: CanDeactivateFn<{ canDeactivate: () => boolean }> = (component) =>
+  component.canDeactivate();
 
 export const appRoutes: Routes = [
   {
@@ -260,6 +263,7 @@ export const appRoutes: Routes = [
       },
       {
         path: 'settings',
+        canDeactivate: [settingsLeaveGuard],
         loadComponent: () =>
           import('./features/owner-dashboard/pages/settings/settings.component/settings.component').then(
             (m) => m.SettingsComponent

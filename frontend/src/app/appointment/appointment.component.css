@@ -1,10 +1,13 @@
 .appointment-container {
   display: grid;
-  grid-template-columns: 1fr 400px;
+  grid-template-columns: 1fr;
   gap: 2rem;
   max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
   margin-top: 100px;
   padding: 2rem;
+  padding-right: 430px;
   min-height: calc(100vh - 80px);
 
 }
@@ -139,12 +142,11 @@
 
 /* JOBB OLDAL - Kosár */
 .cart-section {
-  position: -webkit-sticky; /* Safari támogatás */
-  position: sticky;
-  top: 2rem;
-  height: fit-content;
-  max-height: calc(100vh - 4rem);
-  overflow-y: auto;
+  position: fixed;
+  top: 100px;
+  right: 2rem;
+  width: 400px;
+  z-index: 250;
 }
 .cart-card {
   background: white;
@@ -154,6 +156,19 @@
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+}
+
+@media (max-width: 1280px) {
+  .appointment-container {
+    padding-right: 390px;
+  }
+
+  .cart-section {
+    right: 1.5rem;
+    width: 360px;
+  }
 }
 
 /* Cég info */
@@ -311,6 +326,7 @@
 @media (max-width: 992px) {
   .appointment-container {
     grid-template-columns: 1fr;
+    padding-right: 2rem;
   }
 
   .cart-section {

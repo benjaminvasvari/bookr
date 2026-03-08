@@ -35,7 +35,7 @@ export class StaffProfileComponent implements OnInit {
     if (this.currentUser?.firstName || this.currentUser?.lastName) {
       const firstName = this.currentUser.firstName || '';
       const lastName = this.currentUser.lastName || '';
-      this.displayName = `${firstName} ${lastName}`.trim();
+      this.displayName = `${lastName} ${firstName}`.trim();
     }
   }
 
@@ -69,7 +69,7 @@ export class StaffProfileComponent implements OnInit {
         email: this.profileDraft.email,
         phone: this.profileDraft.phone,
       };
-      this.displayName = `${this.profileDraft.firstName} ${this.profileDraft.lastName}`.trim();
+      this.displayName = `${this.profileDraft.lastName} ${this.profileDraft.firstName}`.trim();
     }
 
     this.isEditing = false;

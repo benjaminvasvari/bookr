@@ -261,15 +261,31 @@
 	white-space: nowrap;
 }
 
-.chart-placeholder {
-	height: 260px;
-	border-radius: 12px;
-	border: 2px dashed #38a179;
-	display: flex;
+.review-rating {
+	display: inline-flex;
 	align-items: center;
-	justify-content: center;
-	color: #2d3748;
-	font-weight: 600;
+	gap: 8px;
+	padding: 4px 10px;
+	border-radius: 999px;
+	background: #ffffff;
+	border: 1px solid #e2e8f0;
+	white-space: nowrap;
+}
+
+.review-stars {
+	gap: 1px;
+}
+
+.review-star {
+	font-size: 15px;
+}
+
+.review-rating-value {
+	font-size: 12px;
+	font-weight: 700;
+	color: #1f2937;
+	min-width: 24px;
+	text-align: right;
 }
 
 .empty-state {

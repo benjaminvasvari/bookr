@@ -1,5 +1,6 @@
 <div class="calendar-container">
 	<!-- Desktop Header with staff dropdown and chips -->
+	@if (!isMobileView) {
 	<header class="calendar-header desktop-header">
 		<div class="header-left">
 			<h1>Naptár</h1>
@@ -33,9 +34,23 @@
 			</div>
 		</div>
 	</header>
+	}
 
 	<!-- Mobile Header with single day navigation -->
+	@if (isMobileView) {
 	<header class="calendar-header mobile-header">
+		<div class="mobile-day-nav">
+			<button class="mobile-nav-btn" (click)="previousMobileWeek()" [disabled]="!canGoToPreviousMobileWeek()">
+				<i class="fas fa-chevron-left"></i>
+			</button>
+			<div class="mobile-day-title">
+				<div class="mobile-day-name">{{ getMobileDayName() }}</div>
+				<div class="mobile-day-date">{{ getMobileDayNumber() }}.</div>
+			</div>
+			<button class="mobile-nav-btn" (click)="nextMobileWeek()">
+				<i class="fas fa-chevron-right"></i>
+			</button>
+		</div>
 		<div class="mobile-week-dots">
 			@for (day of weekDays; track day.dayIndex; let i = $index) {
 				<div 
@@ -49,20 +64,7 @@
 				</div>
 			}
 		</div>
-		<div class="mobile-day-nav">
-			<button class="mobile-nav-btn" (click)="previousMobileDay()" [disabled]="currentMobileDayIndex === 0">
-				<i class="fas fa-chevron-left"></i>
-			</button>
-			<div class="mobile-day-title">
-				<div class="mobile-day-name">{{ getMobileDayName() }}</div>
-				<div class="mobile-day-date">{{ getMobileDayNumber() }}.</div>
-			</div>
-			<button class="mobile-nav-btn" (click)="nextMobileDay()" [disabled]="currentMobileDayIndex === 6">
-				<i class="fas fa-chevron-right"></i>
-			</button>
-		</div>
 		<div class="mobile-staff-filter">
-			<label for="mobileStaffSelect">Szakember nézet</label>
 			<div class="mobile-staff-select-wrap">
 				<span class="mobile-staff-dot" [style.background]="getMobileSelectedStaffColor()"></span>
 				<select id="mobileStaffSelect" [value]="mobileSelectedStaffId" (change)="onMobileStaffSelectionChange($event)">
@@ -76,6 +78,7 @@
 			</div>
 		</div>
 	</header>
+	}
 
 	<!-- Calendar Grid -->
 	<div class="calendar-grid-container">
@@ -83,7 +86,7 @@
 			<!-- Time column -->
 			<div class="time-column">
 				<div class="time-header"></div>
-				@for (slot of timeSlots; track slot.hour) {
+				@for (slot of gridTimeSlots; track slot.hour) {
 					<div class="time-slot">{{ slot.time }}</div>
 				}
 			</div>
@@ -98,6 +101,7 @@
 				[class.day-focused]="isFocused(dayIndex)"
 				[class.day-unfocused]="!isFocused(dayIndex) && !day.isClosed">
 				<!-- Day header - Clickable to focus day -->
+				@if (!isMobileView) {
 				<div class="day-header" 
 					[class.header-closed]="day.isClosed"
 					[class.header-clickable]="!day.isClosed"
@@ -111,11 +115,12 @@
 						<div class="day-hours">{{ day.openingHours }}</div>
 					}
 				</div>
+				}
 
 				<!-- Time grid -->
-				<div class="time-grid" (click)="!day.isClosed && setFocusedDay(dayIndex)">
+				<div class="time-grid" [style.height.px]="gridTimeSlots.length * 60" (click)="!day.isClosed && setFocusedDay(dayIndex)">
 					<!-- Grid cells for hour slots -->
-					@for (slot of timeSlots; track slot.hour) {
+					@for (slot of gridTimeSlots; track slot.hour) {
 						<div class="grid-cell"></div>
 					}
 					

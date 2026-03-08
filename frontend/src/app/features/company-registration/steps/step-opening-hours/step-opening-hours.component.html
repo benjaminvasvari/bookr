@@ -22,12 +22,15 @@
             <div class="time-group">
               <label for="open-{{ day.dayNumber }}" class="time-label">Nyitás</label>
               <input
-                type="time"
                 id="open-{{ day.dayNumber }}"
-                [value]="day.openTime"
-                (change)="onOpenTimeChange(day.dayNumber, $any($event.target).value)"
+                matInput
+                [matTimepicker]="openPicker"
+                [ngModel]="toTimeModel(day.openTime)"
+                (ngModelChange)="onOpenTimePickerChange(day.dayNumber, $event)"
                 class="time-input"
+                readonly
               />
+              <mat-timepicker #openPicker></mat-timepicker>
             </div>
 
             <div class="time-separator">-</div>
@@ -35,12 +38,15 @@
             <div class="time-group">
               <label for="close-{{ day.dayNumber }}" class="time-label">Zárás</label>
               <input
-                type="time"
                 id="close-{{ day.dayNumber }}"
-                [value]="day.closeTime"
-                (change)="onCloseTimeChange(day.dayNumber, $any($event.target).value)"
+                matInput
+                [matTimepicker]="closePicker"
+                [ngModel]="toTimeModel(day.closeTime)"
+                (ngModelChange)="onCloseTimePickerChange(day.dayNumber, $event)"
                 class="time-input"
+                readonly
               />
+              <mat-timepicker #closePicker></mat-timepicker>
             </div>
           </div>
         } @else {

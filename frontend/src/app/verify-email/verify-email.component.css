@@ -107,6 +107,10 @@
   line-height: 1.6;
 }
 
+:host-context(body.dark-mode) .verify-box p {
+  color: rgba(248, 250, 252, 0.92);
+}
+
 .redirect-text {
   font-size: 1rem;
   color: #38a179;

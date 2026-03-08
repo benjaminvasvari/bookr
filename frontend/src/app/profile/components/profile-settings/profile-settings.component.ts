@@ -4,7 +4,7 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } 
 import { UserService } from '../../../core/services/user.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { UpdateNotificationSettingsRequest } from '../../../core/models';
-import { ThemeService } from '../../../core/services/theme.service';
+import { ThemeMode, ThemeService } from '../../../core/services/theme.service';
 import { Subscription } from 'rxjs';
 
 interface NotificationSettings {
@@ -25,6 +25,7 @@ export class ProfileSettingsComponent implements OnInit, OnDestroy {
   passwordForm!: FormGroup;
   deleteAccountForm!: FormGroup;
   isDarkMode = false;
+  followSystemTheme = false;
 
   // Notification Settings
   notificationSettings: NotificationSettings = {
@@ -68,6 +69,12 @@ export class ProfileSettingsComponent implements OnInit, OnDestroy {
     this.themeSubscription = this.themeService.isDarkMode$.subscribe((isDarkMode) => {
       this.isDarkMode = isDarkMode;
     });
+
+    this.themeSubscription.add(
+      this.themeService.themeMode$.subscribe((mode: ThemeMode) => {
+        this.followSystemTheme = mode === 'system';
+      })
+    );
   }
 
   ngOnDestroy(): void {
@@ -79,6 +86,19 @@ export class ProfileSettingsComponent implements OnInit, OnDestroy {
   }
 
   onDarkModeChange(): void {
+    if (this.followSystemTheme) {
+      return;
+    }
+
+    this.themeService.setDarkMode(this.isDarkMode);
+  }
+
+  onFollowSystemThemeChange(): void {
+    if (this.followSystemTheme) {
+      this.themeService.setThemeMode('system');
+      return;
+    }
+
     this.themeService.setDarkMode(this.isDarkMode);
   }
 

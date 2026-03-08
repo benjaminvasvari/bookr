@@ -1,11 +1,36 @@
 <section class="services-panel">
 	<header class="services-topbar">
-		<div>
-			<h1>Szolgáltatások</h1>
-			<p class="subtitle">Árak, időtartamok és elérhetőségek kezelése.</p>
+		<div class="topbar-main">
+			<div class="topbar-copy">
+				<h1>Szolgáltatások</h1>
+				<p class="subtitle">Árak, időtartamok és elérhetőségek kezelése.</p>
+			</div>
+			<div class="actions">
+				<button class="btn primary" (click)="openNewServiceModal()">Új szolgáltatás</button>
+			</div>
 		</div>
-		<div class="actions">
-			<button class="btn primary" (click)="openNewServiceModal()">Új szolgáltatás</button>
+
+		<div class="stats-strip" aria-label="Szolgáltatás összegzés">
+			<article class="stat-tile primary">
+				<span class="stat-label">Összes</span>
+				<strong class="stat-value">{{ services.length }}</strong>
+				<span class="stat-meta">{{ totalCategoryCount }} kategória</span>
+			</article>
+			<article class="stat-tile">
+				<span class="stat-label">Aktív</span>
+				<strong class="stat-value">{{ activeServicesCount }}</strong>
+				<span class="stat-meta">Foglalható szolgáltatás</span>
+			</article>
+			<article class="stat-tile">
+				<span class="stat-label">Szünetel</span>
+				<strong class="stat-value">{{ inactiveServicesCount }}</strong>
+				<span class="stat-meta">Ideiglenesen rejtett</span>
+			</article>
+			<article class="stat-tile accent">
+				<span class="stat-label">Induló ár</span>
+				<strong class="stat-value">{{ startingPriceLabel }}</strong>
+				<span class="stat-meta">Legkedvezőbb ár</span>
+			</article>
 		</div>
 	</header>
 
@@ -16,7 +41,8 @@
 				[class.active]="selectedCategory === category"
 				(click)="selectCategory(category)"
 			>
-				{{ category }}
+				<span>{{ category }}</span>
+				<strong>{{ getCategoryCount(category) }}</strong>
 			</button>
 		}
 	</div>
@@ -30,24 +56,48 @@
 	<div class="service-groups">
 		@for (group of serviceGroups; track group.category) {
 			<section class="category-section">
-				<h2 class="category-title">{{ group.category }}</h2>
+				<div class="category-header">
+					<div>
+						<span class="section-label">Kategória</span>
+						<h2 class="category-title">{{ group.category }}</h2>
+						<p class="category-copy">
+							{{ group.activeCount }} aktív szolgáltatás
+							@if (group.inactiveCount > 0) {
+								<span>&middot; {{ group.inactiveCount }} szünetelő</span>
+							}
+						</p>
+					</div>
+					<span class="category-badge">{{ group.services.length }} elem</span>
+				</div>
+				
 				<div class="services-grid">
-					@for (service of group.services; track service.id) {
+					@for (service of group.services; track service.id; let index = $index) {
 						<article class="service-card">
 							<div class="service-header">
-								<div>
-									<h3>{{ service.name }}</h3>
-									<p class="muted">{{ service.duration }}</p>
-								</div>
+								<span class="service-index">{{ formatSequence(index) }}</span>
+								<span class="service-chip">{{ group.category }}</span>
 								<span class="status-pill" [class.online]="service.status === 'active'" [class.busy]="service.status === 'inactive'">
 									{{ service.status === 'active' ? 'Aktív' : 'Szünetel' }}
 								</span>
 							</div>
-							<p class="service-desc">{{ service.description }}</p>
+							<div class="service-main">
+								<h3>{{ service.name }}</h3>
+								<p class="service-desc">{{ service.description }}</p>
+							</div>
 							<div class="service-meta">
-								<span class="price">{{ formatPrice(service.price, service.currency) }}</span>
+								<div class="meta-chip">
+									<span>Időtartam</span>
+									<strong>{{ service.duration }}</strong>
+								</div>
+								<div class="meta-chip price-chip">
+									<span>Ár</span>
+									<strong class="price">{{ formatPrice(service.price, service.currency) }}</strong>
+								</div>
 							</div>
 							<div class="service-actions">
+								<p class="service-footnote">
+									{{ service.status === 'active' ? 'Megjelenik a vendégek felé és azonnal foglalható.' : 'Jelenleg rejtett, később bármikor újra aktiválható.' }}
+								</p>
 								<button class="btn ghost" (click)="openEditServiceModal(service)">Szerkesztés</button>
 							</div>
 						</article>
@@ -58,7 +108,7 @@
 
 		@if (serviceGroups.length === 0) {
 			<div class="empty-filter-state">
-				<p>Nincs elérhető szolgáltatás.</p>
+				<p>Nincs elérhető szolgáltatás a jelenlegi szűrés mellett.</p>
 			</div>
 		}
 	</div>

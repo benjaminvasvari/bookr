@@ -5,19 +5,35 @@
   <div class="gallery-section">
     <div class="main-image">
       @if (getMainGalleryImage()) {
-      <img [src]="getMainGalleryImage()" [alt]="company.name" loading="lazy" />
+      <img
+        [src]="getMainGalleryImage()"
+        [alt]="company.name"
+        loading="lazy"
+        (click)="openImagePreview(getMainGalleryImage(), company.name)"
+      />
       }
     </div>
     @if (getThumbnailGalleryImages().length > 0) {
     <div class="thumbnail-gallery">
       @for (image of getThumbnailGalleryImages(); track $index) {
-      <div class="thumbnail">
+      <div class="thumbnail" (click)="openImagePreview(image, company.name + ' galéria kép ' + ($index + 2))">
         <img [src]="image" [alt]="company.name + ' galéria kép ' + ($index + 2)" loading="lazy" />
       </div>
       }
     </div>
     }
   </div>
+
+  @if (selectedImagePreview) {
+  <div class="image-lightbox" (click)="handleLightboxBackdropClick($event)">
+    <div class="image-lightbox-dialog">
+      <button type="button" class="lightbox-close" (click)="closeImagePreview()" aria-label="Bezárás">
+        ×
+      </button>
+      <img [src]="selectedImagePreview" [alt]="selectedImageAlt || company.name" loading="eager" />
+    </div>
+  </div>
+  }
 
   <!-- Cég információk szekció -->
   <div class="company-info-section">
@@ -26,10 +42,14 @@
         <h1 class="company-name">{{ company.name }}</h1>
         <div class="rating-section">
           <div class="stars">
-            @for (star of getRatingStars(); track $index) {
-            <span class="star">★</span>
+            @for (fill of getRatingStars(); track $index) {
+            <span class="star-shell" [attr.aria-label]="'Csillag ' + ($index + 1)">
+              <span class="star-base">★</span>
+              <span class="star-fill" [style.width]="(fill * 100) + '%'">★</span>
+            </span>
             }
           </div>
+          <span class="rating-value">{{ company.rating | number:'1.1-1' }}</span>
         </div>
         @if (company.category) {
         <p class="company-category">{{ company.category }}</p>
@@ -112,17 +132,15 @@
         <!-- Térkép szekció -->
         <div class="map-section">
           <div class="map-container">
-            <iframe
-              [src]="getMapUrl()"
-              [title]="getMapTitle()"
-              width="100%"
-              height="100%"
-              style="border: 0"
-              allowfullscreen=""
-              loading="lazy"
-              referrerpolicy="no-referrer-when-downgrade"
-            >
-            </iframe>
+            <div #companyMap class="map-canvas" [attr.title]="getMapTitle()"></div>
+
+            @if (isMapLoading) {
+              <div class="map-overlay">Térkép betöltése...</div>
+            }
+
+            @if (mapError) {
+              <div class="map-fallback">{{ mapError }}</div>
+            }
           </div>
         </div>
 
@@ -134,6 +152,57 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- Csapatunk szekció -->
+  <div class="team-section">
+    <h2 class="section-title">Csapatunk</h2>
+
+    @if (teamMembers.length === 0) {
+    <div class="no-services">
+      <p>Jelenleg még nincs megjeleníthető munkatárs.</p>
+    </div>
+    } @else {
+    <div class="team-grid">
+      @for (member of teamMembers; track member.id) {
+      <article class="team-card">
+        <div class="team-head">
+          <div class="team-title-wrap">
+            <h3 class="team-name">{{ member.name }}</h3>
+            <p class="team-role">{{ member.role }}</p>
+          </div>
+
+          <div class="team-avatar" [attr.aria-label]="member.name">
+            @if (member.imageUrl) {
+            <img [src]="member.imageUrl" [alt]="member.name" loading="lazy" />
+            } @else {
+            <span>{{ member.initials }}</span>
+            }
+          </div>
+        </div>
+
+        <div class="team-info">
+          @if (hasTeamBio(member)) {
+          <p class="team-bio">{{ getTeamBio(member) }}</p>
+
+          @if (hasLongTeamBio(member)) {
+          <button
+            type="button"
+            class="team-more-btn"
+            (click)="toggleTeamBio(member.id)"
+            [attr.aria-expanded]="isTeamBioExpanded(member.id)"
+          >
+            {{ isTeamBioExpanded(member.id) ? 'Mutass kevesebbet' : 'Mutass többet' }}
+          </button>
+          }
+          } @else {
+          <p class="team-bio-empty">Bemutatkozás hamarosan</p>
+          }
+        </div>
+      </article>
+      }
+    </div>
+    }
   </div>
 
   <!-- Nyitvatartás és Értékelések szekció -->
@@ -272,7 +341,18 @@
               <p class="review-date">{{ review.date }}</p>
             </div>
           </div>
-          <p class="review-comment">{{ review.comment }}</p>
+          <p class="review-comment" [class.expanded]="isReviewExpanded(review.id)">
+            {{ getReviewComment(review) }}
+          </p>
+          @if (hasLongReviewComment(review.comment)) {
+          <button
+            type="button"
+            class="review-more-btn"
+            (click)="toggleReviewComment(review.id)"
+          >
+            {{ isReviewExpanded(review.id) ? 'Kevesebbet' : 'Mutass többet' }}
+          </button>
+          }
         </div>
         }
       </div>

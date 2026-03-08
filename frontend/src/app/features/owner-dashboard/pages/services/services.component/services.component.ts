@@ -16,6 +16,13 @@ interface DashboardServiceItem {
   status: 'active' | 'inactive';
 }
 
+interface DashboardServiceGroup {
+  category: string;
+  services: DashboardServiceItem[];
+  activeCount: number;
+  inactiveCount: number;
+}
+
 @Component({
   selector: 'app-services.component',
   standalone: true,
@@ -58,7 +65,31 @@ export class ServicesComponent implements OnInit {
     return ['Összes', ...uniqueCategories];
   }
 
-  get serviceGroups(): { category: string; services: DashboardServiceItem[] }[] {
+  get totalCategoryCount(): number {
+    return Math.max(this.categories.length - 1, 0);
+  }
+
+  get activeServicesCount(): number {
+    return this.services.filter((service) => service.status === 'active').length;
+  }
+
+  get inactiveServicesCount(): number {
+    return this.services.filter((service) => service.status === 'inactive').length;
+  }
+
+  get startingPriceLabel(): string {
+    if (this.services.length === 0) {
+      return 'Nincs adat';
+    }
+
+    const cheapestService = this.services.reduce((lowest, current) =>
+      current.price < lowest.price ? current : lowest
+    );
+
+    return this.formatPrice(cheapestService.price, cheapestService.currency);
+  }
+
+  get serviceGroups(): DashboardServiceGroup[] {
     const groups: { [key: string]: DashboardServiceItem[] } = {};
     if (this.selectedCategory === 'Összes') {
       this.services.forEach((service) => {
@@ -70,11 +101,16 @@ export class ServicesComponent implements OnInit {
       return Object.keys(groups).map((category) => ({
         category,
         services: groups[category],
+        activeCount: groups[category].filter((service) => service.status === 'active').length,
+        inactiveCount: groups[category].filter((service) => service.status === 'inactive').length,
       }));
     } else {
+      const filteredServices = this.services.filter((service) => service.category === this.selectedCategory);
       return [{
         category: this.selectedCategory,
-        services: this.services.filter((s) => s.category === this.selectedCategory)
+        services: filteredServices,
+        activeCount: filteredServices.filter((service) => service.status === 'active').length,
+        inactiveCount: filteredServices.filter((service) => service.status === 'inactive').length,
       }];
     }
   }
@@ -87,6 +123,18 @@ export class ServicesComponent implements OnInit {
     const symbol = currency === 'HUF' ? 'Ft' : currency;
     const formatted = Math.round(price).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0');
     return `${formatted} ${symbol}`;
+  }
+
+  getCategoryCount(category: string): number {
+    if (category === 'Összes') {
+      return this.services.length;
+    }
+
+    return this.services.filter((service) => service.category === category).length;
+  }
+
+  formatSequence(index: number): string {
+    return (index + 1).toString().padStart(2, '0');
   }
 
   openNewServiceModal(): void {
@@ -108,7 +156,7 @@ export class ServicesComponent implements OnInit {
 
   saveNewService(): void {
     if (this.newService.name && this.newService.category) {
-      const newId = Math.max(...this.services.map(s => s.id)) + 1;
+      const newId = (this.services.length > 0 ? Math.max(...this.services.map((service) => service.id)) : 0) + 1;
       this.services.push({
         id: newId,
         name: this.newService.name,

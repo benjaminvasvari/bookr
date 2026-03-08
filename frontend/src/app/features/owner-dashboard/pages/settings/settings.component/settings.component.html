@@ -1,166 +1,362 @@
 <section class="settings-panel">
+	<div class="settings-shell">
 	<header class="settings-topbar">
-		<div>
+		<div class="title-wrap">
 			<h1>Beállítások</h1>
-			<p class="subtitle">Vállalkozás, munkatársak és működési szabályok kezelése.</p>
+			<p class="subtitle">Itt kezelheted a cégprofil adatait, képeket és foglalási szabályokat.</p>
 		</div>
 		<div class="actions">
-			<button class="btn ghost">Visszaállítás</button>
-			<button class="btn primary">Mentés</button>
+			<button class="btn primary" type="button" (click)="saveAllMock()">Mentés</button>
 		</div>
 	</header>
 
-	<section class="settings-stack">
-		<article class="settings-section">
+	<section class="content-grid">
+		<article class="settings-section settings-section-wide section-company" [class.conflict-card]="conflictedSection === 'company'">
 			<header class="section-header">
 				<div>
-					<h2>Cégadatok</h2>
-					<p class="section-subtitle">Alap információk a vállalkozásról.</p>
+					<h2>Céginformációk</h2>
+					<p class="section-subtitle">Cégprofil adatai</p>
 				</div>
-				<button class="link-btn">Szerkesztés</button>
+				@if (!editMode.company) {
+				<button class="link-btn" type="button" (click)="startEdit('company')">Szerkesztés</button>
+				} @else {
+				<div class="inline-actions">
+					<button class="btn ghost" type="button" (click)="cancelEdit('company')">Mégse</button>
+					<button class="btn primary" type="button" [disabled]="isCompanySaving" (click)="saveEdit('company')">{{ isCompanySaving ? 'Mentés...' : 'Mentés' }}</button>
+				</div>
+				}
 			</header>
-			<div class="section-grid">
-				<div class="info-block">
+			@if (conflictedSection === 'company' && editMode.company) {
+			<div class="edit-conflict-message">
+				Előbb mentsd el a módosításokat ezen a kártyán, mielőtt másikat szerkesztenél.
+			</div>
+			}
+			@if (editMode.company && companyValidationMessage) {
+			<div class="save-feedback error">{{ companyValidationMessage }}</div>
+			}
+
+			<div class="company-layout">
+				<section class="hero-card">
 					<p class="label">Cégnév</p>
-					<p class="value">Bookr Studio</p>
-				</div>
-				<div class="info-block">
-					<p class="label">Adószám</p>
-					<p class="value">12345678-1-42</p>
-				</div>
-				<div class="info-block">
-					<p class="label">Kapcsolattartó</p>
-					<p class="value">Kiss Anna · +36 30 123 4567</p>
-				</div>
-				<div class="info-block">
-					<p class="label">Weboldal</p>
-					<p class="value">bookr.hu</p>
-				</div>
-			</div>
-		</article>
+					@if (!editMode.company) {
+					<p class="company-name">{{ companyData.companyName }}</p>
+					} @else {
+					<input class="edit-input card-input card-input-title" type="text" [(ngModel)]="companyDraft.companyName" />
+					}
+					<p class="label">Leírás</p>
+					@if (!editMode.company) {
+					<p class="value value-regular">{{ companyData.description }}</p>
+					} @else {
+					<textarea #companyDescriptionTextarea class="edit-input edit-textarea card-input" [(ngModel)]="companyDraft.description" (input)="onCompanyDescriptionInput(companyDescriptionTextarea)" (mouseup)="onCompanyDescriptionResize(companyDescriptionTextarea)"></textarea>
+					}
+				</section>
 
-		<article class="settings-section">
-			<header class="section-header">
-				<div>
-					<h2>Telephelyek</h2>
-					<p class="section-subtitle">Nyitvatartások és címek kezelése.</p>
-				</div>
-				<button class="link-btn">Új telephely</button>
-			</header>
-			<div class="section-list">
-				<div class="row">
-					<div>
-						<p class="value">Budapest, Andrássy út 12.</p>
-						<p class="label">H-P: 09:00-20:00 · Szo: 09:00-16:00</p>
+				<div class="details-grid details-grid-3">
+					<div class="detail-item">
+						<p class="label">Kategória</p>
+						@if (!editMode.company) {
+						<p class="value">{{ companyData.category || 'Nincs megadva' }}</p>
+						} @else {
+						<select class="edit-input card-input category-select" (change)="onCategoryDropdownChange($event)">
+							<option [selected]="selectedCategoryIdDraft === null" value="">Válassz kategóriát</option>
+							@for (category of businessCategories; track category.id) {
+							<option [value]="category.id" [selected]="selectedCategoryIdDraft === category.id">{{ category.name }}</option>
+							}
+						</select>
+						}
 					</div>
-					<span class="pill">Fő</span>
+					<div class="detail-item"><p class="label">Weboldal</p>@if (!editMode.company) {<p class="value">{{ companyData.website || 'Nincs megadva' }}</p>} @else {<input class="edit-input card-input" [class.input-invalid]="isCompanyWebsiteInvalid" type="text" [(ngModel)]="companyDraft.website" />}</div>
+					<div class="detail-item"><p class="label">Tulajdonos</p><p class="value">{{ companyData.ownerName }}</p></div>
+					<div class="detail-item"><p class="label">Telefonszám</p>@if (!editMode.company) {<p class="value">{{ formatCompanyPhone(companyData.phone) }}</p>} @else {<input class="edit-input card-input" [class.input-invalid]="isCompanyPhoneInvalid" type="text" [(ngModel)]="companyDraft.phone" />}</div>
+					<div class="detail-item"><p class="label">Email</p>@if (!editMode.company) {<p class="value">{{ companyData.email }}</p>} @else {<input class="edit-input card-input" [class.input-invalid]="isCompanyEmailInvalid" type="email" [(ngModel)]="companyDraft.email" />}</div>
+					<div class="detail-item"><p class="label">Ország</p>@if (!editMode.company) {<p class="value">{{ companyData.country }}</p>} @else {<select class="edit-input card-input" [(ngModel)]="companyDraft.country">@for (country of availableCountries; track country) {<option [value]="country">{{ country }}</option>}</select>}</div>
+					<div class="detail-item"><p class="label">Irányítószám</p>@if (!editMode.company) {<p class="value">{{ companyData.zipCode }}</p>} @else {<input class="edit-input card-input" type="text" maxlength="4" inputmode="numeric" [(ngModel)]="companyDraft.zipCode" (ngModelChange)="onCompanyZipCodeChange($event)" />}</div>
+					<div class="detail-item"><p class="label">Város</p>@if (!editMode.company) {<p class="value">{{ companyData.city }}</p>} @else {<input class="edit-input card-input" type="text" [(ngModel)]="companyDraft.city" />}</div>
+					<div class="detail-item"><p class="label">Utca</p>@if (!editMode.company) {<p class="value">{{ companyData.street }}</p>} @else {<input class="edit-input card-input" type="text" [(ngModel)]="companyDraft.street" />}</div>
 				</div>
-				<div class="row">
-					<div>
-						<p class="value">Budapest, Bartók Béla út 44.</p>
-						<p class="label">H-P: 10:00-19:00 · Szo: 10:00-14:00</p>
+			</div>
+		</article>
+
+		<article class="settings-section section-gallery" [class.conflict-card]="conflictedSection === 'gallery'">
+			<header class="section-header">
+				<div>
+					<h2>Képek</h2>
+					<p class="section-subtitle">Profilképek</p>
+				</div>
+				@if (!editMode.gallery) {
+				<button class="link-btn" type="button" (click)="startEdit('gallery')">Képek kezelése</button>
+				} @else {
+				<div class="inline-actions">
+					<button class="btn ghost" type="button" (click)="cancelEdit('gallery')">Mégse</button>
+					<button class="btn primary" type="button" (click)="saveEdit('gallery')">Mentés</button>
+				</div>
+				}
+			</header>
+			@if (conflictedSection === 'gallery' && editMode.gallery) {
+			<div class="edit-conflict-message">
+				Előbb mentsd el a módosításokat ezen a kártyán, mielőtt másikat szerkesztenél.
+			</div>
+			}
+
+			@if (!editMode.gallery) {
+			<div class="image-layout">
+				<div class="image-main" [class.previewable]="!!galleryData.images[0].previewUrl" (click)="openImagePreview(galleryData.images[0].previewUrl)">
+					@if (galleryData.images[0].previewUrl) {
+					<img [src]="galleryData.images[0].previewUrl" alt="Főkép" class="gallery-preview-image" />
+					} @else {
+					{{ galleryData.images[0].title }}
+					}
+				</div>
+				<div class="image-thumb" *ngFor="let image of galleryData.images.slice(1)" [class.previewable]="!!image.previewUrl" (click)="openImagePreview(image.previewUrl)">
+					@if (image.previewUrl) {
+					<img [src]="image.previewUrl" [alt]="image.title" class="gallery-preview-image" />
+					} @else {
+					{{ image.title }}
+					}
+				</div>
+			</div>
+			} @else {
+			<div class="gallery-edit-grid">
+				<div class="gallery-slot-card" *ngFor="let image of galleryDraft.images; let i = index" [class.slot-main]="i === 0">
+					@if (image.previewUrl) {
+					<button class="image-preview-icon-btn" type="button" (click)="openImagePreview(image.previewUrl)">
+						<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+							<path d="M4 9V4h5v2H6v3H4Zm10-5h6v6h-2V6h-4V4ZM4 15h2v3h3v2H4v-5Zm14 3v-3h2v5h-5v-2h3Z"></path>
+						</svg>
+					</button>
+					<img [src]="image.previewUrl" [alt]="image.title" class="gallery-preview-image" />
+					<div class="gallery-slot-overlay">
+						<button class="slot-action danger" type="button" (click)="clearGalleryImage(i)">Törlés</button>
+						<label class="slot-action" [for]="'gallery-file-' + i">Csere</label>
 					</div>
-					<button class="btn ghost small">Szerkesztés</button>
+					} @else {
+					<label class="gallery-slot-empty" [for]="'gallery-file-' + i">
+						<span class="gallery-empty-plus">+</span>
+						<span>{{ i === 0 ? 'Főkép' : image.slotName }}</span>
+					</label>
+					}
+					@if (i === 0) {
+					<span class="cover-badge">Főkép</span>
+					}
+					<input class="gallery-file-input" [id]="'gallery-file-' + i" type="file" accept="image/*" (change)="onGalleryFileSelected(i, $event)" />
 				</div>
+			</div>
+			}
+
+			<p class="hint">Szerkesztéskor képet adhatsz hozzá, cserélhetsz vagy törölhetsz.</p>
+
+			@if (isImagePreviewOpen && imagePreviewUrl) {
+			<div class="image-preview-modal" (click)="closeImagePreview()">
+				<div class="image-preview-dialog" (click)="$event.stopPropagation()">
+					<button class="image-preview-close" type="button" (click)="closeImagePreview()" aria-label="Kép bezárása">×</button>
+					<img [src]="imagePreviewUrl" alt="Nagyított kép" class="image-preview-full" />
+				</div>
+			</div>
+			}
+		</article>
+
+		<article class="settings-section section-rules" [class.conflict-card]="conflictedSection === 'rules'">
+			<header class="section-header">
+				<div>
+					<h2>Üzleti szabályok</h2>
+					<p class="section-subtitle">Foglalási és fizetési beállítások</p>
+				</div>
+				@if (!editMode.rules) {
+				<button class="link-btn" type="button" (click)="startEdit('rules')">Módosítás</button>
+				} @else {
+				<div class="inline-actions">
+					<button class="btn ghost" type="button" (click)="cancelEdit('rules')">Mégse</button>
+					<button class="btn primary" type="button" (click)="saveEdit('rules')">Mentés</button>
+				</div>
+				}
+			</header>
+			@if (conflictedSection === 'rules' && editMode.rules) {
+			<div class="edit-conflict-message">
+				Előbb mentsd el a módosításokat ezen a kártyán, mielőtt másikat szerkesztenél.
+			</div>
+			}
+
+			<div class="rule-list">
+				<div class="rule-row"><p>Maximum előre foglalás</p>@if (!editMode.rules) {<strong>{{ businessRulesData.maxAdvanceBookingDays }} nap</strong>} @else {<div class="hours-inline-inputs"><input class="edit-input card-input rule-input rule-input-small" type="number" [(ngModel)]="businessRulesDraft.maxAdvanceBookingDays" /><span>nap</span></div>}</div>
+				<div class="rule-row"><p>Lemondási határidő</p>@if (!editMode.rules) {<strong>{{ businessRulesData.cancellationDeadlineHours }} óra</strong>} @else {<div class="hours-inline-inputs"><input class="edit-input card-input rule-input rule-input-small" type="number" [(ngModel)]="businessRulesDraft.cancellationDeadlineHours" /><span>óra</span></div>}</div>
+				<div class="rule-row"><p>Minimum előzetes foglalás (azonos napon)</p>@if (!editMode.rules) {<strong>{{ businessRulesData.sameDayMinimumHours === null ? 'Aznap nem foglalható' : businessRulesData.sameDayMinimumHours + ' óra' }}</strong>} @else {<div class="rule-minimum-controls"><label class="toggle-wrap" [class.is-open]="businessRulesDraft.sameDayMinimumHours !== null" [class.is-closed]="businessRulesDraft.sameDayMinimumHours === null"><input type="checkbox" [ngModel]="businessRulesDraft.sameDayMinimumHours === null" (ngModelChange)="onSameDayUnbookableToggle($event)" /><span class="toggle-indicator"></span><span class="toggle-text">Aznap nem foglalható</span></label><div class="hours-inline-inputs" [class.is-disabled]="businessRulesDraft.sameDayMinimumHours === null"><input class="edit-input card-input rule-input rule-input-small" type="number" [(ngModel)]="businessRulesDraft.sameDayMinimumHours" [disabled]="businessRulesDraft.sameDayMinimumHours === null" /><span>óra</span></div></div>}</div>
+				<div class="rule-row"><p>Fizetési mód</p>@if (!editMode.rules) {<strong>{{ businessRulesData.paymentMethod }}</strong>} @else {<select class="edit-input card-input rule-input" [(ngModel)]="businessRulesDraft.paymentMethod"><option *ngFor="let method of paymentMethods" [value]="method">{{ method }}</option></select>}</div>
+				<div class="rule-row"><p>Pénznem</p>@if (!editMode.rules) {<strong>{{ businessRulesData.currency }}</strong>} @else {<select class="edit-input card-input rule-input" [(ngModel)]="businessRulesDraft.currency"><option *ngFor="let currency of currencies" [value]="currency">{{ currency }}</option></select>}</div>
 			</div>
 		</article>
 
-		<article class="settings-section">
+		<article class="settings-section section-hours" [class.conflict-card]="conflictedSection === 'hours'" #hoursSection>
 			<header class="section-header">
 				<div>
-					<h2>Foglalási szabályok</h2>
-					<p class="section-subtitle">Automatikus szabályok a foglalásokhoz.</p>
+					<h2>Nyitvatartás</h2>
+					<p class="section-subtitle">Heti nyitvatartási rend</p>
 				</div>
-				<button class="link-btn">Módosítás</button>
+				@if (!editMode.hours) {
+				<button class="link-btn" type="button" (click)="startEdit('hours')">Szerkesztés</button>
+				} @else {
+				<div class="inline-actions">
+					<button class="btn ghost" type="button" (click)="cancelEdit('hours')">Mégse</button>
+					<button class="btn primary" type="button" (click)="saveEdit('hours')">Mentés</button>
+				</div>
+				}
 			</header>
-			<div class="section-list">
-				<div class="row">
-					<span>Előleg kötelező</span>
-					<span class="toggle on"></span>
-				</div>
-				<div class="row">
-					<span>Lemondási határidő</span>
-					<span class="value">24 óra</span>
-				</div>
-				<div class="row">
-					<span>Maximum előre foglalás</span>
-					<span class="value">30 nap</span>
-				</div>
+			@if (conflictedSection === 'hours' && editMode.hours) {
+			<div class="edit-conflict-message">
+				Előbb mentsd el a módosításokat ezen a kártyán, mielőtt másikat szerkesztenél.
 			</div>
-		</article>
+			}
 
-		<article class="settings-section">
-			<header class="section-header">
-				<div>
-					<h2>Munkatárs hozzáférések</h2>
-					<p class="section-subtitle">Jogosultságok és szerepkörök.</p>
-				</div>
-				<button class="link-btn">Kezelés</button>
-			</header>
-			<div class="section-list">
-				<div class="row">
-					<div>
-						<p class="value">Barni Kiss</p>
-						<p class="label">Tulajdonos · Teljes hozzáférés</p>
+			<div class="hours-table">
+				<div class="hours-row" *ngFor="let hour of (editMode.hours ? openingHoursDraft : openingHoursData)">
+					<span>{{ hour.day }}</span>
+					@if (!editMode.hours) {
+					<span>{{ hour.isOpen ? hour.openTime + ' - ' + hour.closeTime : '-' }}</span>
+					} @else {
+					<div class="hours-inline-inputs">
+						<input
+							class="edit-input card-input"
+							matInput
+							[matTimepicker]="openingStartPicker"
+							[ngModel]="toTimeModel('opening-open-' + hour.day, hour.openTime)"
+							(ngModelChange)="onOpeningHourTimePickerChange(hour, 'openTime', $event)"
+							[disabled]="!hour.isOpen"
+							readonly
+						/>
+						<mat-timepicker #openingStartPicker></mat-timepicker>
+						<input
+							class="edit-input card-input"
+							matInput
+							[matTimepicker]="openingEndPicker"
+							[ngModel]="toTimeModel('opening-close-' + hour.day, hour.closeTime)"
+							(ngModelChange)="onOpeningHourTimePickerChange(hour, 'closeTime', $event)"
+							[disabled]="!hour.isOpen"
+							readonly
+						/>
+						<mat-timepicker #openingEndPicker></mat-timepicker>
 					</div>
-					<span class="pill success">Aktív</span>
+					}
+					@if (!editMode.hours) {
+					<span class="status" [class.open]="hour.isOpen" [class.closed]="!hour.isOpen">{{ hour.isOpen ? 'Nyitva' : 'Zárva' }}</span>
+					} @else {
+					<label class="toggle-wrap" [class.is-open]="hour.isOpen" [class.is-closed]="!hour.isOpen">
+						<input type="checkbox" [(ngModel)]="hour.isOpen" />
+						<span class="toggle-indicator"></span>
+						<span class="toggle-text">{{ hour.isOpen ? 'Nyitva' : 'Zárva' }}</span>
+					</label>
+					}
 				</div>
-				<div class="row">
-					<div>
-						<p class="value">Anna Kovács</p>
-						<p class="label">Menedzser · Szolgáltatás és naptár</p>
+			</div>
+		</article>
+
+		<article class="settings-section section-closures" [class.conflict-card]="conflictedSection === 'closures'" #closuresSection>
+			<header class="section-header" #closuresHeader>
+				<div>
+					<h2>Ideiglenes zárvatartások</h2>
+					<p class="section-subtitle">Szabadság, ünnep vagy felújítás miatti zárvatartás</p>
+				</div>
+				<div class="inline-actions">
+					<button class="btn ghost" type="button" (click)="addTemporaryClosure()">+ Új időszak</button>
+					@if (hasTemporaryClosuresUnsavedChanges || temporaryClosuresSaveState === 'saving') {
+					<button class="btn ghost" type="button" [disabled]="temporaryClosuresSaveState === 'saving' || !hasTemporaryClosuresUnsavedChanges" (click)="cancelTemporaryClosuresChanges()">Mégse</button>
+					<button class="btn primary" type="button" [disabled]="temporaryClosuresSaveState === 'saving' || !hasTemporaryClosuresUnsavedChanges" (click)="saveTemporaryClosures()">{{ temporaryClosuresSaveState === 'saving' ? 'Mentés...' : 'Mentés' }}</button>
+					}
+				</div>
+			</header>
+			@if ((hasTemporaryClosuresUnsavedChanges || showTemporaryClosuresUnsavedWarning) || (temporaryClosuresSaveState !== 'idle' && temporaryClosuresSaveMessage)) {
+			<div class="closures-feedback-container" #closuresFeedback>
+				@if (hasTemporaryClosuresUnsavedChanges || showTemporaryClosuresUnsavedWarning) {
+				<div class="save-feedback warning">{{ showTemporaryClosuresUnsavedWarning ? 'A zárvatartás módosításai még nincsenek mentve.' : 'Mentetlen módosítások vannak. Ne felejtsd el menteni.' }}</div>
+				}
+				@if (temporaryClosuresSaveState === 'success' && temporaryClosuresSaveMessage) {
+				<div class="save-feedback success">{{ temporaryClosuresSaveMessage }}</div>
+				}
+				@if (temporaryClosuresSaveState === 'error' && temporaryClosuresSaveMessage) {
+				<div class="save-feedback error">{{ temporaryClosuresSaveMessage }}</div>
+				}
+			</div>
+			}
+
+			<div class="temporary-list" [style.max-height.px]="temporaryListMaxHeight">
+				<div class="temporary-row" *ngFor="let period of temporaryClosures; let i = index">
+					<div class="field-group start-field">
+						<label [for]="'start-' + i">Kezdő dátum</label>
+						<input
+							[id]="'start-' + i"
+							class="edit-input"
+							[class.input-invalid]="isTemporaryDateInPast(period.startDate) || isTemporaryDateRangeInvalid(period)"
+							matInput
+							[matDatepicker]="startDatePicker"
+							[min]="temporaryClosureMinDateAsDate"
+							[ngModel]="toDateModel('closure-start-' + i, period.startDate)"
+							(ngModelChange)="onTemporaryDatePickerChange(period, 'startDate', $event)"
+							(click)="startDatePicker.open()"
+							readonly
+						/>
+						<mat-datepicker #startDatePicker></mat-datepicker>
 					</div>
-					<button class="btn ghost small">Jogosultság</button>
-				</div>
-			</div>
-		</article>
-
-		<article class="settings-section">
-			<header class="section-header">
-				<div>
-					<h2>Értesítések</h2>
-					<p class="section-subtitle">Email és SMS értesítések beállítása.</p>
-				</div>
-				<button class="link-btn">Szerkesztés</button>
-			</header>
-			<div class="section-list">
-				<div class="row">
-					<span>Új foglalás email</span>
-					<span class="toggle on"></span>
-				</div>
-				<div class="row">
-					<span>SMS emlékeztető ügyfeleknek</span>
-					<span class="toggle"></span>
-				</div>
-				<div class="row">
-					<span>Napi összefoglaló</span>
-					<span class="toggle on"></span>
-				</div>
-			</div>
-		</article>
-
-		<article class="settings-section">
-			<header class="section-header">
-				<div>
-					<h2>Számlázás</h2>
-					<p class="section-subtitle">Csomagok és fizetési módok.</p>
-				</div>
-				<button class="link-btn">Kezelés</button>
-			</header>
-			<div class="section-grid">
-				<div class="info-block">
-					<p class="label">Csomag</p>
-					<p class="value">Pro · havi 19 900 Ft</p>
-				</div>
-				<div class="info-block">
-					<p class="label">Fizetési mód</p>
-					<p class="value">Végződés: 4242</p>
-				</div>
-				<div class="info-block">
-					<p class="label">Következő számlázás</p>
-					<p class="value">2026.02.15</p>
+					<div class="field-group end-field">
+						<label [for]="'end-' + i">Záró dátum</label>
+						<input
+							[id]="'end-' + i"
+							class="edit-input"
+							[class.input-invalid]="isTemporaryDateInPast(period.endDate) || isTemporaryDateRangeInvalid(period)"
+							matInput
+							[matDatepicker]="endDatePicker"
+							[min]="getTemporaryClosureEndMinDateAsDate(period)"
+							[ngModel]="toDateModel('closure-end-' + i, period.endDate)"
+							(ngModelChange)="onTemporaryDatePickerChange(period, 'endDate', $event)"
+							(click)="endDatePicker.open()"
+							readonly
+						/>
+						<mat-datepicker #endDatePicker></mat-datepicker>
+					</div>
+					<div class="field-group all-day-field">
+						<label class="toggle-wrap closure-toggle" [class.is-open]="period.isAllDay" [class.is-closed]="!period.isAllDay">
+							<input
+								type="checkbox"
+								[(ngModel)]="period.isAllDay"
+								(ngModelChange)="onTemporaryAllDayChange(period, $event)"
+							/>
+							<span class="toggle-indicator"></span>
+							<span class="toggle-text">Egész nap</span>
+						</label>
+					</div>
+					@if (!period.isAllDay) {
+					<div class="field-group from-time-field">
+						<label [for]="'from-time-' + i">Mettől</label>
+						<input
+							[id]="'from-time-' + i"
+							class="edit-input"
+							matInput
+							[matTimepicker]="closureFromPicker"
+							[ngModel]="toTimeModel('closure-from-' + i, period.startTime)"
+							(ngModelChange)="onTemporaryTimePickerChange(period, 'startTime', $event)"
+							readonly
+						/>
+						<mat-timepicker #closureFromPicker></mat-timepicker>
+					</div>
+					<div class="field-group to-time-field">
+						<label [for]="'to-time-' + i">Meddig</label>
+						<input
+							[id]="'to-time-' + i"
+							class="edit-input"
+							matInput
+							[matTimepicker]="closureToPicker"
+							[ngModel]="toTimeModel('closure-to-' + i, period.endTime)"
+							(ngModelChange)="onTemporaryTimePickerChange(period, 'endTime', $event)"
+							readonly
+						/>
+						<mat-timepicker #closureToPicker></mat-timepicker>
+					</div>
+					}
+					<div class="field-group reason-field">
+						<label [for]="'reason-' + i">Megjegyzés</label>
+						<input [id]="'reason-' + i" class="edit-input" type="text" [(ngModel)]="period.reason" (ngModelChange)="markTemporaryClosuresChanged()" placeholder="pl. Nyári szabadság" />
+					</div>
+					<button class="remove-btn remove-field" type="button" (click)="removeTemporaryClosure(i)">Törlés</button>
 				</div>
 			</div>
 		</article>
 	</section>
+	</div>
 </section>

@@ -1,11 +1,15 @@
 import { Component, EventEmitter, Output, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
+import { MatInputModule } from '@angular/material/input';
+import { MatTimepickerModule } from '@angular/material/timepicker';
+import { MatNativeDateModule } from '@angular/material/core';
 
 @Component({
   selector: 'app-step-business-details',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, MatInputModule, MatTimepickerModule, MatNativeDateModule],
   templateUrl: './step-business-details.component.html',
   styleUrls: ['./step-business-details.component.css']
 })
@@ -140,5 +144,59 @@ export class StepBusinessDetailsComponent implements OnInit {
 
   isFormValid(): boolean {
     return this.businessForm.valid;
+  }
+
+  get minBookingHoursSameDayModel(): Date | null {
+    const value = this.businessForm.get('minBookingHoursSameDay')?.value;
+    if (typeof value !== 'string') {
+      return null;
+    }
+
+    return this.parseTimeString(value);
+  }
+
+  onMinBookingHoursSameDayPickerChange(value: Date | null): void {
+    const formatted = this.formatTime(value);
+    if (!formatted) {
+      return;
+    }
+
+    this.businessForm.get('minBookingHoursSameDay')?.setValue(formatted);
+  }
+
+  private parseTimeString(value: string): Date | null {
+    const normalized = value?.trim() ?? '';
+    if (!/^\d{2}:\d{2}$/.test(normalized)) {
+      return null;
+    }
+
+    const [hoursRaw, minutesRaw] = normalized.split(':');
+    const hours = Number(hoursRaw);
+    const minutes = Number(minutesRaw);
+
+    if (
+      !Number.isInteger(hours) ||
+      !Number.isInteger(minutes) ||
+      hours < 0 ||
+      hours > 23 ||
+      minutes < 0 ||
+      minutes > 59
+    ) {
+      return null;
+    }
+
+    const date = new Date();
+    date.setHours(hours, minutes, 0, 0);
+    return date;
+  }
+
+  private formatTime(value: Date | null): string {
+    if (!value || Number.isNaN(value.getTime())) {
+      return '';
+    }
+
+    const hours = String(value.getHours()).padStart(2, '0');
+    const minutes = String(value.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
   }
 }
