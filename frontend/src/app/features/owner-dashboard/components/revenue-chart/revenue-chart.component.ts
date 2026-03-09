@@ -35,6 +35,28 @@ interface CubicSegment {
   y: number;
 }
 
+interface OverviewBarItem {
+  label: string;
+  shortLabel: string;
+  value: number;
+  displayValue: string;
+  fullValueLabel: string;
+  heightPercent: number;
+  isPeak: boolean;
+  isClosed: boolean;
+  statusLabel: string;
+}
+
+interface SalesBarItem {
+  label: string;
+  value: number;
+  displayValue: string;
+  fullValueLabel: string;
+  heightPercent: number;
+  isPeak: boolean;
+  isClosed: boolean;
+}
+
 @Component({
   selector: 'app-revenue-chart',
   standalone: true,
@@ -89,23 +111,20 @@ export class RevenueChartComponent {
     return `chartClipPath-${this.chartId}`;
   }
 
-  private get normalizedValues(): number[] {
-    return this.bars.map((bar) => {
-      const parsed = this.parseNumericValue(bar.value);
-      if (parsed !== null) {
-        return Math.max(0, parsed);
-      }
-
-      return this.barHeightToValue(bar.height, this.maxYAxisValue);
-    });
-  }
-
   get hasRenderableData(): boolean {
     return this.bars.length > 0;
   }
 
   get viewBox(): string {
     return `0 0 ${this.svgWidth} ${this.svgHeight}`;
+  }
+
+  get isOverviewVariant(): boolean {
+    return this.variant === 'overview';
+  }
+
+  get chartVariantClass(): string {
+    return this.variant === 'sales' ? 'sales' : 'overview';
   }
 
   get points(): ChartPoint[] {
@@ -131,6 +150,16 @@ export class RevenueChartComponent {
     });
   }
 
+  get xTicks(): XTick[] {
+    const lastIndex = this.points.length - 1;
+
+    return this.points.map((point, index) => ({
+      x: point.x,
+      label: this.displayLabel(this.bars[index]?.label ?? ''),
+      anchor: index === 0 ? 'start' : index === lastIndex ? 'end' : 'middle',
+    }));
+  }
+
   get yTicks(): YTick[] {
     if (this.variant === 'sales') {
       const plotHeight = this.axisBottomY - this.axisTopY;
@@ -149,7 +178,6 @@ export class RevenueChartComponent {
 
     const plotHeight = this.axisBottomY - this.axisTopY;
     const maxValue = this.maxYAxisValue;
-    const useShortFormat = this.variant === 'overview';
 
     return Array.from({ length: this.yTickCount }, (_, index) => {
       const ratio = index / (this.yTickCount - 1);
@@ -158,47 +186,9 @@ export class RevenueChartComponent {
 
       return {
         y,
-        label: this.formatForint(value, useShortFormat),
+        label: this.formatForint(value, true),
       };
     });
-  }
-
-  get maxYAxisValue(): number {
-    if (this.variant === 'sales') {
-      return this.salesYAxisMaxValue;
-    }
-
-    const values = this.normalizedValues;
-
-    if (values.length === 0) {
-      return 0;
-    }
-
-    return Math.max(...values, 0);
-  }
-
-  get chartVariantClass(): string {
-    return this.variant === 'sales' ? 'sales' : 'overview';
-  }
-
-  displayLabel(rawLabel: string): string {
-    const parsedDate = this.tryParseDate(rawLabel);
-    if (parsedDate) {
-      const longWeekday = parsedDate.toLocaleDateString('hu-HU', { weekday: 'long' });
-      return this.variant === 'overview' ? this.toOverviewWeekdayLabel(longWeekday) : longWeekday;
-    }
-
-    return this.variant === 'overview' ? this.toOverviewWeekdayLabel(rawLabel) : rawLabel;
-  }
-
-  get xTicks(): XTick[] {
-    const lastIndex = this.points.length - 1;
-
-    return this.points.map((point, index) => ({
-      x: point.x,
-      label: this.displayLabel(this.bars[index]?.label ?? ''),
-      anchor: index === 0 ? 'start' : index === lastIndex ? 'end' : 'middle',
-    }));
   }
 
   get linePath(): string {
@@ -239,7 +229,134 @@ export class RevenueChartComponent {
     return `${this.linePath} L ${last.x} ${this.axisBottomY} L ${first.x} ${this.axisBottomY} Z`;
   }
 
+  get overviewBars(): OverviewBarItem[] {
+    const values = this.normalizedValues;
+    const maxValue = Math.max(...values, 0);
+    const peakValue = Math.max(...values, 0);
+
+    return this.bars.map((bar, index) => {
+      const value = values[index] ?? 0;
+      const isPeak = peakValue > 0 && value === peakValue;
+      const isClosed = bar.isClosed ?? value === 0;
+
+      return {
+        label: bar.label,
+        shortLabel: this.displayLabel(bar.label),
+        value,
+        displayValue: this.formatOverviewValue(value, 'bar'),
+        fullValueLabel: this.formatForint(value),
+        heightPercent: maxValue > 0 ? Math.round((value / maxValue) * 100) : 0,
+        isPeak,
+        isClosed,
+        statusLabel: isPeak ? 'csúcsnap' : isClosed ? 'nincs' : 'aktív nap',
+      };
+    });
+  }
+
+  get salesBars(): SalesBarItem[] {
+    const values = this.normalizedValues;
+    const maxValue = Math.max(...values, 0);
+    const peakValue = Math.max(...values, 0);
+
+    return this.bars.map((bar, index) => {
+      const value = values[index] ?? 0;
+      const isClosed = bar.isClosed ?? false;
+
+      return {
+        label: this.displayLabel(bar.label),
+        value,
+        displayValue: this.formatOverviewValue(value, 'bar'),
+        fullValueLabel: isClosed ? 'Zárva' : this.formatForint(value),
+        heightPercent: maxValue > 0 ? Math.max(6, Math.round((value / maxValue) * 100)) : 6,
+        isPeak: peakValue > 0 && value === peakValue,
+        isClosed,
+      };
+    });
+  }
+
+  get totalValueLabel(): string {
+    return this.formatOverviewValue(this.totalValue, 'summary');
+  }
+
+  get averageValueLabel(): string {
+    return this.formatOverviewValue(this.averageValue, 'summary');
+  }
+
+  get peakValueLabel(): string {
+    const peakBar = this.peakBar;
+
+    if (!peakBar || peakBar.value <= 0) {
+      return 'Nincs bevétel';
+    }
+
+    return this.formatOverviewValue(peakBar.value, 'summary');
+  }
+
+  get peakDayLabel(): string {
+    const peakBar = this.peakBar;
+
+    if (!peakBar || peakBar.value <= 0) {
+      return 'Az elmúlt 7 napban nem volt forgalom';
+    }
+
+    return `${peakBar.shortLabel} volt a legerősebb nap`;
+  }
+
+  get activeDaysLabel(): string {
+    return `${this.activeDayCount}/${this.bars.length || 7} aktív nap`;
+  }
+
+  get salesTotalLabel(): string {
+    return this.formatOverviewValue(this.totalValue, 'summary');
+  }
+
+  get salesAverageLabel(): string {
+    return this.formatOverviewValue(this.averageValue, 'summary');
+  }
+
+  get salesPeakLabel(): string {
+    const peakBar = this.salesPeakBar;
+
+    if (!peakBar || peakBar.value <= 0) {
+      return 'Nincs csúcs';
+    }
+
+    return `${peakBar.label}: ${this.formatOverviewValue(peakBar.value, 'summary')}`;
+  }
+
+  get maxYAxisValue(): number {
+    if (this.variant === 'sales') {
+      return this.salesYAxisMaxValue;
+    }
+
+    const values = this.normalizedValues;
+
+    if (values.length === 0) {
+      return 0;
+    }
+
+    return Math.max(...values, 0);
+  }
+
+  displayLabel(rawLabel: string): string {
+    const parsedDate = this.tryParseDate(rawLabel);
+    if (parsedDate) {
+      const longWeekday = parsedDate.toLocaleDateString('hu-HU', { weekday: 'long' });
+      return this.variant === 'overview' ? this.toOverviewWeekdayLabel(longWeekday) : longWeekday;
+    }
+
+    return this.variant === 'overview' ? this.toOverviewWeekdayLabel(rawLabel) : rawLabel;
+  }
+
   trackByLabel(index: number, bar: RevenueChartBar): string {
+    return `${bar.label}-${index}`;
+  }
+
+  trackByOverviewBar(index: number, bar: OverviewBarItem): string {
+    return `${bar.label}-${index}`;
+  }
+
+  trackBySalesBar(index: number, bar: SalesBarItem): string {
     return `${bar.label}-${index}`;
   }
 
@@ -247,9 +364,67 @@ export class RevenueChartComponent {
     return index;
   }
 
+  private get normalizedValues(): number[] {
+    return this.bars.map((bar) => {
+      const parsed = this.parseNumericValue(bar.value);
+      if (parsed !== null) {
+        return Math.max(0, parsed);
+      }
+
+      return this.barHeightToValue(bar.height, this.maxYAxisValue);
+    });
+  }
+
+  private get totalValue(): number {
+    return this.normalizedValues.reduce((sum, value) => sum + value, 0);
+  }
+
+  private get averageValue(): number {
+    return this.normalizedValues.length > 0 ? this.totalValue / this.normalizedValues.length : 0;
+  }
+
+  private get activeDayCount(): number {
+    return this.normalizedValues.filter((value) => value > 0).length;
+  }
+
+  private get peakBar(): OverviewBarItem | null {
+    const bars = this.overviewBars;
+
+    if (bars.length === 0) {
+      return null;
+    }
+
+    return bars.reduce((currentPeak, bar) => (bar.value > currentPeak.value ? bar : currentPeak), bars[0]);
+  }
+
+  private get salesPeakBar(): SalesBarItem | null {
+    const bars = this.salesBars;
+
+    if (bars.length === 0) {
+      return null;
+    }
+
+    return bars.reduce((currentPeak, bar) => (bar.value > currentPeak.value ? bar : currentPeak), bars[0]);
+  }
+
+  private formatOverviewValue(value: number, mode: 'summary' | 'bar'): string {
+    const absoluteValue = Math.abs(value);
+
+    if (absoluteValue < 10_000) {
+      return this.formatForint(value);
+    }
+
+    if (mode === 'summary' && absoluteValue < 100_000) {
+      return this.formatForint(value);
+    }
+
+    return this.formatForint(value, true);
+  }
+
   private parseNumericValue(value: string): number | null {
     const normalized = (value || '').replace(/\s/g, '').replace(',', '.').replace(/[^\d.-]/g, '');
     const numeric = Number(normalized);
+
     if (!Number.isFinite(numeric)) {
       return null;
     }
@@ -259,7 +434,7 @@ export class RevenueChartComponent {
 
   private formatForint(value: number, short = false): string {
     if (!short) {
-      return `${value.toLocaleString('hu-HU')} Ft`;
+      return `${Math.round(value).toLocaleString('hu-HU')} Ft`;
     }
 
     const absolute = Math.abs(value);

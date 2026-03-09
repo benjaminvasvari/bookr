@@ -24,7 +24,7 @@
 			<!-- Time column -->
 			<div class="time-column">
 				<div class="time-header"></div>
-				@for (slot of timeSlots; track slot.hour) {
+				@for (slot of gridTimeSlots; track slot.hour) {
 					<div class="time-slot">{{ slot.time }}</div>
 				}
 			</div>
@@ -56,8 +56,8 @@
 					</div>
 
 					<!-- Time grid -->
-					<div class="time-grid" (click)="!day.isClosed && setFocusedDay(dayIndex)">
-						@for (slot of timeSlots; track slot.hour) {
+					<div class="time-grid" [style.height.px]="gridTimeSlots.length * 60" (click)="!day.isClosed && setFocusedDay(dayIndex)">
+						@for (slot of gridTimeSlots; track slot.hour) {
 							<div class="grid-cell"></div>
 						}
 
@@ -92,37 +92,39 @@
 					<button class="close-btn" (click)="closeDetails()">&times;</button>
 				</div>
 				<div class="sidebar-body">
-					<div class="detail-row">
-						<label>Szolgáltatás</label>
-						<div class="detail-value badge-primary">{{ selectedAppointment.service }}</div>
-					</div>
-					<div class="detail-row">
-						<label>Nap</label>
-						<div class="detail-value">{{ weekDays[selectedAppointment.dayIndex].name }}, {{ weekDays[selectedAppointment.dayIndex].date }}</div>
-					</div>
-					<div class="detail-row">
-						<label>Időpont</label>
-						<div class="detail-value">{{ selectedAppointment.startTime }} ({{ selectedAppointment.duration }} perc)</div>
-					</div>
-					<div class="detail-row">
-						<label>Ügyfél neve</label>
-						<div class="detail-value">{{ selectedAppointment.clientName }}</div>
-					</div>
-					<div class="detail-row">
-						<label>Státusz</label>
-						<div class="detail-value">
-							{{ getStatusLabel(selectedAppointment.status) }}
-						</div>
-					</div>
-					@if (selectedAppointment.phone) {
+					<div class="sidebar-scroll-content">
 						<div class="detail-row">
-							<label>Telefonszám</label>
-							<div class="detail-value">{{ selectedAppointment.phone }}</div>
+							<label>Szolgáltatás</label>
+							<div class="detail-value badge-primary">{{ selectedAppointment.service }}</div>
 						</div>
-					}
-					<div class="detail-row">
-						<label>Ár</label>
-						<div class="detail-value price">{{ selectedAppointment.price || 0 }} Ft</div>
+						<div class="detail-row">
+							<label>Nap</label>
+							<div class="detail-value">{{ weekDays[selectedAppointment.dayIndex].name }}, {{ weekDays[selectedAppointment.dayIndex].date }}</div>
+						</div>
+						<div class="detail-row">
+							<label>Időpont</label>
+							<div class="detail-value">{{ selectedAppointment.startTime }} ({{ selectedAppointment.duration }} perc)</div>
+						</div>
+						<div class="detail-row">
+							<label>Ügyfél neve</label>
+							<div class="detail-value">{{ selectedAppointment.clientName }}</div>
+						</div>
+						<div class="detail-row">
+							<label>Státusz</label>
+							<div class="detail-value">
+								{{ getStatusLabel(selectedAppointment.status) }}
+							</div>
+						</div>
+						@if (selectedAppointment.phone) {
+							<div class="detail-row">
+								<label>Telefonszám</label>
+								<div class="detail-value">{{ selectedAppointment.phone }}</div>
+							</div>
+						}
+						<div class="detail-row">
+							<label>Ár</label>
+							<div class="detail-value price">{{ selectedAppointment.price || 0 }} Ft</div>
+						</div>
 					</div>
 					<div class="sidebar-actions">
 						<button class="btn btn-edit">Módosít</button>

@@ -1,127 +1,119 @@
-<header class="staff-topbar">
-	<div>
-		<h1>Vezérlőpult</h1>
-		<p class="subtitle">Napi munkaáttekintés, következő feladatok és céginformációk egy helyen.</p>
-	</div>
-	<div class="topbar-actions">
-		<a class="btn btn-ghost" routerLink="/staff/bookings">Foglalások</a>
-		<a class="btn btn-primary" routerLink="/staff/calendar">Naptár</a>
-	</div>
-</header>
+<section class="staff-dashboard-shell">
+	<header class="hero">
+		<div class="hero-copy">
+			<p class="eyebrow">Staff shell</p>
+			<h1>{{ displayName }} napi dashboardja</h1>
+			<p class="hero-subtitle">Élő nézet a mai időpontokról, közelgő feladatokról és szolgáltatási terhelésről.</p>
+		</div>
+		<div class="hero-actions">
+			<a class="btn btn-ghost" routerLink="/staff/bookings">Foglalások kezelése</a>
+			<a class="btn btn-primary" routerLink="/staff/calendar">Naptár megnyitása</a>
+		</div>
+	</header>
 
-@if (isLoading) {
-	<div class="state-card">Dashboard adatok betöltése...</div>
+	@if (isLoading) {
+		<div class="state-card">Dashboard adatok betöltése...</div>
 	} @else {
-	@if (errorMessage) {
-		<div class="state-card error">{{ errorMessage }}</div>
+		@if (errorMessage) {
+			<div class="state-card error">{{ errorMessage }}</div>
+		}
+
+		@if (dashboard) {
+			<section class="metrics-grid">
+				<article class="metric metric-appointments">
+					<p class="metric-label">Mai foglalás</p>
+					<p class="metric-value">{{ todayCount }}</p>
+					<p class="metric-foot">Aktuális nap terhelése</p>
+				</article>
+				<article class="metric metric-upcoming">
+					<p class="metric-label">Közelgő</p>
+					<p class="metric-value">{{ upcomingCount }}</p>
+					<p class="metric-foot">Előtted álló időpontok</p>
+				</article>
+				<article class="metric metric-services">
+					<p class="metric-label">Szolgáltatások</p>
+					<p class="metric-value">{{ serviceCount }}</p>
+					<p class="metric-foot">Aktív profilban</p>
+				</article>
+				<article class="metric metric-hours">
+					<p class="metric-label">Tervezett munkaidő</p>
+					<p class="metric-value">{{ formatDuration(plannedMinutes) }}</p>
+					<p class="metric-foot">Mai + közelgő összesen</p>
+				</article>
+			</section>
+
+			<section class="layout-grid">
+				<article class="panel identity-panel">
+					<header class="panel-header">
+						<h3>Profil és cég</h3>
+					</header>
+					<div class="identity-row">
+						<div class="avatar">{{ staffInitials }}</div>
+						<div>
+							<p class="name">{{ displayName }}</p>
+							<p class="company">{{ companyName }}</p>
+						</div>
+					</div>
+
+					@if (dashboard.services.length > 0) {
+						<div class="service-list">
+							@for (service of dashboard.services.slice(0, 6); track service.id) {
+								<div class="service-item">
+									<span>{{ service.name }}</span>
+									<span>{{ service.durationMinutes }} perc</span>
+								</div>
+							}
+						</div>
+					} @else {
+						<p class="empty-note">Nincs hozzárendelt szolgáltatás.</p>
+					}
+				</article>
+
+				<article class="panel spotlight-panel">
+					<header class="panel-header">
+						<h3>Következő foglalás</h3>
+					</header>
+					@if (nextAppointment) {
+						<div
+							class="spotlight-card"
+							[style.border-left-color]="nextAppointmentColor"
+							[style.background]="nextAppointmentBackground"
+						>
+							<p class="spotlight-time">{{ nextAppointment.time }}</p>
+							<p class="spotlight-date">{{ formatDate(nextAppointment.date) }}</p>
+							<p class="spotlight-service">{{ nextAppointment.serviceName }}</p>
+							<p class="spotlight-client">{{ nextAppointment.clientName }}</p>
+							<span class="chip" [style.border-color]="nextAppointmentColor">{{ nextAppointment.durationMinutes }} perc</span>
+						</div>
+					} @else {
+						<p class="empty-note">Nincs közelgő foglalás.</p>
+					}
+				</article>
+
+				<article class="panel timeline-panel">
+					<header class="panel-header">
+						<h3>Mai idővonal</h3>
+						<span class="pill">{{ todayCount }}</span>
+					</header>
+					@if (sortedTodayAppointments.length > 0) {
+						<div class="appointment-list">
+							@for (appt of sortedTodayAppointments; track trackByAppointment($index, appt)) {
+								<div
+									class="appointment-item"
+									[style.border-left-color]="getAppointmentColor(appt)"
+									[style.background]="getAppointmentBackground(appt)"
+								>
+									<p class="row-title">{{ appt.time }} · {{ appt.serviceName }}</p>
+									<p class="row-sub">{{ appt.clientName }}</p>
+									<span class="chip" [style.border-color]="getAppointmentColor(appt)">{{ appt.durationMinutes }} perc</span>
+								</div>
+							}
+						</div>
+					} @else {
+						<p class="empty-note">Ma még nincs foglalás.</p>
+					}
+				</article>
+			</section>
+		}
 	}
-
-	@if (dashboard) {
-	<section class="kpi-grid">
-		<article class="kpi-card">
-			<p class="kpi-label">Mai foglalás</p>
-			<p class="kpi-value">{{ todayCount }}</p>
-		</article>
-		<article class="kpi-card">
-			<p class="kpi-label">Következő időpontok</p>
-			<p class="kpi-value">{{ upcomingCount }}</p>
-		</article>
-		<article class="kpi-card">
-			<p class="kpi-label">Szolgáltatásaim</p>
-			<p class="kpi-value">{{ serviceCount }}</p>
-		</article>
-		<article class="kpi-card">
-			<p class="kpi-label">Tervezett munkaidő</p>
-			<p class="kpi-value">{{ formatDuration(plannedMinutes) }}</p>
-		</article>
-	</section>
-
-	<section class="dashboard-grid">
-		<article class="panel company-panel">
-			<header class="panel-header">
-				<h3>Cég információ</h3>
-			</header>
-			<div class="company-block">
-				<div class="company-avatar">{{ staffInitials }}</div>
-				<div>
-					<p class="company-name">{{ companyName }}</p>
-					<p class="company-sub">Munkatárs: {{ displayName }}</p>
-				</div>
-			</div>
-			@if (dashboard.services.length > 0) {
-				<div class="service-list">
-					@for (service of dashboard.services.slice(0, 5); track service.id) {
-						<div class="service-item">
-							<span>{{ service.name }}</span>
-							<span>{{ service.durationMinutes }} perc</span>
-						</div>
-					}
-				</div>
-			} @else {
-				<p class="empty-note">Nincs hozzárendelt szolgáltatás.</p>
-			}
-		</article>
-
-		<article class="panel next-panel">
-			<header class="panel-header">
-				<h3>Következő foglalás</h3>
-			</header>
-			@if (nextAppointment) {
-				<div class="next-booking-card">
-					<p class="next-time">{{ nextAppointment.time }}</p>
-					<p class="next-date">{{ formatDate(nextAppointment.date) }}</p>
-					<p class="next-service">{{ nextAppointment.serviceName }}</p>
-					<p class="next-client">{{ nextAppointment.clientName }}</p>
-					<span class="next-duration">{{ nextAppointment.durationMinutes }} perc</span>
-				</div>
-			} @else {
-				<p class="empty-note">Nincs közelgő foglalás.</p>
-			}
-		</article>
-
-		<article class="panel today-panel">
-			<header class="panel-header">
-				<h3>Mai időpontok</h3>
-				<span class="panel-pill">{{ todayCount }}</span>
-			</header>
-			@if (sortedTodayAppointments.length > 0) {
-				<div class="appointment-list">
-					@for (appt of sortedTodayAppointments; track trackByAppointment($index, appt)) {
-						<div class="appointment-item">
-							<div>
-								<p class="row-title">{{ appt.time }} · {{ appt.serviceName }}</p>
-								<p class="row-sub">{{ appt.clientName }}</p>
-							</div>
-							<span class="duration-pill">{{ appt.durationMinutes }} perc</span>
-						</div>
-					}
-				</div>
-			} @else {
-				<p class="empty-note">Ma még nincs foglalás.</p>
-			}
-		</article>
-
-		<article class="panel upcoming-panel">
-			<header class="panel-header">
-				<h3>Közelgő foglalások</h3>
-				<span class="panel-pill">{{ upcomingCount }}</span>
-			</header>
-			@if (sortedUpcomingAppointments.length > 0) {
-				<div class="appointment-list">
-					@for (appt of sortedUpcomingAppointments.slice(0, 6); track trackByAppointment($index, appt)) {
-						<div class="appointment-item">
-							<div>
-								<p class="row-title">{{ formatDate(appt.date) }} · {{ appt.time }}</p>
-								<p class="row-sub">{{ appt.serviceName }} · {{ appt.clientName }}</p>
-							</div>
-							<span class="duration-pill">{{ appt.durationMinutes }} perc</span>
-						</div>
-					}
-				</div>
-			} @else {
-				<p class="empty-note">Nincs közelgő foglalás.</p>
-			}
-		</article>
-	</section>
-	}
-}
+</section>

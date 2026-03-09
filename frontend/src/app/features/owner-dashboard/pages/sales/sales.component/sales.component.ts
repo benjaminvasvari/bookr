@@ -308,6 +308,10 @@ export class SalesComponent implements OnInit {
       return this.mapWeeklyPointsToDailyBars(points);
     }
 
+    if (period === 'yearly') {
+      return this.mapYearlyPointsToMonthlyBars(points);
+    }
+
     const maxValue = Math.max(...points.map((point) => point.value), 1);
 
     return points.map((point) => {
@@ -319,6 +323,55 @@ export class SalesComponent implements OnInit {
         height,
         label: point.label,
         value: point.value > 0 ? this.formatInteger(point.value) : '0',
+        isClosed: false,
+      };
+    });
+  }
+
+  private mapYearlyPointsToMonthlyBars(points: SalesRevenueChartPoint[]): RevenueChartBar[] {
+    const datedPoints = points
+      .map((point) => ({
+        point,
+        date: this.tryParseDate(point.label),
+      }))
+      .filter(
+        (item): item is { point: SalesRevenueChartPoint; date: Date } => item.date !== null
+      )
+      .sort((a, b) => a.date.getTime() - b.date.getTime());
+
+    const referenceDate =
+      datedPoints.length > 0 ? datedPoints[datedPoints.length - 1].date : new Date();
+
+    const rangeMonths = this.buildLastTwelveMonths(referenceDate);
+    const valuesByMonth = new Map<string, number>();
+
+    if (datedPoints.length > 0) {
+      for (const item of datedPoints) {
+        const monthKey = this.toMonthKey(item.date);
+        valuesByMonth.set(monthKey, (valuesByMonth.get(monthKey) ?? 0) + item.point.value);
+      }
+    } else {
+      const relevantPoints = points.slice(-12);
+      const startIndex = Math.max(0, rangeMonths.length - relevantPoints.length);
+
+      relevantPoints.forEach((point, index) => {
+        valuesByMonth.set(this.toMonthKey(rangeMonths[startIndex + index]), point.value);
+      });
+    }
+
+    const maxValue = Math.max(
+      ...rangeMonths.map((monthDate) => valuesByMonth.get(this.toMonthKey(monthDate)) ?? 0),
+      1
+    );
+
+    return rangeMonths.map((monthDate) => {
+      const value = valuesByMonth.get(this.toMonthKey(monthDate)) ?? 0;
+      const heightPercent = value > 0 ? Math.round((value / maxValue) * 90) : 0;
+
+      return {
+        height: value > 0 ? Math.max(20, heightPercent) : 8,
+        label: this.getShortMonthLabel(monthDate),
+        value: this.formatInteger(value),
         isClosed: false,
       };
     });
@@ -383,11 +436,36 @@ export class SalesComponent implements OnInit {
     return dates;
   }
 
+  private buildLastTwelveMonths(endDate: Date): Date[] {
+    const normalizedEnd = new Date(endDate);
+    normalizedEnd.setDate(1);
+    normalizedEnd.setHours(0, 0, 0, 0);
+
+    const months: Date[] = [];
+    for (let i = 11; i >= 0; i--) {
+      const monthDate = new Date(normalizedEnd);
+      monthDate.setMonth(normalizedEnd.getMonth() - i);
+      months.push(monthDate);
+    }
+
+    return months;
+  }
+
   private toDateKey(date: Date): string {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  private toMonthKey(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    return `${year}-${month}`;
+  }
+
+  private getShortMonthLabel(date: Date): string {
+    return date.toLocaleDateString('hu-HU', { month: 'short' });
   }
 
   private mapMonthlyPointsToWeeklyBars(points: SalesRevenueChartPoint[]): RevenueChartBar[] {

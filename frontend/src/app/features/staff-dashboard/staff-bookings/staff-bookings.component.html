@@ -1,16 +1,19 @@
 <header class="staff-topbar">
-  <div>
+  <div class="topbar-copy">
     <h1>Foglalásaim</h1>
-    <p class="subtitle">Saját időpontok áttekintése.</p>
+    <p class="subtitle">Minden időpont egy helyen, napi munkához optimalizálva.</p>
   </div>
+  <div class="topbar-pill">Összesen: {{ bookings.length }}</div>
 </header>
 
-    <section class="panel">
-      <header class="panel-header">
-        <h3>Következő időpontok</h3>
-        <span class="panel-pill">{{ bookings.length }}</span>
-      </header>
+<section class="panel">
+  <header class="panel-header">
+    <h3>Következő időpontok</h3>
+    <span class="panel-pill">{{ bookings.length }}</span>
+  </header>
 
+  <div class="bookings-content" [class.blurred]="!!selectedBooking">
+    <div class="table-wrap">
       <table class="bookings-table">
         <thead>
           <tr>
@@ -27,15 +30,19 @@
               <td colspan="5" class="empty">Nincs foglalás.</td>
             </tr>
           } @else {
-            @for (booking of bookings; track booking.id) {
-              <tr>
-                <td>{{ booking.date }}</td>
+            @for (booking of sortedBookings; track trackByBooking($index, booking)) {
+              <tr
+                class="booking-row"
+                [class.selected]="selectedBooking?.id === booking.id"
+                (click)="selectBooking(booking)"
+              >
+                <td>{{ formatDate(booking.date) }}</td>
                 <td>{{ booking.time }}</td>
                 <td>{{ booking.serviceName }}</td>
                 <td>{{ booking.clientName }}</td>
                 <td>
                   <span class="status-pill" [class.confirmed]="booking.status === 'confirmed'" [class.pending]="booking.status === 'pending'" [class.cancelled]="booking.status === 'cancelled'">
-                    {{ booking.status === 'confirmed' ? 'Visszaigazolt' : booking.status === 'pending' ? 'Folyamatban' : 'Lemondva' }}
+                    {{ getStatusLabel(booking.status) }}
                   </span>
                 </td>
               </tr>
@@ -43,4 +50,44 @@
           }
         </tbody>
     </table>
-  </section>
+    </div>
+  </div>
+</section>
+
+@if (selectedBooking; as booking) {
+  <div class="booking-popup-overlay" (click)="clearSelectedBooking()">
+    <div class="booking-popup" (click)="$event.stopPropagation()">
+      <div class="popup-header">
+        <div class="avatar large">{{ getInitials(booking.clientName) }}</div>
+        <div>
+          <h3>{{ booking.clientName }}</h3>
+          <p>{{ booking.serviceName }}</p>
+        </div>
+        <button class="close-details-btn" type="button" (click)="clearSelectedBooking()">Bezárás</button>
+      </div>
+
+      <div class="popup-grid">
+        <div class="popup-tile">
+          <span>Dátum</span>
+          <strong>{{ formatDate(booking.date) }}</strong>
+        </div>
+        <div class="popup-tile">
+          <span>Időpont</span>
+          <strong>{{ booking.time }}</strong>
+        </div>
+        <div class="popup-tile">
+          <span>Szolgáltatás</span>
+          <strong>{{ booking.serviceName }}</strong>
+        </div>
+        <div class="popup-tile">
+          <span>Státusz</span>
+          <strong>
+            <span class="status-pill popup-status-pill" [class.confirmed]="booking.status === 'confirmed'" [class.pending]="booking.status === 'pending'" [class.cancelled]="booking.status === 'cancelled'">
+              {{ getStatusLabel(booking.status) }}
+            </span>
+          </strong>
+        </div>
+      </div>
+    </div>
+  </div>
+}

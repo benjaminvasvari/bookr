@@ -53,6 +53,8 @@ interface StaffMember {
 export class StaffCalendarComponent implements OnInit, OnDestroy {
   isLoading = false;
   private readonly appointmentBorderColor = '#4338ca';
+  calendarStartHour: number = 8;
+  calendarEndHour: number = 19;
   currentTimePosition: number = 0;
   currentTimeInterval: any;
   currentWeekStart: Date = this.getMonday(new Date());
@@ -68,20 +70,7 @@ export class StaffCalendarComponent implements OnInit, OnDestroy {
 
   weekDays: WeekDay[] = [];
 
-  timeSlots: TimeSlot[] = [
-    { time: '08:00', hour: 8 },
-    { time: '09:00', hour: 9 },
-    { time: '10:00', hour: 10 },
-    { time: '11:00', hour: 11 },
-    { time: '12:00', hour: 12 },
-    { time: '13:00', hour: 13 },
-    { time: '14:00', hour: 14 },
-    { time: '15:00', hour: 15 },
-    { time: '16:00', hour: 16 },
-    { time: '17:00', hour: 17 },
-    { time: '18:00', hour: 18 },
-    { time: '19:00', hour: 19 }
-  ];
+  timeSlots: TimeSlot[] = this.buildTimeSlots(this.calendarStartHour, this.calendarEndHour);
 
   allAppointments: CalendarAppointment[] = [
     {
@@ -242,6 +231,10 @@ export class StaffCalendarComponent implements OnInit, OnDestroy {
     return this.allAppointments.filter(apt => apt.staffId === this.selectedStaffId);
   }
 
+  get gridTimeSlots(): TimeSlot[] {
+    return this.timeSlots.length > 1 ? this.timeSlots.slice(0, -1) : this.timeSlots;
+  }
+
   onStaffChange(): void {
     this.selectedAppointment = null;
     this.updateWeekDays();
@@ -252,14 +245,12 @@ export class StaffCalendarComponent implements OnInit, OnDestroy {
   }
 
   getAppointmentStyleWithOverlap(appointment: CalendarAppointment, dayIndex: number): any {
-    const [hours, minutes] = appointment.startTime.split(':').map(Number);
-    const startMinutes = (hours - 8) * 60 + minutes;
+    const startMinutes = this.minutesFromCalendarStart(appointment.startTime);
     const endMinutes = startMinutes + appointment.duration;
 
     const dayAppointments = this.getAppointmentsForDay(dayIndex);
     const overlapping = dayAppointments.filter(apt => {
-      const [aptHours, aptMinutes] = apt.startTime.split(':').map(Number);
-      const aptStart = (aptHours - 8) * 60 + aptMinutes;
+      const aptStart = this.minutesFromCalendarStart(apt.startTime);
       const aptEnd = aptStart + apt.duration;
       return apt.id !== appointment.id && aptStart < endMinutes && aptEnd > startMinutes;
     });
@@ -444,13 +435,43 @@ export class StaffCalendarComponent implements OnInit, OnDestroy {
     this.setDefaultFocusedDay(todayIndex);
   }
 
+  private buildTimeSlots(startHour: number, endHour: number): TimeSlot[] {
+    const slots: TimeSlot[] = [];
+    for (let hour = startHour; hour <= endHour; hour++) {
+      slots.push({
+        time: `${hour.toString().padStart(2, '0')}:00`,
+        hour,
+      });
+    }
+    return slots;
+  }
+
+  private parseTimeToMinutes(time: string): number | null {
+    const parts = time.split(':').map(Number);
+    if (parts.length !== 2 || parts.some((value) => Number.isNaN(value))) {
+      return null;
+    }
+
+    const [hours, minutes] = parts;
+    return (hours * 60) + minutes;
+  }
+
+  private minutesFromCalendarStart(time: string): number {
+    const totalMinutes = this.parseTimeToMinutes(time);
+    if (totalMinutes === null) {
+      return 0;
+    }
+
+    return totalMinutes - (this.calendarStartHour * 60);
+  }
+
   private updateCurrentTimePosition(): void {
     const now = new Date();
     const hours = now.getHours();
     const minutes = now.getMinutes();
 
-    if (hours >= 8 && hours < 19) {
-      const totalMinutes = (hours - 8) * 60 + minutes;
+    if (hours >= this.calendarStartHour && hours < this.calendarEndHour) {
+      const totalMinutes = ((hours - this.calendarStartHour) * 60) + minutes;
       this.currentTimePosition = totalMinutes;
       return;
     }
