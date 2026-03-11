@@ -66,27 +66,87 @@
         <button class="close-details-btn" type="button" (click)="clearSelectedBooking()">Bezárás</button>
       </div>
 
-      <div class="popup-grid">
-        <div class="popup-tile">
-          <span>Dátum</span>
-          <strong>{{ formatDate(booking.date) }}</strong>
+      @if (isEditing && editDraft; as draft) {
+        <div class="popup-form-grid">
+          <label class="popup-field">
+            <span>Dátum</span>
+            <input
+              class="popup-date-input"
+              matInput
+              [matDatepicker]="bookingDatePicker"
+              [ngModel]="editDateModel"
+              (ngModelChange)="onEditDatePickerChange($event)"
+              (click)="bookingDatePicker.open()"
+              readonly
+            />
+            <mat-datepicker #bookingDatePicker></mat-datepicker>
+          </label>
+
+          <label class="popup-field">
+            <span>Időpont</span>
+            <input type="time" [(ngModel)]="draft.time" />
+          </label>
+
+          <label class="popup-field">
+            <span>Szolgáltatás</span>
+            <input type="text" [(ngModel)]="draft.serviceName" placeholder="Pl. Hajvágás" />
+          </label>
+
+          <label class="popup-field">
+            <span>Ügyfél neve</span>
+            <input type="text" [(ngModel)]="draft.clientName" placeholder="Pl. Kiss Anna" />
+          </label>
+
+          <label class="popup-field full-width">
+            <span>Státusz</span>
+            <select [(ngModel)]="draft.status">
+              <option value="confirmed">Visszaigazolt</option>
+              <option value="pending">Folyamatban</option>
+              <option value="cancelled">Lemondva</option>
+            </select>
+          </label>
         </div>
-        <div class="popup-tile">
-          <span>Időpont</span>
-          <strong>{{ booking.time }}</strong>
+      } @else {
+        <div class="popup-grid">
+          <div class="popup-tile">
+            <span>Dátum</span>
+            <strong>{{ formatDate(booking.date) }}</strong>
+          </div>
+          <div class="popup-tile">
+            <span>Időpont</span>
+            <strong>{{ booking.time }}</strong>
+          </div>
+          <div class="popup-tile">
+            <span>Szolgáltatás</span>
+            <strong>{{ booking.serviceName }}</strong>
+          </div>
+          <div class="popup-tile">
+            <span>Státusz</span>
+            <strong>
+              <span class="status-pill popup-status-pill" [class.confirmed]="booking.status === 'confirmed'" [class.pending]="booking.status === 'pending'" [class.cancelled]="booking.status === 'cancelled'">
+                {{ getStatusLabel(booking.status) }}
+              </span>
+            </strong>
+          </div>
         </div>
-        <div class="popup-tile">
-          <span>Szolgáltatás</span>
-          <strong>{{ booking.serviceName }}</strong>
-        </div>
-        <div class="popup-tile">
-          <span>Státusz</span>
-          <strong>
-            <span class="status-pill popup-status-pill" [class.confirmed]="booking.status === 'confirmed'" [class.pending]="booking.status === 'pending'" [class.cancelled]="booking.status === 'cancelled'">
-              {{ getStatusLabel(booking.status) }}
-            </span>
-          </strong>
-        </div>
+      }
+
+      <div class="popup-actions">
+        @if (isEditing) {
+          <button class="popup-action-btn secondary" type="button" (click)="cancelEditingSelectedBooking()">
+            Mégse
+          </button>
+          <button class="popup-action-btn primary" type="button" [disabled]="!canSaveEdit" (click)="saveSelectedBookingChanges()">
+            Mentés
+          </button>
+        } @else {
+          <button class="popup-action-btn secondary" type="button" (click)="startEditingSelectedBooking()">
+            Szerkesztés
+          </button>
+          <button class="popup-action-btn danger" type="button" (click)="deleteSelectedBooking()">
+            Törlés
+          </button>
+        }
       </div>
     </div>
   </div>

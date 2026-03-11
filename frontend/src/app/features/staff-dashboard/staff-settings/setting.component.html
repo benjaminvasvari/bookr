@@ -1,0 +1,152 @@
+<section class="staff-settings-page container-fluid py-3 py-md-4">
+  <div class="settings-header mb-3 mb-md-4">
+    <h1 class="settings-title">Beállítások</h1>
+    <p class="settings-subtitle">Személyre szabhatod az értesítéseket, munkaidőt és a megjelenést.</p>
+  </div>
+
+  <div class="row g-3 g-xl-4">
+    <div class="col-12">
+      <article class="settings-card h-100">
+        <header class="settings-card-header">
+          <div>
+            <h2 class="card-title">Megjelenés</h2>
+            <p class="card-subtitle">Dark mode és rendszer téma vezérlés</p>
+          </div>
+        </header>
+
+        <div class="settings-card-body">
+          <div class="setting-item appearance-setting" [class.disabled]="followSystemTheme">
+            <div class="setting-info">
+              <h3 class="setting-title">Dark mode</h3>
+              <p class="setting-description">
+                {{ followSystemTheme ? 'A rendszer beállítása vezérli ezt a kapcsolót' : 'Sötét téma az összes oldalon' }}
+              </p>
+            </div>
+            <label class="toggle-switch">
+              <input
+                type="checkbox"
+                [(ngModel)]="isDarkMode"
+                (change)="onDarkModeChange()"
+                [disabled]="followSystemTheme"
+              />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-item appearance-setting">
+            <div class="setting-info">
+              <h3 class="setting-title">Rendszer téma követése</h3>
+              <p class="setting-description">Automatikusan a rendszer világos/sötét témáját használja.</p>
+            </div>
+            <label class="toggle-switch">
+              <input
+                type="checkbox"
+                [(ngModel)]="followSystemTheme"
+                (change)="onFollowSystemThemeChange()"
+              />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <div class="col-12">
+      <article class="settings-card h-100">
+        <header class="settings-card-header">
+          <div>
+            <h2 class="card-title">Értesítési beállítások</h2>
+            <p class="card-subtitle">Email és push csatorna eseményenként</p>
+          </div>
+          <button class="btn btn-save" type="button" [disabled]="isSavingNotificationPrefs" (click)="saveNotificationPreferences()">
+            {{ isSavingNotificationPrefs ? 'Mentés...' : 'Mentés' }}
+          </button>
+        </header>
+
+        <div class="settings-card-body">
+          @for (item of notificationPreferences; track trackByNotification($index, item)) {
+            <div class="setting-item">
+              <div class="setting-info">
+                <h3 class="setting-title">{{ item.label }}</h3>
+                <p class="setting-description">{{ item.description }}</p>
+              </div>
+
+              <div class="channel-toggles">
+                <label class="toggle-inline">
+                  <span>Email</span>
+                  <label class="toggle-switch">
+                    <input type="checkbox" [(ngModel)]="item.email" />
+                    <span class="toggle-slider"></span>
+                  </label>
+                </label>
+
+                <label class="toggle-inline">
+                  <span>Push</span>
+                  <label class="toggle-switch">
+                    <input type="checkbox" [(ngModel)]="item.push" />
+                    <span class="toggle-slider"></span>
+                  </label>
+                </label>
+              </div>
+            </div>
+          }
+
+          @if (notificationSaveMessage) {
+            <p class="save-feedback success">{{ notificationSaveMessage }}</p>
+          }
+        </div>
+      </article>
+    </div>
+
+    <div class="col-12">
+      <article class="settings-card">
+        <header class="settings-card-header">
+          <div>
+            <h2 class="card-title">Munkaidő beállítások</h2>
+            <p class="card-subtitle">Napi elérhetőség és idősávok</p>
+          </div>
+          <div class="header-actions">
+            @if (!isEditingWorkingHours) {
+              <button class="btn btn-edit-link" type="button" (click)="startWorkingHoursEdit()">Szerkesztés</button>
+            } @else {
+              <button class="btn btn-outline" type="button" [disabled]="isSavingWorkingHours" (click)="cancelWorkingHoursEdit()">Mégse</button>
+              <button class="btn btn-save" type="button" [disabled]="isSavingWorkingHours" (click)="saveWorkingHours()">
+                {{ isSavingWorkingHours ? 'Mentés...' : 'Mentés' }}
+              </button>
+            }
+          </div>
+        </header>
+
+        <div class="settings-card-body">
+          <div class="working-hours-list">
+            @for (day of (isEditingWorkingHours ? workingHoursDraft : workingHours); track trackByDay($index, day)) {
+              <div class="hours-row">
+                <div class="day-info">
+                  <strong>{{ day.label }}</strong>
+                </div>
+
+                <label class="toggle-inline availability-toggle">
+                  <span>Elérhető</span>
+                  <label class="toggle-switch">
+                    <input type="checkbox" [(ngModel)]="day.enabled" [disabled]="!isEditingWorkingHours" />
+                    <span class="toggle-slider"></span>
+                  </label>
+                </label>
+
+                <div class="time-inputs">
+                  <input class="form-control" type="time" [(ngModel)]="day.start" [disabled]="!isEditingWorkingHours || !day.enabled" />
+                  <span class="time-separator">-</span>
+                  <input class="form-control" type="time" [(ngModel)]="day.end" [disabled]="!isEditingWorkingHours || !day.enabled" />
+                </div>
+              </div>
+            }
+          </div>
+
+          @if (workingHoursSaveMessage) {
+            <p class="save-feedback success">{{ workingHoursSaveMessage }}</p>
+          }
+        </div>
+      </article>
+    </div>
+  </div>
+</section>

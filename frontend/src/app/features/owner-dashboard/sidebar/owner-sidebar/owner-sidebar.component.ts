@@ -14,10 +14,14 @@ export class OwnerSidebar {
   mobileOpen = input<boolean>(false);
   requestClose = output<void>();
 
-  isPinned = false;
+  isExpanded = true;
 
-  togglePin(): void {
-    this.isPinned = !this.isPinned;
+  toggleSidebar(): void {
+    if (this.isMobileView()) {
+      return;
+    }
+
+    this.isExpanded = !this.isExpanded;
   }
 
   closeSidebar(): void {

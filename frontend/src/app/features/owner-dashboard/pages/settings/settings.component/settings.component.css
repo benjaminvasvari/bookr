@@ -55,14 +55,18 @@
 }
 
 .pill {
-	display: inline-flex;
-	align-items: center;
+	background: #f1f5f9;
+	color: #94a3b8;
+	-webkit-text-fill-color: #94a3b8;
+	opacity: 1;
 	height: 28px;
 	padding: 0 11px;
 	border-radius: 999px;
 	background: #ffffff;
 	border: 1px solid #dce4ee;
 	font-size: 12px;
+	-webkit-text-fill-color: #8fa3c2;
+	opacity: 1;
 	font-weight: 700;
 	color: #475569;
 }
@@ -207,9 +211,10 @@
 
 .section-closures {
 	height: auto;
-	gap: 14px;
+	gap: 16px;
 	align-self: start;
 	align-content: start;
+	padding: 24px;
 }
 
 .closures-feedback-container {
@@ -233,10 +238,11 @@
 .section-header {
 	display: flex;
 	justify-content: space-between;
-	align-items: center;
+	align-items: flex-start;
 	gap: 12px;
 	padding-bottom: 12px;
 	border-bottom: 1px solid #edf2f7;
+	flex-wrap: wrap;
 }
 
 .section-header h2 {
@@ -307,12 +313,19 @@
 .inline-actions {
 	display: flex;
 	gap: 8px;
+	flex-wrap: nowrap;
+	align-items: center;
+	justify-content: flex-end;
+	flex-shrink: 0;
+	margin-left: auto;
 }
 
 .inline-actions .btn {
 	height: 36px;
 	font-size: 13px;
 	padding: 0 12px;
+	white-space: nowrap;
+	flex-shrink: 0;
 }
 
 .company-layout {
@@ -912,16 +925,16 @@
 
 .temporary-row {
 	display: grid;
-	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+	grid-template-columns: minmax(140px, 1fr) minmax(140px, 1fr) auto auto;
 	grid-template-areas:
-		'start end allday'
-		'fromtime totime remove'
-		'reason reason remove';
-	gap: 10px;
+		'start end allday remove'
+		'fromtime totime . .'
+		'reason reason reason reason';
+	gap: 12px;
 	align-items: start;
-	padding: 11px;
-	border-radius: 12px;
-	border: 1px solid #e5ecf4;
+	padding: 14px;
+	border-radius: 14px;
+	border: 1px solid #e2e8f0;
 	background: #f8fafc;
 }
 
@@ -939,7 +952,10 @@
 
 .temporary-row .all-day-field {
 	grid-area: allday;
-	align-self: end;
+	align-self: start;
+	display: flex;
+	align-items: center;
+	margin-top: 20px;
 }
 
 .temporary-row .from-time-field {
@@ -959,17 +975,21 @@
 .temporary-row .remove-field {
 	grid-area: remove;
 	justify-self: end;
-	align-self: end;
+	align-self: start;
+	margin-top: 20px;
 }
 
 .temporary-row .field-group label {
-	font-size: 12px;
+	font-size: 11px;
 	font-weight: 700;
-	color: #64748b;
+	color: #475569;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
 }
 
 .temporary-row .all-day-field .closure-toggle {
 	justify-self: start;
+	height: 42px;
 }
 
 .remove-btn {

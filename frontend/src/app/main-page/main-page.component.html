@@ -63,7 +63,7 @@
                 <span class="rating-value">{{ company.rating }}</span>
                 <span class="rating-stars">
                   @for (star of getRatingStars(company.rating); track $index) {
-                    <span class="star">★</span>
+                    <span class="star" [class.star-empty]="!star.filled">★</span>
                   }
                 </span>
                 <span class="review-count">({{ company.reviewCount }})</span>
@@ -113,7 +113,7 @@
                 <span class="rating-value">{{ service.rating }}</span>
                 <span class="rating-stars">
                   @for (star of getRatingStars(service.rating); track $index) {
-                    <span class="star">★</span>
+                    <span class="star" [class.star-empty]="!star.filled">★</span>
                   }
                 </span>
                 <span class="review-count">({{ service.reviewCount }})</span>
@@ -163,7 +163,7 @@
                 <span class="rating-value">{{ service.rating }}</span>
                 <span class="rating-stars">
                   @for (star of getRatingStars(service.rating); track $index) {
-                    <span class="star">★</span>
+                    <span class="star" [class.star-empty]="!star.filled">★</span>
                   }
                 </span>
                 <span class="review-count">({{ service.reviewCount }})</span>
@@ -221,7 +221,7 @@
           <p class="review-content">{{ review.content }}</p>
           <div class="review-rating">
             @for (star of getRatingStars(review.rating); track $index) {
-              <span class="star">★</span>
+              <span class="star" [class.star-empty]="!star.filled">★</span>
             }
           </div>
         </div>

@@ -204,8 +204,9 @@ export class MainPageComponent implements OnInit, AfterViewInit {
     this.router.navigate(['/sel-industry', serviceId]);
   }
 
-  getRatingStars(rating: number): number[] {
-    return Array(Math.floor(rating)).fill(0);
+  getRatingStars(rating: number): { filled: boolean }[] {
+    const full = Math.round(rating);
+    return Array(5).fill(0).map((_, i) => ({ filled: i < full }));
   }
 
   learnMore(): void {
