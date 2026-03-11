@@ -177,7 +177,7 @@ public class UsersController {
     @Path("getClientsByCompany")
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response getClientsByCompany(@HeaderParam("Authorization") String authHeader, @QueryParam("companyId") Integer companyId, @QueryParam("page") Integer page, @QueryParam("pageSize") Integer pageSize) {
+    public Response getClientsByCompany(@HeaderParam("Authorization") String authHeader, @QueryParam("companyId") Integer companyId, @QueryParam("page") Integer page, @QueryParam("pageSize") Integer pageSize, @QueryParam("search") String search) {
 
         // 1. Auth header check
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -213,8 +213,14 @@ public class UsersController {
             return buildErrorResponse(400, "invalidParam");
         }
 
+        if (search != null) {
+            if (search.length() > 255) {
+                return buildErrorResponse(400, "invalidParam");
+            }
+        }
+
         // 5. Service hívás
-        JSONObject toReturn = layer.getClientsByCompany(companyId, page, pageSize);
+        JSONObject toReturn = layer.getClientsByCompany(companyId, page, pageSize, search);
 
         return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
                 .entity(toReturn.toString())

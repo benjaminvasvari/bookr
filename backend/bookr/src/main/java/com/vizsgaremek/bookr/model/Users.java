@@ -6,6 +6,7 @@ package com.vizsgaremek.bookr.model;
 
 import com.vizsgaremek.bookr.DTO.OwnerPanelDTO.ClientsByCompaniesDTO;
 import com.vizsgaremek.bookr.DTO.OwnerPanelDTO.ClientsByCompanyResultWrapper;
+import com.vizsgaremek.bookr.util.StoredProcedureUtil;
 import java.io.Serializable;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -1011,18 +1012,20 @@ public class Users implements Serializable {
         }
     }
 
-    public static ClientsByCompanyResultWrapper getClientsByCompany(Integer companyId, Integer page, Integer pageSize) {
+    public static ClientsByCompanyResultWrapper getClientsByCompany(Integer companyId, Integer page, Integer pageSize, String search) {
         EntityManager em = emf.createEntityManager();
         try {
             StoredProcedureQuery spq = em.createStoredProcedureQuery("getClientsByCompany");
             spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("pageIN", Integer.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("pageSizeIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("searchIN", String.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("totalClientsOUT", Integer.class, ParameterMode.OUT);
 
             spq.setParameter("companyIdIN", companyId);
             spq.setParameter("pageIN", page);
             spq.setParameter("pageSizeIN", pageSize);
+            StoredProcedureUtil.setNullableParameter(spq, "searchIN", search);
 
             spq.execute();
 

@@ -296,7 +296,27 @@ public class UsersService {
         }
     }
 
-    public JSONObject getClientsByCompany(Integer companyId, Integer page, Integer pageSize) {
+    public Boolean validateNewUserCreate(String userEmail) {
+
+        try {
+
+            Boolean result = true;
+
+            Users modelResult = Users.checkUserByEmail(userEmail);
+
+            if (modelResult != null) {
+                result = false;
+            }
+
+            return result;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public JSONObject getClientsByCompany(Integer companyId, Integer page, Integer pageSize, String search) {
         JSONObject toReturn = new JSONObject();
         String status = "success";
         Integer statusCode = 200;
@@ -304,7 +324,7 @@ public class UsersService {
         try {
 
             // Adatbázis lekérdezés
-            ClientsByCompanyResultWrapper modelResult = layer.getClientsByCompany(companyId, page, pageSize);
+            ClientsByCompanyResultWrapper modelResult = layer.getClientsByCompany(companyId, page, pageSize, search);
 
             // NULL ELLENŐRZÉS
             if (modelResult == null) {

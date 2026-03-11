@@ -4,11 +4,13 @@
  */
 package com.vizsgaremek.bookr.service;
 
+import com.vizsgaremek.bookr.DTO.OwnerPanelDTO;
 import com.vizsgaremek.bookr.DTO.OwnerPanelDTO.createTemporaryClosedPeriodDTO;
 import com.vizsgaremek.bookr.model.Companies;
 import com.vizsgaremek.bookr.model.TemporaryClosedPeriods;
 import com.vizsgaremek.bookr.util.FileStorageUtil;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.List;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -184,6 +186,37 @@ public class TemporaryClosedPeriodsService {
             toReturn.put("statusCode", statusCode);
         }
 
+        return toReturn;
+    }
+
+    public JSONObject getWeeklyTemporaryClosedPeriods(Integer companyId, String weekStart) {
+        JSONObject toReturn = new JSONObject();
+        try {
+            ArrayList<OwnerPanelDTO.weeklyTCPResponseDTO> results = layer.getWeeklyTemporaryClosedPeriods(companyId, weekStart);
+            if (results == null) {
+                toReturn.put("status", "internalServerError");
+                toReturn.put("statusCode", 500);
+                return toReturn;
+            }
+            JSONArray data = new JSONArray();
+            for (OwnerPanelDTO.weeklyTCPResponseDTO item : results) {
+                JSONObject entry = new JSONObject();
+                entry.put("id", item.getId());
+                entry.put("startDate", item.getStartDate());
+                entry.put("endDate", item.getEndDate());
+                entry.put("openTime", item.getOpenTime() != null ? item.getOpenTime() : JSONObject.NULL);
+                entry.put("closeTime", item.getCloseTime() != null ? item.getCloseTime() : JSONObject.NULL);
+                entry.put("reason", item.getReason() != null ? item.getReason() : JSONObject.NULL);
+                data.put(entry);
+            }
+            toReturn.put("data", data);
+            toReturn.put("status", "success");
+            toReturn.put("statusCode", 200);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            toReturn.put("status", "internalServerError");
+            toReturn.put("statusCode", 500);
+        }
         return toReturn;
     }
 }

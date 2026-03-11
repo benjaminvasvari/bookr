@@ -10,6 +10,7 @@ import com.vizsgaremek.bookr.model.Tokens;
 import com.vizsgaremek.bookr.model.UserXRole;
 import com.vizsgaremek.bookr.model.Users;
 import com.vizsgaremek.bookr.security.JWT;
+import com.vizsgaremek.bookr.util.ErrorResponseBuilder;
 import com.vizsgaremek.bookr.util.FileStorageUtil;
 import java.time.LocalDate;
 import java.util.Date;
@@ -52,6 +53,17 @@ public class AuthService {
             statusCode = 417;
 
         } else {
+
+            Boolean isUserExist = UsersService.validateNewUserCreate(clientRegistered.getEmail());
+
+            if (isUserExist == null) {
+                return ErrorResponseBuilder.buildErrorResponseJSON(500, "InternalServerError");
+            }
+
+            if (!isUserExist) {
+                return ErrorResponseBuilder.buildErrorResponseJSON(409, "Conflict");
+            }
+
             // ========== JELSZÓ HASHELÉS ==========
             String plainPassword = clientRegistered.getPassword();
             String hashedPassword = passwordHasher.hashPassword(plainPassword);

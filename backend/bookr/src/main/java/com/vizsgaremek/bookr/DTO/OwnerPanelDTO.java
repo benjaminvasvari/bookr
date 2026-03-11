@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.vizsgaremek.bookr.DTO;
 
 import java.time.LocalDate;
@@ -9,10 +5,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-/**
- *
- * @author vben
- */
 public class OwnerPanelDTO {
 
     public static class WeeklyRevenueDTO {
@@ -57,7 +49,6 @@ public class OwnerPanelDTO {
         public Integer getNewClientsThisWeek() {
             return newClientsThisWeek;
         }
-
     }
 
     public static class UpcomingAppointmentsDTO {
@@ -126,7 +117,6 @@ public class OwnerPanelDTO {
         public Integer getYesterdayCount() {
             return yesterdayCount;
         }
-
     }
 
     public static class AverageRatingDTO {
@@ -146,7 +136,6 @@ public class OwnerPanelDTO {
         public Integer getTotalReviews() {
             return totalReviews;
         }
-
     }
 
     public static class AllFutureAppointmentsByCompanyDTO {
@@ -238,7 +227,6 @@ public class OwnerPanelDTO {
         public Date getCreateAt() {
             return createAt;
         }
-
     }
 
     public static class ClientsByCompaniesDTO {
@@ -306,7 +294,6 @@ public class OwnerPanelDTO {
         public String getInternalNote() {
             return internalNote;
         }
-
     }
 
     public static class ClientsByCompanyResultWrapper {
@@ -351,7 +338,6 @@ public class OwnerPanelDTO {
         public String getCurrency() {
             return currency;
         }
-
     }
 
     public static class SalesOverviewAvgBasketDTO {
@@ -377,7 +363,6 @@ public class OwnerPanelDTO {
         public String getCurrency() {
             return currency;
         }
-
     }
 
     public static class SalesOverviewBookingsCount {
@@ -397,7 +382,6 @@ public class OwnerPanelDTO {
         public Integer getPreviousCount() {
             return previousCount;
         }
-
     }
 
     public static class SalesOverviewReturningClientsDTO {
@@ -429,7 +413,6 @@ public class OwnerPanelDTO {
         public int getPreviousReturningClients() {
             return previousReturningClients;
         }
-
     }
 
     public static class SalesRevenueChartDTO {
@@ -461,7 +444,6 @@ public class OwnerPanelDTO {
         public String getCurrency() {
             return currency;
         }
-
     }
 
     public static class SalesTopServicesDTO {
@@ -499,7 +481,6 @@ public class OwnerPanelDTO {
         public String getCurrency() {
             return currency;
         }
-
     }
 
     public static class OwnerReviewsDTO {
@@ -555,7 +536,6 @@ public class OwnerPanelDTO {
         public String getAppointmentDate() {
             return appointmentDate;
         }
-
     }
 
     public static class ReviewsForOwnerResultWrapper {
@@ -575,7 +555,6 @@ public class OwnerPanelDTO {
         public Integer getTotalCount() {
             return totalCount;
         }
-
     }
 
     public static class OwnerReviewsRequest {
@@ -613,7 +592,6 @@ public class OwnerPanelDTO {
         public Integer getPageSize() {
             return pageSize;
         }
-
     }
 
     public static class updateOpeningHoursDTO {
@@ -674,7 +652,49 @@ public class OwnerPanelDTO {
         public String getReason() {
             return reason;
         }
+    }
 
+    public static class weeklyTCPResponseDTO {
+
+        private Integer id;
+        private String startDate;
+        private String endDate;
+        private String openTime;
+        private String closeTime;
+        private String reason;
+
+        public weeklyTCPResponseDTO(Integer id, String startDate, String endDate, String openTime, String closeTime, String reason) {
+            this.id = id;
+            this.startDate = startDate;
+            this.endDate = endDate;
+            this.openTime = openTime;
+            this.closeTime = closeTime;
+            this.reason = reason;
+        }
+
+        public Integer getId() {
+            return id;
+        }
+
+        public String getStartDate() {
+            return startDate;
+        }
+
+        public String getEndDate() {
+            return endDate;
+        }
+
+        public String getOpenTime() {
+            return openTime;
+        }
+
+        public String getCloseTime() {
+            return closeTime;
+        }
+
+        public String getReason() {
+            return reason;
+        }
     }
 
     public static class calendarResponseDTO {
@@ -772,7 +792,5 @@ public class OwnerPanelDTO {
         public String getClientEmail() {
             return clientEmail;
         }
-
     }
-
 }

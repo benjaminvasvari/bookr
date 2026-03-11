@@ -4,6 +4,7 @@
  */
 package com.vizsgaremek.bookr.model;
 
+import com.vizsgaremek.bookr.DTO.OwnerPanelDTO;
 import com.vizsgaremek.bookr.DTO.OwnerPanelDTO.createTemporaryClosedPeriodDTO;
 import static com.vizsgaremek.bookr.model.Users.emf;
 import static com.vizsgaremek.bookr.model.Users.formatter;
@@ -452,6 +453,44 @@ public class TemporaryClosedPeriods implements Serializable {
         } catch (Exception ex) {
             ex.printStackTrace();
             return false;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static ArrayList<OwnerPanelDTO.weeklyTCPResponseDTO> getWeeklyTemporaryClosedPeriods(Integer companyId, String weekStart) {
+        EntityManager em = emf.createEntityManager();
+        
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getWeeklyTemporaryClosedPeriods");
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("weekStartIN", Date.class, ParameterMode.IN);
+            
+            spq.setParameter("companyIdIN", companyId);
+            spq.setParameter("weekStartIN", java.sql.Date.valueOf(weekStart));
+            
+            spq.execute();
+            
+            List<Object[]> resultList = spq.getResultList();
+            ArrayList<OwnerPanelDTO.weeklyTCPResponseDTO> toReturn = new ArrayList<>();
+            
+            for (Object[] record : resultList) {
+                toReturn.add(new OwnerPanelDTO.weeklyTCPResponseDTO(
+                        Integer.valueOf(record[0].toString()),
+                        record[1].toString(),
+                        record[2].toString(),
+                        record[3] != null ? record[3].toString() : null,
+                        record[4] != null ? record[4].toString() : null,
+                        record[5] != null ? record[5].toString() : null
+                ));
+            }
+            return toReturn;
+            
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
         } finally {
             if (em != null && em.isOpen()) {
                 em.close();

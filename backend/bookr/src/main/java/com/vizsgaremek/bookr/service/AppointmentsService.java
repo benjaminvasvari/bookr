@@ -199,6 +199,20 @@ public class AppointmentsService {
             return toReturn;
         }
 
+        // Múltbeli időpont ellenőrzés
+        if (startTime.before(new Timestamp(System.currentTimeMillis()))) {
+            toReturn.put("status", "StartTimeInThePast");
+            toReturn.put("statusCode", 400);
+            return toReturn;
+        }
+
+        // End nem lehet korábbi vagy egyenlő mint start
+        if (!endTime.after(startTime)) {
+            toReturn.put("status", "EndTimeNotAfterStartTime");
+            toReturn.put("statusCode", 400);
+            return toReturn;
+        }
+        
         //code
         Integer appointmentId = layer.createAppointment(companyId, serviceId, staffId, clientId, startTime, endTime, notes, price);
 

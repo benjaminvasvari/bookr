@@ -294,12 +294,57 @@ public class TemporaryClosedPeriodsController {
         } else if (isCompanyExist == null) {
             return buildErrorResponse(500, "InternalServerError");
         }
-        
+
         if (periodId == null || periodId <= 0) {
             return buildErrorResponse(400, "InvalidParam");
         }
 
         JSONObject toReturn = layer.deleteTemporaryClosedPeriod(periodId);
+
+        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                .entity(toReturn.toString())
+                .type(MediaType.APPLICATION_JSON)
+                .build();
+    }
+
+    @GET
+    @Path("weekly")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response getWeeklyTemporaryClosedPeriods(@HeaderParam("Authorization") String authHeader, @QueryParam("start") String weekStart) {
+
+        // 1. Auth header check
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return buildErrorResponse(401, "missingToken");
+        }
+
+        String jwtToken = authHeader.substring(7);
+        Boolean validJwt = JWT.validateAccessToken(jwtToken);
+
+        if (validJwt == null) {
+            return buildErrorResponse(401, "tokenExpired");
+        } else if (validJwt == false) {
+            return buildErrorResponse(401, "invalidToken");
+        }
+
+        // 3. Role check
+        String userRoles = JWT.getRolesFromAccessToken(jwtToken);
+        boolean hasPermission = RoleChecker.hasAllRoles(userRoles, "client", "owner");
+        if (!hasPermission) {
+            return buildErrorResponse(403, "Forbidden");
+        }
+
+        Integer userCompanyId = JWT.getCompanyIdFromAccessToken(jwtToken);
+
+        Boolean isCompanyExist = CompaniesService.validateCompanyExist(userCompanyId);
+
+        if (!isCompanyExist) {
+            return buildErrorResponse(400, "CompanyNotExist");
+        } else if (isCompanyExist == null) {
+            return buildErrorResponse(500, "InternalServerError");
+        }
+
+        JSONObject toReturn = layer.getWeeklyTemporaryClosedPeriods(userCompanyId, weekStart);
 
         return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
                 .entity(toReturn.toString())
