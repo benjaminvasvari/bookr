@@ -85,6 +85,12 @@ interface OpeningHour {
   closeTime: string;
 }
 
+interface OpeningHourFallback {
+  isOpen: boolean;
+  openTime: string;
+  closeTime: string;
+}
+
 type OpeningHourApiDay = keyof OpeningHours;
 type OpeningHoursUpdatePayload = { openingHours: Record<OpeningHourApiDay, string> };
 
@@ -240,6 +246,15 @@ export class SettingsComponent implements AfterViewInit, OnInit {
     { day: 'friday', label: 'Péntek' },
     { day: 'saturday', label: 'Szombat' },
     { day: 'sunday', label: 'Vasárnap' },
+  ];
+  private readonly openingHourFallbacks: OpeningHourFallback[] = [
+    { isOpen: true, openTime: '09:00', closeTime: '17:00' },
+    { isOpen: true, openTime: '09:00', closeTime: '17:00' },
+    { isOpen: true, openTime: '09:00', closeTime: '17:00' },
+    { isOpen: true, openTime: '09:00', closeTime: '17:00' },
+    { isOpen: true, openTime: '09:00', closeTime: '17:00' },
+    { isOpen: false, openTime: '10:00', closeTime: '14:00' },
+    { isOpen: false, openTime: '10:00', closeTime: '14:00' },
   ];
 
   editMode: Record<SectionType, boolean> = {
@@ -410,7 +425,9 @@ export class SettingsComponent implements AfterViewInit, OnInit {
   constructor(
     private companiesService: CompaniesService,
     private authService: AuthService
-  ) {}
+  ) {
+    this.temporaryClosuresSavedSnapshot = this.getTemporaryClosuresSnapshot(this.temporaryClosures);
+  }
 
   ngOnInit(): void {
     this.loadBusinessCategories();
@@ -463,7 +480,7 @@ export class SettingsComponent implements AfterViewInit, OnInit {
     }
 
     if (section === 'hours') {
-      this.openingHoursDraft = this.clone(this.openingHoursData);
+      this.openingHoursDraft = this.normalizeOpeningHoursRows(this.openingHoursData);
     }
 
     this.editMode[section] = true;
@@ -486,17 +503,18 @@ export class SettingsComponent implements AfterViewInit, OnInit {
     return true;
   }
 
-  @HostListener('window:beforeunload', ['$event'])
-  onBeforeUnload(event: BeforeUnloadEvent): void {
-    const hasSectionEdit = Boolean(this.getActiveEditSection());
-
-    if (!hasSectionEdit && !this.hasTemporaryClosuresUnsavedChanges) {
-      return;
-    }
-
-    event.preventDefault();
-    event.returnValue = true;
-  }
+  // Disabled beforeunload warning per user request
+  // @HostListener('window:beforeunload', ['$event'])
+  // onBeforeUnload(event: BeforeUnloadEvent): void {
+  //   const hasSectionEdit = Boolean(this.getActiveEditSection());
+  //
+  //   if (!hasSectionEdit && !this.hasTemporaryClosuresUnsavedChanges) {
+  //     return;
+  //   }
+  //
+  //   event.preventDefault();
+  //   event.returnValue = true;
+  // }
 
   cancelEdit(section: SectionType): void {
     if (section === 'company') {
@@ -854,6 +872,15 @@ export class SettingsComponent implements AfterViewInit, OnInit {
     hour[field] = formattedTime;
   }
 
+  onOpeningHourTimeInputChange(
+    hour: OpeningHour,
+    field: 'openTime' | 'closeTime',
+    value: string
+  ): void {
+    const normalizedValue = this.normalizeTime(value || hour[field]);
+    hour[field] = normalizedValue;
+  }
+
   onCompanyZipCodeChange(value: string): void {
     const normalizedZip = this.normalizePostalCode(value);
     this.companyDraft.zipCode = normalizedZip;
@@ -885,6 +912,7 @@ export class SettingsComponent implements AfterViewInit, OnInit {
     this.temporaryClosuresSaveState = 'idle';
     this.temporaryClosuresSaveMessage = '';
     this.showTemporaryClosuresUnsavedWarning = false;
+    this.editMode.closures = false;
     if (this.conflictedSection === 'closures') {
       this.conflictedSection = null;
     }
@@ -895,6 +923,7 @@ export class SettingsComponent implements AfterViewInit, OnInit {
     if (!this.hasTemporaryClosuresUnsavedChanges) {
       this.temporaryClosuresSaveState = 'success';
       this.temporaryClosuresSaveMessage = 'Nincs új módosítás a mentéshez.';
+      this.editMode.closures = false;
       if (this.conflictedSection === 'closures') {
         this.conflictedSection = null;
       }
@@ -935,6 +964,7 @@ export class SettingsComponent implements AfterViewInit, OnInit {
     if (periodsToUpdate.length === 0 && periodsToCreate.length === 0 && periodsToDelete.length === 0) {
       this.temporaryClosuresSaveState = 'success';
       this.temporaryClosuresSaveMessage = 'Nincs új módosítás a mentéshez.';
+      this.editMode.closures = false;
       this.scheduleTemporaryListHeightSync();
       return;
     }
@@ -991,6 +1021,7 @@ export class SettingsComponent implements AfterViewInit, OnInit {
         this.temporaryClosuresSaveState = 'success';
         this.temporaryClosuresSaveMessage = 'Ideiglenes zárvatartások mentve.';
         this.showTemporaryClosuresUnsavedWarning = false;
+        this.editMode.closures = false;
         if (this.conflictedSection === 'closures') {
           this.conflictedSection = null;
         }
@@ -1490,12 +1521,15 @@ export class SettingsComponent implements AfterViewInit, OnInit {
   }
 
   private saveOpeningHours(): void {
-    const nextOpeningHours = this.clone(this.openingHoursDraft);
+    const nextOpeningHours = this.normalizeOpeningHoursRows(this.openingHoursDraft);
     const payload = this.toOpeningHoursUpdatePayload(nextOpeningHours);
 
     this.companiesService.updateOwnerPanelOpeningHours(payload).subscribe({
       next: () => {
         this.openingHoursData = nextOpeningHours;
+        this.openingHoursDraft = this.clone(nextOpeningHours);
+        this.temporaryClosuresSavedSnapshot = this.getTemporaryClosuresSnapshot(this.temporaryClosures);
+        this.showTemporaryClosuresUnsavedWarning = false;
         this.editMode.hours = false;
         this.conflictedSection = null;
       },
@@ -1603,11 +1637,32 @@ export class SettingsComponent implements AfterViewInit, OnInit {
       };
     });
 
-    this.openingHoursData = nextOpeningHours;
+    this.openingHoursData = this.normalizeOpeningHoursRows(nextOpeningHours);
 
     if (!this.editMode.hours) {
-      this.openingHoursDraft = this.clone(nextOpeningHours);
+      this.openingHoursDraft = this.clone(this.openingHoursData);
     }
+  }
+
+  getOpeningDayLabel(index: number): string {
+    return this.openingHoursOrder[index]?.label || 'Nap';
+  }
+
+  private normalizeOpeningHoursRows(rows: Partial<OpeningHour>[] | null | undefined): OpeningHour[] {
+    return this.openingHoursOrder.map(({ label }, index) => {
+      const source = rows?.[index] ?? {};
+      const fallback = this.openingHourFallbacks[index];
+
+      const openTime = this.normalizeTime((source.openTime ?? fallback.openTime) as string);
+      const closeTime = this.normalizeTime((source.closeTime ?? fallback.closeTime) as string);
+
+      return {
+        day: label,
+        isOpen: typeof source.isOpen === 'boolean' ? source.isOpen : fallback.isOpen,
+        openTime,
+        closeTime,
+      };
+    });
   }
 
   private mapOpeningHoursValue(
@@ -1624,7 +1679,9 @@ export class SettingsComponent implements AfterViewInit, OnInit {
       };
     }
 
-    if (normalized.toLowerCase() === 'zárva') {
+    const lowered = normalized.toLowerCase();
+
+    if (lowered === 'zárva' || lowered === 'closed') {
       return {
         isOpen: false,
         openTime: fallback.openTime,

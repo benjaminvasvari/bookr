@@ -1,11 +1,8 @@
-<aside class="owner-sidebar" [class.is-pinned]="isPinned" [class.mobile-view]="isMobileView()" [class.mobile-open]="mobileOpen()">
+<aside class="owner-sidebar" [class.is-expanded]="isExpanded" [class.mobile-view]="isMobileView()" [class.mobile-open]="mobileOpen()">
 	<div class="sidebar-header">
 		<img class="brand-icon" src="../../../../../assets/images/logo.png" alt="Bookr logo" />
 		<button class="mobile-close-btn" type="button" (click)="closeSidebar()" aria-label="Oldalsáv bezárása">
 			<i class="fas fa-times" aria-hidden="true"></i>
-		</button>
-		<button class="pin-btn" type="button" (click)="togglePin()" [attr.aria-pressed]="isPinned" aria-label="Rögzítés">
-			<i class="fas fa-thumbtack pin-icon" aria-hidden="true"></i>
 		</button>
 	</div>
 
@@ -47,5 +44,14 @@
 			<i class="fas fa-cog"></i>
 			<span class="nav-label">Beállítások</span>
 		</a>
+		<div class="nav-divider"></div>
+		<button
+			class="collapse-toggle-btn"
+			type="button"
+			(click)="toggleSidebar()"
+			[attr.aria-label]="isExpanded ? 'Oldalsáv összecsukása' : 'Oldalsáv kinyitása'"
+		>
+			<i class="fas" [class.fa-chevron-left]="isExpanded" [class.fa-chevron-right]="!isExpanded" aria-hidden="true"></i>
+		</button>
 	</nav>
 </aside>

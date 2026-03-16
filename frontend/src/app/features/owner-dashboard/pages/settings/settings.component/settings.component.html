@@ -207,32 +207,26 @@
 			}
 
 			<div class="hours-table">
-				<div class="hours-row" *ngFor="let hour of (editMode.hours ? openingHoursDraft : openingHoursData)">
-					<span>{{ hour.day }}</span>
+				<div class="hours-row" *ngFor="let hour of (editMode.hours ? openingHoursDraft : openingHoursData); let i = index">
+					<span>{{ hour.day || getOpeningDayLabel(i) }}</span>
 					@if (!editMode.hours) {
 					<span>{{ hour.isOpen ? hour.openTime + ' - ' + hour.closeTime : '-' }}</span>
 					} @else {
 					<div class="hours-inline-inputs">
 						<input
 							class="edit-input card-input"
-							matInput
-							[matTimepicker]="openingStartPicker"
-							[ngModel]="toTimeModel('opening-open-' + hour.day, hour.openTime)"
-							(ngModelChange)="onOpeningHourTimePickerChange(hour, 'openTime', $event)"
+							type="time"
+							[ngModel]="hour.openTime"
+							(ngModelChange)="onOpeningHourTimeInputChange(hour, 'openTime', $event)"
 							[disabled]="!hour.isOpen"
-							readonly
 						/>
-						<mat-timepicker #openingStartPicker></mat-timepicker>
 						<input
 							class="edit-input card-input"
-							matInput
-							[matTimepicker]="openingEndPicker"
-							[ngModel]="toTimeModel('opening-close-' + hour.day, hour.closeTime)"
-							(ngModelChange)="onOpeningHourTimePickerChange(hour, 'closeTime', $event)"
+							type="time"
+							[ngModel]="hour.closeTime"
+							(ngModelChange)="onOpeningHourTimeInputChange(hour, 'closeTime', $event)"
 							[disabled]="!hour.isOpen"
-							readonly
 						/>
-						<mat-timepicker #openingEndPicker></mat-timepicker>
 					</div>
 					}
 					@if (!editMode.hours) {
@@ -252,15 +246,16 @@
 			<header class="section-header" #closuresHeader>
 				<div>
 					<h2>Ideiglenes zárvatartások</h2>
-					<p class="section-subtitle">Szabadság, ünnep vagy felújítás miatti zárvatartás</p>
+					<p class="section-subtitle">Szabadság, ünnep vagy <br>felújítás miatti zárvatartás</p>
 				</div>
 				<div class="inline-actions">
+					@if (!editMode.closures) {
+					<button class="link-btn" type="button" (click)="startEdit('closures')">Szerkesztés</button>
+					} @else {
 					<button class="btn ghost" type="button" (click)="addTemporaryClosure()">+ Új időszak</button>
-					@if (hasTemporaryClosuresUnsavedChanges || temporaryClosuresSaveState === 'saving') {
-					<button class="btn ghost" type="button" [disabled]="temporaryClosuresSaveState === 'saving' || !hasTemporaryClosuresUnsavedChanges" (click)="cancelTemporaryClosuresChanges()">Mégse</button>
-					<button class="btn primary" type="button" [disabled]="temporaryClosuresSaveState === 'saving' || !hasTemporaryClosuresUnsavedChanges" (click)="saveTemporaryClosures()">{{ temporaryClosuresSaveState === 'saving' ? 'Mentés...' : 'Mentés' }}</button>
-					}
-				</div>
+					<button class="btn ghost" type="button" (click)="cancelTemporaryClosuresChanges()">Mégse</button>
+					<button class="btn primary" type="button" (click)="saveTemporaryClosures()">{{ temporaryClosuresSaveState === 'saving' ? 'Mentés...' : 'Mentés' }}</button>
+					}</div>
 			</header>
 			@if ((hasTemporaryClosuresUnsavedChanges || showTemporaryClosuresUnsavedWarning) || (temporaryClosuresSaveState !== 'idle' && temporaryClosuresSaveMessage)) {
 			<div class="closures-feedback-container" #closuresFeedback>

@@ -158,6 +158,11 @@
 
 .star {
   font-size: 14px;
+  color: #f59e0b;
+}
+
+.star.star-empty {
+  color: #d1d5db;
 }
 
 .review-count {
@@ -447,6 +452,11 @@
 
 .review-rating .star {
   font-size: 16px;
+  color: #f59e0b;
+}
+
+.review-rating .star.star-empty {
+  color: #d1d5db;
 }
 
 /* Loading Spinner */

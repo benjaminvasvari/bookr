@@ -12,6 +12,8 @@ import { StaffDashboardAppointment, StaffDashboardData } from '../../core/models
   styleUrl: './staff-dashboard.component.css',
 })
 export class StaffDashboardComponent implements OnInit {
+  private readonly staffCalendarDefaultColor = '#4338ca';
+
   dashboard: StaffDashboardData | null = null;
   isLoading = true;
   errorMessage = '';
@@ -80,6 +82,28 @@ export class StaffDashboardComponent implements OnInit {
     return allAppointments
       .slice()
       .sort((a, b) => this.toTimestamp(a) - this.toTimestamp(b))[0] ?? null;
+  }
+
+  get nextAppointmentColor(): string {
+    const appointment = this.nextAppointment;
+
+    if (!appointment) {
+      return this.staffCalendarDefaultColor;
+    }
+
+    return this.getCalendarColorForService(appointment.serviceName);
+  }
+
+  get nextAppointmentBackground(): string {
+    return this.hexToRgba(this.nextAppointmentColor, 0.12);
+  }
+
+  getAppointmentColor(appointment: StaffDashboardAppointment): string {
+    return this.getCalendarColorForService(appointment.serviceName);
+  }
+
+  getAppointmentBackground(appointment: StaffDashboardAppointment): string {
+    return this.hexToRgba(this.getAppointmentColor(appointment), 0.12);
   }
 
   get sortedTodayAppointments(): StaffDashboardAppointment[] {
@@ -213,6 +237,45 @@ export class StaffDashboardComponent implements OnInit {
         },
       ],
     };
+  }
+
+  private getCalendarColorForService(serviceName: string): string {
+    const normalized = serviceName.trim().toLowerCase();
+
+    const colorMap: Record<string, string> = {
+      'hajvágás': '#3b82f6',
+      'prémium hajvágás': '#3b82f6',
+      'női hajvágás': '#3b82f6',
+      'szakáll formázás': '#8b5cf6',
+      'hot towel + szakáll': '#8b5cf6',
+      'hajfestés': '#06b6d4',
+      'frizura + szakáll igazítás': '#ef4444',
+      'szépülés nőknek': '#06b6d4',
+      'relax': '#14b8a6',
+      'manikűr': '#ec4899',
+      'szigor': '#8b5cf6',
+    };
+
+    return colorMap[normalized] ?? this.staffCalendarDefaultColor;
+  }
+
+  private hexToRgba(hex: string, alpha: number): string {
+    const cleanHex = hex.replace('#', '');
+    const isShort = cleanHex.length === 3;
+    const fullHex = isShort
+      ? `${cleanHex[0]}${cleanHex[0]}${cleanHex[1]}${cleanHex[1]}${cleanHex[2]}${cleanHex[2]}`
+      : cleanHex;
+
+    const num = Number.parseInt(fullHex, 16);
+    if (Number.isNaN(num)) {
+      return `rgba(67, 56, 202, ${alpha})`;
+    }
+
+    const r = (num >> 16) & 255;
+    const g = (num >> 8) & 255;
+    const b = num & 255;
+
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   }
 
   private toTimestamp(appointment: StaffDashboardAppointment): number {

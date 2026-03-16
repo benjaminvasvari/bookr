@@ -1,0 +1,199 @@
+<section class="staff-settings-page container-fluid py-3 py-md-4">
+  <div class="settings-header mb-3 mb-md-4">
+    <h1 class="settings-title">Beállítások</h1>
+    <p class="settings-subtitle">Személyre szabhatod az értesítéseket, munkaidőt és a megjelenést.</p>
+  </div>
+
+  <div class="row g-3 g-xl-4">
+    <div class="col-12">
+      <article class="settings-card h-100">
+        <header class="settings-card-header">
+          <div>
+            <h2 class="card-title">Megjelenés</h2>
+            <p class="card-subtitle">Dark mode és rendszer téma vezérlés</p>
+          </div>
+        </header>
+
+        <div class="settings-card-body">
+          <div class="setting-item appearance-setting" [class.disabled]="followSystemTheme">
+            <div class="setting-info">
+              <h3 class="setting-title">Dark mode</h3>
+              <p class="setting-description">
+                {{ followSystemTheme ? 'A rendszer beállítása vezérli ezt a kapcsolót' : 'Sötét téma az összes oldalon' }}
+              </p>
+            </div>
+            <label class="toggle-switch">
+              <input
+                type="checkbox"
+                [(ngModel)]="isDarkMode"
+                (change)="onDarkModeChange()"
+                [disabled]="followSystemTheme"
+              />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-item appearance-setting">
+            <div class="setting-info">
+              <h3 class="setting-title">Rendszer téma követése</h3>
+              <p class="setting-description">Automatikusan a rendszer világos/sötét témáját használja.</p>
+            </div>
+            <label class="toggle-switch">
+              <input
+                type="checkbox"
+                [(ngModel)]="followSystemTheme"
+                (change)="onFollowSystemThemeChange()"
+              />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <div class="col-12">
+      <article class="settings-card h-100">
+        <header class="settings-card-header">
+          <div>
+            <h2 class="card-title">Értesítési beállítások</h2>
+            <p class="card-subtitle">Email értesítések eseményenként</p>
+          </div>
+          <button class="btn btn-save" type="button" [disabled]="isSavingNotificationPrefs" (click)="saveNotificationPreferences()">
+            {{ isSavingNotificationPrefs ? 'Mentés...' : 'Mentés' }}
+          </button>
+        </header>
+
+        <div class="settings-card-body notification-settings-body">
+          <section class="notification-intro" aria-label="Email értesítési összefoglaló">
+            <div class="notification-intro-copy">
+              <span class="notification-kicker">Email csatorna</span>
+              <p class="notification-intro-text">
+                Az alábbi eseményekről emailben küldünk értesítést. Egy kapcsoló egy esemény teljes email
+                értesítését vezérli.
+              </p>
+            </div>
+
+            <div class="notification-intro-stat">
+              <strong>{{ enabledNotificationCount }}</strong>
+              <span>aktív értesítés</span>
+            </div>
+          </section>
+
+          <div class="notification-grid-head" aria-hidden="true">
+            <span>Esemény</span>
+            <span>Email értesítés</span>
+          </div>
+
+          <div class="notification-list">
+            @for (item of notificationPreferences; track trackByNotification($index, item)) {
+              <div class="notification-row" [class.active]="item.enabled">
+                <div class="setting-info">
+                  <h3 class="setting-title">{{ item.label }}</h3>
+                  <p class="setting-description">{{ item.description }}</p>
+                </div>
+
+                <label class="toggle-switch notification-toggle" [attr.aria-label]="item.label + ' email értesítés'">
+                  <input type="checkbox" [(ngModel)]="item.enabled" />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            }
+          </div>
+
+          @if (notificationSaveMessage) {
+            <p class="save-feedback success">{{ notificationSaveMessage }}</p>
+          }
+        </div>
+      </article>
+    </div>
+
+    <div class="col-12">
+      <article class="settings-card">
+        <header class="settings-card-header">
+          <div>
+            <h2 class="card-title">Munkaidő beállítások</h2>
+            <p class="card-subtitle">Napi elérhetőség és idősávok</p>
+          </div>
+          <div class="header-actions">
+            @if (!isEditingWorkingHours) {
+              <button class="btn btn-edit-link" type="button" (click)="startWorkingHoursEdit()">Szerkesztés</button>
+            } @else {
+              <button class="btn btn-outline" type="button" [disabled]="isSavingWorkingHours" (click)="cancelWorkingHoursEdit()">Mégse</button>
+              <button class="btn btn-save" type="button" [disabled]="isSavingWorkingHours" (click)="saveWorkingHours()">
+                {{ isSavingWorkingHours ? 'Mentés...' : 'Mentés' }}
+              </button>
+            }
+          </div>
+        </header>
+
+        <div class="settings-card-body">
+          <section class="working-hours-intro" aria-label="Munkaidő összefoglaló">
+            <div class="working-hours-intro-copy">
+              <span class="working-hours-kicker">Heti beosztás</span>
+              <p class="working-hours-intro-text">
+                Tartsd naprakészen, mely napokon vagy elérhető, és milyen idősávokban fogadsz foglalásokat.
+              </p>
+            </div>
+
+            <div class="working-hours-intro-stat">
+              <strong>{{ enabledWorkingDaysCount }}</strong>
+              <span>aktív nap</span>
+            </div>
+          </section>
+
+          <div class="working-hours-list">
+            @for (day of (isEditingWorkingHours ? workingHoursDraft : workingHours); track trackByDay($index, day)) {
+              <div class="hours-row" [class.closed]="!day.enabled" [class.editing]="isEditingWorkingHours">
+                <div class="day-info">
+                  <strong>{{ day.label }}</strong>
+                  <span class="day-status" [class.closed]="!day.enabled">
+                    {{ day.enabled ? 'Aktív nap' : 'Zárva' }}
+                  </span>
+                </div>
+
+                <div class="availability-toggle">
+                  <label class="toggle-switch" [attr.aria-label]="day.label + ' elérhetőség'">
+                    <input type="checkbox" [(ngModel)]="day.enabled" (ngModelChange)="onWorkingDayAvailabilityChange(day)" />
+                    <span class="toggle-slider"></span>
+                  </label>
+                  <div class="availability-copy">
+                    <span class="availability-label">Elérhetőség</span>
+                    <span class="availability-value">{{ day.enabled ? 'Foglalható' : 'Nem foglalható' }}</span>
+                  </div>
+                </div>
+
+                <div class="time-inputs" [class.closed]="!day.enabled">
+                  <label class="time-field">
+                    <span>Kezdés</span>
+                    <input
+                      class="form-control"
+                      type="time"
+                      [(ngModel)]="day.start"
+                      (ngModelChange)="onWorkingHoursTimeChange(day, 'start', $event)"
+                      [disabled]="!day.enabled"
+                    />
+                  </label>
+                  <span class="time-separator">-</span>
+                  <label class="time-field">
+                    <span>Vége</span>
+                    <input
+                      class="form-control"
+                      type="time"
+                      [(ngModel)]="day.end"
+                      (ngModelChange)="onWorkingHoursTimeChange(day, 'end', $event)"
+                      [disabled]="!day.enabled"
+                    />
+                  </label>
+                </div>
+              </div>
+            }
+          </div>
+
+          @if (workingHoursSaveMessage) {
+            <p class="save-feedback success">{{ workingHoursSaveMessage }}</p>
+          }
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
