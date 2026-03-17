@@ -56,40 +56,49 @@
         <header class="settings-card-header">
           <div>
             <h2 class="card-title">Értesítési beállítások</h2>
-            <p class="card-subtitle">Email és push csatorna eseményenként</p>
+            <p class="card-subtitle">Email értesítések eseményenként</p>
           </div>
           <button class="btn btn-save" type="button" [disabled]="isSavingNotificationPrefs" (click)="saveNotificationPreferences()">
             {{ isSavingNotificationPrefs ? 'Mentés...' : 'Mentés' }}
           </button>
         </header>
 
-        <div class="settings-card-body">
-          @for (item of notificationPreferences; track trackByNotification($index, item)) {
-            <div class="setting-item">
-              <div class="setting-info">
-                <h3 class="setting-title">{{ item.label }}</h3>
-                <p class="setting-description">{{ item.description }}</p>
-              </div>
-
-              <div class="channel-toggles">
-                <label class="toggle-inline">
-                  <span>Email</span>
-                  <label class="toggle-switch">
-                    <input type="checkbox" [(ngModel)]="item.email" />
-                    <span class="toggle-slider"></span>
-                  </label>
-                </label>
-
-                <label class="toggle-inline">
-                  <span>Push</span>
-                  <label class="toggle-switch">
-                    <input type="checkbox" [(ngModel)]="item.push" />
-                    <span class="toggle-slider"></span>
-                  </label>
-                </label>
-              </div>
+        <div class="settings-card-body notification-settings-body">
+          <section class="notification-intro" aria-label="Email értesítési összefoglaló">
+            <div class="notification-intro-copy">
+              <span class="notification-kicker">Email csatorna</span>
+              <p class="notification-intro-text">
+                Az alábbi eseményekről emailben küldünk értesítést. Egy kapcsoló egy esemény teljes email
+                értesítését vezérli.
+              </p>
             </div>
-          }
+
+            <div class="notification-intro-stat">
+              <strong>{{ enabledNotificationCount }}</strong>
+              <span>aktív értesítés</span>
+            </div>
+          </section>
+
+          <div class="notification-grid-head" aria-hidden="true">
+            <span>Esemény</span>
+            <span>Email értesítés</span>
+          </div>
+
+          <div class="notification-list">
+            @for (item of notificationPreferences; track trackByNotification($index, item)) {
+              <div class="notification-row" [class.active]="item.enabled">
+                <div class="setting-info">
+                  <h3 class="setting-title">{{ item.label }}</h3>
+                  <p class="setting-description">{{ item.description }}</p>
+                </div>
+
+                <label class="toggle-switch notification-toggle" [attr.aria-label]="item.label + ' email értesítés'">
+                  <input type="checkbox" [(ngModel)]="item.enabled" />
+                  <span class="toggle-slider"></span>
+                </label>
+              </div>
+            }
+          </div>
 
           @if (notificationSaveMessage) {
             <p class="save-feedback success">{{ notificationSaveMessage }}</p>
@@ -118,25 +127,63 @@
         </header>
 
         <div class="settings-card-body">
+          <section class="working-hours-intro" aria-label="Munkaidő összefoglaló">
+            <div class="working-hours-intro-copy">
+              <span class="working-hours-kicker">Heti beosztás</span>
+              <p class="working-hours-intro-text">
+                Tartsd naprakészen, mely napokon vagy elérhető, és milyen idősávokban fogadsz foglalásokat.
+              </p>
+            </div>
+
+            <div class="working-hours-intro-stat">
+              <strong>{{ enabledWorkingDaysCount }}</strong>
+              <span>aktív nap</span>
+            </div>
+          </section>
+
           <div class="working-hours-list">
             @for (day of (isEditingWorkingHours ? workingHoursDraft : workingHours); track trackByDay($index, day)) {
-              <div class="hours-row">
+              <div class="hours-row" [class.closed]="!day.enabled" [class.editing]="isEditingWorkingHours">
                 <div class="day-info">
                   <strong>{{ day.label }}</strong>
+                  <span class="day-status" [class.closed]="!day.enabled">
+                    {{ day.enabled ? 'Aktív nap' : 'Zárva' }}
+                  </span>
                 </div>
 
-                <label class="toggle-inline availability-toggle">
-                  <span>Elérhető</span>
-                  <label class="toggle-switch">
-                    <input type="checkbox" [(ngModel)]="day.enabled" [disabled]="!isEditingWorkingHours" />
+                <div class="availability-toggle">
+                  <label class="toggle-switch" [attr.aria-label]="day.label + ' elérhetőség'">
+                    <input type="checkbox" [(ngModel)]="day.enabled" (ngModelChange)="onWorkingDayAvailabilityChange(day)" />
                     <span class="toggle-slider"></span>
                   </label>
-                </label>
+                  <div class="availability-copy">
+                    <span class="availability-label">Elérhetőség</span>
+                    <span class="availability-value">{{ day.enabled ? 'Foglalható' : 'Nem foglalható' }}</span>
+                  </div>
+                </div>
 
-                <div class="time-inputs">
-                  <input class="form-control" type="time" [(ngModel)]="day.start" [disabled]="!isEditingWorkingHours || !day.enabled" />
+                <div class="time-inputs" [class.closed]="!day.enabled">
+                  <label class="time-field">
+                    <span>Kezdés</span>
+                    <input
+                      class="form-control"
+                      type="time"
+                      [(ngModel)]="day.start"
+                      (ngModelChange)="onWorkingHoursTimeChange(day, 'start', $event)"
+                      [disabled]="!day.enabled"
+                    />
+                  </label>
                   <span class="time-separator">-</span>
-                  <input class="form-control" type="time" [(ngModel)]="day.end" [disabled]="!isEditingWorkingHours || !day.enabled" />
+                  <label class="time-field">
+                    <span>Vége</span>
+                    <input
+                      class="form-control"
+                      type="time"
+                      [(ngModel)]="day.end"
+                      (ngModelChange)="onWorkingHoursTimeChange(day, 'end', $event)"
+                      [disabled]="!day.enabled"
+                    />
+                  </label>
                 </div>
               </div>
             }

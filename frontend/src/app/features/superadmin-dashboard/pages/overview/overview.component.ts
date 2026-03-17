@@ -1,6 +1,5 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { SuperadminService } from '../../../../core/services/superadmin.service';
 
 @Component({
   selector: 'app-superadmin-overview',
@@ -10,64 +9,81 @@ import { SuperadminService } from '../../../../core/services/superadmin.service'
   styleUrls: ['./overview.component.css'],
 })
 export class SuperadminOverviewComponent {
-  constructor(private superadminService: SuperadminService) {}
+  companySummary = {
+    active: 24,
+    suspended: 3,
+    expiringSoon: 2,
+    recent: [
+      { name: 'Glamour Studio Kft.', status: 'Aktív', plan: 'Pro' },
+      { name: 'NailBar Pécs', status: 'Új', plan: 'Alap' },
+      { name: 'Relax Zone Győr', status: 'Felfüggesztett', plan: 'Pro' },
+    ],
+  };
 
-  onCreateCompany(): void {
-    this.superadminService.runAction('create-company');
-  }
+  staffSummary = {
+    total: 87,
+    pending: 5,
+    withoutCompany: 3,
+    recent: [
+      { name: 'Kovács Éva', company: 'Glamour Studio', role: 'Fodrász' },
+      { name: 'Tóth Balázs', company: 'NailBar Pécs', role: 'Körmös' },
+      { name: 'Varga Réka', company: '—', role: 'Masszőr' },
+    ],
+  };
 
-  onExportLogs(): void {
-    this.superadminService.runAction('export-logs');
-  }
+  ownerSummary = {
+    total: 24,
+    unverified: 4,
+    multiCompany: 3,
+    recent: [
+      { name: 'Kiss Péter', companies: 2, verified: true },
+      { name: 'Nagy Anna', companies: 1, verified: false },
+      { name: 'Horváth Gábor', companies: 3, verified: true },
+    ],
+  };
 
-  onRoleOverride(): void {
-    this.superadminService.confirmAction(
-      'role-override',
-      'Biztosan felül akarod írni a szerepkört?'
-    );
-  }
+  bookingSummary = {
+    todayTotal: 138,
+    cancelled: 12,
+    disputed: 3,
+    upcoming: [
+      {
+        client: 'Molnár Zsuzsa',
+        service: 'Hajvágás',
+        time: '10:30',
+        company: 'Glamour Studio',
+      },
+      {
+        client: 'Fekete Dávid',
+        service: 'Körmözés',
+        time: '11:00',
+        company: 'NailBar Pécs',
+      },
+      {
+        client: 'Simon Lilla',
+        service: 'Masszázs',
+        time: '13:15',
+        company: 'Relax Zone',
+      },
+    ],
+  };
 
-  onSuspendCompany(): void {
-    this.superadminService.confirmAction(
-      'suspend-company',
-      'Biztosan letiltod a céget?'
-    );
-  }
+  logSummary = {
+    total24h: 312,
+    errors: 7,
+    warnings: 18,
+    recent: [
+      {
+        message: 'Auth hiba – sikertelen bejelentkezés',
+        time: '10 perce',
+        type: 'error',
+      },
+      { message: 'Szerepkör módosítás', time: '1 órája', type: 'warning' },
+      { message: 'Új foglalás létrehozva', time: '2 órája', type: 'info' },
+    ],
+  };
 
-  onChangeOwner(): void {
-    this.superadminService.confirmAction(
-      'change-owner',
-      'Biztosan átadod a cég tulajdonosát?'
-    );
-  }
-
-  onMoveStaff(): void {
-    this.superadminService.confirmAction(
-      'move-staff',
-      'Biztosan áthelyezed a staff tagot?'
-    );
-  }
-
-  onAuditLock(): void {
-    this.superadminService.confirmAction(
-      'audit-lock',
-      'Biztosan zárolod audit módban?'
-    );
-  }
-
-  onOpenEvents(): void {
-    this.superadminService.runAction('open-events');
-  }
-
-  onViewCompanies(): void {
-    this.superadminService.runAction('view-companies');
-  }
-
-  onViewLogs(): void {
-    this.superadminService.runAction('view-logs');
-  }
-
-  onViewCriticalBookings(): void {
-    this.superadminService.runAction('view-critical-bookings');
+  onNavigate(page: string): void {
+    console.log('Navigálás:', page);
   }
 }

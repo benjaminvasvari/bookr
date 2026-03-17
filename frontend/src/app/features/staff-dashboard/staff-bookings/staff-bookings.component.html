@@ -1,153 +1,56 @@
-<header class="staff-topbar">
-  <div class="topbar-copy">
-    <h1>Foglalásaim</h1>
-    <p class="subtitle">Minden időpont egy helyen, napi munkához optimalizálva.</p>
-  </div>
-  <div class="topbar-pill">Összesen: {{ bookings.length }}</div>
-</header>
-
-<section class="panel">
-  <header class="panel-header">
-    <h3>Következő időpontok</h3>
-    <span class="panel-pill">{{ bookings.length }}</span>
-  </header>
-
-  <div class="bookings-content" [class.blurred]="!!selectedBooking">
-    <div class="table-wrap">
-      <table class="bookings-table">
-        <thead>
-          <tr>
-            <th>Dátum</th>
-            <th>Idő</th>
-            <th>Szolgáltatás</th>
-            <th>Ügyfél</th>
-            <th>Státusz</th>
-          </tr>
-        </thead>
-        <tbody>
-          @if (bookings.length === 0) {
-            <tr>
-              <td colspan="5" class="empty">Nincs foglalás.</td>
-            </tr>
-          } @else {
-            @for (booking of sortedBookings; track trackByBooking($index, booking)) {
-              <tr
-                class="booking-row"
-                [class.selected]="selectedBooking?.id === booking.id"
-                (click)="selectBooking(booking)"
-              >
-                <td>{{ formatDate(booking.date) }}</td>
-                <td>{{ booking.time }}</td>
-                <td>{{ booking.serviceName }}</td>
-                <td>{{ booking.clientName }}</td>
-                <td>
-                  <span class="status-pill" [class.confirmed]="booking.status === 'confirmed'" [class.pending]="booking.status === 'pending'" [class.cancelled]="booking.status === 'cancelled'">
-                    {{ getStatusLabel(booking.status) }}
-                  </span>
-                </td>
-              </tr>
-            }
-          }
-        </tbody>
-    </table>
-    </div>
-  </div>
-</section>
-
-@if (selectedBooking; as booking) {
-  <div class="booking-popup-overlay" (click)="clearSelectedBooking()">
-    <div class="booking-popup" (click)="$event.stopPropagation()">
-      <div class="popup-header">
-        <div class="avatar large">{{ getInitials(booking.clientName) }}</div>
-        <div>
-          <h3>{{ booking.clientName }}</h3>
-          <p>{{ booking.serviceName }}</p>
-        </div>
-        <button class="close-details-btn" type="button" (click)="clearSelectedBooking()">Bezárás</button>
+<div class="staff-bookings-page">
+  <header class="page-header">
+    <div class="page-header-top">
+      <div class="page-title">
+        <p class="eyebrow">Mai nézet</p>
+        <h1>Mai foglalások</h1>
+        <p>{{ todayLabel }}</p>
       </div>
 
-      @if (isEditing && editDraft; as draft) {
-        <div class="popup-form-grid">
-          <label class="popup-field">
-            <span>Dátum</span>
-            <input
-              class="popup-date-input"
-              matInput
-              [matDatepicker]="bookingDatePicker"
-              [ngModel]="editDateModel"
-              (ngModelChange)="onEditDatePickerChange($event)"
-              (click)="bookingDatePicker.open()"
-              readonly
-            />
-            <mat-datepicker #bookingDatePicker></mat-datepicker>
-          </label>
-
-          <label class="popup-field">
-            <span>Időpont</span>
-            <input type="time" [(ngModel)]="draft.time" />
-          </label>
-
-          <label class="popup-field">
-            <span>Szolgáltatás</span>
-            <input type="text" [(ngModel)]="draft.serviceName" placeholder="Pl. Hajvágás" />
-          </label>
-
-          <label class="popup-field">
-            <span>Ügyfél neve</span>
-            <input type="text" [(ngModel)]="draft.clientName" placeholder="Pl. Kiss Anna" />
-          </label>
-
-          <label class="popup-field full-width">
-            <span>Státusz</span>
-            <select [(ngModel)]="draft.status">
-              <option value="confirmed">Visszaigazolt</option>
-              <option value="pending">Folyamatban</option>
-              <option value="cancelled">Lemondva</option>
-            </select>
-          </label>
-        </div>
-      } @else {
-        <div class="popup-grid">
-          <div class="popup-tile">
-            <span>Dátum</span>
-            <strong>{{ formatDate(booking.date) }}</strong>
-          </div>
-          <div class="popup-tile">
-            <span>Időpont</span>
-            <strong>{{ booking.time }}</strong>
-          </div>
-          <div class="popup-tile">
-            <span>Szolgáltatás</span>
-            <strong>{{ booking.serviceName }}</strong>
-          </div>
-          <div class="popup-tile">
-            <span>Státusz</span>
-            <strong>
-              <span class="status-pill popup-status-pill" [class.confirmed]="booking.status === 'confirmed'" [class.pending]="booking.status === 'pending'" [class.cancelled]="booking.status === 'cancelled'">
-                {{ getStatusLabel(booking.status) }}
-              </span>
-            </strong>
-          </div>
-        </div>
-      }
-
-      <div class="popup-actions">
-        @if (isEditing) {
-          <button class="popup-action-btn secondary" type="button" (click)="cancelEditingSelectedBooking()">
-            Mégse
-          </button>
-          <button class="popup-action-btn primary" type="button" [disabled]="!canSaveEdit" (click)="saveSelectedBookingChanges()">
-            Mentés
-          </button>
+      <div class="header-note">
+        <span class="header-note-label">Napindító</span>
+        @if (hasTodayBookings) {
+          <p>{{ totalBookings }} foglalás van betervezve a mai napra.</p>
         } @else {
-          <button class="popup-action-btn secondary" type="button" (click)="startEditingSelectedBooking()">
-            Szerkesztés
-          </button>
-          <button class="popup-action-btn danger" type="button" (click)="deleteSelectedBooking()">
-            Törlés
-          </button>
+          <p>Ma jelenleg nincs betervezett időpont.</p>
         }
       </div>
     </div>
-  </div>
-}
+  </header>
+
+  <section class="bookings-panel">
+    <div class="panel-header">
+      <h2>A mai lista</h2>
+      <p>Csak a mai napra eső foglalások jelennek meg.</p>
+    </div>
+
+    @if (!hasTodayBookings) {
+      <div class="empty-state">
+        <h3>Ma nincs foglalás</h3>
+        <p>Ha érkezik új időpont a mai napra, itt fog megjelenni.</p>
+      </div>
+    } @else {
+      <div class="booking-list">
+        @for (booking of todayBookings; track trackByBooking($index, booking)) {
+          <article class="booking-row">
+            <div class="booking-time">{{ booking.time }}</div>
+
+            <div class="booking-content">
+              <h3>{{ booking.serviceName }}</h3>
+              <p>{{ booking.clientName }}</p>
+            </div>
+
+            <span
+              class="status-pill"
+              [class.confirmed]="booking.status === 'confirmed'"
+              [class.pending]="booking.status === 'pending'"
+              [class.cancelled]="booking.status === 'cancelled'"
+            >
+              {{ getStatusLabel(booking.status) }}
+            </span>
+          </article>
+        }
+      </div>
+    }
+  </section>
+</div>

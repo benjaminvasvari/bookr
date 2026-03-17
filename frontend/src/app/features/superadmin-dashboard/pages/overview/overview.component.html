@@ -5,112 +5,163 @@
       <p>Átfogó riasztások, cégek és foglalások egy helyen.</p>
     </div>
     <div class="header-actions">
-      <button class="btn btn-primary" type="button" (click)="onCreateCompany()">Új cég</button>
-      <button class="btn btn-secondary" type="button" (click)="onExportLogs()">Log export</button>
-      <button class="btn btn-ghost" type="button" (click)="onRoleOverride()">Szerep felülírás</button>
+      <button class="btn btn-primary" type="button" (click)="onNavigate('companies')">Cégek</button>
+      <button class="btn btn-secondary" type="button" (click)="onNavigate('bookings')">Foglalások</button>
+      <button class="btn btn-ghost" type="button" (click)="onNavigate('logs')">Logok</button>
     </div>
   </header>
 
-  <div class="kpi-grid">
-    <div class="kpi-card">
-      <p class="kpi-label">Aktív cégek</p>
-      <p class="kpi-value">0</p>
-      <p class="kpi-note">Összes regisztrált cég</p>
+  <div class="kpi-strip">
+    <div class="kpi-badge">
+      <span class="kpi-badge-value">{{ companySummary.active }}</span>
+      <span class="kpi-badge-label">Aktív cég</span>
     </div>
-    <div class="kpi-card">
-      <p class="kpi-label">Folyamatban lévő foglalások</p>
-      <p class="kpi-value">0</p>
-      <p class="kpi-note">Ma és holnap</p>
+    <div class="kpi-badge">
+      <span class="kpi-badge-value">{{ staffSummary.total }}</span>
+      <span class="kpi-badge-label">Staff összesen</span>
     </div>
-    <div class="kpi-card">
-      <p class="kpi-label">Nyitott log riasztások</p>
-      <p class="kpi-value">0</p>
-      <p class="kpi-note">Utóbbi 24 óra</p>
+    <div class="kpi-badge">
+      <span class="kpi-badge-value">{{ ownerSummary.total }}</span>
+      <span class="kpi-badge-label">Tulajdonos</span>
     </div>
-    <div class="kpi-card">
-      <p class="kpi-label">Felfüggesztett cégek</p>
-      <p class="kpi-value">0</p>
-      <p class="kpi-note">Manuálisan tiltva</p>
+    <div class="kpi-badge">
+      <span class="kpi-badge-value">{{ bookingSummary.todayTotal }}</span>
+      <span class="kpi-badge-label">Mai foglalás</span>
+    </div>
+    <div class="kpi-badge">
+      <span class="kpi-badge-value">{{ logSummary.errors }}</span>
+      <span class="kpi-badge-label">Hiba 24 órán belül</span>
     </div>
   </div>
 
-  <section class="quick-actions">
-    <div class="action-card">
-      <h3>Gyors műveletek</h3>
-      <div class="action-row">
-        <button class="btn btn-primary" type="button" (click)="onSuspendCompany()">Cég letiltása</button>
-        <button class="btn btn-secondary" type="button" (click)="onChangeOwner()">Tulajdonos csere</button>
-        <button class="btn btn-ghost" type="button" (click)="onMoveStaff()">Staff mozgatása</button>
+  <div class="preview-grid">
+    <div class="preview-card">
+      <div class="preview-card-header">
+        <h2>Cégek</h2>
+        <div class="header-stats">
+          <span class="stat-chip chip-warning">{{ companySummary.suspended }} felfüggesztett</span>
+          <span class="stat-chip chip-danger">{{ companySummary.expiringSoon }} lejár hamarosan</span>
+        </div>
       </div>
-    </div>
-    <div class="action-card">
-      <h3>Audit vezérlés</h3>
-      <p>Keress role és staff változásokat, és lockold a céget.</p>
-      <div class="action-row">
-        <button class="btn btn-dark" type="button" (click)="onAuditLock()">Audit lock</button>
-        <button class="btn btn-ghost" type="button" (click)="onOpenEvents()">Esemény lista</button>
-      </div>
-    </div>
-  </section>
-
-  <div class="panel-grid">
-    <div class="panel">
-      <div class="panel-header">
-        <h2>Legutóbbi cégek</h2>
-        <button class="link-btn" type="button" (click)="onViewCompanies()">Mind</button>
-      </div>
-      <ul class="list">
-        <li>
-          <span>Példa cég 01</span>
-          <span class="badge">Új</span>
-        </li>
-        <li>
-          <span>Példa cég 02</span>
-          <span class="badge">Aktív</span>
-        </li>
-        <li>
-          <span>Példa cég 03</span>
-          <span class="badge">Aktív</span>
-        </li>
+      <ul class="preview-list">
+        @for (c of companySummary.recent; track c.name; let i = $index) {
+          @if (i < 2) {
+            <li>
+              <span class="item-name">{{ c.name }}</span>
+              <span class="item-meta">{{ c.plan }}</span>
+              <span class="badge" [class.warning]="c.status === 'Felfüggesztett'" [class.green]="c.status === 'Új'">{{ c.status }}</span>
+            </li>
+          }
+        }
+        @if (companySummary.recent.length > 2) {
+          <li class="more-row">+{{ companySummary.recent.length - 2 }} további cég</li>
+        }
       </ul>
+      <button class="btn btn-ghost preview-cta" (click)="onNavigate('companies')">Cégek megnyitása →</button>
     </div>
 
-    <div class="panel">
-      <div class="panel-header">
-        <h2>Legutóbbi logok</h2>
-        <button class="link-btn" type="button" (click)="onViewLogs()">Részletek</button>
+    <div class="preview-card">
+      <div class="preview-card-header">
+        <h2>Staff</h2>
+        <div class="header-stats">
+          <span class="stat-chip chip-warning">{{ staffSummary.pending }} függőben</span>
+          <span class="stat-chip chip-danger">{{ staffSummary.withoutCompany }} cég nélkül</span>
+        </div>
       </div>
-      <ul class="list">
-        <li>
-          <span>Auth hiba</span>
-          <span class="muted">10 perc</span>
-        </li>
-        <li>
-          <span>Új foglalás</span>
-          <span class="muted">30 perc</span>
-        </li>
-        <li>
-          <span>Szerep módosítás</span>
-          <span class="muted">1 óra</span>
-        </li>
+      <ul class="preview-list">
+        @for (s of staffSummary.recent; track s.name; let i = $index) {
+          @if (i < 2) {
+            <li>
+              <span class="item-name">{{ s.name }}</span>
+              <span class="item-meta">{{ s.role }}</span>
+              <span class="badge" [class.warning]="s.company === '—'">{{ s.company }}</span>
+            </li>
+          }
+        }
+        @if (staffSummary.recent.length > 2) {
+          <li class="more-row">+{{ staffSummary.recent.length - 2 }} további staff</li>
+        }
       </ul>
+      <button class="btn btn-ghost preview-cta" (click)="onNavigate('staff')">Staff megnyitása →</button>
     </div>
 
-    <div class="panel">
-      <div class="panel-header">
-        <h2>Kritikus foglalások</h2>
-        <button class="link-btn" type="button" (click)="onViewCriticalBookings()">Megnyitás</button>
+    <div class="preview-card">
+      <div class="preview-card-header">
+        <h2>Tulajdonosok</h2>
+        <div class="header-stats">
+          <span class="stat-chip chip-warning">{{ ownerSummary.unverified }} nem hitelesített</span>
+          <span class="stat-chip chip-info">{{ ownerSummary.multiCompany }} több cég</span>
+        </div>
       </div>
-      <ul class="list">
-        <li>
-          <span>Foglalás törlés vita</span>
-          <span class="badge warning">Ellenőrzés</span>
-        </li>
-        <li>
-          <span>Dupla terhelés</span>
-          <span class="badge warning">Ellenőrzés</span>
-        </li>
+      <ul class="preview-list">
+        @for (o of ownerSummary.recent; track o.name; let i = $index) {
+          @if (i < 2) {
+            <li>
+              <span class="item-name">{{ o.name }}</span>
+              <span class="item-meta">{{ o.companies }} cég</span>
+              <span class="badge" [class.warning]="!o.verified" [class.green]="o.verified">
+                {{ o.verified ? 'Hitelesített' : 'Függőben' }}
+              </span>
+            </li>
+          }
+        }
+        @if (ownerSummary.recent.length > 2) {
+          <li class="more-row">+{{ ownerSummary.recent.length - 2 }} további tulajdonos</li>
+        }
       </ul>
+      <button class="btn btn-ghost preview-cta" (click)="onNavigate('owners')">Tulajdonosok megnyitása →</button>
+    </div>
+
+    <div class="preview-card">
+      <div class="preview-card-header">
+        <h2>Foglalások</h2>
+        <div class="header-stats">
+          <span class="stat-chip chip-warning">{{ bookingSummary.cancelled }} lemondott</span>
+          <span class="stat-chip chip-danger">{{ bookingSummary.disputed }} vitatott</span>
+        </div>
+      </div>
+      <ul class="preview-list">
+        @for (b of bookingSummary.upcoming; track b.client; let i = $index) {
+          @if (i < 2) {
+            <li>
+              <span class="item-name">{{ b.client }}</span>
+              <span class="item-meta">{{ b.service }} · {{ b.time }}</span>
+              <span class="badge">{{ b.company }}</span>
+            </li>
+          }
+        }
+        @if (bookingSummary.upcoming.length > 2) {
+          <li class="more-row">+{{ bookingSummary.upcoming.length - 2 }} közelgő foglalás</li>
+        }
+      </ul>
+      <button class="btn btn-ghost preview-cta" (click)="onNavigate('bookings')">Foglalások megnyitása →</button>
+    </div>
+
+    <div class="preview-card">
+      <div class="preview-card-header">
+        <h2>Logok</h2>
+        <div class="header-stats">
+          <span class="stat-chip chip-danger">{{ logSummary.errors }} hiba</span>
+          <span class="stat-chip chip-warning">{{ logSummary.warnings }} figyelmeztetés</span>
+        </div>
+      </div>
+      <ul class="preview-list">
+        @for (l of logSummary.recent; track l.message; let i = $index) {
+          @if (i < 2) {
+            <li>
+              <span class="item-name" style="display: inline-flex; align-items: center; gap: 8px;">
+                <span class="dot" [class]="'dot ' + l.type"></span>
+                <span>{{ l.message }}</span>
+              </span>
+              <span class="item-meta">{{ l.time }}</span>
+            </li>
+          }
+        }
+        @if (logSummary.recent.length > 2) {
+          <li class="more-row">+{{ logSummary.recent.length - 2 }} további log</li>
+        }
+      </ul>
+      <button class="btn btn-ghost preview-cta" (click)="onNavigate('logs')">Logok megnyitása →</button>
     </div>
   </div>
 </section>
