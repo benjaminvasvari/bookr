@@ -28,6 +28,7 @@ public class AppointmentsService {
     private UsersService UsersService = new UsersService();
     private Companies Companies = new Companies();
     private Staff Staff = new Staff();
+    private StaffService StaffService = new StaffService();
     private Services Services = new Services();
     private CompaniesService CompaniesService = new CompaniesService();
     private Appointments layer = new Appointments();
@@ -212,7 +213,7 @@ public class AppointmentsService {
             toReturn.put("statusCode", 400);
             return toReturn;
         }
-        
+
         //code
         Integer appointmentId = layer.createAppointment(companyId, serviceId, staffId, clientId, startTime, endTime, notes, price);
 
@@ -770,6 +771,120 @@ public class AppointmentsService {
         toReturn.put("status", "success");
         toReturn.put("statusCode", 200);
         toReturn.put("data", days);
+        return toReturn;
+    }
+
+    public JSONObject getAppointmentsCountByStaff(Integer staffId, String dateFrom, String dateTo) {
+
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        Boolean staffExist = StaffService.validateStaffExistById(staffId);
+
+        if (!staffExist) {
+            JSONObject error = new JSONObject();
+            error.put("statusCode", 404);
+            error.put("status", "NotFound");
+            error.put("message", "Staff not found with ID: " + staffId);
+            return error;
+        }
+
+        // Model hívás
+        Integer modelResult = layer.getAppointmentsCountByStaff(staffId, dateFrom, dateTo);
+
+        if (modelResult == null) {
+            statusCode = 500;
+            status = "ModelException";
+            toReturn.put("message", "Internal server error");
+
+        } else {
+            JSONObject result = new JSONObject();
+
+            result.put("count", modelResult);
+
+            toReturn.put("result", result);
+        }
+
+        toReturn.put("status", status);
+        toReturn.put("statusCode", statusCode);
+
+        return toReturn;
+    }
+    
+    public JSONObject getUpcomingAppointmentsCountByStaff(Integer staffId) {
+
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        Boolean staffExist = StaffService.validateStaffExistById(staffId);
+
+        if (!staffExist) {
+            JSONObject error = new JSONObject();
+            error.put("statusCode", 404);
+            error.put("status", "NotFound");
+            error.put("message", "Staff not found with ID: " + staffId);
+            return error;
+        }
+
+        // Model hívás
+        Integer modelResult = layer.getUpcomingAppointmentsCountByStaff(staffId);
+
+        if (modelResult == null) {
+            statusCode = 500;
+            status = "ModelException";
+            toReturn.put("message", "Internal server error");
+
+        } else {
+            JSONObject result = new JSONObject();
+
+            result.put("count", modelResult);
+
+            toReturn.put("result", result);
+        }
+
+        toReturn.put("status", status);
+        toReturn.put("statusCode", statusCode);
+
+        return toReturn;
+    }
+    
+    public JSONObject getPlannedWorkingMinutesByStaff(Integer staffId) {
+
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        Boolean staffExist = StaffService.validateStaffExistById(staffId);
+
+        if (!staffExist) {
+            JSONObject error = new JSONObject();
+            error.put("statusCode", 404);
+            error.put("status", "NotFound");
+            error.put("message", "Staff not found with ID: " + staffId);
+            return error;
+        }
+
+        // Model hívás
+        Integer modelResult = layer.getPlannedWorkingMinutesByStaff(staffId);
+
+        if (modelResult == null) {
+            statusCode = 500;
+            status = "ModelException";
+            toReturn.put("message", "Internal server error");
+
+        } else {
+            JSONObject result = new JSONObject();
+
+            result.put("minutes", modelResult);
+
+            toReturn.put("result", result);
+        }
+
+        toReturn.put("status", status);
+        toReturn.put("statusCode", statusCode);
+
         return toReturn;
     }
 }

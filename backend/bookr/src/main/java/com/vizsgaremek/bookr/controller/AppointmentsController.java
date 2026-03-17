@@ -2,9 +2,12 @@ package com.vizsgaremek.bookr.controller;
 
 import com.vizsgaremek.bookr.security.JWT;
 import com.vizsgaremek.bookr.service.AppointmentsService;
+import com.vizsgaremek.bookr.service.CompaniesService;
+import static com.vizsgaremek.bookr.util.ErrorResponseBuilder.buildErrorResponse;
 import com.vizsgaremek.bookr.util.RoleChecker;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Objects;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
@@ -21,6 +24,7 @@ public class AppointmentsController {
 
     private final AppointmentsService layer = new AppointmentsService();
     private final RoleChecker RoleChecker = new RoleChecker();
+    private final CompaniesService CompaniesService = new CompaniesService();
 
     @GET
     @Produces(MediaType.APPLICATION_XML)
@@ -386,6 +390,141 @@ public class AppointmentsController {
         }
 
         JSONObject toReturn = layer.getWeeklyCalendarAppointments(companyId, staffId, weekStart);
+        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                .entity(toReturn.toString())
+                .type(MediaType.APPLICATION_JSON)
+                .build();
+    }
+
+    @GET
+    @Path("countPeriodByStaff")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response getAppointmentsCountByStaff(@HeaderParam("Authorization") String authHeader, @QueryParam("staffId") Integer staffId, @QueryParam("dateFrom") String dateFrom, @QueryParam("dateTo") String dateTo) {
+
+        // 1. Auth header check
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return buildErrorResponse(401, "missingToken");
+        }
+
+        String jwtToken = authHeader.substring(7);
+        Boolean validJwt = JWT.validateAccessToken(jwtToken);
+
+        if (validJwt == null) {
+            return buildErrorResponse(401, "tokenExpired");
+        } else if (validJwt == false) {
+            return buildErrorResponse(401, "invalidToken");
+        }
+
+        // 3. Role check
+        String userRoles = JWT.getRolesFromAccessToken(jwtToken);
+        boolean hasPermission = RoleChecker.hasAllRoles(userRoles, "client", "staff");
+        if (!hasPermission) {
+            return buildErrorResponse(403, "Forbidden");
+        }
+
+        Integer companyId = JWT.getCompanyIdFromAccessToken(jwtToken);
+
+        Boolean isCompanyExist = CompaniesService.validateCompanyExist(companyId);
+
+        if (!isCompanyExist) {
+            return buildErrorResponse(400, "CompanyNotExist");
+        } else if (isCompanyExist == null) {
+            return buildErrorResponse(500, "InternalServerError");
+        }
+
+        JSONObject toReturn = layer.getAppointmentsCountByStaff(staffId, dateFrom, dateTo);
+
+        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                .entity(toReturn.toString())
+                .type(MediaType.APPLICATION_JSON)
+                .build();
+    }
+
+    @GET
+    @Path("upcomingAppointmentsCountByStaff")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response getUpcomingAppointmentsCountByStaff(@HeaderParam("Authorization") String authHeader, @QueryParam("staffId") Integer staffId) {
+
+        // 1. Auth header check
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return buildErrorResponse(401, "missingToken");
+        }
+
+        String jwtToken = authHeader.substring(7);
+        Boolean validJwt = JWT.validateAccessToken(jwtToken);
+
+        if (validJwt == null) {
+            return buildErrorResponse(401, "tokenExpired");
+        } else if (validJwt == false) {
+            return buildErrorResponse(401, "invalidToken");
+        }
+
+        // 3. Role check
+        String userRoles = JWT.getRolesFromAccessToken(jwtToken);
+        boolean hasPermission = RoleChecker.hasAllRoles(userRoles, "client", "staff");
+        if (!hasPermission) {
+            return buildErrorResponse(403, "Forbidden");
+        }
+
+        Integer companyId = JWT.getCompanyIdFromAccessToken(jwtToken);
+
+        Boolean isCompanyExist = CompaniesService.validateCompanyExist(companyId);
+
+        if (!isCompanyExist) {
+            return buildErrorResponse(400, "CompanyNotExist");
+        } else if (isCompanyExist == null) {
+            return buildErrorResponse(500, "InternalServerError");
+        }
+
+        JSONObject toReturn = layer.getUpcomingAppointmentsCountByStaff(staffId);
+
+        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                .entity(toReturn.toString())
+                .type(MediaType.APPLICATION_JSON)
+                .build();
+    }
+
+    @GET
+    @Path("getPlannedWorkingMinutesByStaff")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response getPlannedWorkingMinutesByStaff(@HeaderParam("Authorization") String authHeader, @QueryParam("staffId") Integer staffId) {
+
+        // 1. Auth header check
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return buildErrorResponse(401, "missingToken");
+        }
+
+        String jwtToken = authHeader.substring(7);
+        Boolean validJwt = JWT.validateAccessToken(jwtToken);
+
+        if (validJwt == null) {
+            return buildErrorResponse(401, "tokenExpired");
+        } else if (validJwt == false) {
+            return buildErrorResponse(401, "invalidToken");
+        }
+
+        // 3. Role check
+        String userRoles = JWT.getRolesFromAccessToken(jwtToken);
+        boolean hasPermission = RoleChecker.hasAllRoles(userRoles, "client", "staff");
+        if (!hasPermission) {
+            return buildErrorResponse(403, "Forbidden");
+        }
+
+        Integer companyId = JWT.getCompanyIdFromAccessToken(jwtToken);
+
+        Boolean isCompanyExist = CompaniesService.validateCompanyExist(companyId);
+
+        if (!isCompanyExist) {
+            return buildErrorResponse(400, "CompanyNotExist");
+        } else if (isCompanyExist == null) {
+            return buildErrorResponse(500, "InternalServerError");
+        }
+
+        JSONObject toReturn = layer.getPlannedWorkingMinutesByStaff(staffId);
+
         return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
                 .entity(toReturn.toString())
                 .type(MediaType.APPLICATION_JSON)

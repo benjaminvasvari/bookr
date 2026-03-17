@@ -171,12 +171,19 @@ public class Staff implements Serializable {
         this.specialties = specialties;
         this.bio = bio;
     }
+    
+    // CheckStaff
+
+    public Staff(Integer id, Boolean isActive, Boolean isDeleted) {
+        this.id = id;
+        this.isActive = isActive;
+        this.isDeleted = isDeleted;
+    }
+    
 
     public Staff(String color) {
         this.color = color;
     }
-    
-    
 
     public Integer getId() {
         return id;
@@ -591,11 +598,11 @@ public class Staff implements Serializable {
             spq.execute();
 
             String color = spq.getSingleResult() != null ? spq.getSingleResult().toString() : null;
-            
+
             Staff staff = new Staff(
                     color
             );
-            
+
             return staff;
 
         } catch (Exception ex) {
@@ -634,4 +641,40 @@ public class Staff implements Serializable {
         }
     }
 
+    public static Staff checkStaff(Integer id) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("checkStaff");
+            spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("staffIdIN", id);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            Object[] record = resultList.get(0);
+
+            Staff user = new Staff(
+                    Integer.valueOf(record[0].toString()),
+                    Boolean.parseBoolean(record[1].toString()),
+                    Boolean.parseBoolean(record[2].toString())
+            );
+
+            return user;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
 }

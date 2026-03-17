@@ -1357,4 +1357,92 @@ public class Appointments implements Serializable {
             }
         }
     }
+
+    public static Integer getAppointmentsCountByStaff(Integer staffId, String dateFrom, String dateTo) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getAppointmentsCountByStaff");
+
+            spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("dateFromIN", Date.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("dateToIN", Date.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("countOUT", Integer.class, ParameterMode.OUT);
+
+            spq.setParameter("staffIdIN", staffId);
+            StoredProcedureUtil.setNullableParameter(spq, "dateFromIN", dateFrom != null ? java.sql.Date.valueOf(dateFrom) : null);
+            StoredProcedureUtil.setNullableParameter(spq, "dateToIN", dateTo != null ? java.sql.Date.valueOf(dateTo) : null);
+
+            spq.execute();
+
+            // Az OUT paraméter kinyerése
+            Integer count = (Integer) spq.getOutputParameterValue("countOUT");
+
+            return count;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+    
+    public static Integer getUpcomingAppointmentsCountByStaff(Integer staffId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getUpcomingAppointmentsCountByStaff");
+
+            spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("countOUT", Integer.class, ParameterMode.OUT);
+
+            spq.setParameter("staffIdIN", staffId);
+
+            spq.execute();
+
+            // Az OUT paraméter kinyerése
+            Integer count = (Integer) spq.getOutputParameterValue("countOUT");
+
+            return count;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+    
+    public static Integer getPlannedWorkingMinutesByStaff(Integer staffId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getPlannedWorkingMinutesByStaff");
+
+            spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("minutesOUT", Integer.class, ParameterMode.OUT);
+
+            spq.setParameter("staffIdIN", staffId);
+
+            spq.execute();
+
+            // Az OUT paraméter kinyerése
+            Integer minutes = (Integer) spq.getOutputParameterValue("minutesOUT");
+
+            return minutes;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
 }

@@ -263,4 +263,28 @@ public class StaffService {
         toReturn.put("statusCode", statusCode);
         return toReturn;
     }
+
+    public Boolean validateStaffExistById(Integer id) {
+
+        try {
+
+            Boolean result = true;
+
+            Staff modelResult = Staff.checkStaff(id);
+
+            if (modelResult == null) {
+                result = false;
+            } else if (modelResult.getIsActive() == false) {
+                result = false;
+            } else if (modelResult.getIsDeleted() == true) {
+                result = false;
+            }
+
+            return result;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
 }
