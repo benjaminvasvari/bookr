@@ -10,7 +10,20 @@ import { SuperadminService } from '../../../../core/services/superadmin.service'
   styleUrls: ['./companies.component.css'],
 })
 export class SuperadminCompaniesComponent {
+  isCompanyActionModalOpen = false;
+  selectedCompany = '';
+
   constructor(private superadminService: SuperadminService) {}
+
+  openCompanyActionMenu(company: string): void {
+    this.selectedCompany = company;
+    this.isCompanyActionModalOpen = true;
+  }
+
+  closeCompanyActionMenu(): void {
+    this.isCompanyActionModalOpen = false;
+    this.selectedCompany = '';
+  }
 
   onCreateCompany(): void {
     this.superadminService.runAction('create-company');
@@ -33,6 +46,7 @@ export class SuperadminCompaniesComponent {
   }
 
   onSuspendCompany(company: string): void {
+    this.closeCompanyActionMenu();
     this.superadminService.confirmAction(
       'suspend-company',
       'Biztosan letiltod ezt a céget?',
@@ -53,9 +67,37 @@ export class SuperadminCompaniesComponent {
   }
 
   onLockCompany(company: string): void {
+    this.closeCompanyActionMenu();
     this.superadminService.confirmAction(
       'lock-company',
       'Biztosan zárolod ezt a céget?',
+      company
+    );
+  }
+
+  onFreezeBookings(company: string): void {
+    this.closeCompanyActionMenu();
+    this.superadminService.confirmAction(
+      'freeze-company-bookings',
+      'Biztosan befagyasztod a cég új foglalásait?',
+      company
+    );
+  }
+
+  onArchiveCompany(company: string): void {
+    this.closeCompanyActionMenu();
+    this.superadminService.confirmAction(
+      'archive-company',
+      'Biztosan archiválod a céget?',
+      company
+    );
+  }
+
+  onDisableCompany(company: string): void {
+    this.closeCompanyActionMenu();
+    this.superadminService.confirmAction(
+      'disable-company-permanently',
+      'Biztosan véglegesen letiltod ezt a céget?',
       company
     );
   }

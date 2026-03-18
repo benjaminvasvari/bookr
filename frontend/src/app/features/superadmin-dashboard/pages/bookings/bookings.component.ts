@@ -10,7 +10,20 @@ import { SuperadminService } from '../../../../core/services/superadmin.service'
   styleUrls: ['./bookings.component.css'],
 })
 export class SuperadminBookingsComponent {
+  isDeleteModalOpen = false;
+  selectedBookingId = '';
+
   constructor(private superadminService: SuperadminService) {}
+
+  openBookingDeleteModal(bookingId: string): void {
+    this.selectedBookingId = bookingId;
+    this.isDeleteModalOpen = true;
+  }
+
+  closeBookingDeleteModal(): void {
+    this.isDeleteModalOpen = false;
+    this.selectedBookingId = '';
+  }
 
   onExportBookings(): void {
     this.superadminService.runAction('export-bookings');
@@ -37,5 +50,15 @@ export class SuperadminBookingsComponent {
       'Biztosan törlöd ezt a foglalást?',
       bookingId
     );
+  }
+
+  confirmDeleteBooking(): void {
+    const bookingId = this.selectedBookingId;
+    this.closeBookingDeleteModal();
+    if (!bookingId) {
+      return;
+    }
+
+    this.onCancelBooking(bookingId);
   }
 }

@@ -29,8 +29,57 @@
       <div class="actions">
         <button class="btn btn-ghost" type="button" (click)="onChangeRole('Staff 01')">Szerepkör csere</button>
         <button class="btn btn-outline" type="button" (click)="onChangeCompany('Staff 01')">Cég csere</button>
-        <button class="btn btn-danger" type="button" (click)="onDisableStaff('Staff 01')">Letiltás</button>
+        <button
+          class="icon-danger-btn"
+          type="button"
+          (click)="openStaffActionMenu('Staff 01')"
+          aria-label="Staff műveletek"
+          title="Staff műveletek"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M9 3h6l1 2h4v2H4V5h4l1-2zm1 6h2v8h-2V9zm4 0h2v8h-2V9zM7 9h2v8H7V9zm1 12h8a2 2 0 0 0 2-2V9H6v10a2 2 0 0 0 2 2z" />
+          </svg>
+        </button>
       </div>
     </div>
   </div>
+
+  @if (isStaffActionModalOpen) {
+    <div class="action-modal-backdrop" (click)="closeStaffActionMenu()">
+      <section class="action-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-label="Staff admin műveletek">
+        <header class="action-modal-header">
+          <h2>{{ selectedStaff }} kezelése</h2>
+          <button class="modal-close-btn" type="button" (click)="closeStaffActionMenu()" aria-label="Bezárás">✕</button>
+        </header>
+        <p class="action-modal-subtitle">Válassz gyors admin műveletet a staff felhasználóhoz:</p>
+
+        <div class="action-options">
+          <button class="action-option option-warn" type="button" (click)="onSuspendStaff(selectedStaff)">
+            <span class="option-title">Ideiglenes felfüggesztés</span>
+            <span class="option-text">A profil aktív marad, de ideiglenesen nem dolgozhat.</span>
+          </button>
+
+          <button class="action-option option-muted" type="button" (click)="onRestrictStaffPermissions(selectedStaff)">
+            <span class="option-title">Jogkör korlátozása</span>
+            <span class="option-text">Csak minimális funkciókat ér el, admin jóváhagyásig.</span>
+          </button>
+
+          <button class="action-option option-muted" type="button" (click)="onForcePasswordReset(selectedStaff)">
+            <span class="option-title">Jelszócsere kényszerítése</span>
+            <span class="option-text">Következő belépéskor kötelező új jelszó megadása.</span>
+          </button>
+
+          <button class="action-option option-muted" type="button" (click)="onAuditStaffActivity(selectedStaff)">
+            <span class="option-title">Tevékenység audit indítása</span>
+            <span class="option-text">Részletes naplóellenőrzés és eseményvizsgálat.</span>
+          </button>
+
+          <button class="action-option option-danger" type="button" (click)="onDisableStaff(selectedStaff)">
+            <span class="option-title">Végleges letiltás</span>
+            <span class="option-text">A hozzáférés azonnal megszűnik a staff felhasználónál.</span>
+          </button>
+        </div>
+      </section>
+    </div>
+  }
 </section>

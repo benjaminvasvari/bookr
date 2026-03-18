@@ -149,7 +149,7 @@
         @for (l of logSummary.recent; track l.message; let i = $index) {
           @if (i < 2) {
             <li>
-              <span class="item-name" style="display: inline-flex; align-items: center; gap: 8px;">
+              <span class="item-name item-name-with-dot">
                 <span class="dot" [class]="'dot ' + l.type"></span>
                 <span>{{ l.message }}</span>
               </span>

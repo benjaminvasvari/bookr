@@ -29,8 +29,31 @@
       <div class="actions">
         <button class="btn btn-ghost" type="button" (click)="onViewBooking('BOOK-01')">Részletek</button>
         <button class="btn btn-outline" type="button" (click)="onApproveBooking('BOOK-01')">Jóváhagy</button>
-        <button class="btn btn-danger" type="button" (click)="onCancelBooking('BOOK-01')">Törlés</button>
+        <button
+          class="icon-danger-btn"
+          type="button"
+          (click)="openBookingDeleteModal('BOOK-01')"
+          aria-label="Foglalás törlése"
+          title="Foglalás törlése"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M9 3h6l1 2h4v2H4V5h4l1-2zm1 6h2v8h-2V9zm4 0h2v8h-2V9zM7 9h2v8H7V9zm1 12h8a2 2 0 0 0 2-2V9H6v10a2 2 0 0 0 2 2z" />
+          </svg>
+        </button>
       </div>
     </div>
   </div>
+
+  @if (isDeleteModalOpen) {
+    <div class="delete-modal-backdrop" (click)="closeBookingDeleteModal()">
+      <section class="delete-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-label="Foglalás törlése megerősítés">
+        <h2>Foglalás törlése</h2>
+        <p>Biztosan törlöd ezt a foglalást?</p>
+        <div class="delete-modal-actions">
+          <button class="btn btn-ghost" type="button" (click)="closeBookingDeleteModal()">Mégsem</button>
+          <button class="btn btn-danger" type="button" (click)="confirmDeleteBooking()">Törlés</button>
+        </div>
+      </section>
+    </div>
+  }
 </section>
