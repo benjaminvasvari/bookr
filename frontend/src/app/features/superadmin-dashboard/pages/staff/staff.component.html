@@ -1,8 +1,8 @@
 <section class="page">
   <header class="page-header">
-    <div>
-      <h1>Staff</h1>
-      <p>Staff tagok cégenként, jogosultságokkal.</p>
+    <div class="page-header-copy">
+      <h1>Staff <span class="header-count">({{ staffMembers.length }} fő)</span></h1>
+      <p>Kompakt staff lista gyors admin döntésekhez.</p>
     </div>
     <div class="header-actions">
       <button class="btn btn-primary" type="button" (click)="onAddStaff()">Staff hozzáadása</button>
@@ -10,27 +10,183 @@
     </div>
   </header>
 
-  <div class="table-card">
-    <div class="table-head">
-      <span>Név</span>
-      <span>Cég</span>
-      <span>Szerepkör</span>
-      <span>Státusz</span>
-      <span>Műveletek</span>
+  <section class="staff-list" aria-label="Staff lista">
+    @for (staff of staffMembers; track staff.name) {
+      <article class="staff-row" [class.staff-row-pending]="staff.status === 'Függőben'" [class.staff-row-suspended]="staff.status === 'Felfüggesztett'">
+        <div class="identity-column">
+          <strong>{{ staff.name }}</strong>
+          <span>{{ staff.email }}</span>
+        </div>
+
+        <div class="details-column">
+          <span class="primary-line">{{ staff.company }}</span>
+
+          <div class="detail-meta compact-meta">
+            <span class="meta-chip" [class]="'meta-chip ' + getRoleClass(staff.role)">{{ staff.role }}</span>
+            <span class="meta-text">{{ staff.permission }} · {{ staff.bookingsToday }} ma</span>
+          </div>
+
+          <span class="support-line">{{ staff.verification }}</span>
+
+          <div class="detail-foot">
+            <p class="admin-note" [title]="staff.internalNote">{{ staff.internalNote }}</p>
+            @if (staff.lastAdminUpdate) {
+              <span class="admin-update-time">Frissítve: {{ staff.lastAdminUpdate }}</span>
+            }
+          </div>
+        </div>
+
+        <div class="status-column">
+          <span class="status-chip" [class]="'status-chip ' + getStatusClass(staff.status)">
+            <span class="status-dot" aria-hidden="true"></span>
+            {{ staff.status }}
+          </span>
+        </div>
+
+        <div class="actions">
+          <div class="action-slot">
+            <button class="btn btn-ghost list-action-btn" type="button" (click)="openStaffEditModal(staff.name)">Szerkesztés</button>
+          </div>
+          <div class="action-slot action-slot-icon">
+            <button
+              class="icon-danger-btn list-delete-btn"
+              type="button"
+              (click)="openStaffActionMenu(staff.name)"
+              aria-label="Staff műveletek"
+              title="Staff műveletek"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M9 3h6l1 2h4v2H4V5h4l1-2zm1 6h2v8h-2V9zm4 0h2v8h-2V9zM7 9h2v8H7V9zm1 12h8a2 2 0 0 0 2-2V9H6v10a2 2 0 0 0 2 2z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </article>
+    }
+  </section>
+
+  @if (isStaffEditModalOpen && staffEditDraft) {
+    <div class="action-modal-backdrop" (click)="closeStaffEditModal()">
+      <section class="action-modal edit-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-label="Staff admin szerkesztése">
+        <header class="action-modal-header">
+          <div>
+            <h2>{{ editingStaffName }} szerkesztése</h2>
+            <p class="action-modal-subtitle">Csak superadmin szintű mezők módosíthatók, kötelező indoklással.</p>
+          </div>
+          <button class="modal-close-btn" type="button" (click)="closeStaffEditModal()" aria-label="Bezárás">✕</button>
+        </header>
+
+        <div class="edit-scope-banner">
+          A panel a szerepkört, státuszt, verifikációt, cég-hozzárendelést és admin megjegyzést kezeli. Operatív foglalási adatok itt nem módosíthatók.
+        </div>
+
+        <div class="edit-form-grid">
+          <label class="form-field">
+            <span>Cég</span>
+            <input type="text" [(ngModel)]="staffEditDraft.company" placeholder="Cég neve" />
+          </label>
+
+          <label class="form-field">
+            <span>Szerepkör</span>
+            <select [(ngModel)]="staffEditDraft.role">
+              @for (role of roleOptions; track role) {
+                <option [ngValue]="role">{{ role }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="form-field">
+            <span>Státusz</span>
+            <select [(ngModel)]="staffEditDraft.status">
+              @for (status of statusOptions; track status) {
+                <option [ngValue]="status">{{ status }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="form-field">
+            <span>Verifikáció</span>
+            <select [(ngModel)]="staffEditDraft.verification">
+              @for (verification of verificationOptions; track verification) {
+                <option [ngValue]="verification">{{ verification }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="form-field form-field-wide">
+            <span>Jogosultsági szint</span>
+            <select [(ngModel)]="staffEditDraft.permission">
+              @for (permission of permissionOptions; track permission) {
+                <option [ngValue]="permission">{{ permission }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="form-field form-field-wide">
+            <span>Belső admin megjegyzés</span>
+            <textarea rows="3" [(ngModel)]="staffEditDraft.internalNote" placeholder="Rövid belső megjegyzés"></textarea>
+          </label>
+
+          <label class="form-field form-field-wide">
+            <span>Módosítás oka</span>
+            <textarea rows="4" [(ngModel)]="staffEditDraft.changeReason" placeholder="Miért történik ez a superadmin módosítás?"></textarea>
+          </label>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn btn-ghost" type="button" (click)="closeStaffEditModal()">Mégse</button>
+          <button class="btn btn-primary" type="button" [disabled]="!canSaveStaffEdit" (click)="saveStaffEdit()">Mentés és audit</button>
+        </div>
+      </section>
     </div>
-    <div class="table-row">
-      <div>
-        <strong>Staff 01</strong>
-        <span class="sub">staff01@email.com</span>
-      </div>
-      <div>Példa cég 01</div>
-      <div><span class="role-pill">staff</span></div>
-      <div><span class="status-pill active">Aktív</span></div>
-      <div class="actions">
-        <button class="btn btn-ghost" type="button" (click)="onChangeRole('Staff 01')">Szerepkör csere</button>
-        <button class="btn btn-outline" type="button" (click)="onChangeCompany('Staff 01')">Cég csere</button>
-        <button class="btn btn-danger" type="button" (click)="onDisableStaff('Staff 01')">Letiltás</button>
-      </div>
+  }
+
+  @if (isStaffActionModalOpen) {
+    <div class="action-modal-backdrop" (click)="closeStaffActionMenu()">
+      <section class="action-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-label="Staff admin műveletek">
+        <header class="action-modal-header">
+          <h2>{{ selectedStaff }} kezelése</h2>
+          <button class="modal-close-btn" type="button" (click)="closeStaffActionMenu()" aria-label="Bezárás">✕</button>
+        </header>
+        <p class="action-modal-subtitle">Válassz gyors admin műveletet a staff felhasználóhoz:</p>
+
+        <div class="action-options">
+          <button class="action-option option-muted" type="button" (click)="onChangeRole(selectedStaff)">
+            <span class="option-title">Szerepkör csere</span>
+            <span class="option-text">Új szerepkör kiosztása ugyanazon a profilon belül.</span>
+          </button>
+
+          <button class="action-option option-muted" type="button" (click)="onChangeCompany(selectedStaff)">
+            <span class="option-title">Cég csere</span>
+            <span class="option-text">Másik céghez rendelés admin felülbírálással.</span>
+          </button>
+
+          <button class="action-option option-warn" type="button" (click)="onSuspendStaff(selectedStaff)">
+            <span class="option-title">Ideiglenes felfüggesztés</span>
+            <span class="option-text">A profil aktív marad, de ideiglenesen nem dolgozhat.</span>
+          </button>
+
+          <button class="action-option option-muted" type="button" (click)="onRestrictStaffPermissions(selectedStaff)">
+            <span class="option-title">Jogkör korlátozása</span>
+            <span class="option-text">Csak minimális funkciókat ér el, admin jóváhagyásig.</span>
+          </button>
+
+          <button class="action-option option-muted" type="button" (click)="onForcePasswordReset(selectedStaff)">
+            <span class="option-title">Jelszócsere kényszerítése</span>
+            <span class="option-text">Következő belépéskor kötelező új jelszó megadása.</span>
+          </button>
+
+          <button class="action-option option-muted" type="button" (click)="onAuditStaffActivity(selectedStaff)">
+            <span class="option-title">Tevékenység audit indítása</span>
+            <span class="option-text">Részletes naplóellenőrzés és eseményvizsgálat.</span>
+          </button>
+
+          <button class="action-option option-danger" type="button" (click)="onDisableStaff(selectedStaff)">
+            <span class="option-title">Végleges letiltás</span>
+            <span class="option-text">A hozzáférés azonnal megszűnik a staff felhasználónál.</span>
+          </button>
+        </div>
+      </section>
     </div>
-  </div>
+  }
 </section>

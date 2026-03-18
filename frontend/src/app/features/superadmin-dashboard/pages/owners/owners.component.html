@@ -1,8 +1,8 @@
 <section class="page">
   <header class="page-header">
-    <div>
-      <h1>Tulajdonosok</h1>
-      <p>Tulajdonos felhasználók és cég hozzárendelések.</p>
+    <div class="page-header-copy">
+      <h1>Tulajdonosok <span class="header-count">({{ owners.length }} fő)</span></h1>
+      <p>Kompakt tulajdonosi lista gyors admin döntésekhez.</p>
     </div>
     <div class="header-actions">
       <button class="btn btn-primary" type="button" (click)="onInviteOwner()">Tulajdonos meghívás</button>
@@ -10,25 +10,174 @@
     </div>
   </header>
 
-  <div class="table-card">
-    <div class="table-head">
-      <span>Név</span>
-      <span>Cég</span>
-      <span>Staff</span>
-      <span>Műveletek</span>
+  <section class="owner-list" aria-label="Tulajdonos lista">
+    @for (owner of owners; track owner.name) {
+      <article class="owner-row" [class.owner-row-warning]="owner.status === 'Figyelmeztetett'" [class.owner-row-suspended]="owner.status === 'Felfüggesztett'">
+        <div class="identity-column">
+          <strong>{{ owner.name }}</strong>
+          <span>{{ owner.email }}</span>
+        </div>
+
+        <div class="details-column">
+          <span class="primary-line">{{ owner.company }}</span>
+
+          <div class="detail-meta compact-meta">
+            <span class="meta-chip" [class]="'meta-chip ' + getAccessClass(owner.access)">{{ owner.access }}</span>
+            <span class="meta-text">{{ owner.companiesManaged }} cég · {{ owner.staffCount }} staff</span>
+          </div>
+
+          <span class="support-line">{{ owner.verification }}</span>
+
+          <div class="detail-foot">
+            <p class="admin-note" [title]="owner.internalNote">{{ owner.internalNote }}</p>
+            @if (owner.lastAdminUpdate) {
+              <span class="admin-update-time">Frissítve: {{ owner.lastAdminUpdate }}</span>
+            }
+          </div>
+        </div>
+
+        <div class="status-column">
+          <span class="status-chip" [class]="'status-chip ' + getStatusClass(owner.status)">
+            <span class="status-dot" aria-hidden="true"></span>
+            {{ owner.status }}
+          </span>
+        </div>
+
+        <div class="actions">
+          <div class="action-slot">
+            <button class="btn btn-ghost list-action-btn" type="button" (click)="openOwnerEditModal(owner.name)">Szerkesztés</button>
+          </div>
+          <div class="action-slot action-slot-icon">
+            <button
+              class="icon-danger-btn list-delete-btn"
+              type="button"
+              (click)="openOwnerActionMenu(owner.name, owner.company)"
+              aria-label="Tulajdonos műveletek"
+              title="Tulajdonos műveletek"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path d="M9 3h6l1 2h4v2H4V5h4l1-2zm1 6h2v8h-2V9zm4 0h2v8h-2V9zM7 9h2v8H7V9zm1 12h8a2 2 0 0 0 2-2V9H6v10a2 2 0 0 0 2 2z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </article>
+    }
+  </section>
+
+  @if (isOwnerEditModalOpen && ownerEditDraft) {
+    <div class="action-modal-backdrop" (click)="closeOwnerEditModal()">
+      <section class="action-modal edit-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-label="Tulajdonos admin szerkesztése">
+        <header class="action-modal-header">
+          <div>
+            <h2>{{ editingOwnerName }} szerkesztése</h2>
+            <p class="action-modal-subtitle">Csak superadmin szintű mezők módosíthatók, kötelező indoklással.</p>
+          </div>
+          <button class="modal-close-btn" type="button" (click)="closeOwnerEditModal()" aria-label="Bezárás">✕</button>
+        </header>
+
+        <div class="edit-scope-banner">
+          A panel a hozzáférési szintet, státuszt, verifikációt, elsődleges céget és az admin megjegyzést kezeli. A céges üzleti beállítások továbbra is külön oldalon maradnak.
+        </div>
+
+        <div class="edit-form-grid">
+          <label class="form-field form-field-wide">
+            <span>Elsődleges cég</span>
+            <input type="text" [(ngModel)]="ownerEditDraft.company" placeholder="Cég neve" />
+          </label>
+
+          <label class="form-field">
+            <span>Státusz</span>
+            <select [(ngModel)]="ownerEditDraft.status">
+              @for (status of statusOptions; track status) {
+                <option [ngValue]="status">{{ status }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="form-field">
+            <span>Verifikáció</span>
+            <select [(ngModel)]="ownerEditDraft.verification">
+              @for (verification of verificationOptions; track verification) {
+                <option [ngValue]="verification">{{ verification }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="form-field form-field-wide">
+            <span>Hozzáférési szint</span>
+            <select [(ngModel)]="ownerEditDraft.access">
+              @for (access of accessOptions; track access) {
+                <option [ngValue]="access">{{ access }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="form-field form-field-wide">
+            <span>Belső admin megjegyzés</span>
+            <textarea rows="3" [(ngModel)]="ownerEditDraft.internalNote" placeholder="Rövid belső megjegyzés"></textarea>
+          </label>
+
+          <label class="form-field form-field-wide">
+            <span>Módosítás oka</span>
+            <textarea rows="4" [(ngModel)]="ownerEditDraft.changeReason" placeholder="Miért történik ez a superadmin módosítás?"></textarea>
+          </label>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn btn-ghost" type="button" (click)="closeOwnerEditModal()">Mégse</button>
+          <button class="btn btn-primary" type="button" [disabled]="!canSaveOwnerEdit" (click)="saveOwnerEdit()">Mentés és audit</button>
+        </div>
+      </section>
     </div>
-    <div class="table-row">
-      <div>
-        <strong>Tulajdonos 01</strong>
-        <span class="sub">owner01@email.com</span>
-      </div>
-      <div>Példa cég 01</div>
-      <div>12</div>
-      <div class="actions">
-        <button class="btn btn-ghost" type="button" (click)="onChangeOwner('Tulajdonos 01')">Tulajdonos csere</button>
-        <button class="btn btn-outline" type="button" (click)="onViewStaff('Példa cég 01')">Staff lista</button>
-        <button class="btn btn-danger" type="button" (click)="onDisableOwner('Tulajdonos 01')">Letiltás</button>
-      </div>
+  }
+
+  @if (isOwnerActionModalOpen) {
+    <div class="action-modal-backdrop" (click)="closeOwnerActionMenu()">
+      <section class="action-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-label="Tulajdonos admin műveletek">
+        <header class="action-modal-header">
+          <h2>{{ selectedOwner }} kezelése</h2>
+          <button class="modal-close-btn" type="button" (click)="closeOwnerActionMenu()" aria-label="Bezárás">✕</button>
+        </header>
+        <p class="action-modal-subtitle">Tulajdonos admin opciók a(z) {{ selectedOwnerCompany }} céghez:</p>
+
+        <div class="action-options">
+          <button class="action-option option-muted" type="button" (click)="onChangeOwner(selectedOwner)">
+            <span class="option-title">Tulajdonos csere</span>
+            <span class="option-text">Másik tulajdonos kijelölése a céghez.</span>
+          </button>
+
+          <button class="action-option option-muted" type="button" (click)="onViewStaff(selectedOwnerCompany)">
+            <span class="option-title">Staff lista megnyitása</span>
+            <span class="option-text">A céghez tartozó staff gyors megnyitása.</span>
+          </button>
+
+          <button class="action-option option-warn" type="button" (click)="onSuspendOwner(selectedOwner)">
+            <span class="option-title">Ideiglenes felfüggesztés</span>
+            <span class="option-text">Belépés korlátozása a tulajdonosi jogosultságokkal együtt.</span>
+          </button>
+
+          <button class="action-option option-muted" type="button" (click)="onRevokeOwnerAccess(selectedOwner)">
+            <span class="option-title">Tulajdonosi jogkör visszavonása</span>
+            <span class="option-text">Átállítja a fiókot korlátozott admin státuszra.</span>
+          </button>
+
+          <button class="action-option option-muted" type="button" (click)="onForceOwnerSecurityReview(selectedOwner)">
+            <span class="option-title">Biztonsági felülvizsgálat</span>
+            <span class="option-text">Kötelező hitelesítés és aktivitásellenőrzés indul.</span>
+          </button>
+
+          <button class="action-option option-muted" type="button" (click)="onTransferOwnerAssets(selectedOwner, selectedOwnerCompany)">
+            <span class="option-title">Eszközök átadása</span>
+            <span class="option-text">Foglalások, staff és beállítások átadása kijelölt adminnak.</span>
+          </button>
+
+          <button class="action-option option-danger" type="button" (click)="onDisableOwner(selectedOwner)">
+            <span class="option-title">Végleges letiltás</span>
+            <span class="option-text">A tulajdonos minden céges hozzáférése megszűnik.</span>
+          </button>
+        </div>
+      </section>
     </div>
-  </div>
+  }
 </section>

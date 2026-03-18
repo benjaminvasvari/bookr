@@ -1,116 +1,147 @@
-<section class="page">
-  <header class="page-header">
-    <div>
+<section class="command-center">
+  <header class="command-header">
+    <div class="command-header-copy">
+      <span class="eyebrow">Command Center</span>
       <h1>Superadmin áttekintés</h1>
-      <p>Átfogó riasztások, cégek és foglalások egy helyen.</p>
+      <p>
+        Monitoring és adminisztratív döntések egy fókuszált nézetben, hogy a kritikus események és a teendők
+        ne vesszenek el a részletek között.
+      </p>
+
+      <div class="command-meta">
+        <span class="meta-pill meta-pill-update">
+          <i class="fas fa-clock" aria-hidden="true"></i>
+          Utolsó frissítés: {{ lastUpdated }}
+        </span>
+        <span class="meta-pill meta-pill-neutral">Napi üzemeltetési fókusz</span>
+      </div>
     </div>
-    <div class="header-actions">
-      <button class="btn btn-primary" type="button" (click)="onCreateCompany()">Új cég</button>
-      <button class="btn btn-secondary" type="button" (click)="onExportLogs()">Log export</button>
-      <button class="btn btn-ghost" type="button" (click)="onRoleOverride()">Szerep felülírás</button>
+
+    <div class="command-toolbar">
+      <button class="toolbar-pill toolbar-alert" type="button" (click)="navigateTo('logs')">
+        <i class="fas fa-bell" aria-hidden="true"></i>
+        <span>{{ notificationCount }}</span>
+      </button>
+      <button class="toolbar-pill toolbar-settings" type="button" (click)="openSettings()">Beállítások</button>
     </div>
   </header>
 
-  <div class="kpi-grid">
-    <div class="kpi-card">
-      <p class="kpi-label">Aktív cégek</p>
-      <p class="kpi-value">0</p>
-      <p class="kpi-note">Összes regisztrált cég</p>
-    </div>
-    <div class="kpi-card">
-      <p class="kpi-label">Folyamatban lévő foglalások</p>
-      <p class="kpi-value">0</p>
-      <p class="kpi-note">Ma és holnap</p>
-    </div>
-    <div class="kpi-card">
-      <p class="kpi-label">Nyitott log riasztások</p>
-      <p class="kpi-value">0</p>
-      <p class="kpi-note">Utóbbi 24 óra</p>
-    </div>
-    <div class="kpi-card">
-      <p class="kpi-label">Felfüggesztett cégek</p>
-      <p class="kpi-value">0</p>
-      <p class="kpi-note">Manuálisan tiltva</p>
-    </div>
-  </div>
-
-  <section class="quick-actions">
-    <div class="action-card">
-      <h3>Gyors műveletek</h3>
-      <div class="action-row">
-        <button class="btn btn-primary" type="button" (click)="onSuspendCompany()">Cég letiltása</button>
-        <button class="btn btn-secondary" type="button" (click)="onChangeOwner()">Tulajdonos csere</button>
-        <button class="btn btn-ghost" type="button" (click)="onMoveStaff()">Staff mozgatása</button>
-      </div>
-    </div>
-    <div class="action-card">
-      <h3>Audit vezérlés</h3>
-      <p>Keress role és staff változásokat, és lockold a céget.</p>
-      <div class="action-row">
-        <button class="btn btn-dark" type="button" (click)="onAuditLock()">Audit lock</button>
-        <button class="btn btn-ghost" type="button" (click)="onOpenEvents()">Esemény lista</button>
-      </div>
-    </div>
+  <section class="kpi-grid" aria-label="Kiemelt mutatók">
+    @for (kpi of kpis; track kpi.label) {
+      <button class="kpi-card" [class]="'kpi-card accent-' + kpi.accent" type="button" (click)="navigateTo(kpi.route)">
+        <span class="kpi-value">{{ kpi.value }}</span>
+        <span class="kpi-label">{{ kpi.label }}</span>
+        <span class="kpi-note">{{ kpi.note }}</span>
+      </button>
+    }
   </section>
 
-  <div class="panel-grid">
-    <div class="panel">
-      <div class="panel-header">
-        <h2>Legutóbbi cégek</h2>
-        <button class="link-btn" type="button" (click)="onViewCompanies()">Mind</button>
-      </div>
-      <ul class="list">
-        <li>
-          <span>Példa cég 01</span>
-          <span class="badge">Új</span>
-        </li>
-        <li>
-          <span>Példa cég 02</span>
-          <span class="badge">Aktív</span>
-        </li>
-        <li>
-          <span>Példa cég 03</span>
-          <span class="badge">Aktív</span>
-        </li>
-      </ul>
+  <section class="command-layout">
+    <div class="activity-column">
+      <article class="panel">
+        <div class="panel-header">
+          <div class="panel-heading">
+            <h2>Legutóbbi foglalások</h2>
+            <p>Az utolsó 6 foglalás, hogy gyorsan lásd a napi terhelést és az eltéréseket.</p>
+          </div>
+          <button class="panel-link" type="button" (click)="navigateTo('bookings')">Összes foglalás</button>
+        </div>
+
+        <div class="booking-table">
+          <div class="booking-table-head">
+            <span>Ügyfél</span>
+            <span>Szolgáltatás</span>
+            <span>Idő</span>
+            <span>Státusz</span>
+          </div>
+
+          @for (booking of recentBookings; track booking.client + booking.time) {
+            <button class="booking-row" type="button" (click)="navigateTo('bookings')">
+              <span class="row-primary">
+                <strong>{{ booking.client }}</strong>
+                <span>{{ booking.company }}</span>
+              </span>
+              <span class="row-secondary">{{ booking.service }}</span>
+              <span class="row-time">{{ booking.time }}</span>
+              <span class="status-pill" [class.status-pill-new]="booking.status === 'Új'" [class.status-pill-warning]="booking.status === 'Vizsgálandó'">
+                {{ booking.status }}
+              </span>
+            </button>
+          }
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-header panel-header-stack">
+          <div class="panel-heading">
+            <h2>Legutóbbi audit logok</h2>
+            <p>Szűrhető eseménylista gyors hibakereséshez és auth ellenőrzéshez.</p>
+          </div>
+
+          <div class="audit-controls">
+            <div class="filter-group" role="tablist" aria-label="Audit log szűrők">
+              @for (filter of logFilters; track filter.value) {
+                <button
+                  class="filter-chip"
+                  type="button"
+                  [class.active]="selectedLogFilter === filter.value"
+                  [attr.aria-pressed]="selectedLogFilter === filter.value"
+                  (click)="setLogFilter(filter.value)"
+                >
+                  {{ filter.label }}
+                </button>
+              }
+            </div>
+            <button class="panel-link" type="button" (click)="navigateTo('logs')">Log oldal</button>
+          </div>
+        </div>
+
+        <div class="audit-list">
+          @for (log of filteredAuditLogs; track log.title + log.time) {
+            <button class="audit-item" type="button" (click)="navigateTo('logs')">
+              <span class="audit-marker" [class.audit-marker-error]="log.type === 'error'" [class.audit-marker-auth]="log.type === 'auth'"></span>
+              <span class="audit-copy">
+                <span class="audit-title">{{ log.title }}</span>
+                <span class="audit-detail">{{ log.detail }}</span>
+              </span>
+              <span class="audit-meta">
+                <span class="audit-type">{{ log.type === 'error' ? 'Hiba' : log.type === 'auth' ? 'Auth' : 'Audit' }}</span>
+                <span class="audit-time">{{ log.time }}</span>
+              </span>
+            </button>
+          }
+        </div>
+      </article>
     </div>
 
-    <div class="panel">
-      <div class="panel-header">
-        <h2>Legutóbbi logok</h2>
-        <button class="link-btn" type="button" (click)="onViewLogs()">Részletek</button>
-      </div>
-      <ul class="list">
-        <li>
-          <span>Auth hiba</span>
-          <span class="muted">10 perc</span>
-        </li>
-        <li>
-          <span>Új foglalás</span>
-          <span class="muted">30 perc</span>
-        </li>
-        <li>
-          <span>Szerep módosítás</span>
-          <span class="muted">1 óra</span>
-        </li>
-      </ul>
-    </div>
+    <aside class="tasks-column">
+      <article class="panel tasks-panel">
+        <div class="panel-header">
+          <div class="panel-heading">
+            <h2>Azonnali teendők</h2>
+            <p>Minden sor a megfelelő admin oldalra visz, hogy egy lépésből lehessen intézkedni.</p>
+          </div>
+        </div>
 
-    <div class="panel">
-      <div class="panel-header">
-        <h2>Kritikus foglalások</h2>
-        <button class="link-btn" type="button" (click)="onViewCriticalBookings()">Megnyitás</button>
-      </div>
-      <ul class="list">
-        <li>
-          <span>Foglalás törlés vita</span>
-          <span class="badge warning">Ellenőrzés</span>
-        </li>
-        <li>
-          <span>Dupla terhelés</span>
-          <span class="badge warning">Ellenőrzés</span>
-        </li>
-      </ul>
-    </div>
-  </div>
+        <ul class="task-list">
+          @for (item of actionItems; track item.label) {
+            <li>
+              <button class="task-link" type="button" (click)="navigateTo(item.route)">
+                <span class="task-count">{{ item.count }}</span>
+                <span class="task-copy">
+                  <span class="task-label">{{ item.count }} {{ item.label }}</span>
+                  <span class="task-description">{{ item.description }}</span>
+                </span>
+                <span class="task-arrow" aria-hidden="true">→</span>
+              </button>
+            </li>
+          }
+        </ul>
+
+        <div class="tasks-footnote">
+          Kritikus figyelmeztetés és függő adminisztratív feladat egyetlen oldalon, külön részletező oldalakra bontva.
+        </div>
+      </article>
+    </aside>
+  </section>
 </section>
