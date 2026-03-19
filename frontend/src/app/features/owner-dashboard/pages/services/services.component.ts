@@ -1,9 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { AuthService } from '../../../../../core/services/auth.service';
-import { CompaniesService } from '../../../../../core/services/companies.service';
-import { ServiceCategory, Service as ApiService } from '../../../../../core/models/service.model';
+import { AuthService } from '../../../../core/services/auth.service';
+import { CompaniesService } from '../../../../core/services/companies.service';
+import { ServiceCategory, Service as ApiService } from '../../../../core/models/service.model';
 
 interface DashboardServiceItem {
   id: number;

@@ -1,12 +1,12 @@
 import { Component, OnInit, OnDestroy, HostListener, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { AuthService } from '../../../../../core/services/auth.service';
-import { CompaniesService } from '../../../../../core/services/companies.service';
-import { OwnerDashboardService } from '../../../../../core/services/owner-dashboard.service';
-import { StaffService } from '../../../../../core/services/staff.service';
-import { OpeningHours } from '../../../../../core/models/opening-hours.model';
-import { User } from '../../../../../core/models';
+import { AuthService } from '../../../../core/services/auth.service';
+import { CompaniesService } from '../../../../core/services/companies.service';
+import { OwnerDashboardService } from '../../../../core/services/owner-dashboard.service';
+import { StaffService } from '../../../../core/services/staff.service';
+import { OpeningHours } from '../../../../core/models/opening-hours.model';
+import { User } from '../../../../core/models';
 import { StaffChipComponent } from './staff-chip.component';
 
 interface TimeSlot {

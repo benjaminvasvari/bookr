@@ -5,9 +5,9 @@ import {
   OwnerActualStaffMember,
   OwnerPendingStaffMember,
   OwnerUpcomingAppointment,
-} from '../../../../../core/models/staff.model';
-import { AuthService } from '../../../../../core/services/auth.service';
-import { StaffService } from '../../../../../core/services/staff.service';
+} from '../../../../core/models/staff.model';
+import { AuthService } from '../../../../core/services/auth.service';
+import { StaffService } from '../../../../core/services/staff.service';
 
 interface StaffInviteForm {
   email: string;

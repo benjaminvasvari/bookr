@@ -91,6 +91,7 @@
 	gap: 16px;
 	margin-top: 2px;
 }
+
 .sidebar-nav .home-link {
 	margin-bottom: 6px;
 	background: rgba(235, 244, 255, 0.2);
@@ -123,7 +124,6 @@
 	flex-shrink: 0;
 	margin-left: 3px;
 }
-
 
 .nav-label {
 	opacity: 0;

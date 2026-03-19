@@ -8,17 +8,17 @@ import {
   OwnerDashboardServiceItem,
   OwnerDashboardUpcomingAppointment,
   OwnerDashboardData,
-} from '../../../../../core/models/owner-dashboard.model';
-import { AuthService } from '../../../../../core/services/auth.service';
-import { OwnerDashboardService } from '../../../../../core/services/owner-dashboard.service';
+} from '../../../../core/models/owner-dashboard.model';
+import { AuthService } from '../../../../core/services/auth.service';
+import { OwnerDashboardService } from '../../../../core/services/owner-dashboard.service';
 import {
   OwnerSalesService,
   SalesRevenueChartPoint,
-} from '../../../../../core/services/owner-sales.service';
+} from '../../../../core/services/owner-sales.service';
 import {
   RevenueChartBar,
   RevenueChartComponent,
-} from '../../../components/revenue-chart/revenue-chart.component';
+} from '../../components/revenue-chart/revenue-chart.component';
 
 @Component({
   selector: 'app-overview',

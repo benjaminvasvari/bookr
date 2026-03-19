@@ -1,8 +1,8 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { AuthService } from '../../../../../core/services/auth.service';
-import { OwnerClientsService } from '../../../../../core/services/owner-clients.service';
-import { OwnerClientApiItem } from '../../../../../core/models';
+import { AuthService } from '../../../../core/services/auth.service';
+import { OwnerClientsService } from '../../../../core/services/owner-clients.service';
+import { OwnerClientApiItem } from '../../../../core/models';
 
 interface ClientListItem {
   id: number;

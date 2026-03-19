@@ -6,14 +6,14 @@ import {
   OwnerSalesService,
   SalesRevenueChartPoint,
   SalesOverviewPeriod,
-} from '../../../../../core/services/owner-sales.service';
-import { AuthService } from '../../../../../core/services/auth.service';
-import { CompaniesService } from '../../../../../core/services/companies.service';
-import { OpeningHours } from '../../../../../core/models/opening-hours.model';
+} from '../../../../core/services/owner-sales.service';
+import { AuthService } from '../../../../core/services/auth.service';
+import { CompaniesService } from '../../../../core/services/companies.service';
+import { OpeningHours } from '../../../../core/models/opening-hours.model';
 import {
   RevenueChartBar,
   RevenueChartComponent,
-} from '../../../components/revenue-chart/revenue-chart.component';
+} from '../../components/revenue-chart/revenue-chart.component';
 
 export type Period = 'weekly' | 'monthly' | 'yearly';
 

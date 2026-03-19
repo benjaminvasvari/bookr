@@ -7,13 +7,13 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatTimepickerModule } from '@angular/material/timepicker';
 import { DateAdapter, MatNativeDateModule, NativeDateAdapter } from '@angular/material/core';
 import { MAT_DATE_FORMATS, MAT_DATE_LOCALE } from '@angular/material/core';
-import { CompaniesService, CompanyImage, TemporaryClosedPeriod, UpdateCompanyRequest } from '../../../../../core/services/companies.service';
+import { CompaniesService, CompanyImage, TemporaryClosedPeriod, UpdateCompanyRequest } from '../../../../core/services/companies.service';
 import { forkJoin, of } from 'rxjs';
-import { AuthService } from '../../../../../core/services/auth.service';
-import { Company } from '../../../../../core/models/company.model';
-import { BusinessCategory } from '../../../../../core/models/business-category.model';
-import { OpeningHours } from '../../../../../core/models/opening-hours.model';
-import { environment } from '../../../../../../environments/environment';
+import { AuthService } from '../../../../core/services/auth.service';
+import { Company } from '../../../../core/models/company.model';
+import { BusinessCategory } from '../../../../core/models/business-category.model';
+import { OpeningHours } from '../../../../core/models/opening-hours.model';
+import { environment } from '../../../../../environments/environment';
 
 interface TemporaryClosingPeriod {
   id?: number;

@@ -1,7 +1,7 @@
 import { Component, HostListener, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
-import { OwnerSidebar } from '../sidebar/owner-sidebar/owner-sidebar.component';
+import { OwnerSidebar } from './sidebar/owner-sidebar.component';
 
 @Component({
   selector: 'app-owner-dashboard',

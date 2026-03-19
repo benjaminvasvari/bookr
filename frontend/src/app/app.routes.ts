@@ -141,7 +141,7 @@ export const appRoutes: Routes = [
   {
     path: 'superadmin',
     loadComponent: () =>
-      import('./features/superadmin-dashboard/superadmin-dashboard/superadmin-dashboard.component').then(
+      import('./features/superadmin-dashboard/superadmin-dashboard.component').then(
         (m) => m.SuperadminDashboardComponent
       ),
     canActivate: [authGuard, roleGuard],
@@ -201,7 +201,7 @@ export const appRoutes: Routes = [
   {
     path: 'owner',
     loadComponent: () =>
-      import('./features/owner-dashboard/owner-dashboard/owner-dashboard.component').then(
+      import('./features/owner-dashboard/owner-dashboard.component').then(
         (m) => m.OwnerDashboardComponent
       ),
     canActivate: [authGuard, ownerGuard],
@@ -215,21 +215,21 @@ export const appRoutes: Routes = [
       {
         path: 'overview',
         loadComponent: () =>
-          import('./features/owner-dashboard/pages/overview/overview/overview.component').then(
+          import('./features/owner-dashboard/pages/overview/overview.component').then(
             (m) => m.OverviewComponent
           )
       },
       {
         path: 'calendar',
         loadComponent: () =>
-          import('./features/owner-dashboard/pages/calendar/calendar.component/calendar.component').then(
+          import('./features/owner-dashboard/pages/calendar/calendar.component').then(
             (m) => m.CalendarComponent
           )
       },
       {
         path: 'staff',
         loadComponent: () =>
-          import('./features/owner-dashboard/pages/staff/staff.component/staff.component').then(
+          import('./features/owner-dashboard/pages/staff/staff.component').then(
             (m) => m.StaffComponent
           )
       },
@@ -243,28 +243,28 @@ export const appRoutes: Routes = [
       {
         path: 'clients',
         loadComponent: () =>
-          import('./features/owner-dashboard/pages/clients/clients.component/clients.component').then(
+          import('./features/owner-dashboard/pages/clients/clients.component').then(
             (m) => m.ClientsComponent
           )
       },
       {
         path: 'services',
         loadComponent: () =>
-          import('./features/owner-dashboard/pages/services/services.component/services.component').then(
+          import('./features/owner-dashboard/pages/services/services.component').then(
             (m) => m.ServicesComponent
           )
       },
       {
         path: 'sales',
         loadComponent: () =>
-          import('./features/owner-dashboard/pages/sales/sales.component/sales.component').then(
+          import('./features/owner-dashboard/pages/sales/sales.component').then(
             (m) => m.SalesComponent
           )
       },
       {
         path: 'reviews',
         loadComponent: () =>
-          import('./features/owner-dashboard/pages/reviews/reviews.component/reviews.component').then(
+          import('./features/owner-dashboard/pages/reviews/reviews.component').then(
             (m) => m.ReviewsComponent
           )
       },
@@ -272,7 +272,7 @@ export const appRoutes: Routes = [
         path: 'settings',
         canDeactivate: [settingsLeaveGuard],
         loadComponent: () =>
-          import('./features/owner-dashboard/pages/settings/settings.component/settings.component').then(
+          import('./features/owner-dashboard/pages/settings/settings.component').then(
             (m) => m.SettingsComponent
           )
       }

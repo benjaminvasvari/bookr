@@ -1,7 +1,7 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { AuthService } from '../../../../../core/services/auth.service';
-import { OwnerReviewsService, OwnerReview, OwnerReviewsRequest } from '../../../../../core/services/owner-reviews.service';
+import { AuthService } from '../../../../core/services/auth.service';
+import { OwnerReviewsService, OwnerReview, OwnerReviewsRequest } from '../../../../core/services/owner-reviews.service';
 
 @Component({
   selector: 'app-reviews.component',
