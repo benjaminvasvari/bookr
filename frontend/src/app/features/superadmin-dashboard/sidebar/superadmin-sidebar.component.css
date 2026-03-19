@@ -2,26 +2,23 @@
   width: 68px;
   flex: 0 0 68px;
   height: 100vh;
-  background: #1f2937;
-  color: #f8fafc;
+  background: #2d3748;
+  color: #ebf4ff;
   padding: 18px 10px;
   display: flex;
   flex-direction: column;
   gap: 24px;
-  transition: width 0.2s ease;
+  transition: width 0.2s ease, flex-basis 0.2s ease, max-width 0.2s ease;
   overflow: hidden;
   box-sizing: border-box;
   position: relative;
+  max-width: 68px;
 }
 
-.superadmin-sidebar:hover {
+.superadmin-sidebar.is-expanded {
   width: 220px;
   flex-basis: 220px;
-}
-
-.superadmin-sidebar.is-pinned {
-  width: 220px;
-  flex-basis: 220px;
+  max-width: 220px;
 }
 
 .sidebar-header {
@@ -45,53 +42,15 @@
   line-height: 1;
 }
 
-.pin-btn {
-  position: absolute;
-  top: 14px;
-  right: 12px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px;
-  border-radius: 10px;
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  background: rgba(148, 163, 184, 0.18);
-  color: #f8fafc;
-  cursor: pointer;
-  font-size: 12px;
-  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
-}
-
-.superadmin-sidebar:not(:hover):not(.is-pinned) .pin-btn {
-  opacity: 0;
-  pointer-events: none;
-}
-
-.pin-btn:hover {
-  background: rgba(148, 163, 184, 0.28);
-  border-color: rgba(148, 163, 184, 0.55);
-}
-
-.superadmin-sidebar.is-pinned .pin-btn {
-  background: rgba(148, 163, 184, 0.4);
-  border-color: rgba(148, 163, 184, 0.7);
-}
-
-.pin-icon {
-  font-size: 14px;
-  line-height: 1;
-  color: #f8fafc;
-  transform: rotate(25deg) translateY(1px);
-}
-
 .sidebar-nav {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  flex: 1;
 }
 
 .sidebar-nav a {
-  color: #f8fafc;
+  color: #ebf4ff;
   text-decoration: none;
   padding: 6px 12px;
   border-radius: 8px;
@@ -105,18 +64,18 @@
 
 .sidebar-nav .home-link {
   margin-bottom: 6px;
-  background: rgba(248, 250, 252, 0.12);
-  color: #f8fafc;
+  background: rgba(235, 244, 255, 0.2);
+  color: #ebf4ff;
 }
 
 .sidebar-nav .home-link.active {
-  background: #f3c97a;
-  color: #2d3748;
+  background: #7c9cbf;
+  color: #ebf4ff;
 }
 
 .nav-divider {
   height: 1px;
-  background: rgba(148, 163, 184, 0.35);
+  background: rgba(124, 156, 191, 0.35);
   margin: 6px 4px 10px;
 }
 
@@ -135,20 +94,44 @@
   white-space: nowrap;
 }
 
-.superadmin-sidebar:hover .nav-label {
+.superadmin-sidebar.is-expanded .nav-label {
   opacity: 1;
 }
 
-.superadmin-sidebar.is-pinned .nav-label {
-  opacity: 1;
+.collapse-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  align-self: center;
+  margin-top: auto;
+  border-radius: 999px;
+  border: 1px solid rgba(124, 156, 191, 0.35);
+  background: rgba(124, 156, 191, 0.18);
+  color: #ebf4ff;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
+}
+
+.collapse-toggle-btn:hover {
+  background: rgba(124, 156, 191, 0.28);
+  border-color: rgba(124, 156, 191, 0.55);
+}
+
+.collapse-toggle-btn i {
+  font-size: 12px;
+  line-height: 1;
 }
 
 .sidebar-nav a:hover {
-  background: rgba(148, 163, 184, 0.22);
-  color: #f8fafc;
+  background: rgba(124, 156, 191, 0.22);
+  color: #ebf4ff;
 }
 
 .sidebar-nav a.active {
-  background: #f3c97a;
-  color: #2d3748;
+  background: #7c9cbf;
+  color: #ebf4ff;
 }

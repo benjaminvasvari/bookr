@@ -10,9 +10,9 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
   styleUrls: ['./superadmin-sidebar.component.css'],
 })
 export class SuperadminSidebarComponent {
-  isPinned = false;
+  isExpanded = true;
 
-  togglePin(): void {
-    this.isPinned = !this.isPinned;
+  toggleSidebar(): void {
+    this.isExpanded = !this.isExpanded;
   }
 }

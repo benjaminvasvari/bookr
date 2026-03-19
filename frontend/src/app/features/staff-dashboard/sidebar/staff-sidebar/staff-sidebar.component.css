@@ -8,20 +8,18 @@
 	display: flex;
 	flex-direction: column;
 	gap: 24px;
-	transition: width 0.2s ease;
+	transition: width 0.2s ease, flex-basis 0.2s ease, max-width 0.2s ease;
 	overflow: hidden;
 	box-sizing: border-box;
 	position: relative;
+	max-width: 68px;
 }
 
-.staff-sidebar:hover {
-	width: 220px;
-	flex-basis: 220px;
-}
 
-.staff-sidebar.is-pinned {
+.staff-sidebar.is-expanded {
 	width: 220px;
 	flex-basis: 220px;
+	max-width: 220px;
 }
 
 .sidebar-header {
@@ -30,46 +28,6 @@
 	gap: 12px;
 	padding: 4px 6px;
 	height: 48px;
-}
-
-.pin-btn {
-	position: absolute;
-	top: 14px;
-	right: 12px;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	gap: 0;
-	padding: 8px;
-	border-radius: 10px;
-	border: 1px solid rgba(124, 156, 191, 0.35);
-	background: rgba(124, 156, 191, 0.18);
-	color: #ebf4ff;
-	cursor: pointer;
-	font-size: 12px;
-	transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
-}
-
-.staff-sidebar:not(:hover):not(.is-pinned) .pin-btn {
-	opacity: 0;
-	pointer-events: none;
-}
-
-.pin-btn:hover {
-	background: rgba(124, 156, 191, 0.28);
-	border-color: rgba(124, 156, 191, 0.55);
-}
-
-.staff-sidebar.is-pinned .pin-btn {
-	background: rgba(124, 156, 191, 0.4);
-	border-color: rgba(124, 156, 191, 0.7);
-}
-
-.pin-icon {
-	font-size: 14px;
-	line-height: 1;
-	color: #ebf4ff;
-	transform: rotate(25deg) translateY(1px);
 }
 
 .brand-icon {
@@ -88,8 +46,8 @@
 .sidebar-nav {
 	display: flex;
 	flex-direction: column;
-	gap: 16px;
-	margin-top: 2px;
+	gap: 10px;
+	flex: 1;
 }
 
 .sidebar-nav .home-link {
@@ -101,6 +59,12 @@
 .sidebar-nav .home-link.active {
 	background: #7c9cbf;
 	color: #ebf4ff;
+}
+
+.nav-divider {
+	height: 1px;
+	background: rgba(124, 156, 191, 0.35);
+	margin: 6px 4px 10px;
 }
 
 .sidebar-nav a {
@@ -131,9 +95,36 @@
 	white-space: nowrap;
 }
 
-.staff-sidebar:hover .nav-label,
-.staff-sidebar.is-pinned .nav-label {
+.staff-sidebar.is-expanded .nav-label {
 	opacity: 1;
+}
+
+.collapse-toggle-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
+	padding: 0;
+	align-self: center;
+	margin-top: auto;
+	border-radius: 999px;
+	border: 1px solid rgba(124, 156, 191, 0.35);
+	background: rgba(124, 156, 191, 0.18);
+	color: #ebf4ff;
+	cursor: pointer;
+	font-size: 12px;
+	transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
+}
+
+.collapse-toggle-btn:hover {
+	background: rgba(124, 156, 191, 0.28);
+	border-color: rgba(124, 156, 191, 0.55);
+}
+
+.collapse-toggle-btn i {
+	font-size: 12px;
+	line-height: 1;
 }
 
 .sidebar-nav a:hover {
