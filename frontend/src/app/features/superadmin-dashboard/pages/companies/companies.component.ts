@@ -1,7 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SuperadminService } from '../../../../core/services/superadmin.service';
+import { createBookrExportWorkbook } from '../../../../core/utils/bookr-export.util';
 
 type CompanyFilter = 'all' | 'Aktív' | 'Felfüggesztett' | 'Új';
 type CompanyPlan = 'Alap' | 'Pro' | 'Enterprise';
@@ -31,6 +32,15 @@ interface CompanyEditDraft {
   changeReason: string;
 }
 
+type ExportFeedbackTone = 'success' | 'error' | 'info';
+
+interface ExportFeedback {
+  tone: ExportFeedbackTone;
+  title: string;
+  detail: string;
+  meta?: string;
+}
+
 @Component({
   selector: 'app-superadmin-companies',
   standalone: true,
@@ -38,14 +48,19 @@ interface CompanyEditDraft {
   templateUrl: './companies.component.html',
   styleUrls: ['./companies.component.css'],
 })
-export class SuperadminCompaniesComponent {
+export class SuperadminCompaniesComponent implements OnDestroy {
   isCompanyActionModalOpen = false;
   isCompanyEditModalOpen = false;
+  isExportingCompanies = false;
+  hasRecentCompanyExport = false;
   selectedCompany = '';
   editingCompanyName = '';
   searchTerm = '';
   selectedFilter: CompanyFilter = 'all';
   companyEditDraft: CompanyEditDraft | null = null;
+  companyExportFeedback: ExportFeedback | null = null;
+
+  private exportSuccessTimeoutId: number | null = null;
 
   readonly filters: Array<{ value: CompanyFilter; label: string }> = [
     { value: 'all', label: 'Összes' },
@@ -141,6 +156,22 @@ export class SuperadminCompaniesComponent {
 
   constructor(private superadminService: SuperadminService) {}
 
+  ngOnDestroy(): void {
+    this.clearExportSuccessTimer();
+  }
+
+  get exportButtonLabel(): string {
+    if (this.isExportingCompanies) {
+      return 'Exportálás...';
+    }
+
+    if (this.hasRecentCompanyExport) {
+      return 'Letöltve';
+    }
+
+    return 'Tömeges export';
+  }
+
   get filteredCompanies(): CompanyCard[] {
     const normalizedSearch = this.searchTerm.trim().toLocaleLowerCase();
 
@@ -205,6 +236,10 @@ export class SuperadminCompaniesComponent {
     }
 
     return 'verification-pill-pending';
+  }
+
+  getStatusActionLabel(status: CompanyStatus): string {
+    return status === 'Aktív' ? 'Felfüggesztés' : 'Aktiválás';
   }
 
   openCompanyEditModal(companyName: string): void {
@@ -291,11 +326,120 @@ export class SuperadminCompaniesComponent {
     this.superadminService.runAction('create-company');
   }
 
-  onExportCompanies(): void {
-    this.superadminService.runAction('export-companies');
+  async onExportCompanies(): Promise<void> {
+    if (this.isExportingCompanies) {
+      return;
+    }
+
+    const fileName = this.getExportFileName();
+
+    const exportRows = this.filteredCompanies.map((company) => ({
+      'Cég neve': company.name,
+      Város: company.city,
+      Email: company.email,
+      Tulajdonos: company.owner,
+      Staff: company.staffCount,
+      'Foglalás ma': company.bookingsToday,
+      Csomag: company.plan,
+      Státusz: company.status,
+      Verifikáció: company.verification,
+      'Belső admin megjegyzés': company.internalNote,
+      'Utolsó admin frissítés': company.lastAdminUpdate ?? '-',
+    }));
+
+    if (exportRows.length === 0) {
+      this.showCompanyExportFeedback(
+        'info',
+        'Nincs exportálható adat',
+        'Módosítsd a szűrőket vagy a keresést, és próbáld újra.'
+      );
+      return;
+    }
+
+    this.isExportingCompanies = true;
+
+    try {
+      const { workbook, XLSX } = await createBookrExportWorkbook({
+        exportType: 'Cégek',
+        source: 'Bookr weboldal / Superadmin / Cégek',
+        dataSheetName: 'Cégek',
+        rows: exportRows,
+        filters: [
+          ['Státusz szűrő', this.getActiveFilterLabel()],
+          ['Keresés', this.searchTerm.trim() || 'nincs'],
+        ],
+      });
+
+      XLSX.writeFile(workbook, fileName, { compression: true });
+      this.markCompanyExportSuccess(exportRows.length, fileName);
+
+      this.superadminService.runAction(
+        'export-companies',
+        `xlsx | db: ${exportRows.length} | szuro: ${this.getActiveFilterLabel()} | kereses: ${this.searchTerm.trim() || 'nincs'}`
+      );
+    } catch (error) {
+      console.error('[Companies export] Excel export failed', error);
+      this.showCompanyExportFeedback(
+        'error',
+        'Az export nem sikerült',
+        'Az Excel fájl létrehozása most nem sikerült. Próbáld újra később.'
+      );
+    } finally {
+      this.isExportingCompanies = false;
+    }
+  }
+
+  closeCompanyExportFeedback(): void {
+    this.companyExportFeedback = null;
+  }
+
+  private getActiveFilterLabel(): string {
+    return this.filters.find((filter) => filter.value === this.selectedFilter)?.label ?? 'Összes';
+  }
+
+  private getExportFileName(): string {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+
+    return `cegek-export-${year}-${month}-${day}.xlsx`;
+  }
+
+  private markCompanyExportSuccess(exportedCount: number, fileName: string): void {
+    this.hasRecentCompanyExport = true;
+    this.clearExportSuccessTimer();
+    this.exportSuccessTimeoutId = window.setTimeout(() => {
+      this.hasRecentCompanyExport = false;
+      this.exportSuccessTimeoutId = null;
+    }, 2400);
+
+    this.showCompanyExportFeedback(
+      'success',
+      'Excel export kész',
+      `${exportedCount} cég exportálva. A letöltés elindult, a fájl a böngésző letöltései között érhető el.`,
+      `Fájl: ${fileName} · A workbook tartalmaz egy letisztított Bookr forráslapot és export metaadatokat.`
+    );
+  }
+
+  private showCompanyExportFeedback(
+    tone: ExportFeedbackTone,
+    title: string,
+    detail: string,
+    meta?: string
+  ): void {
+    this.companyExportFeedback = { tone, title, detail, meta };
+  }
+
+  private clearExportSuccessTimer(): void {
+    if (this.exportSuccessTimeoutId !== null) {
+      window.clearTimeout(this.exportSuccessTimeoutId);
+      this.exportSuccessTimeoutId = null;
+    }
   }
 
   onChangeOwner(company: string): void {
+    this.closeCompanyActionMenu();
     this.superadminService.confirmAction(
       'change-owner',
       'Biztosan tulajdonost cserélsz ennél a cégnél?',
@@ -305,6 +449,25 @@ export class SuperadminCompaniesComponent {
 
   onViewStaff(company: string): void {
     this.superadminService.runAction('view-staff', company);
+  }
+
+  toggleCompanyStatus(companyName: string): void {
+    const company = this.companies.find((item) => item.name === companyName);
+
+    if (!company) {
+      return;
+    }
+
+    const nextStatus: CompanyStatus = company.status === 'Aktív' ? 'Felfüggesztett' : 'Aktív';
+    const prompt = nextStatus === 'Aktív' ? 'Biztosan aktiválod ezt a céget?' : 'Biztosan felfüggeszted ezt a céget?';
+
+    if (!window.confirm(`${prompt}\n\nCél: ${company.name}`)) {
+      return;
+    }
+
+    company.status = nextStatus;
+    company.lastAdminUpdate = this.formatAdminTimestamp();
+    this.superadminService.runAction('toggle-company-status', `${company.name} | uj-statusz: ${company.status}`);
   }
 
   onSuspendCompany(company: string): void {
@@ -360,6 +523,15 @@ export class SuperadminCompaniesComponent {
     this.superadminService.confirmAction(
       'disable-company-permanently',
       'Biztosan véglegesen letiltod ezt a céget?',
+      company
+    );
+  }
+
+  onDeleteCompany(company: string): void {
+    this.closeCompanyActionMenu();
+    this.superadminService.confirmAction(
+      'delete-company',
+      'Biztosan törlöd ezt a céget? Ez a művelet nem vonható vissza.',
       company
     );
   }

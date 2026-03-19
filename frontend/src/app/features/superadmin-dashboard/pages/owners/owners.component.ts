@@ -6,6 +6,7 @@ import { SuperadminService } from '../../../../core/services/superadmin.service'
 type OwnerStatus = 'Aktív' | 'Figyelmeztetett' | 'Felfüggesztett';
 type OwnerVerification = 'Hitelesített' | 'Függőben' | 'Biztonsági review';
 type OwnerAccess = 'Teljes hozzáférés' | 'Korlátozott admin' | 'Megfigyelés alatt';
+type OwnerStatusFilter = 'all' | OwnerStatus;
 
 interface OwnerCard {
   name: string;
@@ -42,11 +43,20 @@ export class SuperadminOwnersComponent {
   selectedOwner = '';
   selectedOwnerCompany = '';
   editingOwnerName = '';
+  searchTerm = '';
+  selectedCompanyFilter = 'all';
+  selectedStatusFilter: OwnerStatusFilter = 'all';
   ownerEditDraft: OwnerEditDraft | null = null;
 
   readonly statusOptions: OwnerStatus[] = ['Aktív', 'Figyelmeztetett', 'Felfüggesztett'];
   readonly verificationOptions: OwnerVerification[] = ['Hitelesített', 'Függőben', 'Biztonsági review'];
   readonly accessOptions: OwnerAccess[] = ['Teljes hozzáférés', 'Korlátozott admin', 'Megfigyelés alatt'];
+  readonly statusFilters: Array<{ value: OwnerStatusFilter; label: string }> = [
+    { value: 'all', label: 'Összes' },
+    { value: 'Aktív', label: 'Aktív' },
+    { value: 'Figyelmeztetett', label: 'Figyelmeztetett' },
+    { value: 'Felfüggesztett', label: 'Felfüggesztett' },
+  ];
 
   owners: OwnerCard[] = [
     {
@@ -101,6 +111,26 @@ export class SuperadminOwnersComponent {
 
   constructor(private superadminService: SuperadminService) {}
 
+  get companyOptions(): string[] {
+    return ['all', ...new Set(this.owners.map((owner) => owner.company))];
+  }
+
+  get filteredOwners(): OwnerCard[] {
+    const normalizedSearch = this.searchTerm.trim().toLocaleLowerCase();
+
+    return this.owners.filter((owner) => {
+      const matchesSearch =
+        normalizedSearch.length === 0 ||
+        owner.name.toLocaleLowerCase().includes(normalizedSearch) ||
+        owner.email.toLocaleLowerCase().includes(normalizedSearch) ||
+        owner.company.toLocaleLowerCase().includes(normalizedSearch);
+      const matchesCompany = this.selectedCompanyFilter === 'all' || owner.company === this.selectedCompanyFilter;
+      const matchesStatus = this.selectedStatusFilter === 'all' || owner.status === this.selectedStatusFilter;
+
+      return matchesSearch && matchesCompany && matchesStatus;
+    });
+  }
+
   get canSaveOwnerEdit(): boolean {
     return Boolean(
       this.ownerEditDraft &&
@@ -143,6 +173,18 @@ export class SuperadminOwnersComponent {
     }
 
     return 'access-pill-watch';
+  }
+
+  getStatusActionLabel(status: OwnerStatus): string {
+    return status === 'Aktív' ? 'Felfüggesztés' : 'Aktiválás';
+  }
+
+  setStatusFilter(filter: OwnerStatusFilter): void {
+    this.selectedStatusFilter = filter;
+  }
+
+  clearSearch(): void {
+    this.searchTerm = '';
   }
 
   openOwnerEditModal(ownerName: string): void {
@@ -227,12 +269,23 @@ export class SuperadminOwnersComponent {
     this.selectedOwnerCompany = '';
   }
 
-  onInviteOwner(): void {
-    this.superadminService.runAction('invite-owner');
-  }
+  toggleOwnerStatus(ownerName: string): void {
+    const owner = this.owners.find((item) => item.name === ownerName);
 
-  onAuditRoles(): void {
-    this.superadminService.runAction('audit-roles');
+    if (!owner) {
+      return;
+    }
+
+    const nextStatus: OwnerStatus = owner.status === 'Aktív' ? 'Felfüggesztett' : 'Aktív';
+    const prompt = nextStatus === 'Aktív' ? 'Biztosan aktiválod ezt a tulajdonost?' : 'Biztosan felfüggeszted ezt a tulajdonost?';
+
+    if (!window.confirm(`${prompt}\n\nCél: ${owner.name}`)) {
+      return;
+    }
+
+    owner.status = nextStatus;
+    owner.lastAdminUpdate = this.formatAdminTimestamp();
+    this.superadminService.runAction('toggle-owner-status', `${owner.name} | uj-statusz: ${owner.status}`);
   }
 
   onChangeOwner(ownerName: string): void {
@@ -279,12 +332,33 @@ export class SuperadminOwnersComponent {
     this.superadminService.runAction('owner-security-review', ownerName);
   }
 
+  onForceOwnerPasswordReset(ownerName: string): void {
+    if (this.isOwnerActionModalOpen) {
+      this.closeOwnerActionMenu();
+    }
+
+    this.superadminService.confirmAction(
+      'force-owner-password-reset',
+      'Biztosan jelszócserét kényszerítesz ennél a tulajdonosnál?',
+      ownerName
+    );
+  }
+
   onTransferOwnerAssets(ownerName: string, companyName: string): void {
     this.closeOwnerActionMenu();
     this.superadminService.confirmAction(
       'transfer-owner-assets',
       'Biztosan átadod a tulajdonoshoz tartozó eszközöket?',
       `${ownerName} (${companyName})`
+    );
+  }
+
+  onDeleteOwner(ownerName: string): void {
+    this.closeOwnerActionMenu();
+    this.superadminService.confirmAction(
+      'delete-owner',
+      'Biztosan törlöd ezt a tulajdonost? Ez a művelet nem vonható vissza.',
+      ownerName
     );
   }
 }

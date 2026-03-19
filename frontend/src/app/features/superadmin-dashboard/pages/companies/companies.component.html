@@ -6,9 +6,37 @@
     </div>
     <div class="header-actions">
       <button class="btn btn-primary" type="button" (click)="onCreateCompany()">Új cég</button>
-      <button class="btn btn-secondary" type="button" (click)="onExportCompanies()">Tömeges export</button>
+      <button
+        class="btn btn-secondary"
+        type="button"
+        [class.btn-success-state]="hasRecentCompanyExport"
+        [disabled]="isExportingCompanies"
+        (click)="onExportCompanies()"
+      >
+        {{ exportButtonLabel }}
+      </button>
     </div>
   </header>
+
+  @if (companyExportFeedback) {
+    <section
+      class="export-feedback"
+      [class.export-feedback-success]="companyExportFeedback.tone === 'success'"
+      [class.export-feedback-error]="companyExportFeedback.tone === 'error'"
+      [class.export-feedback-info]="companyExportFeedback.tone === 'info'"
+      aria-live="polite"
+    >
+      <div class="export-feedback-copy">
+        <span class="export-feedback-kicker">Bookr export</span>
+        <strong>{{ companyExportFeedback.title }}</strong>
+        <p>{{ companyExportFeedback.detail }}</p>
+        @if (companyExportFeedback.meta) {
+          <span class="export-feedback-meta">{{ companyExportFeedback.meta }}</span>
+        }
+      </div>
+      <button class="export-feedback-close" type="button" (click)="closeCompanyExportFeedback()" aria-label="Értesítés bezárása">✕</button>
+    </section>
+  }
 
   <section class="company-toolbar">
     <label class="search-field" for="company-search">
@@ -46,7 +74,12 @@
 
   <section class="company-list" aria-label="Cégkártyák">
     @for (company of filteredCompanies; track company.name) {
-      <article class="company-card">
+      <article
+        class="company-card"
+        [class.company-card-active]="company.status === 'Aktív'"
+        [class.company-card-suspended]="company.status === 'Felfüggesztett'"
+        [class.company-card-new]="company.status === 'Új'"
+      >
         <div class="company-card-main">
           <div class="company-card-heading">
             <div class="company-name-row">
@@ -71,7 +104,9 @@
           </div>
 
           <div class="company-admin-meta">
-            <span>Verifikáció: {{ company.verification }}</span>
+            <span class="meta-chip verification-chip" [class]="'meta-chip verification-chip ' + getVerificationClass(company.verification)">
+              {{ company.verification }}
+            </span>
             @if (company.lastAdminUpdate) {
               <span class="admin-update-time">Frissítve: {{ company.lastAdminUpdate }}</span>
             }
@@ -81,18 +116,26 @@
         </div>
 
         <div class="company-card-actions">
-          <button class="btn btn-secondary-soft" type="button" (click)="openCompanyEditModal(company.name)">Szerkesztés</button>
-          <button class="btn btn-ghost" type="button" (click)="onChangeOwner(company.name)">Tulajdonos csere</button>
+          <button class="btn btn-ghost list-action-btn" type="button" (click)="openCompanyEditModal(company.name)">Szerkesztés</button>
+          <button
+            class="btn status-action-btn"
+            [class.status-action-suspend]="company.status === 'Aktív'"
+            [class.status-action-activate]="company.status !== 'Aktív'"
+            type="button"
+            (click)="toggleCompanyStatus(company.name)"
+          >
+            {{ getStatusActionLabel(company.status) }}
+          </button>
           <button class="btn btn-outline" type="button" (click)="onViewBookings(company.name)">Foglalások</button>
           <button
-            class="icon-danger-btn"
+            class="icon-danger-btn list-menu-btn"
             type="button"
             (click)="openCompanyActionMenu(company.name)"
-            aria-label="Cég műveletek"
-            title="Cég műveletek"
+            aria-label="További cégműveletek"
+            title="További cégműveletek"
           >
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path d="M9 3h6l1 2h4v2H4V5h4l1-2zm1 6h2v8h-2V9zm4 0h2v8h-2V9zM7 9h2v8H7V9zm1 12h8a2 2 0 0 0 2-2V9H6v10a2 2 0 0 0 2 2z" />
+              <path d="M6 12a1.5 1.5 0 1 1 0.001 0A1.5 1.5 0 0 1 6 12zm6 0a1.5 1.5 0 1 1 0.001 0A1.5 1.5 0 0 1 12 12zm6 0a1.5 1.5 0 1 1 0.001 0A1.5 1.5 0 0 1 18 12z" />
             </svg>
           </button>
         </div>
@@ -192,6 +235,11 @@
         <p class="action-modal-subtitle">Válassz műveletet a céggel kapcsolatban:</p>
 
         <div class="action-options">
+          <button class="action-option option-muted" type="button" (click)="onChangeOwner(selectedCompany)">
+            <span class="option-title">Tulajdonos csere</span>
+            <span class="option-text">Másik tulajdonos hozzárendelése admin jóváhagyással.</span>
+          </button>
+
           <button class="action-option option-warn" type="button" (click)="onSuspendCompany(selectedCompany)">
             <span class="option-title">Felfüggesztés</span>
             <span class="option-text">A cég ideiglenesen nem tud új foglalást fogadni.</span>
@@ -215,6 +263,11 @@
           <button class="action-option option-danger" type="button" (click)="onDisableCompany(selectedCompany)">
             <span class="option-title">Végleges letiltás</span>
             <span class="option-text">Szigorú tiltás, csak admin jóváhagyással visszaállítható.</span>
+          </button>
+
+          <button class="action-option option-danger" type="button" (click)="onDeleteCompany(selectedCompany)">
+            <span class="option-title">Törlés</span>
+            <span class="option-text">A cég rekordja és kapcsolt admin adatai végleg eltávolításra kerülnek.</span>
           </button>
         </div>
       </section>

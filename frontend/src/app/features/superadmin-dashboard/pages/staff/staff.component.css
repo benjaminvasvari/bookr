@@ -46,6 +46,117 @@
   flex-wrap: wrap;
 }
 
+.list-toolbar {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 18px 20px;
+  border: 1px solid #e6ecf2;
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.search-field {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 0 16px;
+  border-radius: 14px;
+  border: 1px solid #dbe5f0;
+  background: #ffffff;
+  color: #64748b;
+}
+
+.search-field input {
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.clear-search-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid #dbe5f0;
+  background: #ffffff;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.toolbar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.status-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.filter-chip {
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  border: 1px solid #dbe5f0;
+  color: #475569;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.filter-chip.active {
+  background: #0f172a;
+  color: #ffffff;
+  border-color: #0f172a;
+}
+
+.secondary-filters {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.select-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  min-height: 42px;
+  border-radius: 12px;
+  border: 1px solid #dbe5f0;
+  background: #ffffff;
+}
+
+.select-field span {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.select-field select {
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #0f172a;
+  font: inherit;
+}
+
+.results-count {
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .btn {
   border: 1px solid transparent;
   border-radius: 12px;
@@ -120,15 +231,23 @@
 
 .staff-row {
   position: relative;
-  display: grid;
-  grid-template-columns: minmax(220px, 1.05fr) minmax(260px, 1.35fr) 124px 170px;
-  align-items: start;
-  gap: 14px;
-  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 18px;
+  padding: 18px 18px;
   border-radius: 16px;
   border: 1px solid #e6ecf2;
   background: #ffffff;
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);
+}
+
+.staff-row-main {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.9fr) minmax(240px, 1.1fr) 148px 124px;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
 }
 
 .staff-row-pending::before,
@@ -152,6 +271,7 @@
 
 .identity-column,
 .details-column,
+.admin-column,
 .status-column {
   min-width: 0;
 }
@@ -160,7 +280,6 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding-top: 2px;
 }
 
 .identity-column strong {
@@ -199,6 +318,13 @@
   gap: 8px;
 }
 
+.admin-column {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+
 .meta-chip,
 .status-chip {
   display: inline-flex;
@@ -225,21 +351,13 @@
   line-height: 1.4;
 }
 
-.detail-foot {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: flex-start;
-  gap: 4px;
-}
-
-.admin-note {
-  margin: 0;
+.support-note {
   color: #64748b;
   font-size: 12px;
   line-height: 1.45;
   display: -webkit-box;
   -webkit-box-orient: vertical;
+  line-clamp: 1;
   -webkit-line-clamp: 1;
   overflow: hidden;
 }
@@ -252,14 +370,14 @@
 
 .status-column {
   display: flex;
-  justify-content: flex-start;
-  align-self: start;
-  padding-top: 2px;
+  justify-content: center;
+  width: 100%;
 }
 
 .status-chip {
   justify-content: center;
-  min-width: 96px;
+  width: 100%;
+  min-width: 0;
 }
 
 .status-dot {
@@ -294,30 +412,56 @@
 }
 
 .actions {
-  display: grid;
-  grid-template-columns: 110px 40px;
-  justify-content: flex-end;
-  align-items: start;
-  align-self: start;
-  gap: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  margin-top: 2px;
+  padding-top: 16px;
+  border-top: 1px solid #e6ecf2;
 }
 
 .action-slot {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 
 .action-slot-icon {
+  margin-left: auto;
   justify-content: flex-end;
 }
 
 .list-action-btn {
   min-height: 38px;
-  min-width: 110px;
-  padding: 0 12px;
+  width: auto;
+  min-width: 0;
+  padding: 0 12px;  
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
-.list-delete-btn {
+.status-action-btn {
+  min-height: 38px;
+  width: auto;
+}
+
+.status-action-suspend {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #9a3412;
+}
+
+.status-action-activate {
+  background: #ecfdf5;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
+.list-menu-btn {
   width: 40px;
   height: 38px;
 }
@@ -498,6 +642,24 @@
   outline-offset: 2px;
 }
 
+.empty-state {
+  padding: 28px 24px;
+  border-radius: 18px;
+  border: 1px dashed #cbd5e1;
+  background: #ffffff;
+  text-align: center;
+}
+
+.empty-state h2 {
+  margin: 0 0 8px;
+  color: #0f172a;
+}
+
+.empty-state p {
+  margin: 0 0 16px;
+  color: #64748b;
+}
+
 @media (max-width: 768px) {
   .page {
     gap: 20px;
@@ -507,10 +669,35 @@
     padding: 18px;
   }
 
+  .list-toolbar {
+    padding: 16px;
+  }
+
+  .search-field {
+    min-height: 48px;
+  }
+
+  .toolbar-row {
+    align-items: stretch;
+  }
+
+  .secondary-filters {
+    width: 100%;
+  }
+
+  .select-field {
+    flex: 1 1 180px;
+    justify-content: space-between;
+  }
+
   .staff-row {
-    grid-template-columns: 1fr;
     gap: 10px;
     padding: 16px;
+  }
+
+  .staff-row-main {
+    grid-template-columns: 1fr;
+    gap: 10px;
   }
 
   .staff-row-pending::before,
@@ -525,20 +712,24 @@
   }
 
   .actions {
-    display: flex;
     justify-content: flex-start;
-    flex-wrap: wrap;
   }
 
   .action-slot {
+    flex: 1 1 180px;
     justify-content: flex-start;
+  }
+
+  .action-slot-icon {
+    flex: 0 0 40px;
+    margin-left: 0;
   }
 
   .actions .btn {
     flex: 1 1 180px;
   }
 
-  .list-delete-btn {
+  .list-menu-btn {
     flex: 0 0 40px;
   }
 

@@ -2,66 +2,123 @@
   <header class="page-header">
     <div class="page-header-copy">
       <h1>Tulajdonosok <span class="header-count">({{ owners.length }} fő)</span></h1>
-      <p>Kompakt tulajdonosi lista gyors admin döntésekhez.</p>
-    </div>
-    <div class="header-actions">
-      <button class="btn btn-primary" type="button" (click)="onInviteOwner()">Tulajdonos meghívás</button>
-      <button class="btn btn-secondary" type="button" (click)="onAuditRoles()">Szerep audit</button>
+      <p>Operatív tulajdonosi lista kereséssel, cégszűrővel és gyors hozzáféréskezeléssel.</p>
     </div>
   </header>
 
+  <section class="list-toolbar">
+    <label class="search-field" for="owner-search">
+      <i class="fas fa-search" aria-hidden="true"></i>
+      <input
+        id="owner-search"
+        type="search"
+        [(ngModel)]="searchTerm"
+        placeholder="Keresés név, e-mail vagy cég alapján..."
+        aria-label="Keresés tulajdonos név, e-mail vagy cég alapján"
+      />
+      @if (searchTerm) {
+        <button class="clear-search-btn" type="button" (click)="clearSearch()" aria-label="Keresés törlése">✕</button>
+      }
+    </label>
+
+    <div class="toolbar-row">
+      <div class="status-filters" role="tablist" aria-label="Tulajdonos státuszszűrők">
+        @for (filter of statusFilters; track filter.value) {
+          <button
+            class="filter-chip"
+            type="button"
+            [class.active]="selectedStatusFilter === filter.value"
+            [attr.aria-pressed]="selectedStatusFilter === filter.value"
+            (click)="setStatusFilter(filter.value)"
+          >
+            {{ filter.label }}
+          </button>
+        }
+      </div>
+
+      <div class="secondary-filters">
+        <label class="select-field">
+          <span>Cég</span>
+          <select [(ngModel)]="selectedCompanyFilter">
+            @for (company of companyOptions; track company) {
+              <option [ngValue]="company">{{ company === 'all' ? 'Összes cég' : company }}</option>
+            }
+          </select>
+        </label>
+
+        <div class="results-count">Találatok: {{ filteredOwners.length }}</div>
+      </div>
+    </div>
+  </section>
+
   <section class="owner-list" aria-label="Tulajdonos lista">
-    @for (owner of owners; track owner.name) {
+    @for (owner of filteredOwners; track owner.name) {
       <article class="owner-row" [class.owner-row-warning]="owner.status === 'Figyelmeztetett'" [class.owner-row-suspended]="owner.status === 'Felfüggesztett'">
-        <div class="identity-column">
-          <strong>{{ owner.name }}</strong>
-          <span>{{ owner.email }}</span>
-        </div>
-
-        <div class="details-column">
-          <span class="primary-line">{{ owner.company }}</span>
-
-          <div class="detail-meta compact-meta">
-            <span class="meta-chip" [class]="'meta-chip ' + getAccessClass(owner.access)">{{ owner.access }}</span>
-            <span class="meta-text">{{ owner.companiesManaged }} cég · {{ owner.staffCount }} staff</span>
+        <div class="owner-row-main">
+          <div class="identity-column">
+            <strong>{{ owner.name }}</strong>
+            <span>{{ owner.email }}</span>
           </div>
 
-          <span class="support-line">{{ owner.verification }}</span>
+          <div class="details-column">
+            <span class="primary-line">{{ owner.company }}</span>
 
-          <div class="detail-foot">
-            <p class="admin-note" [title]="owner.internalNote">{{ owner.internalNote }}</p>
+            <div class="detail-meta compact-meta">
+              <span class="meta-chip" [class]="'meta-chip ' + getAccessClass(owner.access)">{{ owner.access }}</span>
+              <span class="meta-text">{{ owner.companiesManaged }} cég · {{ owner.staffCount }} staff</span>
+            </div>
+
+            <span class="support-note" [title]="owner.internalNote">{{ owner.internalNote }}</span>
+          </div>
+
+          <div class="admin-column">
+            <span class="support-line">{{ owner.verification }}</span>
+
             @if (owner.lastAdminUpdate) {
               <span class="admin-update-time">Frissítve: {{ owner.lastAdminUpdate }}</span>
             }
           </div>
-        </div>
 
-        <div class="status-column">
-          <span class="status-chip" [class]="'status-chip ' + getStatusClass(owner.status)">
-            <span class="status-dot" aria-hidden="true"></span>
-            {{ owner.status }}
-          </span>
+          <div class="status-column">
+            <span class="status-chip" [class]="'status-chip ' + getStatusClass(owner.status)">
+              <span class="status-dot" aria-hidden="true"></span>
+              {{ owner.status }}
+            </span>
+          </div>
         </div>
 
         <div class="actions">
           <div class="action-slot">
             <button class="btn btn-ghost list-action-btn" type="button" (click)="openOwnerEditModal(owner.name)">Szerkesztés</button>
           </div>
+          <div class="action-slot">
+            <button class="btn status-action-btn" [class.status-action-suspend]="owner.status === 'Aktív'" [class.status-action-activate]="owner.status !== 'Aktív'" type="button" (click)="toggleOwnerStatus(owner.name)">
+              {{ getStatusActionLabel(owner.status) }}
+            </button>
+          </div>
           <div class="action-slot action-slot-icon">
             <button
-              class="icon-danger-btn list-delete-btn"
+              class="icon-danger-btn list-menu-btn"
               type="button"
               (click)="openOwnerActionMenu(owner.name, owner.company)"
               aria-label="Tulajdonos műveletek"
               title="Tulajdonos műveletek"
             >
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                <path d="M9 3h6l1 2h4v2H4V5h4l1-2zm1 6h2v8h-2V9zm4 0h2v8h-2V9zM7 9h2v8H7V9zm1 12h8a2 2 0 0 0 2-2V9H6v10a2 2 0 0 0 2 2z" />
+                <path d="M6 12a1.5 1.5 0 1 1 0.001 0A1.5 1.5 0 0 1 6 12zm6 0a1.5 1.5 0 1 1 0.001 0A1.5 1.5 0 0 1 12 12zm6 0a1.5 1.5 0 1 1 0.001 0A1.5 1.5 0 0 1 18 12z" />
               </svg>
             </button>
           </div>
         </div>
       </article>
+    }
+
+    @empty {
+      <div class="empty-state">
+        <h2>Nincs találat</h2>
+        <p>A jelenlegi keresés és szűrők mellett nincs megjeleníthető tulajdonos rekord.</p>
+        <button class="btn btn-outline" type="button" (click)="clearSearch(); setStatusFilter('all'); selectedCompanyFilter = 'all'">Szűrők törlése</button>
+      </div>
     }
   </section>
 
@@ -142,6 +199,16 @@
         <p class="action-modal-subtitle">Tulajdonos admin opciók a(z) {{ selectedOwnerCompany }} céghez:</p>
 
         <div class="action-options">
+          <button class="action-option option-muted" type="button" (click)="openOwnerEditModal(selectedOwner)">
+            <span class="option-title">Admin szerkesztés</span>
+            <span class="option-text">Hozzáférési szint, verifikáció és belső mezők módosítása.</span>
+          </button>
+
+          <button class="action-option option-muted" type="button" (click)="onForceOwnerPasswordReset(selectedOwner)">
+            <span class="option-title">Jelszó reset</span>
+            <span class="option-text">Egyszeri új jelszó link küldése a tulajdonosi fióknak.</span>
+          </button>
+
           <button class="action-option option-muted" type="button" (click)="onChangeOwner(selectedOwner)">
             <span class="option-title">Tulajdonos csere</span>
             <span class="option-text">Másik tulajdonos kijelölése a céghez.</span>
@@ -175,6 +242,11 @@
           <button class="action-option option-danger" type="button" (click)="onDisableOwner(selectedOwner)">
             <span class="option-title">Végleges letiltás</span>
             <span class="option-text">A tulajdonos minden céges hozzáférése megszűnik.</span>
+          </button>
+
+          <button class="action-option option-danger" type="button" (click)="onDeleteOwner(selectedOwner)">
+            <span class="option-title">Törlés</span>
+            <span class="option-text">A tulajdonosi profil és a kapcsolt admin rekordok végleg törlődnek.</span>
           </button>
         </div>
       </section>

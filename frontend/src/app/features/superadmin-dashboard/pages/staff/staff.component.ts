@@ -7,6 +7,7 @@ type StaffRole = 'Staff' | 'Senior Staff' | 'Manager';
 type StaffStatus = 'Aktív' | 'Függőben' | 'Felfüggesztett';
 type StaffVerification = 'Hitelesített' | 'Függőben' | 'Jelszócsere szükséges';
 type StaffPermission = 'Standard' | 'Korlátozott' | 'Kiemelt';
+type StaffStatusFilter = 'all' | StaffStatus;
 
 interface StaffCard {
   name: string;
@@ -43,12 +44,21 @@ export class SuperadminStaffComponent {
   isStaffEditModalOpen = false;
   selectedStaff = '';
   editingStaffName = '';
+  searchTerm = '';
+  selectedCompanyFilter = 'all';
+  selectedStatusFilter: StaffStatusFilter = 'all';
   staffEditDraft: StaffEditDraft | null = null;
 
   readonly roleOptions: StaffRole[] = ['Staff', 'Senior Staff', 'Manager'];
   readonly statusOptions: StaffStatus[] = ['Aktív', 'Függőben', 'Felfüggesztett'];
   readonly verificationOptions: StaffVerification[] = ['Hitelesített', 'Függőben', 'Jelszócsere szükséges'];
   readonly permissionOptions: StaffPermission[] = ['Standard', 'Korlátozott', 'Kiemelt'];
+  readonly statusFilters: Array<{ value: StaffStatusFilter; label: string }> = [
+    { value: 'all', label: 'Összes' },
+    { value: 'Aktív', label: 'Aktív' },
+    { value: 'Függőben', label: 'Függőben' },
+    { value: 'Felfüggesztett', label: 'Felfüggesztett' },
+  ];
 
   staffMembers: StaffCard[] = [
     {
@@ -102,6 +112,26 @@ export class SuperadminStaffComponent {
   ];
 
   constructor(private superadminService: SuperadminService) {}
+
+  get companyOptions(): string[] {
+    return ['all', ...new Set(this.staffMembers.map((staff) => staff.company))];
+  }
+
+  get filteredStaffMembers(): StaffCard[] {
+    const normalizedSearch = this.searchTerm.trim().toLocaleLowerCase();
+
+    return this.staffMembers.filter((staff) => {
+      const matchesSearch =
+        normalizedSearch.length === 0 ||
+        staff.name.toLocaleLowerCase().includes(normalizedSearch) ||
+        staff.email.toLocaleLowerCase().includes(normalizedSearch) ||
+        staff.company.toLocaleLowerCase().includes(normalizedSearch);
+      const matchesCompany = this.selectedCompanyFilter === 'all' || staff.company === this.selectedCompanyFilter;
+      const matchesStatus = this.selectedStatusFilter === 'all' || staff.status === this.selectedStatusFilter;
+
+      return matchesSearch && matchesCompany && matchesStatus;
+    });
+  }
 
   get canSaveStaffEdit(): boolean {
     return Boolean(
@@ -157,6 +187,18 @@ export class SuperadminStaffComponent {
     }
 
     return 'permission-pill-standard';
+  }
+
+  getStatusActionLabel(status: StaffStatus): string {
+    return status === 'Aktív' ? 'Felfüggesztés' : 'Aktiválás';
+  }
+
+  setStatusFilter(filter: StaffStatusFilter): void {
+    this.selectedStatusFilter = filter;
+  }
+
+  clearSearch(): void {
+    this.searchTerm = '';
   }
 
   openStaffEditModal(staffName: string): void {
@@ -245,8 +287,27 @@ export class SuperadminStaffComponent {
     this.superadminService.runAction('add-staff');
   }
 
-  onBulkRoleUpdate(): void {
-    this.superadminService.runAction('bulk-role-update');
+  onReviewPendingStaff(): void {
+    this.selectedStatusFilter = 'Függőben';
+  }
+
+  toggleStaffStatus(staffName: string): void {
+    const staff = this.staffMembers.find((item) => item.name === staffName);
+
+    if (!staff) {
+      return;
+    }
+
+    const nextStatus: StaffStatus = staff.status === 'Aktív' ? 'Felfüggesztett' : 'Aktív';
+    const prompt = nextStatus === 'Aktív' ? 'Biztosan aktiválod ezt a staff tagot?' : 'Biztosan felfüggeszted ezt a staff tagot?';
+
+    if (!window.confirm(`${prompt}\n\nCél: ${staff.name}`)) {
+      return;
+    }
+
+    staff.status = nextStatus;
+    staff.lastAdminUpdate = this.formatAdminTimestamp();
+    this.superadminService.runAction('toggle-staff-status', `${staff.name} | uj-statusz: ${staff.status}`);
   }
 
   onChangeRole(staffName: string): void {
@@ -293,7 +354,9 @@ export class SuperadminStaffComponent {
   }
 
   onForcePasswordReset(staffName: string): void {
-    this.closeStaffActionMenu();
+    if (this.isStaffActionModalOpen) {
+      this.closeStaffActionMenu();
+    }
     this.superadminService.confirmAction(
       'force-staff-password-reset',
       'Biztosan jelszócserét kényszerítesz ennél a staff felhasználónál?',
@@ -304,5 +367,14 @@ export class SuperadminStaffComponent {
   onAuditStaffActivity(staffName: string): void {
     this.closeStaffActionMenu();
     this.superadminService.runAction('audit-staff-activity', staffName);
+  }
+
+  onDeleteStaff(staffName: string): void {
+    this.closeStaffActionMenu();
+    this.superadminService.confirmAction(
+      'delete-staff',
+      'Biztosan törlöd ezt a staff felhasználót? Ez a művelet nem vonható vissza.',
+      staffName
+    );
   }
 }
