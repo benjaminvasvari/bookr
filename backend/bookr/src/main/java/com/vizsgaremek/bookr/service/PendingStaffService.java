@@ -391,9 +391,15 @@ public class PendingStaffService {
             }
             // ==================================
 
-            // ========== AUDIT LOG ==========
-            try {
+            em.getTransaction().commit();
 
+            toReturn.put("result", "accepted");
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+
+            // ========== AUDIT LOG ==========
+            // Az audit log a tranzakció UTÁN fut – hiba esetén nem gördíti vissza a fő műveletet
+            try {
                 AuditLogs auditLog = new AuditLogs(
                         tokenCheckMResult.getUserId() != null ? tokenCheckMResult.getUserId() : null,
                         "client",
@@ -407,26 +413,24 @@ public class PendingStaffService {
                 auditLog.addNewValue("specialty", tokenCheckMResult.getPosition());
 
                 AuditLogService.logAudit(auditLog);
-
             } catch (Exception ex) {
-                em.getTransaction().rollback();
                 ex.printStackTrace();
-                return ErrorResponseBuilder.buildErrorResponseJSON(500, "InternalServerError");
             }
-
-            em.getTransaction().commit();
-
-            toReturn.put("result", "accepted");
-
-            toReturn.put("status", status);
-            toReturn.put("statusCode", statusCode);
+            // ================================
 
         } catch (Exception ex) {
             ex.printStackTrace();
+            if (em != null && em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
             status = "InternalServerError";
             statusCode = 500;
             toReturn.put("status", status);
             toReturn.put("statusCode", statusCode);
+        } finally {
+            if (em != null) {
+                em.close();
+            }
         }
 
         return toReturn;

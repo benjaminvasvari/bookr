@@ -498,6 +498,9 @@ public class AppointmentsService {
 
             Boolean companyExist = CompaniesService.validateCompanyExist(companyId);
 
+            if (companyExist == null) {
+                return buildErrorResponseJSON(500, "InternalServerError");
+            }
             if (!companyExist) {
                 JSONObject error = new JSONObject();
                 error.put("statusCode", 404);
@@ -541,6 +544,9 @@ public class AppointmentsService {
 
             Boolean companyExist = CompaniesService.validateCompanyExist(companyId);
 
+            if (companyExist == null) {
+                return buildErrorResponseJSON(500, "InternalServerError");
+            }
             if (!companyExist) {
                 JSONObject error = new JSONObject();
                 error.put("statusCode", 404);
@@ -584,6 +590,9 @@ public class AppointmentsService {
 
             Boolean companyExist = CompaniesService.validateCompanyExist(companyId);
 
+            if (companyExist == null) {
+                return buildErrorResponseJSON(500, "InternalServerError");
+            }
             if (!companyExist) {
                 JSONObject error = new JSONObject();
                 error.put("statusCode", 404);
@@ -626,6 +635,9 @@ public class AppointmentsService {
 
             Boolean companyExist = CompaniesService.validateCompanyExist(companyId);
 
+            if (companyExist == null) {
+                return buildErrorResponseJSON(500, "InternalServerError");
+            }
             if (!companyExist) {
                 JSONObject error = new JSONObject();
                 error.put("statusCode", 404);
@@ -672,6 +684,9 @@ public class AppointmentsService {
 
         Boolean companyExist = CompaniesService.validateCompanyExist(companyId);
 
+        if (companyExist == null) {
+            return buildErrorResponseJSON(500, "InternalServerError");
+        }
         if (!companyExist) {
             JSONObject error = new JSONObject();
             error.put("statusCode", 404);
@@ -782,6 +797,9 @@ public class AppointmentsService {
 
         Boolean staffExist = StaffService.validateStaffExistById(staffId);
 
+        if (staffExist == null) {
+            return buildErrorResponseJSON(500, "InternalServerError");
+        }
         if (!staffExist) {
             JSONObject error = new JSONObject();
             error.put("statusCode", 404);
@@ -820,6 +838,9 @@ public class AppointmentsService {
 
         Boolean staffExist = StaffService.validateStaffExistById(staffId);
 
+        if (staffExist == null) {
+            return buildErrorResponseJSON(500, "InternalServerError");
+        }
         if (!staffExist) {
             JSONObject error = new JSONObject();
             error.put("statusCode", 404);
@@ -858,6 +879,9 @@ public class AppointmentsService {
 
         Boolean staffExist = StaffService.validateStaffExistById(staffId);
 
+        if (staffExist == null) {
+            return buildErrorResponseJSON(500, "InternalServerError");
+        }
         if (!staffExist) {
             JSONObject error = new JSONObject();
             error.put("statusCode", 404);

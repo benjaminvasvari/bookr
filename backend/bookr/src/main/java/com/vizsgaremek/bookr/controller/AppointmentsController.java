@@ -427,10 +427,10 @@ public class AppointmentsController {
 
         Boolean isCompanyExist = CompaniesService.validateCompanyExist(companyId);
 
-        if (!isCompanyExist) {
-            return buildErrorResponse(400, "CompanyNotExist");
-        } else if (isCompanyExist == null) {
+        if (isCompanyExist == null) {
             return buildErrorResponse(500, "InternalServerError");
+        } else if (!isCompanyExist) {
+            return buildErrorResponse(400, "CompanyNotExist");
         }
 
         JSONObject toReturn = layer.getAppointmentsCountByStaff(staffId, dateFrom, dateTo);
@@ -472,10 +472,10 @@ public class AppointmentsController {
 
         Boolean isCompanyExist = CompaniesService.validateCompanyExist(companyId);
 
-        if (!isCompanyExist) {
-            return buildErrorResponse(400, "CompanyNotExist");
-        } else if (isCompanyExist == null) {
+        if (isCompanyExist == null) {
             return buildErrorResponse(500, "InternalServerError");
+        } else if (!isCompanyExist) {
+            return buildErrorResponse(400, "CompanyNotExist");
         }
 
         JSONObject toReturn = layer.getUpcomingAppointmentsCountByStaff(staffId);
@@ -517,10 +517,10 @@ public class AppointmentsController {
 
         Boolean isCompanyExist = CompaniesService.validateCompanyExist(companyId);
 
-        if (!isCompanyExist) {
-            return buildErrorResponse(400, "CompanyNotExist");
-        } else if (isCompanyExist == null) {
+        if (isCompanyExist == null) {
             return buildErrorResponse(500, "InternalServerError");
+        } else if (!isCompanyExist) {
+            return buildErrorResponse(400, "CompanyNotExist");
         }
 
         JSONObject toReturn = layer.getPlannedWorkingMinutesByStaff(staffId);
