@@ -1,16 +1,4 @@
 <section class="staff-dashboard-shell">
-	<header class="hero">
-		<div class="hero-copy">
-			<p class="eyebrow">Staff shell</p>
-			<h1>{{ displayName }} napi dashboardja</h1>
-			<p class="hero-subtitle">Élő nézet a mai időpontokról, közelgő feladatokról és szolgáltatási terhelésről.</p>
-		</div>
-		<div class="hero-actions">
-			<a class="btn btn-ghost" routerLink="/staff/bookings">Foglalások kezelése</a>
-			<a class="btn btn-primary" routerLink="/staff/calendar">Naptár megnyitása</a>
-		</div>
-	</header>
-
 	@if (isLoading) {
 		<div class="state-card">Dashboard adatok betöltése...</div>
 	} @else {

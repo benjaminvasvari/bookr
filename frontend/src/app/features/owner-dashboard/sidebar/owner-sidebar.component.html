@@ -1,6 +1,13 @@
 <aside class="owner-sidebar" [class.is-expanded]="isExpanded" [class.mobile-view]="isMobileView()" [class.mobile-open]="mobileOpen()">
 	<div class="sidebar-header">
-		<img class="brand-icon" src="../../../../../assets/images/logo.png" alt="Bookr logo" />
+		@if (isExpanded || isMobileView()) {
+			<div class="brand-block" aria-label="Bookr Owner Panel">
+				<img class="brand-icon brand-icon-expanded" src="../../../../../assets/images/logo.png" alt="Bookr logo" />
+				<span class="brand-tagline">Owner Panel</span>
+			</div>
+		} @else {
+			<img class="brand-icon" src="../../../../../assets/images/logo.png" alt="Bookr logo" />
+		}
 		<button class="mobile-close-btn" type="button" (click)="closeSidebar()" aria-label="Oldalsáv bezárása">
 			<i class="fas fa-times" aria-hidden="true"></i>
 		</button>

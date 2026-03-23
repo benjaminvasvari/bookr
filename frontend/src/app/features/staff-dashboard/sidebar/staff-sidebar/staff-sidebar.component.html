@@ -1,6 +1,13 @@
 <aside class="staff-sidebar" [class.is-expanded]="isExpanded">
 	<div class="sidebar-header">
-		<img src="assets/images/logo.png" alt="Bookr" class="brand-icon" />
+		@if (isExpanded) {
+			<div class="brand-block" aria-label="Bookr Staff Panel">
+				<img src="assets/images/logo.png" alt="Bookr" class="brand-icon brand-icon-expanded" />
+				<span class="brand-tagline">Staff Panel</span>
+			</div>
+		} @else {
+			<img src="assets/images/logo.png" alt="Bookr" class="brand-icon" />
+		}
 	</div>
 
 	<nav class="sidebar-nav">
@@ -20,6 +27,10 @@
 		<a routerLink="/staff/bookings" routerLinkActive="active">
 			<i class="fas fa-clipboard-list"></i>
 			<span class="nav-label">Foglalások</span>
+		</a>
+		<a routerLink="/staff/work-settings" routerLinkActive="active">
+			<i class="fas fa-business-time"></i>
+			<span class="nav-label">Munkarend</span>
 		</a>
 		<a routerLink="/staff/profile" routerLinkActive="active">
 			<i class="fas fa-user-circle"></i>

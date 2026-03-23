@@ -42,8 +42,6 @@ interface ActionItem {
   styleUrls: ['./overview.component.css'],
 })
 export class SuperadminOverviewComponent {
-  notificationCount = 7;
-  lastUpdated = '2 perce';
   selectedLogFilter: LogFilter = 'all';
 
   kpis: CommandKpi[] = [
@@ -204,9 +202,5 @@ export class SuperadminOverviewComponent {
 
   navigateTo(page: string): void {
     void this.router.navigate(['/superadmin', page]);
-  }
-
-  openSettings(): void {
-    void this.router.navigate(['/profile'], { fragment: 'settings' });
   }
 }

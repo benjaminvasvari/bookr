@@ -113,6 +113,13 @@ export const appRoutes: Routes = [
           )
       },
       {
+        path: 'work-settings',
+        loadComponent: () =>
+          import('./features/staff-dashboard/staff-work-settings/staff-work-settings.component').then(
+            (m) => m.StaffWorkSettingsComponent
+          )
+      },
+      {
         path: 'profile',
         loadComponent: () =>
           import('./features/staff-dashboard/staff-profile/staff-profile.component').then(

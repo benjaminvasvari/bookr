@@ -1,6 +1,13 @@
 <aside class="superadmin-sidebar" [class.is-expanded]="isExpanded">
   <div class="sidebar-header">
-    <img class="brand-icon" src="../../../../../assets/images/logo.png" alt="Bookr logo" />
+    @if (isExpanded) {
+      <div class="brand-block" aria-label="Bookr Admin Panel">
+        <img class="brand-icon brand-icon-expanded" src="../../../../../assets/images/logo.png" alt="Bookr logo" />
+        <span class="brand-tagline">Admin Panel</span>
+      </div>
+    } @else {
+      <img class="brand-icon" src="../../../../../assets/images/logo.png" alt="Bookr logo" />
+    }
   </div>
 
   <nav class="sidebar-nav">

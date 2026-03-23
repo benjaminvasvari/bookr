@@ -1,23 +1,4 @@
 <section class="page">
-  <header class="page-header">
-    <div class="page-header-copy">
-      <h1>Cégek</h1>
-      <p>Teljes céglista kereséssel, vizuális státuszokkal és kontextusos admin műveletekkel.</p>
-    </div>
-    <div class="header-actions">
-      <button class="btn btn-primary" type="button" (click)="onCreateCompany()">Új cég</button>
-      <button
-        class="btn btn-secondary"
-        type="button"
-        [class.btn-success-state]="hasRecentCompanyExport"
-        [disabled]="isExportingCompanies"
-        (click)="onExportCompanies()"
-      >
-        {{ exportButtonLabel }}
-      </button>
-    </div>
-  </header>
-
   @if (companyExportFeedback) {
     <section
       class="export-feedback"
@@ -68,7 +49,20 @@
         }
       </div>
 
-      <div class="results-count">Találatok: {{ filteredCompanies.length }}</div>
+      <div class="toolbar-side">
+        <div class="header-actions toolbar-actions">
+          <button class="btn btn-primary" type="button" (click)="onCreateCompany()">Új cég</button>
+          <button
+            class="btn btn-secondary"
+            type="button"
+            [class.btn-success-state]="hasRecentCompanyExport"
+            [disabled]="isExportingCompanies"
+            (click)="onExportCompanies()"
+          >
+            {{ exportButtonLabel }}
+          </button>
+        </div>
+      </div>
     </div>
   </section>
 

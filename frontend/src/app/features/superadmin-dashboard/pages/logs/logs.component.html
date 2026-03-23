@@ -1,23 +1,4 @@
 <section class="page">
-  <header class="page-header">
-    <div class="page-header-copy">
-      <h1>Logok</h1>
-      <p>Audit feed súlyossági fókuszsal és azonnal nyitható részletekkel.</p>
-    </div>
-    <div class="header-actions">
-      <button class="btn btn-header-primary" type="button" (click)="onAddFilter()">Új szűrő</button>
-      <button
-        class="btn btn-header-secondary"
-        type="button"
-        [class.btn-success-state]="hasRecentLogExport"
-        [disabled]="isExportingLogs"
-        (click)="onExportLogs()"
-      >
-        {{ exportButtonLabel }}
-      </button>
-    </div>
-  </header>
-
   @if (exportFeedback) {
     <section
       class="export-feedback"
@@ -61,35 +42,53 @@
   </section>
 
   <section class="filters-panel">
-    <div class="filter-group">
-      <span class="filter-label">Típus</span>
-      <div class="filter-row">
-        @for (filter of typeFilters; track filter.value) {
-          <button
-            class="filter-chip"
-            type="button"
-            [class.active]="selectedType === filter.value"
-            (click)="setTypeFilter(filter.value)"
-          >
-            {{ filter.label }}
-          </button>
-        }
+    <div class="filters-stack">
+      <div class="filter-group">
+        <span class="filter-label">Típus</span>
+        <div class="filter-row">
+          @for (filter of typeFilters; track filter.value) {
+            <button
+              class="filter-chip"
+              type="button"
+              [class.active]="selectedType === filter.value"
+              (click)="setTypeFilter(filter.value)"
+            >
+              {{ filter.label }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <span class="filter-label">Súlyosság</span>
+        <div class="filter-row">
+          @for (filter of severityFilters; track filter.value) {
+            <button
+              class="filter-chip"
+              type="button"
+              [class.active]="selectedSeverity === filter.value"
+              (click)="setSeverityFilter(filter.value)"
+            >
+              {{ filter.label }}
+            </button>
+          }
+        </div>
       </div>
     </div>
 
-    <div class="filter-group">
-      <span class="filter-label">Súlyosság</span>
-      <div class="filter-row">
-        @for (filter of severityFilters; track filter.value) {
-          <button
-            class="filter-chip"
-            type="button"
-            [class.active]="selectedSeverity === filter.value"
-            (click)="setSeverityFilter(filter.value)"
-          >
-            {{ filter.label }}
-          </button>
-        }
+    <div class="filter-group filter-group-actions">
+      <span class="filter-label">Műveletek</span>
+      <div class="filter-row header-actions toolbar-actions">
+        <button class="btn btn-header-primary" type="button" (click)="onAddFilter()">Új szűrő</button>
+        <button
+          class="btn btn-header-secondary"
+          type="button"
+          [class.btn-success-state]="hasRecentLogExport"
+          [disabled]="isExportingLogs"
+          (click)="onExportLogs()"
+        >
+          {{ exportButtonLabel }}
+        </button>
       </div>
     </div>
   </section>

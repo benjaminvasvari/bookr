@@ -1,31 +1,4 @@
 <section class="command-center">
-  <header class="command-header">
-    <div class="command-header-copy">
-      <span class="eyebrow">Command Center</span>
-      <h1>Superadmin áttekintés</h1>
-      <p>
-        Monitoring és adminisztratív döntések egy fókuszált nézetben, hogy a kritikus események és a teendők
-        ne vesszenek el a részletek között.
-      </p>
-
-      <div class="command-meta">
-        <span class="meta-pill meta-pill-update">
-          <i class="fas fa-clock" aria-hidden="true"></i>
-          Utolsó frissítés: {{ lastUpdated }}
-        </span>
-        <span class="meta-pill meta-pill-neutral">Napi üzemeltetési fókusz</span>
-      </div>
-    </div>
-
-    <div class="command-toolbar">
-      <button class="toolbar-pill toolbar-alert" type="button" (click)="navigateTo('logs')">
-        <i class="fas fa-bell" aria-hidden="true"></i>
-        <span>{{ notificationCount }}</span>
-      </button>
-      <button class="toolbar-pill toolbar-settings" type="button" (click)="openSettings()">Beállítások</button>
-    </div>
-  </header>
-
   <section class="kpi-grid" aria-label="Kiemelt mutatók">
     @for (kpi of kpis; track kpi.label) {
       <button class="kpi-card" [class]="'kpi-card accent-' + kpi.accent" type="button" (click)="navigateTo(kpi.route)">

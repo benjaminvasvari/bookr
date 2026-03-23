@@ -1,15 +1,4 @@
 <section class="page">
-  <header class="page-header">
-    <div class="page-header-copy">
-      <h1>Foglalások <span class="header-count">({{ todayBookingsCount }} ma)</span></h1>
-      <p>Időalapú csoportosítás, státusz szerinti prioritás és gyors operátori döntések.</p>
-    </div>
-    <div class="header-actions">
-      <button class="btn btn-primary" type="button" (click)="onExportBookings()">Export</button>
-      <button class="btn btn-secondary" type="button" (click)="onRefreshBookings()">Frissítés</button>
-    </div>
-  </header>
-
   <section class="booking-toolbar">
     <label class="search-field" for="booking-search">
       <i class="fas fa-search" aria-hidden="true"></i>
@@ -38,23 +27,30 @@
       </div>
 
       <div class="secondary-filters">
-        <label class="select-field">
-          <span>Cég</span>
-          <select [(ngModel)]="selectedCompany">
-            @for (company of companyOptions; track company) {
-              <option [ngValue]="company">{{ company === 'all' ? 'Összes cég' : company }}</option>
-            }
-          </select>
-        </label>
+        <div class="toolbar-selects">
+          <label class="select-field">
+            <span>Cég</span>
+            <select [(ngModel)]="selectedCompany">
+              @for (company of companyOptions; track company) {
+                <option [ngValue]="company">{{ company === 'all' ? 'Összes cég' : company }}</option>
+              }
+            </select>
+          </label>
 
-        <label class="select-field">
-          <span>Dátum</span>
-          <select [(ngModel)]="selectedDateFilter">
-            @for (filter of dateFilters; track filter.value) {
-              <option [ngValue]="filter.value">{{ filter.label }}</option>
-            }
-          </select>
-        </label>
+          <label class="select-field">
+            <span>Dátum</span>
+            <select [(ngModel)]="selectedDateFilter">
+              @for (filter of dateFilters; track filter.value) {
+                <option [ngValue]="filter.value">{{ filter.label }}</option>
+              }
+            </select>
+          </label>
+        </div>
+
+        <div class="header-actions toolbar-actions">
+          <button class="btn btn-primary" type="button" (click)="onExportBookings()">Export</button>
+          <button class="btn btn-secondary" type="button" (click)="onRefreshBookings()">Frissítés</button>
+        </div>
       </div>
     </div>
   </section>

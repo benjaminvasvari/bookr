@@ -2,18 +2,13 @@
   <header class="page-header">
     <div class="page-header-top">
       <div class="page-title">
-        <p class="eyebrow">Mai nézet</p>
         <h1>Mai foglalások</h1>
         <p>{{ todayLabel }}</p>
       </div>
 
-      <div class="header-note">
-        <span class="header-note-label">Napindító</span>
-        @if (hasTodayBookings) {
-          <p>{{ totalBookings }} foglalás van betervezve a mai napra.</p>
-        } @else {
-          <p>Ma jelenleg nincs betervezett időpont.</p>
-        }
+      <div class="booking-counter">
+        <span class="booking-counter-label">Mai foglalások</span>
+        <strong>{{ totalBookings }}</strong>
       </div>
     </div>
   </header>
@@ -21,7 +16,6 @@
   <section class="bookings-panel">
     <div class="panel-header">
       <h2>A mai lista</h2>
-      <p>Csak a mai napra eső foglalások jelennek meg.</p>
     </div>
 
     @if (!hasTodayBookings) {

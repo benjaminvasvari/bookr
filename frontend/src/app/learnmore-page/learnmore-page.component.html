@@ -1,103 +1,108 @@
 <main class="learnmore-page">
-	<section class="lm-hero">
-		<div class="container hero-inner">
-			<span class="hero-kicker">Bookr Cégeknek</span>
-			<h1>Építs erősebb vállalkozást<br />okos online foglalással</h1>
-			<p>
-				Egy modern, átlátható platform, ahol a láthatóság, a naptárkezelés és az ügyfélélmény
-				egyszerre fejlődik.
-			</p>
 
-			<div class="hero-actions">
-				<a routerLink="/register" class="btn-primary">Regisztrálok most</a>
-				<a routerLink="/login" class="btn-ghost">Belépek</a>
-			</div>
+  <!-- HERO -->
+  <section class="lm-hero">
+    <div class="hero-overlay"></div>
+    <div class="container hero-inner">
+      <span class="hero-kicker">Időpontfoglalás új szinten</span>
+      <h1>Fedezd fel a B<span class="accent-oo">oo</span>krt</h1>
+      <p>Online foglalás, átlátható működés és gördülékeny ügyfélélmény egyetlen modern platformon.</p>
+      <button type="button" class="scroll-indicator" (click)="scrollToSection('booking-section')">
+        <span>Tovább</span>
+        <i class="fas fa-angle-down"></i>
+      </button>
+    </div>
+  </section>
 
-			<div class="hero-metrics" aria-label="Fő előnyök">
-				<div class="metric-card">
-					<strong>24/7</strong>
-					<span>online foglalás</span>
-				</div>
-				<div class="metric-card">
-					<strong>-40%</strong>
-					<span>kevesebb adminisztráció</span>
-				</div>
-				<div class="metric-card">
-					<strong>+Növekedés</strong>
-					<span>helyi láthatóság</span>
-				</div>
-			</div>
-		</div>
-	</section>
+  <!-- FOGLALÁS -->
+  <section id="booking-section" class="lm-section">
+    <div class="container">
+      <div class="split-layout">
+        <div class="split-copy">
+          <p class="eyebrow">Gyors és egyszerű</p>
+          <h2>Foglalj időpontot percek alatt</h2>
+          <p>Találd meg a hozzád illő szolgáltatót, nézd meg a valós idejű szabad időpontokat, és foglalj néhány kattintással. Nincs több telefonálás, nincs felesleges egyeztetés.</p>
+          <a routerLink="/register" class="btn-primary">Kezdj el most</a>
+        </div>
+        <div class="split-image">
+          <img src="/assets/images/tudjmegtobbet7.jpg" alt="Foglalás" class="section-img" />
+        </div>
+      </div>
+    </div>
+  </section>
 
-	<section class="lm-section">
-		<div class="container">
-			<div class="section-head">
-				<h2>Miért jó a Bookr a vállalkozásodnak?</h2>
-				<p>Letisztult felület, gyors indulás, mérhető eredmények.</p>
-			</div>
+  <!-- STATISZTIKÁK -->
+  <section class="lm-section lm-section--img-bg lm-stats-section">
+    <div class="section-bg-overlay"></div>
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow">Megbízhatóság, ami számít</p>
+        <h2>Stabil háttér minden foglalás mögött</h2>
+        <p>A Bookr azért készül, hogy a vendégek gyorsan döntsenek, a vállalkozások pedig biztosan tervezhessenek.</p>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <strong>24/7</strong>
+          <span>elérhető online foglalás</span>
+        </div>
+        <div class="stat-card">
+          <strong>99%</strong>
+          <span>gyors visszaigazolási élmény</span>
+        </div>
+        <div class="stat-card">
+          <strong>1 platform</strong>
+          <span>minden időpont egy helyen</span>
+        </div>
+      </div>
+    </div>
+  </section>
 
-			<div class="benefit-grid">
-				<article class="benefit-card">
-					<span class="benefit-icon">🎯</span>
-					<h3>Célzott láthatóság</h3>
-					<p>Jelenj meg ott, ahol a környéked ügyfelei valóban keresnek szolgáltatást.</p>
-				</article>
+  <!-- CÉGEKNEK -->
+  <section class="lm-section">
+    <div class="container">
+      <div class="split-layout split-layout--reverse">
+        <div class="split-copy">
+          <p class="eyebrow">Cégeknek</p>
+          <h2>Vezesd a vállalkozásod okosabban</h2>
+          <p>Az owner felületet úgy alakítottuk ki, hogy kevesebb adminisztrációval, több kontrollal és jobb ügyfélélménnyel dolgozhass.</p>
+          <ul class="feature-list">
+            <li>
+              <i class="fas fa-calendar-check"></i>
+              <span>Időpontok és nyitvatartás kezelése valós időben</span>
+            </li>
+            <li>
+              <i class="fas fa-users"></i>
+              <span>Munkatársak, szolgáltatások és kapacitások egy helyen</span>
+            </li>
+            <li>
+              <i class="fas fa-chart-line"></i>
+              <span>Áttekinthető statisztikák a foglalásokról</span>
+            </li>
+            <li>
+              <i class="fas fa-bell"></i>
+              <span>Értesítések és gördülékeny ügyfélkommunikáció</span>
+            </li>
+          </ul>
+        </div>
+        <div class="split-image">
+          <img src="/assets/images/tudjmegtobbet5.jpg" alt="Cégeknek" class="section-img" />
+        </div>
+      </div>
+    </div>
+  </section>
 
-				<article class="benefit-card">
-					<span class="benefit-icon">📅</span>
-					<h3>Okos foglalási rendszer</h3>
-					<p>Valós idejű szabad időpontok, automatikus visszaigazolás, kevesebb manuális egyeztetés.</p>
-				</article>
+  <!-- CTA -->
+  <section class="lm-section lm-cta">
+    <div class="cta-overlay"></div>
+    <div class="container cta-inner">
+      <p class="eyebrow">Csatlakozz hozzánk</p>
+      <h2>Készen állsz a következő szintre?</h2>
+      <p>Csatlakozz a Bookr-höz, és alakítsd át a foglalási folyamataidat modern, átlátható rendszerrel.</p>
+      <div class="cta-actions">
+        <a routerLink="/register" class="btn-primary">Regisztráció</a>
+        <a routerLink="/login" class="btn-ghost">Bejelentkezés</a>
+      </div>
+    </div>
+  </section>
 
-				<article class="benefit-card">
-					<span class="benefit-icon">⭐</span>
-					<h3>Bizalomépítő profil</h3>
-					<p>Mutasd be szolgáltatásaidat professzionálisan értékelésekkel és tiszta információkkal.</p>
-				</article>
-
-				<article class="benefit-card">
-					<span class="benefit-icon">📊</span>
-					<h3>Üzleti betekintés</h3>
-					<p>Kövesd a foglalásokat, visszatérő ügyfeleket és bevételi trendeket egy helyen.</p>
-				</article>
-			</div>
-		</div>
-	</section>
-
-	<section class="lm-section section-steps">
-		<div class="container">
-			<div class="section-head">
-				<h2>Indulj el 3 egyszerű lépésben</h2>
-			</div>
-
-			<div class="steps-grid">
-				<article class="step-card">
-					<span class="step-index">1</span>
-					<h3>Profil létrehozása</h3>
-					<p>Add meg szolgáltatásaidat, nyitvatartásodat és alapadataidat.</p>
-				</article>
-
-				<article class="step-card">
-					<span class="step-index">2</span>
-					<h3>Naptár beállítása</h3>
-					<p>Kapcsold össze elérhetőségedet, és kezeld egy helyről az időpontokat.</p>
-				</article>
-
-				<article class="step-card">
-					<span class="step-index">3</span>
-					<h3>Foglalások fogadása</h3>
-					<p>Indulhat az online jelenlét: új vendégek és gördülékenyebb napi működés.</p>
-				</article>
-			</div>
-		</div>
-	</section>
-
-	<section class="lm-cta">
-		<div class="container cta-inner">
-			<h2>Készen állsz a következő szintre?</h2>
-			<p>Csatlakozz a Bookr-höz, és alakítsd át a foglalási folyamataidat modern, átlátható rendszerrel.</p>
-			<a routerLink="/register-business" class="btn-primary">Kezdjük el</a>
-		</div>
-	</section>
 </main>
