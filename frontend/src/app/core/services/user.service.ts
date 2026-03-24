@@ -18,6 +18,7 @@ import {
 export class UserService {
   private apiUrl = environment.apiUrl;
   private readonly USER_KEY = 'user_data';
+  private readonly TWO_FACTOR_KEY_PREFIX = 'two_factor_enabled_';
 
   constructor(private http: HttpClient) {}
 
@@ -101,6 +102,46 @@ export class UserService {
       `${this.apiUrl}${API_ENDPOINTS.USER.UPDATE_NOTIFICATION_SETTINGS}`,
       data
     );
+  }
+
+  /**
+   * 2FA beállítás lekérése.
+   * Backend hiányában userenként localStorage-ban tároljuk.
+   */
+  getTwoFactorEnabled(userId: number | string | null | undefined): boolean {
+    if (userId === null || userId === undefined || userId === '') {
+      return false;
+    }
+
+    return localStorage.getItem(`${this.TWO_FACTOR_KEY_PREFIX}${userId}`) === 'true';
+  }
+
+  /**
+   * 2FA állapot frissítése.
+   * Bekapcsoláskor a backend majd valódi jelszó-ellenőrzést végez.
+   */
+  updateTwoFactorEnabled(
+    userId: number | string | null | undefined,
+    enabled: boolean,
+    password?: string
+  ): Observable<ApiStatusResponse> {
+    if (userId === null || userId === undefined || userId === '') {
+      throw new Error('Missing user id for 2FA update');
+    }
+
+    if (enabled && (!password || password.trim().length < 8)) {
+      throw new Error('Password is required to enable 2FA');
+    }
+
+    localStorage.setItem(`${this.TWO_FACTOR_KEY_PREFIX}${userId}`, String(enabled));
+
+    return new Observable<ApiStatusResponse>((observer) => {
+      observer.next({
+        status: 'success',
+        statusCode: 200,
+      });
+      observer.complete();
+    });
   }
 
   /**

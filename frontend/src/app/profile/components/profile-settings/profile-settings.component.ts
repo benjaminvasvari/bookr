@@ -24,8 +24,10 @@ interface NotificationSettings {
 export class ProfileSettingsComponent implements OnInit, OnDestroy {
   passwordForm!: FormGroup;
   deleteAccountForm!: FormGroup;
+  twoFactorForm!: FormGroup;
   isDarkMode = false;
   followSystemTheme = false;
+  twoFactorEnabled = false;
 
   // Notification Settings
   notificationSettings: NotificationSettings = {
@@ -46,6 +48,10 @@ export class ProfileSettingsComponent implements OnInit, OnDestroy {
   showPasswordModal = false;
   isRequestingReset = false;
 
+  // 2FA modal states
+  showTwoFactorModal = false;
+  isSavingTwoFactor = false;
+
   // Delete Account modal states
   showDeleteAccountModal = false;
   isDeletingAccount = false;
@@ -54,6 +60,8 @@ export class ProfileSettingsComponent implements OnInit, OnDestroy {
   // Success/Error messages
   passwordResetSuccess = false;
   passwordResetError = '';
+  twoFactorError = '';
+  twoFactorSuccess = '';
 
   constructor(
     private fb: FormBuilder,
@@ -65,6 +73,7 @@ export class ProfileSettingsComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.initForms();
     this.loadNotificationSettings();
+    this.loadTwoFactorSettings();
 
     this.themeSubscription = this.themeService.isDarkMode$.subscribe((isDarkMode) => {
       this.isDarkMode = isDarkMode;
@@ -111,6 +120,11 @@ export class ProfileSettingsComponent implements OnInit, OnDestroy {
     // Delete Account Form
     this.deleteAccountForm = this.fb.group({
       password: ['', [Validators.required, Validators.minLength(8)]],
+    });
+
+    // 2FA bekapcsolás megerősítés
+    this.twoFactorForm = this.fb.group({
+      currentPassword: ['', [Validators.required, Validators.minLength(8)]],
     });
   }
 
@@ -170,6 +184,89 @@ export class ProfileSettingsComponent implements OnInit, OnDestroy {
           this.hasPendingNotificationSave = false;
           this.saveNotificationSettings();
         }
+      },
+    });
+  }
+
+  // ==================== TWO FACTOR AUTHENTICATION ====================
+
+  loadTwoFactorSettings(): void {
+    const currentUser = this.authService.getCurrentUser();
+    this.twoFactorEnabled = this.userService.getTwoFactorEnabled(currentUser?.id);
+  }
+
+  onTwoFactorToggleChange(event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+
+    this.twoFactorError = '';
+    this.twoFactorSuccess = '';
+
+    if (checked) {
+      this.openTwoFactorModal();
+      return;
+    }
+
+    this.updateTwoFactor(false);
+  }
+
+  openTwoFactorModal(): void {
+    this.showTwoFactorModal = true;
+    this.twoFactorForm.reset();
+    this.twoFactorError = '';
+
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+  }
+
+  closeTwoFactorModal(): void {
+    this.showTwoFactorModal = false;
+    this.twoFactorForm.reset();
+    this.twoFactorError = '';
+
+    document.documentElement.style.overflow = '';
+    document.body.style.overflow = '';
+  }
+
+  confirmEnableTwoFactor(): void {
+    if (this.twoFactorForm.invalid) {
+      this.twoFactorError = 'A bekapcsoláshoz add meg a jelenlegi jelszavadat.';
+      return;
+    }
+
+    const password = this.twoFactorForm.get('currentPassword')?.value;
+    this.updateTwoFactor(true, password);
+  }
+
+  private updateTwoFactor(enabled: boolean, password?: string): void {
+    const currentUser = this.authService.getCurrentUser();
+
+    if (!currentUser) {
+      this.twoFactorError = 'A 2FA beállításához be kell jelentkezned.';
+      return;
+    }
+
+    this.isSavingTwoFactor = true;
+    this.twoFactorError = '';
+
+    this.userService.updateTwoFactorEnabled(currentUser.id, enabled, password).subscribe({
+      next: () => {
+        this.twoFactorEnabled = enabled;
+        this.twoFactorSuccess = enabled
+          ? 'A kétlépcsős azonosítás sikeresen be lett kapcsolva.'
+          : 'A kétlépcsős azonosítás ki lett kapcsolva.';
+        this.isSavingTwoFactor = false;
+
+        if (enabled) {
+          this.closeTwoFactorModal();
+        }
+      },
+      error: (error) => {
+        console.error('2FA update error:', error);
+        this.twoFactorError =
+          error instanceof Error
+            ? error.message
+            : error.error?.message || 'A 2FA beállítás mentése nem sikerült.';
+        this.isSavingTwoFactor = false;
       },
     });
   }

@@ -89,6 +89,8 @@ export interface OwnerActualStaffMember {
   color: string | null;
   displayName: string;
   imageUrl: string | null;
+  email?: string;
+  phone?: string;
   id: number;
   userId: number;
 }

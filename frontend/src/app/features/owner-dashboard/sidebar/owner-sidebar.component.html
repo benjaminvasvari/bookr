@@ -14,44 +14,50 @@
 	</div>
 
 	<nav class="sidebar-nav">
-		<a class="home-link" routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavClick()">
-			<i class="fas fa-home"></i>
-			<span class="nav-label">Home</span>
-		</a>
-		<div class="nav-divider"></div>
-		<a routerLink="/owner/overview" routerLinkActive="active" (click)="onNavClick()">
-			<i class="fas fa-chart-pie"></i>
-			<span class="nav-label">Áttekintés</span>
-		</a>
-		<a routerLink="/owner/calendar" routerLinkActive="active" (click)="onNavClick()">
-			<i class="fas fa-calendar-alt"></i>
-			<span class="nav-label">Naptár</span>
-		</a>
-		<a routerLink="/owner/staff" routerLinkActive="active" (click)="onNavClick()">
-			<i class="fas fa-user-friends"></i>
-			<span class="nav-label">Dolgozók</span>
-		</a>
-		<a routerLink="/owner/clients" routerLinkActive="active" (click)="onNavClick()">
-			<i class="fas fa-users"></i>
-			<span class="nav-label">Ügyfelek</span>
-		</a>
-		<a routerLink="/owner/services" routerLinkActive="active" (click)="onNavClick()">
-			<i class="fas fa-concierge-bell"></i>
-			<span class="nav-label">Szolgáltatások</span>
-		</a>
-		<a routerLink="/owner/sales" routerLinkActive="active" (click)="onNavClick()">
-			<i class="fas fa-coins"></i>
-			<span class="nav-label">Pénzügyek</span>
-		</a>
-		<a routerLink="/owner/reviews" routerLinkActive="active" (click)="onNavClick()">
-			<i class="fas fa-star"></i>
-			<span class="nav-label">Értékelések</span>
-		</a>
-		<a routerLink="/owner/settings" routerLinkActive="active" (click)="onNavClick()">
-			<i class="fas fa-cog"></i>
-			<span class="nav-label">Beállítások</span>
-		</a>
-		<div class="nav-divider"></div>
+		<div class="nav-links">
+			<a class="home-link" routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="onNavClick()">
+				<i class="fas fa-home"></i>
+				<span class="nav-label">Home</span>
+			</a>
+			<div class="nav-divider"></div>
+			<a routerLink="/owner/overview" routerLinkActive="active" (click)="onNavClick()">
+				<i class="fas fa-chart-pie"></i>
+				<span class="nav-label">Áttekintés</span>
+			</a>
+			<a routerLink="/owner/calendar" routerLinkActive="active" (click)="onNavClick()">
+				<i class="fas fa-calendar-alt"></i>
+				<span class="nav-label">Naptár</span>
+			</a>
+			<a routerLink="/owner/chat" routerLinkActive="active" (click)="onNavClick()">
+				<i class="fas fa-comments"></i>
+				<span class="nav-label">Chat</span>
+			</a>
+			<a routerLink="/owner/staff" routerLinkActive="active" (click)="onNavClick()">
+				<i class="fas fa-user-friends"></i>
+				<span class="nav-label">Dolgozók</span>
+			</a>
+			<a routerLink="/owner/clients" routerLinkActive="active" (click)="onNavClick()">
+				<i class="fas fa-users"></i>
+				<span class="nav-label">Ügyfelek</span>
+			</a>
+			<a routerLink="/owner/services" routerLinkActive="active" (click)="onNavClick()">
+				<i class="fas fa-concierge-bell"></i>
+				<span class="nav-label">Szolgáltatások</span>
+			</a>
+			<a routerLink="/owner/sales" routerLinkActive="active" (click)="onNavClick()">
+				<i class="fas fa-coins"></i>
+				<span class="nav-label">Pénzügyek</span>
+			</a>
+			<a routerLink="/owner/reviews" routerLinkActive="active" (click)="onNavClick()">
+				<i class="fas fa-star"></i>
+				<span class="nav-label">Értékelések</span>
+			</a>
+			<a routerLink="/owner/settings" routerLinkActive="active" (click)="onNavClick()">
+				<i class="fas fa-cog"></i>
+				<span class="nav-label">Beállítások</span>
+			</a>
+		</div>
+		<div class="nav-divider bottom-divider"></div>
 		<button
 			class="collapse-toggle-btn"
 			type="button"

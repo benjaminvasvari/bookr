@@ -23,20 +23,11 @@ interface StaffAssignableService {
   price: number;
   currency: string;
   enabled: boolean;
-  source: 'company' | 'custom';
 }
 
 interface StaffAssignableServiceGroup {
   category: string;
   services: StaffAssignableService[];
-}
-
-interface NewStaffServiceDraft {
-  name: string;
-  category: string;
-  duration: string;
-  price: number | null;
-  currency: string;
 }
 
 const DEFAULT_WORKING_HOURS: WorkingHourDay[] = [
@@ -60,16 +51,13 @@ export class StaffWorkSettingsComponent implements OnInit {
   workingHours: WorkingHourDay[] = this.cloneWorkingHours(DEFAULT_WORKING_HOURS);
   workingHoursDraft: WorkingHourDay[] = this.cloneWorkingHours(DEFAULT_WORKING_HOURS);
   services: StaffAssignableService[] = [];
-  newServiceDraft: NewStaffServiceDraft = this.createEmptyServiceDraft();
 
   isEditingWorkingHours = false;
   isSavingWorkingHours = false;
   isLoadingServices = false;
-  isAddingService = false;
 
   workingHoursSaveMessage = '';
   errorMessage = '';
-  newServiceErrorMessage = '';
 
   private companyId: number | null = null;
   private staffUserId: number | null = null;
@@ -187,50 +175,6 @@ export class StaffWorkSettingsComponent implements OnInit {
     this.persistServices();
   }
 
-  startAddService(): void {
-    this.isAddingService = true;
-    this.newServiceErrorMessage = '';
-    this.newServiceDraft = this.createEmptyServiceDraft();
-  }
-
-  cancelAddService(): void {
-    this.isAddingService = false;
-    this.newServiceErrorMessage = '';
-    this.newServiceDraft = this.createEmptyServiceDraft();
-  }
-
-  addCustomService(): void {
-    const name = this.newServiceDraft.name.trim();
-    const category = this.newServiceDraft.category.trim();
-    const duration = this.newServiceDraft.duration.trim();
-    const price = this.newServiceDraft.price;
-
-    if (!name || !category || !duration || price === null || price < 0) {
-      this.newServiceErrorMessage = 'Add meg a szolgáltatás nevét, kategóriáját, időtartamát és árát.';
-      return;
-    }
-
-    this.services = [
-      {
-        key: `custom:${Date.now()}`,
-        companyServiceId: null,
-        name,
-        category,
-        duration,
-        price,
-        currency: this.newServiceDraft.currency || 'HUF',
-        enabled: true,
-        source: 'custom',
-      },
-      ...this.services,
-    ];
-
-    this.isAddingService = false;
-    this.newServiceErrorMessage = '';
-    this.newServiceDraft = this.createEmptyServiceDraft();
-    this.persistServices();
-  }
-
   onServiceAvailabilityChange(): void {
     this.persistServices();
   }
@@ -299,19 +243,15 @@ export class StaffWorkSettingsComponent implements OnInit {
         const savedServiceConfigs = this.getSavedServiceConfigs();
         const savedCompanyServicesById = new Map(
           savedServiceConfigs
-            .filter((service) => service.source === 'company' && typeof service.companyServiceId === 'number')
+            .filter((service) => typeof service.companyServiceId === 'number')
             .map((service) => [service.companyServiceId as number, service])
         );
 
-        const companyServices = categories.flatMap((category) =>
+        this.services = categories.flatMap((category) =>
           (category.services || []).map((service) =>
             this.mapCompanyService(category.name, service, savedCompanyServicesById.get(service.id))
           )
         );
-
-        const customServices = savedServiceConfigs.filter((service) => service.source === 'custom');
-
-        this.services = [...customServices, ...companyServices];
 
         this.isLoadingServices = false;
       },
@@ -337,7 +277,6 @@ export class StaffWorkSettingsComponent implements OnInit {
       price: service.price,
       currency: service.currency || 'HUF',
       enabled: savedService ? savedService.enabled : true,
-      source: 'company',
     };
   }
 
@@ -364,21 +303,11 @@ export class StaffWorkSettingsComponent implements OnInit {
           typeof service?.price === 'number' &&
           typeof service?.currency === 'string' &&
           typeof service?.enabled === 'boolean' &&
-          (service?.source === 'company' || service?.source === 'custom')
+          typeof service?.companyServiceId === 'number'
       );
     } catch {
       return [];
     }
-  }
-
-  private createEmptyServiceDraft(): NewStaffServiceDraft {
-    return {
-      name: '',
-      category: '',
-      duration: '30 perc',
-      price: null,
-      currency: 'HUF',
-    };
   }
 
   private getWorkingHoursStorageKey(): string {

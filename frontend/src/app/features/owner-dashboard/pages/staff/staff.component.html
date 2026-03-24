@@ -110,20 +110,30 @@
 
 			@for (staff of filteredActualStaff; track trackByStaff($index, staff)) {
 			<article class="staff-table-card">
-				<header class="card-header">
-					<div class="avatar">
-						@if (staff.imageUrl) {
-						<img class="avatar-image" [src]="staff.imageUrl" [alt]="staff.displayName" />
-						} @else {
-						{{ getStaffInitials(staff) }}
-						}
-					</div>
-					<div class="staff-info">
-						<h3>{{ staff.displayName }}</h3>
-						<p>{{ staff.specialties }}</p>
-					</div>
-					<span class="status" [class.online]="!isStaffCurrentlyBusy(staff)" [class.busy]="isStaffCurrentlyBusy(staff)">{{ getStaffStatusLabel(staff) }}</span>
-				</header>
+				<button
+					class="staff-card-toggle"
+					type="button"
+					(click)="openStaffContactModal(staff)"
+					aria-haspopup="dialog"
+					[attr.aria-label]="staff.displayName + ' kontakt adatainak megnyitása'"
+				>
+					<header class="card-header">
+						<div class="avatar">
+							@if (staff.imageUrl) {
+							<img class="avatar-image" [src]="staff.imageUrl" [alt]="staff.displayName" />
+							} @else {
+							{{ getStaffInitials(staff) }}
+							}
+						</div>
+						<div class="staff-info">
+							<h3>{{ staff.displayName }}</h3>
+							<p>{{ staff.specialties }}</p>
+						</div>
+						<div class="staff-header-side">
+							<span class="status" [class.online]="!isStaffCurrentlyBusy(staff)" [class.busy]="isStaffCurrentlyBusy(staff)">{{ getStaffStatusLabel(staff) }}</span>
+						</div>
+					</header>
+				</button>
 				<table class="staff-table">
 					<thead>
 						<tr>
@@ -239,6 +249,74 @@
 					<div class="success-progress"></div>
 				</div>
 			}
+		</div>
+	</div>
+}
+
+@if (selectedStaff) {
+	<div class="modal-overlay" (click)="closeStaffContactModal()">
+		<div class="modal-content contact-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" [attr.aria-label]="selectedStaff.displayName + ' kontakt adatai'">
+			<div class="modal-header contact-modal-header">
+				<div class="contact-modal-title-block">
+					<div class="avatar contact-modal-avatar">
+						@if (selectedStaff.imageUrl) {
+						<img class="avatar-image" [src]="selectedStaff.imageUrl" [alt]="selectedStaff.displayName" />
+						} @else {
+						{{ getStaffInitials(selectedStaff) }}
+						}
+					</div>
+					<div>
+						<h2>{{ selectedStaff.displayName }}</h2>
+						<p>{{ selectedStaff.specialties }}</p>
+					</div>
+				</div>
+				<button class="close-btn" type="button" (click)="closeStaffContactModal()">&times;</button>
+			</div>
+
+			<div class="modal-body contact-modal-body">
+				<div class="staff-contact-grid modal-contact-grid">
+					<div class="contact-item">
+						<div class="contact-head">
+							<span class="contact-icon" aria-hidden="true"><i class="fas fa-envelope"></i></span>
+							<span class="contact-label">Email</span>
+							@if (hasStaffEmail(selectedStaff)) {
+							<button class="contact-copy-btn" type="button" (click)="copyStaffEmail(selectedStaff)" [attr.aria-label]="selectedStaff.displayName + ' email címének másolása'">
+								@if (isContactCopied('email')) {
+								Másolva
+								} @else {
+								Másolás
+								}
+							</button>
+							}
+						</div>
+						@if (hasStaffEmail(selectedStaff)) {
+						<a class="contact-value contact-link" [href]="getStaffEmailHref(selectedStaff)">{{ getStaffEmail(selectedStaff) }}</a>
+						} @else {
+						<strong class="contact-value contact-value-muted">{{ getStaffEmail(selectedStaff) }}</strong>
+						}
+					</div>
+					<div class="contact-item">
+						<div class="contact-head">
+							<span class="contact-icon" aria-hidden="true"><i class="fas fa-phone"></i></span>
+							<span class="contact-label">Telefon</span>
+							@if (hasStaffPhone(selectedStaff)) {
+							<button class="contact-copy-btn" type="button" (click)="copyStaffPhone(selectedStaff)" [attr.aria-label]="selectedStaff.displayName + ' telefonszámának másolása'">
+								@if (isContactCopied('phone')) {
+								Másolva
+								} @else {
+								Másolás
+								}
+							</button>
+							}
+						</div>
+						@if (hasStaffPhone(selectedStaff)) {
+						<a class="contact-value contact-link" [href]="getStaffPhoneHref(selectedStaff)">{{ getStaffPhone(selectedStaff) }}</a>
+						} @else {
+						<strong class="contact-value contact-value-muted">{{ getStaffPhone(selectedStaff) }}</strong>
+						}
+					</div>
+				</div>
+			</div>
 		</div>
 	</div>
 }

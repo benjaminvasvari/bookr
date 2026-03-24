@@ -26,6 +26,8 @@ interface StaffCard {
   displayName: string;
   specialties: string;
   imageUrl: string | null;
+  email: string | null;
+  phone: string | null;
   upcomingAppointments: OwnerUpcomingAppointment[];
 }
 
@@ -57,7 +59,10 @@ export class StaffComponent implements OnInit {
   lastInvitedPendingId: number | null = null;
   searchTerm = '';
   selectedRole = 'all';
+  selectedStaff: StaffCard | null = null;
+  copiedContactField: 'email' | 'phone' | null = null;
   private deletingPendingIds = new Set<number>();
+  private copiedContactResetTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private staffService: StaffService,
@@ -311,6 +316,65 @@ export class StaffComponent implements OnInit {
     this.selectedRole = 'all';
   }
 
+  openStaffContactModal(staff: StaffCard): void {
+    this.selectedStaff = staff;
+    this.clearCopiedContactFeedback();
+  }
+
+  closeStaffContactModal(): void {
+    this.selectedStaff = null;
+    this.clearCopiedContactFeedback();
+  }
+
+  getStaffEmail(staff: StaffCard): string {
+    return staff.email?.trim() || 'Nincs megadva';
+  }
+
+  getStaffPhone(staff: StaffCard): string {
+    return staff.phone?.trim() || 'Nincs megadva';
+  }
+
+  hasStaffEmail(staff: StaffCard): boolean {
+    return !!staff.email?.trim();
+  }
+
+  hasStaffPhone(staff: StaffCard): boolean {
+    return !!staff.phone?.trim();
+  }
+
+  getStaffEmailHref(staff: StaffCard): string {
+    return `mailto:${staff.email?.trim() || ''}`;
+  }
+
+  getStaffPhoneHref(staff: StaffCard): string {
+    const normalizedPhone = (staff.phone || '').replace(/[^\d+]/g, '');
+    return `tel:${normalizedPhone}`;
+  }
+
+  copyStaffEmail(staff: StaffCard): void {
+    if (!this.hasStaffEmail(staff)) {
+      return;
+    }
+
+    this.copyContactValue(staff.email!.trim(), 'email');
+  }
+
+  copyStaffPhone(staff: StaffCard): void {
+    if (!this.hasStaffPhone(staff)) {
+      return;
+    }
+
+    this.copyContactValue(staff.phone!.trim(), 'phone');
+  }
+
+  hasAnyStaffContact(staff: StaffCard): boolean {
+    return !!staff.email?.trim() || !!staff.phone?.trim();
+  }
+
+  isContactCopied(field: 'email' | 'phone'): boolean {
+    return this.copiedContactField === field;
+  }
+
   private loadOwnerStaff(): void {
     const currentUser = this.authService.getCurrentUser();
     const companyId = currentUser?.companyId ?? null;
@@ -333,6 +397,9 @@ export class StaffComponent implements OnInit {
 
         this.pendingInvites = pending.map((item) => this.mapPendingInvite(item));
         this.actualStaff = actual.map((item) => this.mapActualStaff(item));
+        if (this.selectedStaff && !this.actualStaff.some((staff) => staff.id === this.selectedStaff?.id)) {
+          this.selectedStaff = null;
+        }
         this.isLoadingStaff = false;
       },
       error: () => {
@@ -363,6 +430,8 @@ export class StaffComponent implements OnInit {
       displayName: item.displayName || `${item.firstName} ${item.lastName}`.trim(),
       specialties: item.specialties || 'Nincs megadva',
       imageUrl: item.imageUrl,
+      email: this.getStringValue(item as unknown as Record<string, unknown>, ['email']),
+      phone: this.getStringValue(item as unknown as Record<string, unknown>, ['phone', 'phoneNumber', 'mobile']),
       upcomingAppointments: appointments,
     };
   }
@@ -619,6 +688,56 @@ export class StaffComponent implements OnInit {
       Number(minutes),
       Number(seconds),
     );
+  }
+
+  private copyContactValue(value: string, field: 'email' | 'phone'): void {
+    const onCopied = () => {
+      this.copiedContactField = field;
+
+      if (this.copiedContactResetTimer) {
+        clearTimeout(this.copiedContactResetTimer);
+      }
+
+      this.copiedContactResetTimer = setTimeout(() => {
+        this.copiedContactField = null;
+        this.copiedContactResetTimer = null;
+      }, 1800);
+    };
+
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(value).then(onCopied).catch(() => {
+        this.copyContactValueFallback(value, onCopied);
+      });
+      return;
+    }
+
+    this.copyContactValueFallback(value, onCopied);
+  }
+
+  private copyContactValueFallback(value: string, onCopied: () => void): void {
+    const textarea = document.createElement('textarea');
+    textarea.value = value;
+    textarea.setAttribute('readonly', 'true');
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+
+    try {
+      document.execCommand('copy');
+      onCopied();
+    } finally {
+      document.body.removeChild(textarea);
+    }
+  }
+
+  private clearCopiedContactFeedback(): void {
+    this.copiedContactField = null;
+
+    if (this.copiedContactResetTimer) {
+      clearTimeout(this.copiedContactResetTimer);
+      this.copiedContactResetTimer = null;
+    }
   }
 
   private resetInviteState(): void {

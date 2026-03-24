@@ -113,6 +113,13 @@ export const appRoutes: Routes = [
           )
       },
       {
+        path: 'chat',
+        loadComponent: () =>
+          import('./features/staff-dashboard/staff-chat/staff-chat.component').then(
+            (m) => m.StaffChatComponent
+          )
+      },
+      {
         path: 'work-settings',
         loadComponent: () =>
           import('./features/staff-dashboard/staff-work-settings/staff-work-settings.component').then(
@@ -273,6 +280,13 @@ export const appRoutes: Routes = [
         loadComponent: () =>
           import('./features/owner-dashboard/pages/reviews/reviews.component').then(
             (m) => m.ReviewsComponent
+          )
+      },
+      {
+        path: 'chat',
+        loadComponent: () =>
+          import('./features/owner-dashboard/pages/chat/chat.component').then(
+            (m) => m.OwnerChatPageComponent
           )
       },
       {

@@ -86,60 +86,11 @@
         <header class="work-card-header">
           <div>
             <h2 class="card-title">Saját szolgáltatások</h2>
-            <p class="card-subtitle">Azok a szolgáltatások, amiket nálad lehet foglalni</p>
+      <p class="card-subtitle">Válaszd ki, mely alap szolgáltatásokat tudod vállalni</p>
           </div>
         </header>
 
         <div class="work-card-body service-card-body">
-          <div class="service-actions-bar">
-            <button class="btn btn-edit-link" type="button" (click)="startAddService()" [disabled]="isAddingService">
-              Új saját szolgáltatás
-            </button>
-          </div>
-
-          @if (isAddingService) {
-            <section class="custom-service-form">
-              <div class="form-head">
-                <div>
-                  <h3>Új saját szolgáltatás</h3>
-                  <p>Olyan elemet is felvehetsz, ami még nincs benne a cég alaplistájában.</p>
-                </div>
-
-                <button class="btn btn-outline" type="button" (click)="cancelAddService()">Mégse</button>
-              </div>
-
-              <div class="service-form-grid">
-                <label class="form-field">
-                  <span>Név</span>
-                  <input type="text" [(ngModel)]="newServiceDraft.name" placeholder="pl. Expressz szakáll styling" />
-                </label>
-
-                <label class="form-field">
-                  <span>Kategória</span>
-                  <input type="text" [(ngModel)]="newServiceDraft.category" placeholder="pl. Barber" />
-                </label>
-
-                <label class="form-field">
-                  <span>Időtartam</span>
-                  <input type="text" [(ngModel)]="newServiceDraft.duration" placeholder="pl. 30 perc" />
-                </label>
-
-                <label class="form-field">
-                  <span>Ár</span>
-                  <input type="number" [(ngModel)]="newServiceDraft.price" min="0" step="500" placeholder="pl. 6500" />
-                </label>
-              </div>
-
-              @if (newServiceErrorMessage) {
-                <p class="save-feedback error">{{ newServiceErrorMessage }}</p>
-              }
-
-              <div class="form-actions">
-                <button class="btn btn-save" type="button" (click)="addCustomService()">Hozzáadás</button>
-              </div>
-            </section>
-          }
-
           @if (isLoadingServices) {
             <div class="page-state">Szolgáltatások betöltése...</div>
           } @else {
@@ -155,12 +106,7 @@
                     @for (service of group.services; track trackByService($index, service)) {
                       <div class="service-row" [class.inactive]="!service.enabled">
                         <div class="service-copy">
-                          <div class="service-copy-top">
-                            <strong>{{ service.name }}</strong>
-                            @if (service.source === 'custom') {
-                              <span class="service-type-badge">Saját</span>
-                            }
-                          </div>
+              <strong>{{ service.name }}</strong>
                           <span>{{ service.duration }} · {{ formatPrice(service.price, service.currency) }}</span>
                         </div>
 

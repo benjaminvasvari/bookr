@@ -130,6 +130,56 @@
     </div>
   </div>
 
+  <div class="card">
+    <div class="card-header">
+      <div class="card-heading-group">
+        <h2 class="card-title">Kétlépcsős azonosítás</h2>
+        <span class="status-badge" [class.enabled]="twoFactorEnabled">
+          {{ twoFactorEnabled ? 'Bekapcsolva' : 'Kikapcsolva' }}
+        </span>
+      </div>
+    </div>
+    <div class="card-body">
+      @if (twoFactorSuccess) {
+        <div class="alert alert-success">
+          <svg class="alert-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+          </svg>
+          <span>{{ twoFactorSuccess }}</span>
+        </div>
+      }
+
+      @if (twoFactorError && !showTwoFactorModal) {
+        <div class="alert alert-error">
+          <span>{{ twoFactorError }}</span>
+        </div>
+      }
+
+      <div class="setting-item security-setting">
+        <div class="setting-info">
+          <h3 class="setting-title">2FA bejelentkezés</h3>
+          <p class="setting-description">
+            Bejelentkezéskor egy második megerősítési lépést is kér a rendszer a nagyobb
+            biztonságért.
+          </p>
+          <p class="setting-note">
+            Bekapcsoláskor újra meg kell adnod a jelszavadat. A backend integrációig ez a beállítás
+            csak ezen az eszközön kerül mentésre.
+          </p>
+        </div>
+        <label class="toggle-switch">
+          <input
+            type="checkbox"
+            [checked]="twoFactorEnabled"
+            (change)="onTwoFactorToggleChange($event)"
+            [disabled]="isSavingTwoFactor"
+          />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
   <!-- Account Deletion Card -->
   <div class="card card-danger">
     <div class="card-header">
@@ -222,6 +272,71 @@
           </button>
         </div>
       }
+    </div>
+  </div>
+}
+
+<!-- Two Factor Modal -->
+@if (showTwoFactorModal) {
+  <div class="modal-backdrop" (click)="closeTwoFactorModal()"></div>
+  <div class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Kétlépcsős azonosítás bekapcsolása</h3>
+        <button class="modal-close" (click)="closeTwoFactorModal()" [disabled]="isSavingTwoFactor">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+            <path
+              d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+            />
+          </svg>
+        </button>
+      </div>
+
+      <form [formGroup]="twoFactorForm" class="modal-body">
+        @if (twoFactorError) {
+          <div class="alert alert-error">
+            <span>{{ twoFactorError }}</span>
+          </div>
+        }
+
+        <p class="modal-description">
+          A 2FA bekapcsolásához erősítsd meg a jelenlegi jelszavaddal, hogy valóban te végzed a
+          módosítást.
+        </p>
+
+        <div class="form-group">
+          <label class="form-label">Jelenlegi jelszó</label>
+          <input
+            type="password"
+            class="form-input"
+            formControlName="currentPassword"
+            placeholder="••••••••"
+          />
+        </div>
+      </form>
+
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn btn-secondary"
+          (click)="closeTwoFactorModal()"
+          [disabled]="isSavingTwoFactor"
+        >
+          Mégse
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          (click)="confirmEnableTwoFactor()"
+          [disabled]="twoFactorForm.invalid || isSavingTwoFactor"
+        >
+          @if (isSavingTwoFactor) {
+            <span>Mentés...</span>
+          } @else {
+            <span>2FA bekapcsolása</span>
+          }
+        </button>
+      </div>
     </div>
   </div>
 }

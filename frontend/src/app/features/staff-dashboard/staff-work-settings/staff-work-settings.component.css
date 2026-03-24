@@ -75,59 +75,6 @@
   margin-left: auto;
 }
 
-.summary-strip {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 18px;
-  border: 1px solid #e4ebf4;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #f8fbff 0%, #f9fcff 100%);
-}
-
-.summary-kicker {
-  display: inline-flex;
-  align-items: center;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: rgba(37, 99, 235, 0.08);
-  color: #315ca8;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.summary-text {
-  margin: 10px 0 0;
-  font-size: 14px;
-  line-height: 1.6;
-  color: #476072;
-}
-
-.summary-stat {
-  display: grid;
-  min-width: 120px;
-  justify-items: end;
-  gap: 2px;
-}
-
-.summary-stat strong {
-  font-size: 30px;
-  line-height: 1;
-  font-weight: 800;
-  color: #0f172a;
-}
-
-.summary-stat span {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: #64748b;
-}
-
 .working-hours-list,
 .service-groups {
   display: grid;
@@ -237,85 +184,6 @@
   gap: 16px;
 }
 
-.service-actions-bar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.custom-service-form {
-  display: grid;
-  gap: 16px;
-  padding: 18px;
-  border: 1px solid #dfe9e4;
-  border-radius: 16px;
-  background: linear-gradient(180deg, #ffffff 0%, #f6fbf8 100%);
-}
-
-.form-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.form-head h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 800;
-  color: #0f172a;
-}
-
-.form-head p {
-  margin: 4px 0 0;
-  font-size: 13px;
-  color: #64748b;
-}
-
-.service-form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.form-field {
-  display: grid;
-  gap: 6px;
-}
-
-.form-field span {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #64748b;
-}
-
-.form-field input {
-  width: 100%;
-  min-width: 0;
-  height: 44px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid #cfdae7;
-  background: #ffffff;
-  font-weight: 600;
-  color: #1f2937;
-  outline: none;
-}
-
-.form-field input:focus {
-  border-color: #9ccbb7;
-  box-shadow: 0 0 0 3px rgba(56, 161, 121, 0.12);
-}
-
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
 .service-group {
   display: grid;
   gap: 12px;
@@ -350,25 +218,6 @@
   gap: 10px;
 }
 
-.service-copy-top {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.service-type-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: rgba(56, 161, 121, 0.12);
-  color: #2f8d66;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
 
 .service-row {
   grid-template-columns: minmax(0, 1fr) auto;
@@ -464,10 +313,6 @@
   color: #1f7a52;
 }
 
-.save-feedback.error {
-  color: #c24141;
-}
-
 .page-state {
   padding: 14px 16px;
   border-radius: 14px;
@@ -484,27 +329,17 @@
 
 @media (max-width: 991px) {
   .work-card-header,
-  .summary-strip,
   .hours-row {
     grid-template-columns: 1fr;
   }
 
-  .work-card-header,
-  .summary-strip {
+	.work-card-header {
     display: grid;
   }
 
   .header-actions {
     margin-left: 0;
     justify-content: flex-start;
-  }
-
-  .service-form-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .summary-stat {
-    justify-items: start;
   }
 
   .hours-row {
@@ -540,17 +375,6 @@
   }
 
   .header-actions .btn {
-    width: 100%;
-  }
-
-  .service-actions-bar,
-  .form-actions {
-    display: grid;
-    grid-template-columns: 1fr;
-  }
-
-  .service-actions-bar .btn,
-  .form-actions .btn {
     width: 100%;
   }
 }

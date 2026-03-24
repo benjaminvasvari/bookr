@@ -55,6 +55,13 @@
   border-bottom: 1px solid #e9ecef;
 }
 
+.card-heading-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .card-title {
   font-size: 20px;
   font-weight: 600;
@@ -138,6 +145,10 @@
   flex: 1;
 }
 
+.security-setting {
+  align-items: flex-start;
+}
+
 .setting-title {
   font-size: 16px;
   font-weight: 600;
@@ -149,6 +160,36 @@
   font-size: 14px;
   color: #6c757d;
   margin: 0;
+}
+
+.setting-note {
+  margin: 12px 0 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #856404;
+  background-color: #fff8dd;
+  border: 1px solid #f3df92;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.status-badge.enabled {
+  background-color: #d4edda;
+  color: #155724;
 }
 
 /* Custom Toggle Switch */
@@ -558,6 +599,10 @@
     gap: 16px;
     align-items: flex-start;
     padding: 20px 24px;
+  }
+
+  .card-heading-group {
+    align-items: flex-start;
   }
 
   .card-body {
