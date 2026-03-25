@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { UserService } from '../../../core/services/user.service';
@@ -6,6 +6,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { UpdateNotificationSettingsRequest } from '../../../core/models';
 import { ThemeMode, ThemeService } from '../../../core/services/theme.service';
 import { Subscription } from 'rxjs';
+import { TwoFactorSetupModalComponent } from './security/two-factor-setup-modal/two-factor-setup-modal.component';
 
 interface NotificationSettings {
   appointmentConfirmation: boolean;
@@ -17,17 +18,17 @@ interface NotificationSettings {
 @Component({
   selector: 'app-profile-settings',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, TwoFactorSetupModalComponent],
   templateUrl: './profile-settings.component.html',
   styleUrls: ['./profile-settings.component.css'],
 })
 export class ProfileSettingsComponent implements OnInit, OnDestroy {
   passwordForm!: FormGroup;
   deleteAccountForm!: FormGroup;
-  twoFactorForm!: FormGroup;
+  disableTwoFactorForm!: FormGroup;
   isDarkMode = false;
   followSystemTheme = false;
-  twoFactorEnabled = false;
+  twoFactorEnabled = signal(false);
 
   // Notification Settings
   notificationSettings: NotificationSettings = {
@@ -50,6 +51,7 @@ export class ProfileSettingsComponent implements OnInit, OnDestroy {
 
   // 2FA modal states
   showTwoFactorModal = false;
+  showDisableTwoFactorModal = false;
   isSavingTwoFactor = false;
 
   // Delete Account modal states
@@ -122,9 +124,9 @@ export class ProfileSettingsComponent implements OnInit, OnDestroy {
       password: ['', [Validators.required, Validators.minLength(8)]],
     });
 
-    // 2FA bekapcsolás megerősítés
-    this.twoFactorForm = this.fb.group({
-      currentPassword: ['', [Validators.required, Validators.minLength(8)]],
+    // 2FA kikapcsolás megerősítés
+    this.disableTwoFactorForm = this.fb.group({
+      password: ['', [Validators.required]],
     });
   }
 
@@ -192,7 +194,7 @@ export class ProfileSettingsComponent implements OnInit, OnDestroy {
 
   loadTwoFactorSettings(): void {
     const currentUser = this.authService.getCurrentUser();
-    this.twoFactorEnabled = this.userService.getTwoFactorEnabled(currentUser?.id);
+    this.twoFactorEnabled.set(this.userService.getTwoFactorEnabled(currentUser?.id));
   }
 
   onTwoFactorToggleChange(event: Event): void {
@@ -206,35 +208,49 @@ export class ProfileSettingsComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.updateTwoFactor(false);
+    this.openDisableTwoFactorModal();
   }
 
   openTwoFactorModal(): void {
     this.showTwoFactorModal = true;
-    this.twoFactorForm.reset();
     this.twoFactorError = '';
-
-    document.documentElement.style.overflow = 'hidden';
-    document.body.style.overflow = 'hidden';
+    this.syncBodyScrollLock();
   }
 
   closeTwoFactorModal(): void {
     this.showTwoFactorModal = false;
-    this.twoFactorForm.reset();
     this.twoFactorError = '';
-
-    document.documentElement.style.overflow = '';
-    document.body.style.overflow = '';
+    this.syncBodyScrollLock();
   }
 
-  confirmEnableTwoFactor(): void {
-    if (this.twoFactorForm.invalid) {
-      this.twoFactorError = 'A bekapcsoláshoz add meg a jelenlegi jelszavadat.';
+  handleTwoFactorSetupComplete(): void {
+    this.twoFactorEnabled.set(true);
+    this.twoFactorSuccess = 'A kétlépcsős azonosítás sikeresen be lett kapcsolva.';
+    this.twoFactorError = '';
+    this.closeTwoFactorModal();
+  }
+
+  openDisableTwoFactorModal(): void {
+    this.showDisableTwoFactorModal = true;
+    this.disableTwoFactorForm.reset();
+    this.twoFactorError = '';
+    this.syncBodyScrollLock();
+  }
+
+  closeDisableTwoFactorModal(): void {
+    this.showDisableTwoFactorModal = false;
+    this.disableTwoFactorForm.reset();
+    this.twoFactorError = '';
+    this.syncBodyScrollLock();
+  }
+
+  confirmDisableTwoFactor(): void {
+    if (this.disableTwoFactorForm.invalid) {
+      this.twoFactorError = 'A kikapcsoláshoz add meg a jelszavadat.';
       return;
     }
 
-    const password = this.twoFactorForm.get('currentPassword')?.value;
-    this.updateTwoFactor(true, password);
+    this.updateTwoFactor(false, this.disableTwoFactorForm.get('password')?.value);
   }
 
   private updateTwoFactor(enabled: boolean, password?: string): void {
@@ -250,15 +266,13 @@ export class ProfileSettingsComponent implements OnInit, OnDestroy {
 
     this.userService.updateTwoFactorEnabled(currentUser.id, enabled, password).subscribe({
       next: () => {
-        this.twoFactorEnabled = enabled;
+        this.twoFactorEnabled.set(enabled);
         this.twoFactorSuccess = enabled
           ? 'A kétlépcsős azonosítás sikeresen be lett kapcsolva.'
           : 'A kétlépcsős azonosítás ki lett kapcsolva.';
         this.isSavingTwoFactor = false;
 
-        if (enabled) {
-          this.closeTwoFactorModal();
-        }
+        this.closeDisableTwoFactorModal();
       },
       error: (error) => {
         console.error('2FA update error:', error);
@@ -271,6 +285,13 @@ export class ProfileSettingsComponent implements OnInit, OnDestroy {
     });
   }
 
+  private syncBodyScrollLock(): void {
+    const hasOpenModal = this.showPasswordModal || this.showTwoFactorModal || this.showDisableTwoFactorModal || this.showDeleteAccountModal;
+
+    document.documentElement.style.overflow = hasOpenModal ? 'hidden' : '';
+    document.body.style.overflow = hasOpenModal ? 'hidden' : '';
+  }
+
   // ==================== PASSWORD RESET ====================
 
   openPasswordModal(): void {
@@ -280,8 +301,7 @@ export class ProfileSettingsComponent implements OnInit, OnDestroy {
     this.passwordResetError = '';
 
     // Disable body scroll
-    document.documentElement.style.overflow = 'hidden';
-    document.body.style.overflow = 'hidden';
+    this.syncBodyScrollLock();
   }
 
   closePasswordModal(): void {
@@ -291,8 +311,7 @@ export class ProfileSettingsComponent implements OnInit, OnDestroy {
     this.passwordResetError = '';
 
     // Enable body scroll
-    document.documentElement.style.overflow = '';
-    document.body.style.overflow = '';
+    this.syncBodyScrollLock();
   }
 
   requestPasswordReset(): void {
@@ -332,8 +351,7 @@ export class ProfileSettingsComponent implements OnInit, OnDestroy {
     this.deleteAccountError = '';
 
     // Disable body scroll
-    document.documentElement.style.overflow = 'hidden';
-    document.body.style.overflow = 'hidden';
+    this.syncBodyScrollLock();
   }
 
   closeDeleteAccountModal(): void {
@@ -342,8 +360,7 @@ export class ProfileSettingsComponent implements OnInit, OnDestroy {
     this.deleteAccountError = '';
 
     // Enable body scroll
-    document.documentElement.style.overflow = '';
-    document.body.style.overflow = '';
+    this.syncBodyScrollLock();
   }
 
   deleteAccount(): void {

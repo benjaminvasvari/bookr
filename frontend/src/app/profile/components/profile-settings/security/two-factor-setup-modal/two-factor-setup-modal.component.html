@@ -1,0 +1,191 @@
+<div class="modal-backdrop" (click)="requestDismiss()"></div>
+
+<div class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div>
+        <p class="modal-kicker">2FA beállítás</p>
+        <h3 class="modal-title">{{ currentTitle() }}</h3>
+      </div>
+
+      <button class="modal-close" type="button" (click)="requestDismiss()" [disabled]="isDismissBlocked()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+          <path
+            d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+          />
+        </svg>
+      </button>
+    </div>
+
+    <div class="stepper" aria-label="2FA setup progress">
+      @for (step of steps; track step.number) {
+        <div class="stepper-item" [class.active]="isStepActive(step.number)" [class.completed]="isStepCompleted(step.number)">
+          <div class="step-node">
+            @if (isStepCompleted(step.number)) {
+              <span>✓</span>
+            } @else if (isStepActive(step.number)) {
+              <span>●</span>
+            } @else {
+              <span>○</span>
+            }
+          </div>
+          <span class="step-label">{{ step.label }}</span>
+        </div>
+      }
+    </div>
+
+    <div class="modal-body">
+      @if (setupError()) {
+        <div class="alert alert-error">
+          <span>{{ setupError() }}</span>
+        </div>
+      }
+
+      @if (currentStep() === 1) {
+        <form [formGroup]="passwordForm" class="step-content">
+          <p class="modal-description">
+            A 2FA bekapcsolásához erősítsd meg a jelenlegi jelszavaddal, hogy valóban te végzed a módosítást.
+          </p>
+
+          <div class="form-group">
+            <label class="form-label">Jelenlegi jelszó</label>
+            <input
+              type="password"
+              class="form-input"
+              formControlName="currentPassword"
+              placeholder="••••••••"
+            />
+          </div>
+        </form>
+      }
+
+      @if (currentStep() === 2) {
+        <div class="step-content">
+          <p class="modal-description">Töltsd le az egyik alábbi alkalmazást a telefonodra:</p>
+
+          <div class="apps-grid">
+            @for (app of authenticatorApps; track app.name) {
+              <a class="app-card" [href]="app.url" target="_blank" rel="noreferrer noopener">
+                <div class="app-icon">{{ app.shortName }}</div>
+                <div>
+                  <div class="app-name">{{ app.name }}</div>
+                  <div class="app-link">Megnyitás</div>
+                </div>
+              </a>
+            }
+          </div>
+
+          <div class="qr-panel">
+            <img [src]="qrCodeAsset" alt="Mock TOTP QR kód" class="qr-image" />
+          </div>
+
+          <button class="secret-toggle" type="button" (click)="toggleSecretKey()">
+            Nem olvasható a QR kód?
+          </button>
+
+          @if (showSecretKey()) {
+            <div class="secret-key">{{ secretKey }}</div>
+          }
+        </div>
+      }
+
+      @if (currentStep() === 3) {
+        <div class="step-content">
+          <p class="modal-description">Add meg az alkalmazásban megjelenő 6 jegyű kódot</p>
+
+          <div class="code-inputs" (paste)="onCodePaste($event)">
+            @for (digit of verificationDigits(); track $index; let i = $index) {
+              <input
+                #codeInput
+                type="text"
+                class="code-input"
+                inputmode="numeric"
+                maxlength="1"
+                [value]="digit"
+                (keyup)="onCodeKeyup($event, i)"
+              />
+            }
+          </div>
+
+          @if (verificationError()) {
+            <p class="verification-error">{{ verificationError() }}</p>
+          }
+        </div>
+      }
+
+      @if (currentStep() === 4) {
+        <div class="step-content">
+          <div class="alert alert-warning">
+            <strong>Ezek a kódok csak egyszer használhatók. Mentsd el őket biztonságos helyre!</strong>
+          </div>
+
+          <div class="recovery-grid">
+            @for (code of recoveryCodes; track code) {
+              <div class="recovery-code">{{ code }}</div>
+            }
+          </div>
+
+          <div class="recovery-actions">
+            <button class="btn btn-secondary" type="button" (click)="copyRecoveryCodes()">Másolás</button>
+            <button class="btn btn-secondary" type="button" (click)="downloadRecoveryCodes()">
+              Letöltés .txt-ként
+            </button>
+          </div>
+
+          @if (copyFeedback()) {
+            <p class="copy-feedback">{{ copyFeedback() }}</p>
+          }
+
+          <label class="checkbox-row">
+            <input
+              type="checkbox"
+              [checked]="recoveryCodesSaved()"
+              (change)="updateRecoveryCodesSaved($event)"
+            />
+            <span>Elmentettem a visszaállítási kódokat</span>
+          </label>
+        </div>
+      }
+    </div>
+
+    <div class="modal-footer">
+      @if (currentStep() < 4) {
+        <button class="btn btn-secondary" type="button" (click)="requestDismiss()">Mégse</button>
+      }
+
+      @if (currentStep() === 1) {
+        <button
+          class="btn btn-primary"
+          type="button"
+          (click)="continueFromPassword()"
+          [disabled]="passwordForm.invalid"
+        >
+          2FA bekapcsolása
+        </button>
+      }
+
+      @if (currentStep() === 2) {
+        <button class="btn btn-primary" type="button" (click)="continueFromQr()">Következő →</button>
+      }
+
+      @if (currentStep() === 3) {
+        <button class="btn btn-primary" type="button" (click)="verifyCode()">Ellenőrzés</button>
+      }
+
+      @if (currentStep() === 4) {
+        <button
+          class="btn btn-primary"
+          type="button"
+          (click)="finishSetup()"
+          [disabled]="!recoveryCodesSaved() || isFinishing()"
+        >
+          @if (isFinishing()) {
+            <span>Mentés...</span>
+          } @else {
+            <span>Befejezés</span>
+          }
+        </button>
+      }
+    </div>
+  </div>
+</div>

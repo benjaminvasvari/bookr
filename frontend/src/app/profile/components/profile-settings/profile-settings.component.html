@@ -134,8 +134,8 @@
     <div class="card-header">
       <div class="card-heading-group">
         <h2 class="card-title">Kétlépcsős azonosítás</h2>
-        <span class="status-badge" [class.enabled]="twoFactorEnabled">
-          {{ twoFactorEnabled ? 'Bekapcsolva' : 'Kikapcsolva' }}
+        <span class="status-badge" [class.enabled]="twoFactorEnabled()">
+          {{ twoFactorEnabled() ? 'Bekapcsolva' : 'Kikapcsolva' }}
         </span>
       </div>
     </div>
@@ -149,7 +149,7 @@
         </div>
       }
 
-      @if (twoFactorError && !showTwoFactorModal) {
+      @if (twoFactorError && !showTwoFactorModal && !showDisableTwoFactorModal) {
         <div class="alert alert-error">
           <span>{{ twoFactorError }}</span>
         </div>
@@ -170,7 +170,7 @@
         <label class="toggle-switch">
           <input
             type="checkbox"
-            [checked]="twoFactorEnabled"
+            [checked]="twoFactorEnabled()"
             (change)="onTwoFactorToggleChange($event)"
             [disabled]="isSavingTwoFactor"
           />
@@ -276,14 +276,20 @@
   </div>
 }
 
-<!-- Two Factor Modal -->
 @if (showTwoFactorModal) {
-  <div class="modal-backdrop" (click)="closeTwoFactorModal()"></div>
+  <app-two-factor-setup-modal
+    (setupComplete)="handleTwoFactorSetupComplete()"
+    (dismissed)="closeTwoFactorModal()"
+  ></app-two-factor-setup-modal>
+}
+
+@if (showDisableTwoFactorModal) {
+  <div class="modal-backdrop" (click)="closeDisableTwoFactorModal()"></div>
   <div class="modal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 class="modal-title">Kétlépcsős azonosítás bekapcsolása</h3>
-        <button class="modal-close" (click)="closeTwoFactorModal()" [disabled]="isSavingTwoFactor">
+        <h3 class="modal-title">Kétlépcsős azonosítás kikapcsolása</h3>
+        <button class="modal-close" (click)="closeDisableTwoFactorModal()" [disabled]="isSavingTwoFactor">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
             <path
               d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
@@ -292,26 +298,18 @@
         </button>
       </div>
 
-      <form [formGroup]="twoFactorForm" class="modal-body">
+      <form [formGroup]="disableTwoFactorForm" class="modal-body">
         @if (twoFactorError) {
           <div class="alert alert-error">
             <span>{{ twoFactorError }}</span>
           </div>
         }
 
-        <p class="modal-description">
-          A 2FA bekapcsolásához erősítsd meg a jelenlegi jelszavaddal, hogy valóban te végzed a
-          módosítást.
-        </p>
+        <p class="modal-description">Biztosan kikapcsolod a 2FA-t? Add meg a jelszavad.</p>
 
         <div class="form-group">
           <label class="form-label">Jelenlegi jelszó</label>
-          <input
-            type="password"
-            class="form-input"
-            formControlName="currentPassword"
-            placeholder="••••••••"
-          />
+          <input type="password" class="form-input" formControlName="password" placeholder="••••••••" />
         </div>
       </form>
 
@@ -319,7 +317,7 @@
         <button
           type="button"
           class="btn btn-secondary"
-          (click)="closeTwoFactorModal()"
+          (click)="closeDisableTwoFactorModal()"
           [disabled]="isSavingTwoFactor"
         >
           Mégse
@@ -327,13 +325,13 @@
         <button
           type="button"
           class="btn btn-primary"
-          (click)="confirmEnableTwoFactor()"
-          [disabled]="twoFactorForm.invalid || isSavingTwoFactor"
+          (click)="confirmDisableTwoFactor()"
+          [disabled]="disableTwoFactorForm.invalid || isSavingTwoFactor"
         >
           @if (isSavingTwoFactor) {
             <span>Mentés...</span>
           } @else {
-            <span>2FA bekapcsolása</span>
+            <span>Kikapcsolás</span>
           }
         </button>
       </div>
