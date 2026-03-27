@@ -5,6 +5,7 @@
 package com.vizsgaremek.bookr.model;
 
 import com.vizsgaremek.bookr.DTO.OwnerPanelDTO;
+import com.vizsgaremek.bookr.DTO.staffPanelDTO;
 import static com.vizsgaremek.bookr.model.OpeningHours.timeFormatter;
 import static com.vizsgaremek.bookr.model.Users.emf;
 import static com.vizsgaremek.bookr.model.Users.formatter;
@@ -1435,6 +1436,51 @@ public class Appointments implements Serializable {
             Integer minutes = (Integer) spq.getOutputParameterValue("minutesOUT");
 
             return minutes;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+    
+    public static ArrayList<staffPanelDTO.getTodayAppointmentsByStaffDTO> getTodayAppointmentsByStaff(Integer staffId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getTodayAppointmentsByStaff");
+
+            spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("staffIdIN", staffId);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+            ArrayList<staffPanelDTO.getTodayAppointmentsByStaffDTO> toReturn = new ArrayList<>();
+
+            for (Object[] record : resultList) {
+                staffPanelDTO.getTodayAppointmentsByStaffDTO a = new staffPanelDTO.getTodayAppointmentsByStaffDTO(
+                        Integer.valueOf(record[0].toString()),
+                        record[1].toString(),
+                        record[2].toString(),
+                        record[3].toString(),
+                        record[4].toString(),
+                        record[5] != null ? record[5].toString() : null,
+                        Double.parseDouble(record[6].toString()),
+                        record[7].toString(),
+                        record[8].toString(),
+                        Integer.valueOf(record[9].toString()),
+                        record[10] != null ? record[10].toString() : null,
+                        record[11].toString(),
+                        record[12].toString()
+                );
+                toReturn.add(a);
+            }
+            return toReturn;
 
         } catch (Exception ex) {
             ex.printStackTrace();

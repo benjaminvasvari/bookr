@@ -132,7 +132,7 @@ public class AuthService {
 
         // ========== 1. EMAIL VALIDÁLÁS ==========
         if (!ValidationUtil.isValidEmail(loginUser.getEmail())) {
-            status = "InvalidEmail";
+            status = "InvalidCredentials";
             statusCode = 400;
             toReturn.put("status", status);
             toReturn.put("statusCode", statusCode);
@@ -144,7 +144,7 @@ public class AuthService {
         String plainPassword = loginUser.getPassword();
 
         if (!ValidationUtil.isValidPassword(plainPassword)) {
-            status = "InvalidPassword";
+            status = "InvalidCredentials";
             statusCode = 400;
             toReturn.put("status", status);
             toReturn.put("statusCode", statusCode);

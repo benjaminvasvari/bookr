@@ -5,8 +5,13 @@
 package com.vizsgaremek.bookr.service;
 
 import com.vizsgaremek.bookr.DTO.OwnerPanelDTO;
+import com.vizsgaremek.bookr.DTO.staffPanelDTO;
 import com.vizsgaremek.bookr.model.Services;
+
 import java.util.ArrayList;
+
+import com.vizsgaremek.bookr.model.Staff;
+import com.vizsgaremek.bookr.model.Users;
 import org.json.JSONObject;
 
 /**
@@ -52,6 +57,60 @@ public class ServicesService {
                 datObj.put("clientCount", record.getClientCount());
                 datObj.put("totalRevenue", record.getTotalRevenue());
                 datObj.put("currency", record.getCurrency());
+
+                resultList.add(datObj);
+            }
+
+            toReturn.put("result", resultList);
+        }
+
+        toReturn.put("status", status);
+        toReturn.put("statusCode", statusCode);
+
+        return toReturn;
+    }
+
+    public JSONObject getStaffServicesDetailed(Integer userId, Integer companyId) {
+
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        Boolean companyExist = CompaniesService.validateCompanyExist(companyId);
+
+        if (!companyExist) {
+            JSONObject error = new JSONObject();
+            error.put("statusCode", 404);
+            error.put("status", "NotFound");
+            error.put("message", "Company not found with ID: " + companyId);
+            return error;
+        }
+
+        Integer staffId = Staff.getStaffIdByUserId(userId);
+
+        // Model hívás
+        ArrayList<staffPanelDTO.getDetailedServicesDTO> modelResult = layer.getStaffServicesDetailed(staffId);
+
+        if (modelResult == null) {
+            statusCode = 500;
+            status = "ModelException";
+            toReturn.put("message", "Internal server error");
+
+        } else {
+            ArrayList resultList = new ArrayList();
+
+            for (staffPanelDTO.getDetailedServicesDTO record : modelResult) {
+                JSONObject datObj = new JSONObject();
+                datObj.put("serviceId", record.getServiceId());
+                datObj.put("serviceName", record.getServiceName());
+                datObj.put("description", record.getDescription());
+                datObj.put("durationMinutes", record.getDurationMinutes());
+                datObj.put("price", record.getPrice());
+                datObj.put("currency", record.getCurrency());
+                datObj.put("isActive", record.getIsActive());
+                datObj.put("category", record.getCategory());
+                datObj.put("categoryId", record.getCategoryId());
+                datObj.put("assignedAt", record.getAssignedAt());
 
                 resultList.add(datObj);
             }

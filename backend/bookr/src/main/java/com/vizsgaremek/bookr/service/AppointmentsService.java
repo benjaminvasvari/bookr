@@ -1,6 +1,7 @@
 package com.vizsgaremek.bookr.service;
 
 import com.vizsgaremek.bookr.DTO.OwnerPanelDTO;
+import com.vizsgaremek.bookr.DTO.staffPanelDTO;
 import com.vizsgaremek.bookr.model.Appointments;
 import com.vizsgaremek.bookr.model.AuditLogs;
 import com.vizsgaremek.bookr.model.Companies;
@@ -27,7 +28,6 @@ public class AppointmentsService {
     private EmailService EmailService = new EmailService();
     private UsersService UsersService = new UsersService();
     private Companies Companies = new Companies();
-    private Staff Staff = new Staff();
     private StaffService StaffService = new StaffService();
     private Services Services = new Services();
     private CompaniesService CompaniesService = new CompaniesService();
@@ -904,6 +904,51 @@ public class AppointmentsService {
             result.put("minutes", modelResult);
 
             toReturn.put("result", result);
+        }
+
+        toReturn.put("status", status);
+        toReturn.put("statusCode", statusCode);
+
+        return toReturn;
+    }
+
+    public JSONObject getTodayAppointmentsByStaff(Integer userId, Integer companyId) {
+
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        Integer staffId = Staff.getStaffIdByUserId(userId);
+
+        // Model hívás
+        ArrayList<staffPanelDTO.getTodayAppointmentsByStaffDTO> modelResult = layer.getTodayAppointmentsByStaff(staffId);
+
+        if (modelResult == null) {
+            statusCode = 500;
+            status = "ModelException";
+            toReturn.put("message", "Internal server error");
+
+        } else {
+            ArrayList resultList = new ArrayList();
+
+            for (staffPanelDTO.getTodayAppointmentsByStaffDTO record : modelResult) {
+                JSONObject datObj = new JSONObject();
+                datObj.put("id", record.getId());
+                datObj.put("startTime", record.getStartTime());
+                datObj.put("endTime", record.getEndTime());
+                datObj.put("status", record.getStatus());
+                datObj.put("note", record.getNote());
+                datObj.put("internalNotes", record.getInternalNotes());
+                datObj.put("price", record.getPrice());
+                datObj.put("currency", record.getCurrency());
+                datObj.put("serviceName", record.getServiceName());
+                datObj.put("durationMinutes", record.getDurationMinutes());
+                datObj.put("clientName", record.getClientName());
+
+                resultList.add(datObj);
+            }
+
+            toReturn.put("result", resultList);
         }
 
         toReturn.put("status", status);

@@ -28,7 +28,7 @@ import org.json.JSONObject;
  */
 @Path("services")
 public class ServicesController {
-    
+
     private ServicesService layer = new ServicesService();
     private RoleChecker RoleChecker = new RoleChecker();
 
@@ -42,7 +42,9 @@ public class ServicesController {
     }
 
     /**
-     * Retrieves representation of an instance of com.vizsgaremek.bookr.controller.ServicesController
+     * Retrieves representation of an instance of
+     * com.vizsgaremek.bookr.controller.ServicesController
+     *
      * @return an instance of java.lang.String
      */
     @GET
@@ -54,13 +56,14 @@ public class ServicesController {
 
     /**
      * PUT method for updating or creating an instance of ServicesController
+     *
      * @param content representation for the resource
      */
     @PUT
     @Consumes(MediaType.APPLICATION_XML)
     public void putXml(String content) {
     }
-    
+
     @GET
     @Path("getSalesTopServices")
     @Produces(MediaType.APPLICATION_JSON)
@@ -112,6 +115,61 @@ public class ServicesController {
             }
 
             JSONObject toReturn = layer.getSalesTopServices(companyId, period);
+            return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                    .entity(toReturn.toString())
+                    .type(MediaType.APPLICATION_JSON)
+                    .build();
+        }
+
+    }
+
+    @GET
+    @Path("getStaffServicesDetailed")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getStaffServicesDetailed(@HeaderParam("Authorization") String authHeader) {
+
+        JSONObject errorResponse = new JSONObject();
+
+        // Extract token from "Bearer <token>"
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            System.out.println("Missing or invalid Authorization header");
+            return buildErrorResponse(401, "missingToken");
+        }
+
+        String jwtToken = authHeader.substring(7);
+        Boolean validJwt = JWT.validateAccessToken(jwtToken);
+
+        if (validJwt == null) {
+            // Lejárt JWT
+            return buildErrorResponse(401, "tokenExpired");
+        } else if (validJwt == false) {
+            // Invalid JWT
+            return buildErrorResponse(401, "invalidToken");
+        } else {
+            // Valid token
+
+            Integer companyId = JWT.getCompanyIdFromAccessToken(jwtToken);
+
+            // Validation
+            if (companyId == null || companyId <= 0) {
+                errorResponse.put("status", "InvalidParam");
+                errorResponse.put("statusCode", 400);
+                return Response.status(Response.Status.BAD_REQUEST)
+                        .entity(errorResponse.toString())
+                        .type(MediaType.APPLICATION_JSON)
+                        .build();
+            }
+
+            String userRoles = JWT.getRolesFromAccessToken(jwtToken);
+            boolean hasPermission = RoleChecker.hasAllRoles(userRoles, "client", "staff");
+
+            Integer userId = JWT.getUserIdFromAccessToken(jwtToken);
+
+            if (!hasPermission) {
+                return buildErrorResponse(403, "forbidden");
+            }
+
+            JSONObject toReturn = layer.getStaffServicesDetailed(userId, companyId);
             return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
                     .entity(toReturn.toString())
                     .type(MediaType.APPLICATION_JSON)

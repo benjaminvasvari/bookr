@@ -5,7 +5,10 @@
 package com.vizsgaremek.bookr.model;
 
 import com.vizsgaremek.bookr.DTO.OwnerPanelDTO;
+import com.vizsgaremek.bookr.DTO.staffPanelDTO;
+
 import static com.vizsgaremek.bookr.model.Users.emf;
+
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -45,17 +48,17 @@ import javax.xml.bind.annotation.XmlTransient;
 @Table(name = "services")
 @XmlRootElement
 @NamedQueries({
-    @NamedQuery(name = "Services.findAll", query = "SELECT s FROM Services s"),
-    @NamedQuery(name = "Services.findById", query = "SELECT s FROM Services s WHERE s.id = :id"),
-    @NamedQuery(name = "Services.findByName", query = "SELECT s FROM Services s WHERE s.name = :name"),
-    @NamedQuery(name = "Services.findByDurationMinutes", query = "SELECT s FROM Services s WHERE s.durationMinutes = :durationMinutes"),
-    @NamedQuery(name = "Services.findByPrice", query = "SELECT s FROM Services s WHERE s.price = :price"),
-    @NamedQuery(name = "Services.findByCurrency", query = "SELECT s FROM Services s WHERE s.currency = :currency"),
-    @NamedQuery(name = "Services.findByIsActive", query = "SELECT s FROM Services s WHERE s.isActive = :isActive"),
-    @NamedQuery(name = "Services.findByCreatedAt", query = "SELECT s FROM Services s WHERE s.createdAt = :createdAt"),
-    @NamedQuery(name = "Services.findByUpdatedAt", query = "SELECT s FROM Services s WHERE s.updatedAt = :updatedAt"),
-    @NamedQuery(name = "Services.findByDeletedAt", query = "SELECT s FROM Services s WHERE s.deletedAt = :deletedAt"),
-    @NamedQuery(name = "Services.findByIsDeleted", query = "SELECT s FROM Services s WHERE s.isDeleted = :isDeleted")})
+        @NamedQuery(name = "Services.findAll", query = "SELECT s FROM Services s"),
+        @NamedQuery(name = "Services.findById", query = "SELECT s FROM Services s WHERE s.id = :id"),
+        @NamedQuery(name = "Services.findByName", query = "SELECT s FROM Services s WHERE s.name = :name"),
+        @NamedQuery(name = "Services.findByDurationMinutes", query = "SELECT s FROM Services s WHERE s.durationMinutes = :durationMinutes"),
+        @NamedQuery(name = "Services.findByPrice", query = "SELECT s FROM Services s WHERE s.price = :price"),
+        @NamedQuery(name = "Services.findByCurrency", query = "SELECT s FROM Services s WHERE s.currency = :currency"),
+        @NamedQuery(name = "Services.findByIsActive", query = "SELECT s FROM Services s WHERE s.isActive = :isActive"),
+        @NamedQuery(name = "Services.findByCreatedAt", query = "SELECT s FROM Services s WHERE s.createdAt = :createdAt"),
+        @NamedQuery(name = "Services.findByUpdatedAt", query = "SELECT s FROM Services s WHERE s.updatedAt = :updatedAt"),
+        @NamedQuery(name = "Services.findByDeletedAt", query = "SELECT s FROM Services s WHERE s.deletedAt = :deletedAt"),
+        @NamedQuery(name = "Services.findByIsDeleted", query = "SELECT s FROM Services s WHERE s.isDeleted = :isDeleted")})
 public class Services implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -353,6 +356,48 @@ public class Services implements Serializable {
                         Integer.valueOf(record[0].toString()),
                         Double.parseDouble(record[2].toString()),
                         record[3].toString()
+                );
+                toReturn.add(s);
+            }
+            return toReturn;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static ArrayList<staffPanelDTO.getDetailedServicesDTO> getStaffServicesDetailed(Integer staffId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getStaffServicesDetailed");
+
+            spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("staffIdIN", staffId);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+            ArrayList<staffPanelDTO.getDetailedServicesDTO> toReturn = new ArrayList<>();
+
+            for (Object[] record : resultList) {
+                staffPanelDTO.getDetailedServicesDTO s = new staffPanelDTO.getDetailedServicesDTO(
+                        Integer.valueOf(record[0].toString()),
+                        record[1].toString(),
+                        record[2].toString(),
+                        Integer.valueOf(record[3].toString()),
+                        Double.parseDouble(record[4].toString()),
+                        record[5].toString(),
+                        Boolean.parseBoolean(record[6].toString()),
+                        record[7].toString(),
+                        Integer.valueOf(record[8].toString()),
+                        record[9].toString()
                 );
                 toReturn.add(s);
             }

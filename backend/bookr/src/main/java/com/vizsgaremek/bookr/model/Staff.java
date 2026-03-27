@@ -6,6 +6,7 @@ package com.vizsgaremek.bookr.model;
 
 import static com.vizsgaremek.bookr.model.Users.emf;
 import static com.vizsgaremek.bookr.model.Users.formatter;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -43,14 +44,14 @@ import javax.xml.bind.annotation.XmlTransient;
 @Table(name = "staff")
 @XmlRootElement
 @NamedQueries({
-    @NamedQuery(name = "Staff.findAll", query = "SELECT s FROM Staff s"),
-    @NamedQuery(name = "Staff.findById", query = "SELECT s FROM Staff s WHERE s.id = :id"),
-    @NamedQuery(name = "Staff.findByDisplayName", query = "SELECT s FROM Staff s WHERE s.displayName = :displayName"),
-    @NamedQuery(name = "Staff.findByColor", query = "SELECT s FROM Staff s WHERE s.color = :color"),
-    @NamedQuery(name = "Staff.findByIsActive", query = "SELECT s FROM Staff s WHERE s.isActive = :isActive"),
-    @NamedQuery(name = "Staff.findByIsDeleted", query = "SELECT s FROM Staff s WHERE s.isDeleted = :isDeleted"),
-    @NamedQuery(name = "Staff.findByCreatedAt", query = "SELECT s FROM Staff s WHERE s.createdAt = :createdAt"),
-    @NamedQuery(name = "Staff.findByUpdatedAt", query = "SELECT s FROM Staff s WHERE s.updatedAt = :updatedAt")})
+        @NamedQuery(name = "Staff.findAll", query = "SELECT s FROM Staff s"),
+        @NamedQuery(name = "Staff.findById", query = "SELECT s FROM Staff s WHERE s.id = :id"),
+        @NamedQuery(name = "Staff.findByDisplayName", query = "SELECT s FROM Staff s WHERE s.displayName = :displayName"),
+        @NamedQuery(name = "Staff.findByColor", query = "SELECT s FROM Staff s WHERE s.color = :color"),
+        @NamedQuery(name = "Staff.findByIsActive", query = "SELECT s FROM Staff s WHERE s.isActive = :isActive"),
+        @NamedQuery(name = "Staff.findByIsDeleted", query = "SELECT s FROM Staff s WHERE s.isDeleted = :isDeleted"),
+        @NamedQuery(name = "Staff.findByCreatedAt", query = "SELECT s FROM Staff s WHERE s.createdAt = :createdAt"),
+        @NamedQuery(name = "Staff.findByUpdatedAt", query = "SELECT s FROM Staff s WHERE s.updatedAt = :updatedAt")})
 public class Staff implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -171,7 +172,7 @@ public class Staff implements Serializable {
         this.specialties = specialties;
         this.bio = bio;
     }
-    
+
     // CheckStaff
 
     public Staff(Integer id, Boolean isActive, Boolean isDeleted) {
@@ -179,7 +180,7 @@ public class Staff implements Serializable {
         this.isActive = isActive;
         this.isDeleted = isDeleted;
     }
-    
+
 
     public Staff(String color) {
         this.color = color;
@@ -667,6 +668,36 @@ public class Staff implements Serializable {
             );
 
             return user;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+    public static Integer getStaffIdByUserId(Integer id) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getStaffIdByUserId");
+            spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("userIdIN", id);
+
+            spq.execute();
+
+            Object result = spq.getSingleResult();
+
+            if (result == null) {
+                return null;
+            }
+
+            Integer staffId = Integer.valueOf(result.toString());
+
+            return staffId;
 
         } catch (Exception ex) {
             ex.printStackTrace();
