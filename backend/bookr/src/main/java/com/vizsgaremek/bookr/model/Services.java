@@ -412,4 +412,90 @@ public class Services implements Serializable {
             }
         }
     }
+
+    public static ArrayList<staffPanelDTO.getServicesByCompanyIdForStaffDTO> getServicesByCompanyIdForStaff(Integer companyId, Integer staffId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getServicesByCompanyIdForStaff");
+
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("companyIdIN", companyId);
+            spq.setParameter("staffIdIN", staffId);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+            ArrayList<staffPanelDTO.getServicesByCompanyIdForStaffDTO> toReturn = new ArrayList<>();
+
+            for (Object[] record : resultList) {
+                staffPanelDTO.getServicesByCompanyIdForStaffDTO s = new staffPanelDTO.getServicesByCompanyIdForStaffDTO(
+                        record[0] != null ? Integer.valueOf(record[0].toString()) : null,
+                        record[1] != null ? record[1].toString() : null,
+                        record[2] != null ? record[2].toString() : null,
+                        record[3] != null ? Integer.valueOf(record[3].toString()) : null,
+                        record[4] != null ? Double.valueOf(record[4].toString()) : null,
+                        record[5] != null ? record[5].toString() : null,
+                        record[6] != null ? Boolean.parseBoolean(record[6].toString()) : null,
+                        record[9] != null ? record[9].toString() : null,
+                        record[10] != null ? record[10].toString().equals("1") : null
+                );
+                toReturn.add(s);
+            }
+
+            return toReturn;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            em.close();
+        }
+    }
+
+    public static void assignServiceToStaff(Integer staffId, Integer serviceId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("assignServiceToStaff");
+
+            spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("serviceIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("staffIdIN", staffId);
+            spq.setParameter("serviceIdIN", serviceId);
+
+            spq.execute();
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            throw ex;
+        } finally {
+            em.close();
+        }
+    }
+
+    public static void removeServiceFromStaff(Integer staffId, Integer serviceId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("removeServiceFromStaff");
+
+            spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("serviceIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("staffIdIN", staffId);
+            spq.setParameter("serviceIdIN", serviceId);
+
+            spq.execute();
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            throw ex;
+        } finally {
+            em.close();
+        }
+    }
 }

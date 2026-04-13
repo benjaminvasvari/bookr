@@ -570,7 +570,54 @@ public class AppointmentsController {
 
         Integer userId = JWT.getUserIdFromAccessToken(jwtToken);
 
-        JSONObject toReturn = layer.getTodayAppointmentsByStaff(userId, companyId);
+        JSONObject toReturn = layer.getTodayAppointmentsByStaff(userId);
+
+        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                .entity(toReturn.toString())
+                .type(MediaType.APPLICATION_JSON)
+                .build();
+    }
+
+    @GET
+    @Path("staffDashboardTodayAppointments")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response getStaffDashboardTodayAppointments(@HeaderParam("Authorization") String authHeader) {
+
+        // 1. Auth header check
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return buildErrorResponse(401, "missingToken");
+        }
+
+        String jwtToken = authHeader.substring(7);
+        Boolean validJwt = JWT.validateAccessToken(jwtToken);
+
+        if (validJwt == null) {
+            return buildErrorResponse(401, "tokenExpired");
+        } else if (validJwt == false) {
+            return buildErrorResponse(401, "invalidToken");
+        }
+
+        // 3. Role check
+        String userRoles = JWT.getRolesFromAccessToken(jwtToken);
+        boolean hasPermission = RoleChecker.hasAllRoles(userRoles, "client", "staff");
+        if (!hasPermission) {
+            return buildErrorResponse(403, "Forbidden");
+        }
+
+        Integer companyId = JWT.getCompanyIdFromAccessToken(jwtToken);
+
+        Boolean isCompanyExist = CompaniesService.validateCompanyExist(companyId);
+
+        if (isCompanyExist == null) {
+            return buildErrorResponse(500, "InternalServerError");
+        } else if (!isCompanyExist) {
+            return buildErrorResponse(400, "CompanyNotExist");
+        }
+
+        Integer userId = JWT.getUserIdFromAccessToken(jwtToken);
+
+        JSONObject toReturn = layer.getStaffDashboardTodayAppointments(userId);
 
         return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
                 .entity(toReturn.toString())

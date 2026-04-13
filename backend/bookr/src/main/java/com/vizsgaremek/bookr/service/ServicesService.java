@@ -12,6 +12,7 @@ import java.util.ArrayList;
 
 import com.vizsgaremek.bookr.model.Staff;
 import com.vizsgaremek.bookr.model.Users;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 /**
@@ -120,6 +121,69 @@ public class ServicesService {
 
         toReturn.put("status", status);
         toReturn.put("statusCode", statusCode);
+
+        return toReturn;
+    }
+
+    public JSONObject getServicesByCompanyIdForStaff(Integer userId, Integer companyId) {
+
+        JSONObject toReturn = new JSONObject();
+
+        try {
+            Integer staffId = Staff.getStaffIdByUserId(userId);
+
+            ArrayList<staffPanelDTO.getServicesByCompanyIdForStaffDTO> modelResult = layer.getServicesByCompanyIdForStaff(companyId, staffId);
+
+            JSONArray data = new JSONArray();
+
+            for (staffPanelDTO.getServicesByCompanyIdForStaffDTO record : modelResult) {
+                JSONObject item = new JSONObject();
+                item.put("id", record.getId());
+                item.put("name", record.getName());
+                item.put("description", record.getDescription() != null ? record.getDescription() : JSONObject.NULL);
+                item.put("durationMinutes", record.getDurationMinutes());
+                item.put("price", record.getPrice() != null ? record.getPrice() : JSONObject.NULL);
+                item.put("currency", record.getCurrency() != null ? record.getCurrency() : JSONObject.NULL);
+                item.put("isActive", record.getIsActive());
+                item.put("categories", record.getCategories() != null ? record.getCategories() : JSONObject.NULL);
+                item.put("isAssigned", record.getIsAssigned());
+                data.put(item);
+            }
+
+            toReturn.put("status", "success");
+            toReturn.put("statusCode", 200);
+            toReturn.put("data", data);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            toReturn.put("status", "error");
+            toReturn.put("statusCode", 500);
+        }
+
+        return toReturn;
+    }
+
+    public JSONObject updateStaffService(Integer userId, Integer serviceId, Boolean isAssigned) {
+
+        JSONObject toReturn = new JSONObject();
+
+        try {
+            Integer staffId = Staff.getStaffIdByUserId(userId);
+
+            if (isAssigned) {
+                layer.assignServiceToStaff(staffId, serviceId);
+            } else {
+                layer.removeServiceFromStaff(staffId, serviceId);
+            }
+
+            toReturn.put("status", "success");
+            toReturn.put("statusCode", 200);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            toReturn.put("status", "error");
+            toReturn.put("statusCode", 500);
+        }
 
         return toReturn;
     }

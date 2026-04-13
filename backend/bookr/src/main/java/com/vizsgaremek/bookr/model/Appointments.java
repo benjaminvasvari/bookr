@@ -6,10 +6,13 @@ package com.vizsgaremek.bookr.model;
 
 import com.vizsgaremek.bookr.DTO.OwnerPanelDTO;
 import com.vizsgaremek.bookr.DTO.staffPanelDTO;
+
 import static com.vizsgaremek.bookr.model.OpeningHours.timeFormatter;
 import static com.vizsgaremek.bookr.model.Users.emf;
 import static com.vizsgaremek.bookr.model.Users.formatter;
+
 import com.vizsgaremek.bookr.util.StoredProcedureUtil;
+
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
@@ -43,6 +46,7 @@ import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -54,16 +58,16 @@ import org.json.JSONObject;
 @Table(name = "appointments")
 @XmlRootElement
 @NamedQueries({
-    @NamedQuery(name = "Appointments.findAll", query = "SELECT a FROM Appointments a"),
-    @NamedQuery(name = "Appointments.findById", query = "SELECT a FROM Appointments a WHERE a.id = :id"),
-    @NamedQuery(name = "Appointments.findByStartTime", query = "SELECT a FROM Appointments a WHERE a.startTime = :startTime"),
-    @NamedQuery(name = "Appointments.findByEndTime", query = "SELECT a FROM Appointments a WHERE a.endTime = :endTime"),
-    @NamedQuery(name = "Appointments.findByStatus", query = "SELECT a FROM Appointments a WHERE a.status = :status"),
-    @NamedQuery(name = "Appointments.findByPrice", query = "SELECT a FROM Appointments a WHERE a.price = :price"),
-    @NamedQuery(name = "Appointments.findByCurrency", query = "SELECT a FROM Appointments a WHERE a.currency = :currency"),
-    @NamedQuery(name = "Appointments.findByCancelledAt", query = "SELECT a FROM Appointments a WHERE a.cancelledAt = :cancelledAt"),
-    @NamedQuery(name = "Appointments.findByCreatedAt", query = "SELECT a FROM Appointments a WHERE a.createdAt = :createdAt"),
-    @NamedQuery(name = "Appointments.findByUpdatedAt", query = "SELECT a FROM Appointments a WHERE a.updatedAt = :updatedAt")})
+        @NamedQuery(name = "Appointments.findAll", query = "SELECT a FROM Appointments a"),
+        @NamedQuery(name = "Appointments.findById", query = "SELECT a FROM Appointments a WHERE a.id = :id"),
+        @NamedQuery(name = "Appointments.findByStartTime", query = "SELECT a FROM Appointments a WHERE a.startTime = :startTime"),
+        @NamedQuery(name = "Appointments.findByEndTime", query = "SELECT a FROM Appointments a WHERE a.endTime = :endTime"),
+        @NamedQuery(name = "Appointments.findByStatus", query = "SELECT a FROM Appointments a WHERE a.status = :status"),
+        @NamedQuery(name = "Appointments.findByPrice", query = "SELECT a FROM Appointments a WHERE a.price = :price"),
+        @NamedQuery(name = "Appointments.findByCurrency", query = "SELECT a FROM Appointments a WHERE a.currency = :currency"),
+        @NamedQuery(name = "Appointments.findByCancelledAt", query = "SELECT a FROM Appointments a WHERE a.cancelledAt = :cancelledAt"),
+        @NamedQuery(name = "Appointments.findByCreatedAt", query = "SELECT a FROM Appointments a WHERE a.createdAt = :createdAt"),
+        @NamedQuery(name = "Appointments.findByUpdatedAt", query = "SELECT a FROM Appointments a WHERE a.updatedAt = :updatedAt")})
 public class Appointments implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -718,8 +722,8 @@ public class Appointments implements Serializable {
     }
 
     public static Integer createAppointment(Integer companyId, Integer serviceId, Integer staffId,
-            Integer clientId, Timestamp startTime, Timestamp endTime,
-            String notes, BigDecimal price) {
+                                            Integer clientId, Timestamp startTime, Timestamp endTime,
+                                            String notes, BigDecimal price) {
         EntityManager em = emf.createEntityManager();
         try {
             StoredProcedureQuery spq = em.createStoredProcedureQuery("createAppointment");
@@ -1390,7 +1394,7 @@ public class Appointments implements Serializable {
             }
         }
     }
-    
+
     public static Integer getUpcomingAppointmentsCountByStaff(Integer staffId) {
         EntityManager em = emf.createEntityManager();
 
@@ -1418,7 +1422,7 @@ public class Appointments implements Serializable {
             }
         }
     }
-    
+
     public static Integer getPlannedWorkingMinutesByStaff(Integer staffId) {
         EntityManager em = emf.createEntityManager();
 
@@ -1446,7 +1450,7 @@ public class Appointments implements Serializable {
             }
         }
     }
-    
+
     public static ArrayList<staffPanelDTO.getTodayAppointmentsByStaffDTO> getTodayAppointmentsByStaff(Integer staffId) {
         EntityManager em = emf.createEntityManager();
 
@@ -1477,6 +1481,49 @@ public class Appointments implements Serializable {
                         record[10] != null ? record[10].toString() : null,
                         record[11].toString(),
                         record[12].toString()
+                );
+                toReturn.add(a);
+            }
+            return toReturn;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static ArrayList<staffPanelDTO.getStaffDashboardTodayAppointmentsDTO> getStaffDashboardTodayAppointments(Integer staffId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getStaffDashboardTodayAppointments");
+
+            spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("staffIdIN", staffId);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+            ArrayList<staffPanelDTO.getStaffDashboardTodayAppointmentsDTO> toReturn = new ArrayList<>();
+
+            for (Object[] record : resultList) {
+                staffPanelDTO.getStaffDashboardTodayAppointmentsDTO a = new staffPanelDTO.getStaffDashboardTodayAppointmentsDTO(
+                        Integer.valueOf(record[0].toString()),
+                        record[1].toString(),
+                        record[2].toString(),
+                        record[3].toString(),
+                        Double.parseDouble(record[4].toString()),
+                        record[5].toString(),
+                        record[6].toString(),
+                        Integer.valueOf(record[7].toString()),
+                        record[8] != null ? record[8].toString() : null,
+                        record[9].toString(),
+                        record[10].toString()
                 );
                 toReturn.add(a);
             }

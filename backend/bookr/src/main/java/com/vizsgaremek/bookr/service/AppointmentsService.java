@@ -9,7 +9,9 @@ import com.vizsgaremek.bookr.model.Services;
 import com.vizsgaremek.bookr.model.Staff;
 import com.vizsgaremek.bookr.model.Users;
 import com.vizsgaremek.bookr.security.JWT;
+
 import static com.vizsgaremek.bookr.util.ErrorResponseBuilder.buildErrorResponseJSON;
+
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
@@ -19,6 +21,7 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -829,7 +832,7 @@ public class AppointmentsService {
 
         return toReturn;
     }
-    
+
     public JSONObject getUpcomingAppointmentsCountByStaff(Integer staffId) {
 
         JSONObject toReturn = new JSONObject();
@@ -870,7 +873,7 @@ public class AppointmentsService {
 
         return toReturn;
     }
-    
+
     public JSONObject getPlannedWorkingMinutesByStaff(Integer staffId) {
 
         JSONObject toReturn = new JSONObject();
@@ -912,7 +915,7 @@ public class AppointmentsService {
         return toReturn;
     }
 
-    public JSONObject getTodayAppointmentsByStaff(Integer userId, Integer companyId) {
+    public JSONObject getTodayAppointmentsByStaff(Integer userId) {
 
         JSONObject toReturn = new JSONObject();
         String status = "success";
@@ -939,6 +942,49 @@ public class AppointmentsService {
                 datObj.put("status", record.getStatus());
                 datObj.put("note", record.getNote());
                 datObj.put("internalNotes", record.getInternalNotes());
+                datObj.put("price", record.getPrice());
+                datObj.put("currency", record.getCurrency());
+                datObj.put("serviceName", record.getServiceName());
+                datObj.put("durationMinutes", record.getDurationMinutes());
+                datObj.put("clientName", record.getClientName());
+
+                resultList.add(datObj);
+            }
+
+            toReturn.put("result", resultList);
+        }
+
+        toReturn.put("status", status);
+        toReturn.put("statusCode", statusCode);
+
+        return toReturn;
+    }
+
+    public JSONObject getStaffDashboardTodayAppointments(Integer userId) {
+
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        Integer staffId = Staff.getStaffIdByUserId(userId);
+
+        // Model hívás
+        ArrayList<staffPanelDTO.getStaffDashboardTodayAppointmentsDTO> modelResult = layer.getStaffDashboardTodayAppointments(staffId);
+
+        if (modelResult == null) {
+            statusCode = 500;
+            status = "ModelException";
+            toReturn.put("message", "Internal server error");
+
+        } else {
+            ArrayList resultList = new ArrayList();
+
+            for (staffPanelDTO.getStaffDashboardTodayAppointmentsDTO record : modelResult) {
+                JSONObject datObj = new JSONObject();
+                datObj.put("id", record.getId());
+                datObj.put("startTime", record.getStartTime());
+                datObj.put("endTime", record.getEndTime());
+                datObj.put("status", record.getStatus());
                 datObj.put("price", record.getPrice());
                 datObj.put("currency", record.getCurrency());
                 datObj.put("serviceName", record.getServiceName());

@@ -4,6 +4,8 @@
  */
 package com.vizsgaremek.bookr.model;
 
+import com.vizsgaremek.bookr.util.StoredProcedureUtil;
+
 import static com.vizsgaremek.bookr.model.OpeningHours.timeFormatter;
 import static com.vizsgaremek.bookr.model.Users.emf;
 import static com.vizsgaremek.bookr.model.Users.formatter;
@@ -206,7 +208,7 @@ public class StaffWorkingHours implements Serializable {
         return "com.vizsgaremek.bookr.model.StaffWorkingHours[ id=" + id + " ]";
     }
 
-    public static ArrayList<StaffWorkingHours> getStaffWorkingHours(Integer staffId) {
+    public static ArrayList<StaffWorkingHours> getStaffWorkingHoursByStaffId(Integer staffId) {
         EntityManager em = emf.createEntityManager();
 
         try {
@@ -276,4 +278,34 @@ public class StaffWorkingHours implements Serializable {
             em.close();
         }
     }
+
+    public static void updateStaffWorkingHours(Integer staffId, String dayOfWeek, String startTime, String endTime, Boolean isAvailable) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("updateStaffWorkingHours");
+
+            spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("dayOfWeekIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("startTimeIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("endTimeIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("isAvailableIN", Boolean.class, ParameterMode.IN);
+
+            spq.setParameter("staffIdIN", staffId);
+            spq.setParameter("dayOfWeekIN", dayOfWeek);
+            StoredProcedureUtil.setNullableParameter(spq, "startTimeIN", startTime);
+            StoredProcedureUtil.setNullableParameter(spq, "endTimeIN", endTime);
+            spq.setParameter("isAvailableIN", isAvailable);
+
+            spq.execute();
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            throw ex;
+        } finally {
+            em.close();
+        }
+    }
+
+
 }
