@@ -299,12 +299,22 @@ public class EnvConfig {
             );
         }
 
+        // 2FA encryption key ellenőrzés
+        String twoFactorKey = get("TWO_FACTOR_ENCRYPTION_KEY", null);
+        if (twoFactorKey == null || twoFactorKey.length() != 32) {
+            throw new IllegalStateException(
+                    "HIBA: TWO_FACTOR_ENCRYPTION_KEY hiányzik vagy nem pontosan 32 karakter! (Jelenlegi: "
+                            + (twoFactorKey != null ? twoFactorKey.length() : "null") + ")"
+            );
+        }
+
         System.out.println("✓ Konfiguráció sikeres");
         System.out.println("  - Access Token: " + accessMinutes + " perc");
         System.out.println("  - Refresh Token: " + refreshDays + " nap");
         System.out.println("  - Upload dir: " + uploadDir);
         System.out.println("  - Max file size: " + getUploadMaxFileSizeMB() + " MB");
         System.out.println("  - Company max images: " + getCompanyMaxImages());
+        System.out.println("  - 2FA encryption key: OK");
         System.out.println("===========================");
     }
 
@@ -428,6 +438,15 @@ public class EnvConfig {
 
     public static String getAppBaseUrl() {
         return getRequired("APP_BASE_URL");
+    }
+
+    // ===== Two Factor Authentication =====
+    /**
+     * AES-256 titkosítási kulcs a TOTP secret-hez
+     * KÖTELEZŐ - pontosan 32 karakter
+     */
+    public static String getTwoFactorEncryptionKey() {
+        return getRequired("TWO_FACTOR_ENCRYPTION_KEY");
     }
 
 }

@@ -8,6 +8,7 @@ import com.vizsgaremek.bookr.model.Users;
 import com.vizsgaremek.bookr.security.JWT;
 import com.vizsgaremek.bookr.service.AuthService;
 import com.vizsgaremek.bookr.util.RoleChecker;
+
 import javax.inject.Inject;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.UriInfo;
@@ -20,6 +21,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PUT;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -74,10 +76,7 @@ public class AuthController {
         errorResponse.put("statusCode", statusCode);
         errorResponse.put("status", status);
 
-        return Response.status(statusCode)
-                .entity(errorResponse.toString())
-                .type(MediaType.APPLICATION_JSON)
-                .build();
+        return Response.status(statusCode).entity(errorResponse.toString()).type(MediaType.APPLICATION_JSON).build();
     }
 
     @POST
@@ -86,20 +85,11 @@ public class AuthController {
     public Response clientRegister(String body) {
         JSONObject bodyObject = new JSONObject(body);
 
-        Users clientRegistered = new Users(
-                bodyObject.getString("firstName"),
-                bodyObject.getString("lastName"),
-                bodyObject.getString("email"),
-                bodyObject.getString("password"),
-                bodyObject.getString("phone")
-        );
+        Users clientRegistered = new Users(bodyObject.getString("firstName"), bodyObject.getString("lastName"), bodyObject.getString("email"), bodyObject.getString("password"), bodyObject.getString("phone"));
 
         JSONObject toReturn = layer.clientRegister(clientRegistered);
 
-        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
-                .entity(toReturn.toString())
-                .type(MediaType.APPLICATION_JSON)
-                .build();
+        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString())).entity(toReturn.toString()).type(MediaType.APPLICATION_JSON).build();
     }
 
     @POST
@@ -109,17 +99,11 @@ public class AuthController {
     public Response login(String body) {
         JSONObject bodyObject = new JSONObject(body);
 
-        Users loginUser = new Users(
-                bodyObject.getString("email"),
-                bodyObject.getString("password")
-        );
+        Users loginUser = new Users(bodyObject.getString("email"), bodyObject.getString("password"));
 
         JSONObject toReturn = layer.login(loginUser);
 
-        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
-                .entity(toReturn.toString())
-                .type(MediaType.APPLICATION_JSON)
-                .build();
+        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString())).entity(toReturn.toString()).type(MediaType.APPLICATION_JSON).build();
     }
 
     @POST
@@ -134,10 +118,7 @@ public class AuthController {
             // Service layer hívás - email verification
             JSONObject toReturn = layer.verifyEmail(verifyToken);
 
-            return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
-                    .entity(toReturn.toString())
-                    .type(MediaType.APPLICATION_JSON)
-                    .build();
+            return Response.status(Integer.parseInt(toReturn.get("statusCode").toString())).entity(toReturn.toString()).type(MediaType.APPLICATION_JSON).build();
 
         } catch (JSONException ex) {
             JSONObject error = new JSONObject();
@@ -145,10 +126,7 @@ public class AuthController {
             error.put("statusCode", 400);
             error.put("message", "Invalid request format");
 
-            return Response.status(400)
-                    .entity(error.toString())
-                    .type(MediaType.APPLICATION_JSON)
-                    .build();
+            return Response.status(400).entity(error.toString()).type(MediaType.APPLICATION_JSON).build();
         }
     }
 
@@ -162,10 +140,7 @@ public class AuthController {
 
             JSONObject toReturn = layer.refreshTokens(refreshToken);
 
-            return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
-                    .entity(toReturn.toString())
-                    .type(MediaType.APPLICATION_JSON)
-                    .build();
+            return Response.status(Integer.parseInt(toReturn.get("statusCode").toString())).entity(toReturn.toString()).type(MediaType.APPLICATION_JSON).build();
 
         } catch (JSONException ex) {
             JSONObject error = new JSONObject();
@@ -173,18 +148,14 @@ public class AuthController {
             error.put("statusCode", 400);
             error.put("message", "Invalid request format");
 
-            return Response.status(400)
-                    .entity(error.toString())
-                    .type(MediaType.APPLICATION_JSON)
-                    .build();
+            return Response.status(400).entity(error.toString()).type(MediaType.APPLICATION_JSON).build();
         }
     }
 
     @POST
     @Path("logout")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response logout(
-            @HeaderParam("Authorization") String authHeader) {
+    public Response logout(@HeaderParam("Authorization") String authHeader) {
 
         // Extract token from "Bearer <token>"
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -212,10 +183,7 @@ public class AuthController {
             }
 
             JSONObject toReturn = layer.logout(jwtToken);
-            return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
-                    .entity(toReturn.toString())
-                    .type(MediaType.APPLICATION_JSON)
-                    .build();
+            return Response.status(Integer.parseInt(toReturn.get("statusCode").toString())).entity(toReturn.toString()).type(MediaType.APPLICATION_JSON).build();
         }
     }
 
@@ -247,10 +215,7 @@ public class AuthController {
         } else {
             // Valid token
             JSONObject toReturn = layer.changePasswordEmail(passString, jwtToken);
-            return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
-                    .entity(toReturn.toString())
-                    .type(MediaType.APPLICATION_JSON)
-                    .build();
+            return Response.status(Integer.parseInt(toReturn.get("statusCode").toString())).entity(toReturn.toString()).type(MediaType.APPLICATION_JSON).build();
         }
     }
 
@@ -283,10 +248,25 @@ public class AuthController {
         } else {
             // Valid token
             JSONObject toReturn = layer.resetPassUpdate(passString, token, jwtToken);
-            return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
-                    .entity(toReturn.toString())
-                    .type(MediaType.APPLICATION_JSON)
-                    .build();
+            return Response.status(Integer.parseInt(toReturn.get("statusCode").toString())).entity(toReturn.toString()).type(MediaType.APPLICATION_JSON).build();
         }
+    }
+
+    @POST
+    @Path("2fa/verify")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response verify2fa(String body) {
+        JSONObject bodyObj = new JSONObject(body);
+
+        if (!bodyObj.has("pendingToken") || bodyObj.isNull("pendingToken") || !bodyObj.has("code") || bodyObj.isNull("code")) {
+            return buildErrorResponse(400, "missingFields");
+        }
+
+        String pendingToken = bodyObj.getString("pendingToken");
+        int code = bodyObj.getInt("code");
+
+        JSONObject toReturn = layer.verify2fa(pendingToken, code);
+        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString())).entity(toReturn.toString()).type(MediaType.APPLICATION_JSON).build();
     }
 }

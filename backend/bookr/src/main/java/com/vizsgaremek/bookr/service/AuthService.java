@@ -1,6 +1,7 @@
 package com.vizsgaremek.bookr.service;
 
 import com.vizsgaremek.bookr.security.PasswordHasher;
+import com.vizsgaremek.bookr.util.AesEncryptionUtil;
 import com.vizsgaremek.bookr.util.ValidationUtil;
 import com.vizsgaremek.bookr.model.AuditLogs;
 import com.vizsgaremek.bookr.model.PendingStaff;
@@ -12,15 +13,18 @@ import com.vizsgaremek.bookr.model.Users;
 import com.vizsgaremek.bookr.security.JWT;
 import com.vizsgaremek.bookr.util.ErrorResponseBuilder;
 import com.vizsgaremek.bookr.util.FileStorageUtil;
+
 import java.time.LocalDate;
 import java.util.Date;
 import javax.enterprise.context.ApplicationScoped;
+
 import org.json.JSONObject;
 
 /*
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
+
 /**
  *
  * @author vben
@@ -81,13 +85,7 @@ public class AuthService {
             } else {
                 // ========== AUDIT LOG ==========
                 try {
-                    AuditLogs auditLog = new AuditLogs(
-                            registrationResult.getId(),
-                            "client",
-                            clientRegistered.getEmail(),
-                            "user",
-                            "register"
-                    );
+                    AuditLogs auditLog = new AuditLogs(registrationResult.getId(), "client", clientRegistered.getEmail(), "user", "register");
                     auditLog.addNewValue("user_id", registrationResult.getId());
                     auditLog.addNewValue("email", clientRegistered.getEmail());
                     auditLog.addNewValue("first_name", clientRegistered.getFirstName());
@@ -103,11 +101,7 @@ public class AuthService {
 
                 // ========== EMAIL KÜLDÉS ==========
                 try {
-                    emailService.sendVerificationEmail(
-                            clientRegistered.getEmail(),
-                            clientRegistered.getFirstName(),
-                            registrationResult.getRegToken()
-                    );
+                    emailService.sendVerificationEmail(clientRegistered.getEmail(), clientRegistered.getFirstName(), registrationResult.getRegToken());
                 } catch (Exception ex) {
                     // Log the error but don't fail the registration
                     System.err.println("Failed to send verification email: " + ex.getMessage());
@@ -211,6 +205,22 @@ public class AuthService {
             return toReturn;
         }
 
+        // ========== 5.5 2FA ELLENŐRZÉS ==========
+        Users twoFactorStatus = Users.getTwoFactorStatus(userFromDB.getId());
+        if (twoFactorStatus != null && twoFactorStatus.getTwoFactorEnabled()) {
+            Tokens pendingToken = Tokens.generate2faPendingToken(userFromDB.getId());
+            if (pendingToken == null) {
+                toReturn.put("status", "InternalServerError");
+                toReturn.put("statusCode", 500);
+                return toReturn;
+            }
+            toReturn.put("status", "2faRequired");
+            toReturn.put("statusCode", 200);
+            toReturn.put("pendingToken", pendingToken.getToken());
+            return toReturn;
+        }
+// =========================================
+
         // ========== 6. JWT TOKEN GENERÁLÁS ==========
         String accessToken = JWT.createAccessToken(userFromDB);
         String refreshToken = JWT.createRefreshToken(userFromDB);
@@ -263,15 +273,7 @@ public class AuthService {
 
         // ========== AUDIT LOG ==========
         try {
-            auditLogService.logSimpleAction(
-                    userFromDB.getId(),
-                    userFromDB.getRoleName(),
-                    userFromDB.getId(),
-                    userFromDB.getCompanyIdInt() != null ? userFromDB.getCompanyIdInt() : null,
-                    userFromDB.getEmail(),
-                    "user",
-                    "login"
-            );
+            auditLogService.logSimpleAction(userFromDB.getId(), userFromDB.getRoleName(), userFromDB.getId(), userFromDB.getCompanyIdInt() != null ? userFromDB.getCompanyIdInt() : null, userFromDB.getEmail(), "user", "login");
         } catch (Exception ex) {
             // Log the error but don't fail the login
             ex.printStackTrace();
@@ -354,15 +356,7 @@ public class AuthService {
                 try {
                     user = Users.getUserProfile(tokenInfo.getUserIdInt());
 
-                    auditLogService.logSimpleAction(
-                            user.getId(),
-                            user.getRoleName(),
-                            null,
-                            user.getCompanyIdInt() != null ? user.getCompanyIdInt() : null,
-                            user.getEmail(),
-                            "user",
-                            "email_verified"
-                    );
+                    auditLogService.logSimpleAction(user.getId(), user.getRoleName(), null, user.getCompanyIdInt() != null ? user.getCompanyIdInt() : null, user.getEmail(), "user", "email_verified");
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }
@@ -480,15 +474,7 @@ public class AuthService {
         String userBestRole = JWT.getUserBestRoleFromAccessToken(jwtToken);
 
         try {
-            auditLogService.logSimpleAction(
-                    userId,
-                    userBestRole,
-                    userId,
-                    companyId != null ? companyId : null,
-                    userEmail,
-                    "user",
-                    "logout"
-            );
+            auditLogService.logSimpleAction(userId, userBestRole, userId, companyId != null ? companyId : null, userEmail, "user", "logout");
 
             toReturn.put("status", "success");
             toReturn.put("statusCode", 200);
@@ -572,13 +558,7 @@ public class AuthService {
 
             // ========== AUDIT LOG ==========
             try {
-                AuditLogs auditLog = new AuditLogs(
-                        userId,
-                        "client",
-                        userEmail,
-                        "user",
-                        "password_reset_request"
-                );
+                AuditLogs auditLog = new AuditLogs(userId, "client", userEmail, "user", "password_reset_request");
                 auditLogService.logAudit(auditLog);
             } catch (Exception ex) {
                 // Log the error but don't fail the process
@@ -597,10 +577,7 @@ public class AuthService {
                     return toReturn;
                 }
 
-                emailService.sendPasswordResetEmail(
-                        userEmail,
-                        resetTokenResult.getToken()
-                );
+                emailService.sendPasswordResetEmail(userEmail, resetTokenResult.getToken());
 
             } catch (Exception ex) {
                 ex.printStackTrace();
@@ -672,19 +649,127 @@ public class AuthService {
 
         // ========== Audit log ==========
         try {
-            AuditLogs auditLog = new AuditLogs(
-                    userId,
-                    "client",
-                    userEmail,
-                    "user",
-                    "password_reset"
-            );
+            AuditLogs auditLog = new AuditLogs(userId, "client", userEmail, "user", "password_reset");
             auditLogService.logAudit(auditLog);
         } catch (Exception ex) {
             System.err.println("Audit log failed: " + ex.getMessage());
             ex.printStackTrace();
         }
 
+        return toReturn;
+    }
+
+    public JSONObject verify2fa(String pendingTokenStr, int totpCode) {
+        JSONObject toReturn = new JSONObject();
+
+        // 1. Token validálás
+        Tokens pendingToken = Tokens.validate2faPendingToken(pendingTokenStr);
+
+        if (pendingToken == null) {
+            toReturn.put("status", "InvalidPendingToken");
+            toReturn.put("statusCode", 400);
+            return toReturn;
+        }
+
+        if (pendingToken.getIsRevoked()) {
+            toReturn.put("status", "TokenAlreadyUsed");
+            toReturn.put("statusCode", 400);
+            return toReturn;
+        }
+
+        Date now = new Date();
+        if (now.after(pendingToken.getExpiresAt())) {
+            toReturn.put("status", "TokenExpired");
+            toReturn.put("statusCode", 401);
+            return toReturn;
+        }
+
+        // 2. User 2FA secret lekérése
+        Integer userId = pendingToken.getUserIdInt();
+        Users twoFactorStatus = Users.getTwoFactorStatus(userId);
+
+        if (twoFactorStatus == null || !twoFactorStatus.getTwoFactorEnabled()) {
+            toReturn.put("status", "2faNotEnabled");
+            toReturn.put("statusCode", 400);
+            return toReturn;
+        }
+
+        // 3. User lekérése (audit loghoz is kell)
+        Users userFromDB = Users.getUserById(userId);
+        if (userFromDB == null) {
+            toReturn.put("status", "UserNotFound");
+            toReturn.put("statusCode", 404);
+            return toReturn;
+        }
+
+        // 4. TOTP kód ellenőrzés
+        String plainSecret = AesEncryptionUtil.decrypt(twoFactorStatus.getTwoFactorSecret());
+        boolean codeValid = TwoFactorService.verifyCode(plainSecret, totpCode);
+
+        if (!codeValid) {
+            // ===== AUDIT LOG =====
+            try {
+                auditLogService.logSimpleAction(
+                        userId,
+                        userFromDB.getRoleName(),
+                        userId,
+                        userFromDB.getCompanyIdInt() != null ? userFromDB.getCompanyIdInt() : null,
+                        userFromDB.getEmail(),
+                        "user",
+                        "2fa_login_failed"
+                );
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+            // =====================
+            toReturn.put("status", "InvalidTotpCode");
+            toReturn.put("statusCode", 401);
+            return toReturn;
+        }
+
+        // 5. Pending token revoke
+        Tokens.revoke2faPendingToken(pendingTokenStr);
+
+        // 6. User lekérése JWT-hez
+        if (userFromDB == null) {
+            toReturn.put("status", "UserNotFound");
+            toReturn.put("statusCode", 404);
+            return toReturn;
+        }
+
+        // 7. JWT tokenek generálása
+        String accessToken = JWT.createAccessToken(userFromDB);
+        String refreshToken = JWT.createRefreshToken(userFromDB);
+
+        // 8. Last login update + audit log
+        try {
+            Users.updateLastLogin(userId);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+
+        try {
+            auditLogService.logSimpleAction(userId, userFromDB.getRoleName(), userId, userFromDB.getCompanyIdInt() != null ? userFromDB.getCompanyIdInt() : null, userFromDB.getEmail(), "user", "login_2fa");
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+
+        // 9. Válasz
+        JSONObject userData = new JSONObject();
+        userData.put("id", userFromDB.getId());
+        userData.put("firstName", userFromDB.getFirstName());
+        userData.put("lastName", userFromDB.getLastName());
+        userData.put("email", userFromDB.getEmail());
+        userData.put("phone", userFromDB.getPhone());
+        userData.put("companyId", userFromDB.getCompanyIdInt() != null ? userFromDB.getCompanyIdInt() : JSONObject.NULL);
+        userData.put("avatarUrl", userFromDB.getImageUrl() != null ? FileStorageUtil.buildFullUrl(userFromDB.getImageUrl()) : JSONObject.NULL);
+        userData.put("roles", userFromDB.getRolesString());
+        userData.put("accessToken", accessToken);
+        userData.put("refreshToken", refreshToken);
+
+        toReturn.put("user", userData);
+        toReturn.put("status", "success");
+        toReturn.put("statusCode", 200);
         return toReturn;
     }
 }
