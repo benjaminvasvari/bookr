@@ -224,4 +224,42 @@ public class TwoFactorController {
 
         return Response.status(200).entity(response.toString()).type(MediaType.APPLICATION_JSON).build();
     }
+
+    @GET
+    @Path("status")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getStatus(@HeaderParam("Authorization") String authHeader) {
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return buildErrorResponse(401, "missingToken");
+        }
+
+        String jwtToken = authHeader.substring(7);
+        Boolean validJwt = JWT.validateAccessToken(jwtToken);
+
+        if (validJwt == null) {
+            return buildErrorResponse(401, "tokenExpired");
+        } else if (validJwt == false) {
+            return buildErrorResponse(401, "invalidToken");
+        }
+
+        Integer userId = JWT.getUserIdFromAccessToken(jwtToken);
+        if (userId == null) {
+            return buildErrorResponse(400, "invalidToken");
+        }
+
+        Users twoFactorStatus = TwoFactorService.getTwoFactorStatus(userId);
+        if (twoFactorStatus == null) {
+            return buildErrorResponse(404, "UserNotFound");
+        }
+
+        JSONObject response = new JSONObject();
+        response.put("statusCode", 200);
+        response.put("twoFactorEnabled", twoFactorStatus.getTwoFactorEnabled());
+        response.put("confirmedAt", twoFactorStatus.getTwoFactorConfirmedAt() != null
+                ? twoFactorStatus.getTwoFactorConfirmedAt().toString()
+                : JSONObject.NULL);
+
+        return Response.status(200).entity(response.toString()).type(MediaType.APPLICATION_JSON).build();
+    }
 }
