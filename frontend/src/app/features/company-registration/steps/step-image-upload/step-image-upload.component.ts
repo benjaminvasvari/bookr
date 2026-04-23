@@ -1,11 +1,13 @@
 import { Component, EventEmitter, Output, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { ImageUploadService } from '../../../../core/services/image-upload.service';
+import { ImageCropModalComponent } from '../../../../shared/components/image-crop-modal/image-crop-modal.component';
 
 @Component({
   selector: 'app-step-image-upload',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, ImageCropModalComponent],
   templateUrl: './step-image-upload.component.html',
   styleUrls: ['./step-image-upload.component.css']
 })
@@ -24,8 +26,11 @@ export class StepImageUploadComponent implements OnInit {
   ];
 
   draggedSlotId: string | null = null;
+  cropSourceFile: File | null = null;
+  cropTargetSlotId: string | null = null;
+  showCropModal = false;
 
-  constructor(private fb: FormBuilder) {
+  constructor(private fb: FormBuilder, private imageUploadService: ImageUploadService) {
     // Az image upload opcionális - nincs kötelező validáció
     this.imageForm = this.fb.group({
       // Üres form, csak az optional képek miatt
@@ -69,31 +74,51 @@ export class StepImageUploadComponent implements OnInit {
   // KÉPFELTÖLTÉS KEZELÉS
   // ============================================
 
-  onImageSelected(event: Event, slotId: string) {
+  onImageSelected(event: Event, slotId: string): void {
     const input = event.target as HTMLInputElement;
-    if (input.files && input.files[0]) {
-      const file = input.files[0];
-      
-      if (!file.type.startsWith('image/')) {
-        alert('Csak képfájlokat lehet feltölteni!');
-        return;
-      }
+    const file = input.files?.[0];
 
-      if (file.size > 5 * 1024 * 1024) {
-        alert('A kép mérete maximum 5MB lehet!');
-        return;
-      }
+    if (!file) {
+      return;
+    }
 
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const slot = this.imageSlots.find(s => s.id === slotId);
-        if (slot) {
-          slot.preview = e.target?.result as string;
-          slot.file = file;
-          this.emitFormStatus();
-        }
-      };
-      reader.readAsDataURL(file);
+    try {
+      this.imageUploadService.validateImageType(file);
+      this.cropSourceFile = file;
+      this.cropTargetSlotId = slotId;
+      this.showCropModal = true;
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'A kep feldolgozasa sikertelen.');
+    } finally {
+      input.value = '';
+    }
+  }
+
+  closeCropModal(): void {
+    this.cropSourceFile = null;
+    this.cropTargetSlotId = null;
+    this.showCropModal = false;
+  }
+
+  async applyCrop(file: File): Promise<void> {
+    if (!this.cropTargetSlotId) {
+      this.closeCropModal();
+      return;
+    }
+
+    try {
+      const processedImage = await this.imageUploadService.prepareImage(file);
+      const slot = this.imageSlots.find(s => s.id === this.cropTargetSlotId);
+
+      if (slot) {
+        slot.preview = processedImage.previewUrl;
+        slot.file = processedImage.file;
+        this.emitFormStatus();
+      }
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'A kep feldolgozasa sikertelen.');
+    } finally {
+      this.closeCropModal();
     }
   }
 

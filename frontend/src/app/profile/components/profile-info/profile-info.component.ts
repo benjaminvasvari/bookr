@@ -1,14 +1,17 @@
 import { Component, Input, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { finalize, switchMap } from 'rxjs';
 import { User, UpdateProfileRequest } from '../../../core/models';
 import { UserService } from '../../../core/services/user.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { ImageUploadService } from '../../../core/services/image-upload.service';
+import { ImageCropModalComponent } from '../../../shared/components/image-crop-modal/image-crop-modal.component';
 
 @Component({
   selector: 'app-profile-info',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, ImageCropModalComponent],
   templateUrl: './profile-info.component.html',
   styleUrls: ['./profile-info.component.css'],
 })
@@ -24,8 +27,10 @@ export class ProfileInfoComponent implements OnInit, OnDestroy {
 
   // Avatar states
   selectedFile: File | null = null;
+  avatarCropFile: File | null = null;
   avatarPreview: string | null = null;
   showAvatarPreview = false;
+  showAvatarCropper = false;
   isUploadingAvatar = false;
   isDeletingAvatar = false;
   showDeleteConfirm = false;
@@ -50,7 +55,8 @@ export class ProfileInfoComponent implements OnInit, OnDestroy {
   constructor(
     private fb: FormBuilder,
     private userService: UserService,
-    private authService: AuthService
+    private authService: AuthService,
+    private imageUploadService: ImageUploadService
   ) {}
 
   ngOnInit(): void {
@@ -128,7 +134,7 @@ export class ProfileInfoComponent implements OnInit, OnDestroy {
 
           // Frissítjük az AuthService currentUser$-t is
           // (localStorage már frissült a userService-ben)
-          this.authService['currentUserSubject'].next(updatedUser);
+          this.authService.updateCurrentUser(updatedUser);
         },
         error: (error) => {
           console.error('Profile update error:', error);
@@ -145,39 +151,48 @@ export class ProfileInfoComponent implements OnInit, OnDestroy {
 
   onAvatarFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
 
-    if (input.files && input.files[0]) {
-      const file = input.files[0];
+    if (!file) {
+      return;
+    }
 
-      // Validáció: file type
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
-      if (!allowedTypes.includes(file.type)) {
-        this.avatarUploadError = 'Csak JPG, PNG vagy WEBP formátum engedélyezett.';
-        return;
-      }
-
-      // Validáció: file size (2MB)
-      const maxSize = 2 * 1024 * 1024; // 2MB in bytes
-      if (file.size > maxSize) {
-        this.avatarUploadError = 'A fájl mérete maximum 2MB lehet.';
-        return;
-      }
-
-      // Preview létrehozása
-      this.selectedFile = file;
-      const reader = new FileReader();
-      reader.onload = (e: ProgressEvent<FileReader>) => {
-        this.avatarPreview = e.target?.result as string;
-        this.showAvatarPreview = true;
-
-        // Disable body scroll - set on both html and body
-        document.documentElement.style.overflow = 'hidden';
-        document.body.style.overflow = 'hidden';
-      };
-      reader.readAsDataURL(file);
-
-      // Clear errors
+    try {
+      this.imageUploadService.validateImageType(file);
+      this.avatarCropFile = file;
+      this.showAvatarCropper = true;
       this.avatarUploadError = '';
+      this.syncModalScrollLock();
+    } catch (error) {
+      this.avatarUploadError = error instanceof Error
+        ? error.message
+        : `A fajl merete maximum ${this.imageUploadService.maxUploadSizeMb}MB lehet.`;
+    } finally {
+      input.value = '';
+    }
+  }
+
+  closeAvatarCropper(): void {
+    this.avatarCropFile = null;
+    this.showAvatarCropper = false;
+    this.syncModalScrollLock();
+  }
+
+  async applyAvatarCrop(file: File): Promise<void> {
+    try {
+      const processedImage = await this.imageUploadService.prepareImage(file);
+      this.selectedFile = processedImage.file;
+      this.avatarPreview = processedImage.previewUrl;
+      this.showAvatarPreview = true;
+      this.avatarUploadError = '';
+    } catch (error) {
+      this.avatarUploadError = error instanceof Error
+        ? error.message
+        : 'Hiba tortent a kep feldolgozasa soran.';
+    } finally {
+      this.avatarCropFile = null;
+      this.showAvatarCropper = false;
+      this.syncModalScrollLock();
     }
   }
 
@@ -186,96 +201,91 @@ export class ProfileInfoComponent implements OnInit, OnDestroy {
     this.selectedFile = null;
     this.avatarPreview = null;
     this.avatarUploadError = '';
-
-    // Enable body scroll - restore on both html and body
-    document.documentElement.style.overflow = '';
-    document.body.style.overflow = '';
+    this.syncModalScrollLock();
   }
 
   uploadAvatar(): void {
-    if (!this.selectedFile) return;
+    if (!this.selectedFile) {
+      return;
+    }
 
     this.isUploadingAvatar = true;
     this.avatarUploadError = '';
 
-    this.userService.uploadAvatar(this.selectedFile).subscribe({
-      next: (response) => {
-        // currentUser frissítése az új avatarUrl-lel
-        if (this.currentUser) {
-          this.currentUser.avatarUrl = response.avatarUrl;
-        }
+    this.userService
+      .uploadAvatar(this.selectedFile)
+      .pipe(
+        switchMap(() => this.authService.refreshCurrentUser()),
+        finalize(() => {
+          this.isUploadingAvatar = false;
+        })
+      )
+      .subscribe({
+        next: (refreshedUser) => {
+          this.currentUser = refreshedUser;
+          this.avatarUploadSuccess = true;
+          this.closeAvatarPreview();
 
-        this.avatarUploadSuccess = true;
-        this.isUploadingAvatar = false;
-        this.closeAvatarPreview();
-
-        // Success message hide after 3 seconds
-        setTimeout(() => {
+          // Success message hide after 3 seconds
+          setTimeout(() => {
+            this.avatarUploadSuccess = false;
+          }, 3000);
+        },
+        error: (error) => {
+          console.error('Avatar upload error:', error);
+          this.avatarUploadError = error.error?.message || 'Hiba történt a kép feltöltése során.';
           this.avatarUploadSuccess = false;
-        }, 3000);
-
-        // Frissítjük az AuthService currentUser$-t
-        if (this.currentUser) {
-          this.authService['currentUserSubject'].next(this.currentUser);
-        }
-      },
-      error: (error) => {
-        console.error('Avatar upload error:', error);
-        this.avatarUploadError = error.error?.message || 'Hiba történt a kép feltöltése során.';
-        this.isUploadingAvatar = false;
-        this.avatarUploadSuccess = false;
-      },
-    });
+        },
+      });
   }
 
   // ==================== AVATAR DELETE ====================
 
   showDeleteConfirmModal(): void {
     this.showDeleteConfirm = true;
-
-    // Disable body scroll
-    document.documentElement.style.overflow = 'hidden';
-    document.body.style.overflow = 'hidden';
+    this.syncModalScrollLock();
   }
 
   closeDeleteConfirmModal(): void {
     this.showDeleteConfirm = false;
-
-    // Enable body scroll
-    document.documentElement.style.overflow = '';
-    document.body.style.overflow = '';
+    this.syncModalScrollLock();
   }
 
   confirmDeleteAvatar(): void {
     this.isDeletingAvatar = true;
     this.avatarDeleteError = '';
 
-    this.userService.deleteAvatar().subscribe({
-      next: () => {
-        if (this.currentUser) {
-          this.currentUser.avatarUrl = null;
-        }
+    this.userService
+      .deleteAvatar()
+      .pipe(
+        switchMap(() => this.authService.refreshCurrentUser()),
+        finalize(() => {
+          this.isDeletingAvatar = false;
+        })
+      )
+      .subscribe({
+        next: (refreshedUser) => {
+          this.currentUser = refreshedUser;
+          this.avatarDeleteSuccess = true;
+          this.closeDeleteConfirmModal();
 
-        this.avatarDeleteSuccess = true;
-        this.isDeletingAvatar = false;
-        this.closeDeleteConfirmModal();
-
-        setTimeout(() => {
+          setTimeout(() => {
+            this.avatarDeleteSuccess = false;
+          }, 3000);
+        },
+        error: (error) => {
+          console.error('Avatar delete error:', error);
+          this.avatarDeleteError = error.error?.message || 'Hiba történt a kép törlése során.';
           this.avatarDeleteSuccess = false;
-        }, 3000);
+          this.closeDeleteConfirmModal();
+        },
+      });
+  }
 
-        if (this.currentUser) {
-          this.authService['currentUserSubject'].next(this.currentUser);
-        }
-      },
-      error: (error) => {
-        console.error('Avatar delete error:', error);
-        this.avatarDeleteError = error.error?.message || 'Hiba történt a kép törlése során.';
-        this.isDeletingAvatar = false;
-        this.avatarDeleteSuccess = false;
-        this.closeDeleteConfirmModal();
-      },
-    });
+  private syncModalScrollLock(): void {
+    const shouldLock = this.showAvatarPreview || this.showAvatarCropper || this.showDeleteConfirm || this.showPasswordModal;
+    document.documentElement.style.overflow = shouldLock ? 'hidden' : '';
+    document.body.style.overflow = shouldLock ? 'hidden' : '';
   }
 
   // ==================== PASSWORD RESET ====================
@@ -285,10 +295,7 @@ export class ProfileInfoComponent implements OnInit, OnDestroy {
     this.passwordForm.reset();
     this.passwordResetSuccess = false;
     this.passwordResetError = '';
-
-    // Disable body scroll - set on both html and body
-    document.documentElement.style.overflow = 'hidden';
-    document.body.style.overflow = 'hidden';
+    this.syncModalScrollLock();
   }
 
   closePasswordModal(): void {
@@ -296,10 +303,7 @@ export class ProfileInfoComponent implements OnInit, OnDestroy {
     this.passwordForm.reset();
     this.passwordResetSuccess = false;
     this.passwordResetError = '';
-
-    // Enable body scroll - restore on both html and body
-    document.documentElement.style.overflow = '';
-    document.body.style.overflow = '';
+    this.syncModalScrollLock();
   }
 
   requestPasswordReset(): void {

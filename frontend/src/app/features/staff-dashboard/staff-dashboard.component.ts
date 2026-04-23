@@ -1,13 +1,14 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
 
+import { AuthService } from '../../core/services/auth.service';
+import { BookingService } from '../../core/services/booking.service';
 import { StaffDashboardAppointment, StaffDashboardData } from '../../core/models/staff.model';
 
 @Component({
   selector: 'app-staff-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule],
   templateUrl: './staff-dashboard.component.html',
   styleUrl: './staff-dashboard.component.css',
 })
@@ -18,7 +19,10 @@ export class StaffDashboardComponent implements OnInit {
   isLoading = true;
   errorMessage = '';
 
-  constructor() {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly bookingService: BookingService,
+  ) {}
 
   ngOnInit(): void {
     this.loadDashboard();
@@ -152,90 +156,43 @@ export class StaffDashboardComponent implements OnInit {
   }
 
   private loadDashboard(): void {
-    this.dashboard = this.createMockDashboard();
+    this.dashboard = this.createEmptyDashboard();
     this.errorMessage = '';
-    this.isLoading = false;
+    this.isLoading = true;
+
+    this.bookingService.getStaffDashboardTodayAppointments().subscribe({
+      next: (todayAppointments) => {
+        if (!this.dashboard) {
+          this.dashboard = this.createEmptyDashboard();
+        }
+
+        this.dashboard = {
+          ...this.dashboard,
+          todayAppointments,
+        };
+        this.isLoading = false;
+      },
+      error: () => {
+        this.dashboard = this.createEmptyDashboard();
+        this.errorMessage = 'Nem sikerült betölteni a mai foglalásokat.';
+        this.isLoading = false;
+      },
+    });
   }
 
-  private createMockDashboard(): StaffDashboardData {
-    const today = new Date();
-    const tomorrow = new Date(Date.now() + 86400000);
-    const twoDaysLater = new Date(Date.now() + 172800000);
+  private createEmptyDashboard(): StaffDashboardData {
+    const user = this.authService.getCurrentUser();
+    const firstName = user?.firstName?.trim() ?? '';
+    const lastName = user?.lastName?.trim() ?? '';
+    const staffName = `${firstName} ${lastName}`.trim() || 'Staff';
 
     return {
-      staffId: 12,
-      staffName: 'Ujhelyi Hunor',
-      companyName: 'Bookr Studio',
-      todayAppointments: [
-        {
-          id: 1001,
-          date: today.toISOString().split('T')[0],
-          time: '10:00',
-          serviceName: 'Prémium hajvágás',
-          clientName: 'Kiss Anna',
-          durationMinutes: 45,
-        },
-        {
-          id: 1002,
-          date: today.toISOString().split('T')[0],
-          time: '12:30',
-          serviceName: 'Szakáll formázás',
-          clientName: 'Nagy Bálint',
-          durationMinutes: 30,
-        },
-      ],
-      upcomingAppointments: [
-        {
-          id: 1003,
-          date: tomorrow.toISOString().split('T')[0],
-          time: '14:30',
-          serviceName: 'Hajfestés',
-          clientName: 'Kovács Lili',
-          durationMinutes: 90,
-        },
-        {
-          id: 1004,
-          date: twoDaysLater.toISOString().split('T')[0],
-          time: '09:15',
-          serviceName: 'Női hajvágás',
-          clientName: 'Szabó Petra',
-          durationMinutes: 50,
-        },
-        {
-          id: 1005,
-          date: twoDaysLater.toISOString().split('T')[0],
-          time: '16:00',
-          serviceName: 'Hot towel + szakáll',
-          clientName: 'Horváth Dávid',
-          durationMinutes: 30,
-        },
-      ],
-      services: [
-        {
-          id: 1,
-          name: 'Prémium hajvágás',
-          durationMinutes: 45,
-          price: 8500,
-        },
-        {
-          id: 2,
-          name: 'Szakáll formázás',
-          durationMinutes: 30,
-          price: 6500,
-        },
-        {
-          id: 3,
-          name: 'Hajfestés',
-          durationMinutes: 90,
-          price: 18000,
-        },
-        {
-          id: 4,
-          name: 'Hot towel + szakáll',
-          durationMinutes: 30,
-          price: 7800,
-        },
-      ],
+      staffId: user?.id ?? 0,
+      staffName,
+      companyName: 'Nincs hozzárendelt cég',
+      todayAppointments: [],
+      upcomingAppointments: [],
+      services: [],
     };
   }
 

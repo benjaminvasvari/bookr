@@ -40,6 +40,36 @@
   letter-spacing: 2px;
 }
 
+.login-step-note {
+  width: 100%;
+  max-width: 450px;
+  margin: -2.5rem 0 2rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.login-step-note p {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.step-badge {
+  display: inline-flex;
+  margin-bottom: 0.65rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(56, 161, 121, 0.18);
+  color: #9ae6b4;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .login-form {
   width: 100%;
   max-width: 450px;
@@ -261,6 +291,30 @@
   opacity: 0.6;
 }
 
+.btn-secondary-action {
+  width: 100%;
+  padding: 0.95rem;
+  border-radius: 25px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: transparent;
+  color: white;
+  font-size: 0.98rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.btn-secondary-action:hover:not(:disabled) {
+  border-color: var(--dark-green-color, #38a179);
+  color: var(--dark-green-color, #38a179);
+  background: rgba(56, 161, 121, 0.1);
+}
+
+.btn-secondary-action:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 /* LOADING SPINNER ANIMATION */
 .fa-spinner {
   animation: spin 1s linear infinite;
@@ -374,6 +428,15 @@
     letter-spacing: 1px;
   }
 
+  .login-step-note {
+    margin: -1.4rem 0 1.3rem;
+    padding: 0.9rem 1rem;
+  }
+
+  .login-step-note p {
+    font-size: 0.88rem;
+  }
+
   .login-form {
     max-width: 500px;
     gap: 0.42rem;
@@ -451,6 +514,11 @@
     margin-bottom: 0.5rem;
     gap: 0.45rem;
   }
+
+  .btn-secondary-action {
+    padding: 0.78rem;
+    font-size: 0.9rem;
+  }
 }
 
 @media (max-width: 576px) {
@@ -467,6 +535,15 @@
   .login-title {
     font-size: 1.85rem;
     margin-bottom: 1.2rem;
+  }
+
+  .login-step-note {
+    margin: 0 0 1rem;
+    padding: 0.82rem 0.9rem;
+  }
+
+  .step-badge {
+    font-size: 0.72rem;
   }
 
   .login-form {

@@ -8,11 +8,27 @@ export interface User {
   companyId: number | null;
   avatarUrl: string | null;
   roleId: number | null;
+  twoFactorEnabled?: boolean;
+  isTwoFactorEnabled?: boolean;
 }
 
 export interface LoginRequest {
   email: string;
   password: string;
+}
+
+export interface AuthenticatedUser {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  roles: string;
+  companyId: number | null;
+  avatarUrl: string | null;
+  roleId: number | null;
+  accessToken: string;
+  refreshToken: string;
 }
 
 export interface RegisterRequest {
@@ -23,23 +39,26 @@ export interface RegisterRequest {
   phone?: string;
 }
 
-export interface LoginResponse {
-  user: {
-    id: number;
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string;
-    roles: string;
-    companyId: number | null;
-    avatarUrl: string | null;
-    roleId: number | null;
-    accessToken: string;
-    refreshToken: string;
-  };
-  status: string;
+export interface LoginSuccessResponse {
+  user: AuthenticatedUser;
+  status: 'success';
   statusCode: number;
 }
+
+export interface LoginTwoFactorRequiredResponse {
+  pendingToken: string;
+  status: '2faRequired';
+  statusCode: number;
+}
+
+export type LoginResponse = LoginSuccessResponse | LoginTwoFactorRequiredResponse;
+
+export interface VerifyTwoFactorLoginRequest {
+  pendingToken: string;
+  code: number;
+}
+
+export type VerifyTwoFactorLoginResponse = LoginSuccessResponse;
 
 export interface TokenRefreshRequest {
   refresh_token: string;
@@ -90,7 +109,40 @@ export interface UpdateNotificationSettingsRequest {
   marketing: boolean;
 }
 
+export interface NotificationSettingsResult {
+  id: number;
+  confirm: boolean;
+  reminder: boolean;
+  cancel: boolean;
+  marketing: boolean;
+}
+
+export interface NotificationSettingsResponse {
+  result: NotificationSettingsResult;
+  status: string;
+  statusCode: number;
+}
+
 export interface ApiStatusResponse {
   status: string;
+  statusCode: number;
+  message?: string;
+}
+
+export interface TwoFactorSetupResponse {
+  qrUrl: string;
+  secret: string;
+  statusCode: number;
+}
+
+export interface TwoFactorStatusResponse {
+  twoFactorEnabled: boolean;
+  confirmedAt: string | null;
+  statusCode: number;
+}
+
+export interface TwoFactorConfirmResponse {
+  message: string;
+  recoveryCodes: string[];
   statusCode: number;
 }

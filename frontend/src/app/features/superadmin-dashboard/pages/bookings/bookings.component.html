@@ -1,48 +1,127 @@
 <section class="page">
-  <header class="page-header">
-    <div>
-      <h1>Foglalások</h1>
-      <p>Összes cég foglalása egy listában.</p>
-    </div>
-    <div class="header-actions">
-      <button class="btn btn-primary" type="button" (click)="onExportBookings()">Export</button>
-      <button class="btn btn-secondary" type="button" (click)="onBulkStatusUpdate()">Státusz frissítés</button>
-    </div>
-  </header>
+  <section class="booking-toolbar">
+    <label class="search-field" for="booking-search">
+      <i class="fas fa-search" aria-hidden="true"></i>
+      <input
+        id="booking-search"
+        type="search"
+        [(ngModel)]="searchTerm"
+        placeholder="Keresés..."
+        aria-label="Keresés foglalások között"
+      />
+    </label>
 
-  <div class="table-card">
-    <div class="table-head">
-      <span>Ügyfél</span>
-      <span>Cég</span>
-      <span>Időpont</span>
-      <span>Státusz</span>
-      <span>Műveletek</span>
-    </div>
-    <div class="table-row">
-      <div>
-        <strong>Ügyfél 01</strong>
-        <span class="sub">ugyfel01@email.com</span>
+    <div class="booking-toolbar-row">
+      <div class="status-filters" role="tablist" aria-label="Foglalás státuszszűrők">
+        @for (status of statusFilters; track status) {
+          <button
+            class="filter-chip"
+            type="button"
+            [class.active]="selectedStatus === status"
+            [attr.aria-pressed]="selectedStatus === status"
+            (click)="setStatusFilter(status)"
+          >
+            {{ status }}
+          </button>
+        }
       </div>
-      <div>Példa cég 01</div>
-      <div>2026.02.10 10:00</div>
-      <div><span class="status-pill pending">Függőben</span></div>
-      <div class="actions">
-        <button class="btn btn-ghost" type="button" (click)="onViewBooking('BOOK-01')">Részletek</button>
-        <button class="btn btn-outline" type="button" (click)="onApproveBooking('BOOK-01')">Jóváhagy</button>
-        <button
-          class="icon-danger-btn"
-          type="button"
-          (click)="openBookingDeleteModal('BOOK-01')"
-          aria-label="Foglalás törlése"
-          title="Foglalás törlése"
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M9 3h6l1 2h4v2H4V5h4l1-2zm1 6h2v8h-2V9zm4 0h2v8h-2V9zM7 9h2v8H7V9zm1 12h8a2 2 0 0 0 2-2V9H6v10a2 2 0 0 0 2 2z" />
-          </svg>
-        </button>
+
+      <div class="secondary-filters">
+        <div class="toolbar-selects">
+          <label class="select-field">
+            <span>Cég</span>
+            <select [(ngModel)]="selectedCompany">
+              @for (company of companyOptions; track company) {
+                <option [ngValue]="company">{{ company === 'all' ? 'Összes cég' : company }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="select-field">
+            <span>Dátum</span>
+            <select [(ngModel)]="selectedDateFilter">
+              @for (filter of dateFilters; track filter.value) {
+                <option [ngValue]="filter.value">{{ filter.label }}</option>
+              }
+            </select>
+          </label>
+        </div>
+
+        <div class="header-actions toolbar-actions">
+          <button class="btn btn-primary" type="button" (click)="onExportBookings()">Export</button>
+          <button class="btn btn-secondary" type="button" (click)="onRefreshBookings()">Frissítés</button>
+        </div>
       </div>
     </div>
-  </div>
+  </section>
+
+  <section class="booking-groups" aria-label="Csoportosított foglalások">
+    @for (group of groupedBookings; track group.dateKey) {
+      <section class="booking-group">
+        <header class="group-header">
+          <h2>{{ group.title }} <span>— {{ group.subtitle }}</span></h2>
+        </header>
+
+        <div class="group-list">
+          @for (booking of group.items; track booking.id) {
+            <article class="booking-row" [class.booking-row-pending]="booking.status === 'Függőben'" [class.booking-row-cancelled]="booking.status === 'Lemondott'">
+              <div class="time-column">
+                <span class="booking-time">{{ formatTime(booking.startsAt) }}</span>
+              </div>
+
+              <div class="client-column">
+                <strong>{{ booking.clientName }}</strong>
+                <span>{{ booking.clientEmail }}</span>
+              </div>
+
+              <div class="service-column">
+                <span class="service-line">{{ booking.service }} · {{ booking.durationMinutes }} perc</span>
+                <span class="company-chip">{{ booking.company }}</span>
+              </div>
+
+              <div class="status-column">
+                <span class="status-chip" [class]="'status-chip ' + getStatusClass(booking.status)">
+                  <span class="status-icon">{{ getStatusIcon(booking.status) }}</span>
+                  {{ booking.status }}
+                </span>
+              </div>
+
+              <div class="actions">
+                <div class="action-slot">
+                  <button class="btn btn-ghost booking-action-btn" type="button" (click)="onViewBooking(booking.id)">Részletek</button>
+                </div>
+                <div class="action-slot">
+                  @if (booking.status === 'Függőben') {
+                    <button class="btn btn-outline booking-action-btn" type="button" (click)="onApproveBooking(booking.id)">Jóváhagy</button>
+                  } @else {
+                    <span class="action-placeholder" aria-hidden="true"></span>
+                  }
+                </div>
+                <div class="action-slot action-slot-icon">
+                  @if (booking.status !== 'Lemondott') {
+                    <button class="icon-danger-btn booking-delete-btn" type="button" (click)="openBookingDeleteModal(booking.id)" aria-label="Foglalás törlése" title="Foglalás törlése">
+                      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M9 3h6l1 2h4v2H4V5h4l1-2zm1 6h2v8h-2V9zm4 0h2v8h-2V9zM7 9h2v8H7V9zm1 12h8a2 2 0 0 0 2-2V9H6v10a2 2 0 0 0 2 2z" />
+                      </svg>
+                    </button>
+                  } @else {
+                    <span class="action-placeholder action-placeholder-icon" aria-hidden="true"></span>
+                  }
+                </div>
+              </div>
+            </article>
+          }
+        </div>
+      </section>
+    }
+
+    @empty {
+      <div class="empty-state">
+        <h2>Nincs találat</h2>
+        <p>A megadott keresésre vagy szűrőre nem találtunk foglalást.</p>
+      </div>
+    }
+  </section>
 
   @if (isDeleteModalOpen) {
     <div class="delete-modal-backdrop" (click)="closeBookingDeleteModal()">

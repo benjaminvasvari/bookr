@@ -4,13 +4,20 @@ import { Injectable } from '@angular/core';
   providedIn: 'root',
 })
 export class StaffSidebarStateService {
-  private readonly storageKey = 'staffSidebarPinned';
+  private readonly storageKey = 'staffSidebarExpanded';
+  private readonly legacyStorageKey = 'staffSidebarPinned';
 
-  getPinned(): boolean {
-    return localStorage.getItem(this.storageKey) === 'true';
+  getExpanded(): boolean {
+    const storedValue = localStorage.getItem(this.storageKey);
+    if (storedValue !== null) {
+      return storedValue === 'true';
+    }
+
+    return localStorage.getItem(this.legacyStorageKey) === 'true';
   }
 
-  setPinned(value: boolean): void {
+  setExpanded(value: boolean): void {
     localStorage.setItem(this.storageKey, value ? 'true' : 'false');
+    localStorage.removeItem(this.legacyStorageKey);
   }
 }

@@ -1,12 +1,10 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
-interface StaffBookingItem {
-  id: number;
-  date: string;
-  time: string;
-  serviceName: string;
-  clientName: string;
+import { BookingService } from '../../../core/services/booking.service';
+import { StaffDashboardAppointment } from '../../../core/models/staff.model';
+
+interface StaffBookingItem extends StaffDashboardAppointment {
   status: 'confirmed' | 'pending' | 'cancelled';
 }
 
@@ -19,45 +17,18 @@ type StaffBookingStatus = StaffBookingItem['status'];
   templateUrl: './staff-bookings.component.html',
   styleUrl: './staff-bookings.component.css',
 })
-export class StaffBookingsComponent {
+export class StaffBookingsComponent implements OnInit {
   private readonly today = new Date();
   private readonly todayIso = this.toIsoDate(this.today);
-  private readonly tomorrowIso = this.toIsoDate(this.addDays(this.today, 1));
+  bookings: StaffBookingItem[] = [];
+  isLoading = true;
+  errorMessage = '';
 
-  bookings: StaffBookingItem[] = [
-    {
-      id: 1,
-      date: this.todayIso,
-      time: '09:30',
-      serviceName: 'Hajvágás',
-      clientName: 'Kiss Anna',
-      status: 'confirmed',
-    },
-    {
-      id: 2,
-      date: this.todayIso,
-      time: '11:00',
-      serviceName: 'Szakáll igazítás',
-      clientName: 'Nagy Bálint',
-      status: 'pending',
-    },
-    {
-      id: 3,
-      date: this.todayIso,
-      time: '14:00',
-      serviceName: 'Festés',
-      clientName: 'Kovács Lili',
-      status: 'cancelled',
-    },
-    {
-      id: 4,
-      date: this.tomorrowIso,
-      time: '10:00',
-      serviceName: 'Hajmosás',
-      clientName: 'Tóth Emese',
-      status: 'confirmed',
-    },
-  ];
+  constructor(private readonly bookingService: BookingService) {}
+
+  ngOnInit(): void {
+    this.loadTodayBookings();
+  }
 
   get sortedBookings(): StaffBookingItem[] {
     return this.bookings
@@ -137,6 +108,40 @@ export class StaffBookingsComponent {
     return booking.id;
   }
 
+  private loadTodayBookings(): void {
+    this.isLoading = true;
+    this.errorMessage = '';
+
+    this.bookingService.getStaffDashboardTodayAppointments().subscribe({
+      next: (appointments) => {
+        this.bookings = appointments.map((appointment) => ({
+          ...appointment,
+          status: this.mapApiStatus(appointment.status),
+        }));
+        this.isLoading = false;
+      },
+      error: () => {
+        this.bookings = [];
+        this.errorMessage = 'Nem sikerült betölteni a mai foglalásokat.';
+        this.isLoading = false;
+      },
+    });
+  }
+
+  private mapApiStatus(status: string | undefined): StaffBookingStatus {
+    const normalized = (status || '').trim().toLowerCase();
+
+    if (normalized === 'cancelled' || normalized === 'canceled') {
+      return 'cancelled';
+    }
+
+    if (normalized === 'pending') {
+      return 'pending';
+    }
+
+    return 'confirmed';
+  }
+
   private getBookingCountByStatus(status: StaffBookingStatus): number {
     return this.todayBookings.filter((booking) => booking.status === status).length;
   }
@@ -148,12 +153,6 @@ export class StaffBookingsComponent {
 
     const parsed = new Date(`${value}T00:00:00`);
     return Number.isNaN(parsed.getTime()) ? null : parsed;
-  }
-
-  private addDays(date: Date, days: number): Date {
-    const nextDate = new Date(date);
-    nextDate.setDate(nextDate.getDate() + days);
-    return nextDate;
   }
 
   private toIsoDate(date: Date): string {

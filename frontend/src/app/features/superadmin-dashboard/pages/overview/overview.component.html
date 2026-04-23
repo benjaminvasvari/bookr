@@ -1,167 +1,120 @@
-<section class="page">
-  <header class="page-header">
-    <div>
-      <h1>Superadmin áttekintés</h1>
-      <p>Átfogó riasztások, cégek és foglalások egy helyen.</p>
-    </div>
-    <div class="header-actions">
-      <button class="btn btn-primary" type="button" (click)="onNavigate('companies')">Cégek</button>
-      <button class="btn btn-secondary" type="button" (click)="onNavigate('bookings')">Foglalások</button>
-      <button class="btn btn-ghost" type="button" (click)="onNavigate('logs')">Logok</button>
-    </div>
-  </header>
+<section class="command-center">
+  <section class="kpi-grid" aria-label="Kiemelt mutatók">
+    @for (kpi of kpis; track kpi.label) {
+      <button class="kpi-card" [class]="'kpi-card accent-' + kpi.accent" type="button" (click)="navigateTo(kpi.route)">
+        <span class="kpi-value">{{ kpi.value }}</span>
+        <span class="kpi-label">{{ kpi.label }}</span>
+        <span class="kpi-note">{{ kpi.note }}</span>
+      </button>
+    }
+  </section>
 
-  <div class="kpi-strip">
-    <div class="kpi-badge">
-      <span class="kpi-badge-value">{{ companySummary.active }}</span>
-      <span class="kpi-badge-label">Aktív cég</span>
-    </div>
-    <div class="kpi-badge">
-      <span class="kpi-badge-value">{{ staffSummary.total }}</span>
-      <span class="kpi-badge-label">Staff összesen</span>
-    </div>
-    <div class="kpi-badge">
-      <span class="kpi-badge-value">{{ ownerSummary.total }}</span>
-      <span class="kpi-badge-label">Tulajdonos</span>
-    </div>
-    <div class="kpi-badge">
-      <span class="kpi-badge-value">{{ bookingSummary.todayTotal }}</span>
-      <span class="kpi-badge-label">Mai foglalás</span>
-    </div>
-    <div class="kpi-badge">
-      <span class="kpi-badge-value">{{ logSummary.errors }}</span>
-      <span class="kpi-badge-label">Hiba 24 órán belül</span>
-    </div>
-  </div>
-
-  <div class="preview-grid">
-    <div class="preview-card">
-      <div class="preview-card-header">
-        <h2>Cégek</h2>
-        <div class="header-stats">
-          <span class="stat-chip chip-warning">{{ companySummary.suspended }} felfüggesztett</span>
-          <span class="stat-chip chip-danger">{{ companySummary.expiringSoon }} lejár hamarosan</span>
+  <section class="command-layout">
+    <div class="activity-column">
+      <article class="panel">
+        <div class="panel-header">
+          <div class="panel-heading">
+            <h2>Legutóbbi foglalások</h2>
+            <p>Az utolsó 6 foglalás, hogy gyorsan lásd a napi terhelést és az eltéréseket.</p>
+          </div>
+          <button class="panel-link" type="button" (click)="navigateTo('bookings')">Összes foglalás</button>
         </div>
-      </div>
-      <ul class="preview-list">
-        @for (c of companySummary.recent; track c.name; let i = $index) {
-          @if (i < 2) {
-            <li>
-              <span class="item-name">{{ c.name }}</span>
-              <span class="item-meta">{{ c.plan }}</span>
-              <span class="badge" [class.warning]="c.status === 'Felfüggesztett'" [class.green]="c.status === 'Új'">{{ c.status }}</span>
-            </li>
-          }
-        }
-        @if (companySummary.recent.length > 2) {
-          <li class="more-row">+{{ companySummary.recent.length - 2 }} további cég</li>
-        }
-      </ul>
-      <button class="btn btn-ghost preview-cta" (click)="onNavigate('companies')">Cégek megnyitása →</button>
-    </div>
 
-    <div class="preview-card">
-      <div class="preview-card-header">
-        <h2>Staff</h2>
-        <div class="header-stats">
-          <span class="stat-chip chip-warning">{{ staffSummary.pending }} függőben</span>
-          <span class="stat-chip chip-danger">{{ staffSummary.withoutCompany }} cég nélkül</span>
-        </div>
-      </div>
-      <ul class="preview-list">
-        @for (s of staffSummary.recent; track s.name; let i = $index) {
-          @if (i < 2) {
-            <li>
-              <span class="item-name">{{ s.name }}</span>
-              <span class="item-meta">{{ s.role }}</span>
-              <span class="badge" [class.warning]="s.company === '—'">{{ s.company }}</span>
-            </li>
-          }
-        }
-        @if (staffSummary.recent.length > 2) {
-          <li class="more-row">+{{ staffSummary.recent.length - 2 }} további staff</li>
-        }
-      </ul>
-      <button class="btn btn-ghost preview-cta" (click)="onNavigate('staff')">Staff megnyitása →</button>
-    </div>
+        <div class="booking-table">
+          <div class="booking-table-head">
+            <span>Ügyfél</span>
+            <span>Szolgáltatás</span>
+            <span>Idő</span>
+            <span>Státusz</span>
+          </div>
 
-    <div class="preview-card">
-      <div class="preview-card-header">
-        <h2>Tulajdonosok</h2>
-        <div class="header-stats">
-          <span class="stat-chip chip-warning">{{ ownerSummary.unverified }} nem hitelesített</span>
-          <span class="stat-chip chip-info">{{ ownerSummary.multiCompany }} több cég</span>
-        </div>
-      </div>
-      <ul class="preview-list">
-        @for (o of ownerSummary.recent; track o.name; let i = $index) {
-          @if (i < 2) {
-            <li>
-              <span class="item-name">{{ o.name }}</span>
-              <span class="item-meta">{{ o.companies }} cég</span>
-              <span class="badge" [class.warning]="!o.verified" [class.green]="o.verified">
-                {{ o.verified ? 'Hitelesített' : 'Függőben' }}
+          @for (booking of recentBookings; track booking.client + booking.time) {
+            <button class="booking-row" type="button" (click)="navigateTo('bookings')">
+              <span class="row-primary">
+                <strong>{{ booking.client }}</strong>
+                <span>{{ booking.company }}</span>
               </span>
-            </li>
-          }
-        }
-        @if (ownerSummary.recent.length > 2) {
-          <li class="more-row">+{{ ownerSummary.recent.length - 2 }} további tulajdonos</li>
-        }
-      </ul>
-      <button class="btn btn-ghost preview-cta" (click)="onNavigate('owners')">Tulajdonosok megnyitása →</button>
-    </div>
-
-    <div class="preview-card">
-      <div class="preview-card-header">
-        <h2>Foglalások</h2>
-        <div class="header-stats">
-          <span class="stat-chip chip-warning">{{ bookingSummary.cancelled }} lemondott</span>
-          <span class="stat-chip chip-danger">{{ bookingSummary.disputed }} vitatott</span>
-        </div>
-      </div>
-      <ul class="preview-list">
-        @for (b of bookingSummary.upcoming; track b.client; let i = $index) {
-          @if (i < 2) {
-            <li>
-              <span class="item-name">{{ b.client }}</span>
-              <span class="item-meta">{{ b.service }} · {{ b.time }}</span>
-              <span class="badge">{{ b.company }}</span>
-            </li>
-          }
-        }
-        @if (bookingSummary.upcoming.length > 2) {
-          <li class="more-row">+{{ bookingSummary.upcoming.length - 2 }} közelgő foglalás</li>
-        }
-      </ul>
-      <button class="btn btn-ghost preview-cta" (click)="onNavigate('bookings')">Foglalások megnyitása →</button>
-    </div>
-
-    <div class="preview-card">
-      <div class="preview-card-header">
-        <h2>Logok</h2>
-        <div class="header-stats">
-          <span class="stat-chip chip-danger">{{ logSummary.errors }} hiba</span>
-          <span class="stat-chip chip-warning">{{ logSummary.warnings }} figyelmeztetés</span>
-        </div>
-      </div>
-      <ul class="preview-list">
-        @for (l of logSummary.recent; track l.message; let i = $index) {
-          @if (i < 2) {
-            <li>
-              <span class="item-name item-name-with-dot">
-                <span class="dot" [class]="'dot ' + l.type"></span>
-                <span>{{ l.message }}</span>
+              <span class="row-secondary">{{ booking.service }}</span>
+              <span class="row-time">{{ booking.time }}</span>
+              <span class="status-pill" [class.status-pill-new]="booking.status === 'Új'" [class.status-pill-warning]="booking.status === 'Vizsgálandó'">
+                {{ booking.status }}
               </span>
-              <span class="item-meta">{{ l.time }}</span>
+            </button>
+          }
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-header panel-header-stack">
+          <div class="panel-heading">
+            <h2>Legutóbbi audit logok</h2>
+            <p>Szűrhető eseménylista gyors hibakereséshez és auth ellenőrzéshez.</p>
+          </div>
+
+          <div class="audit-controls">
+            <div class="filter-group" role="tablist" aria-label="Audit log szűrők">
+              @for (filter of logFilters; track filter.value) {
+                <button
+                  class="filter-chip"
+                  type="button"
+                  [class.active]="selectedLogFilter === filter.value"
+                  [attr.aria-pressed]="selectedLogFilter === filter.value"
+                  (click)="setLogFilter(filter.value)"
+                >
+                  {{ filter.label }}
+                </button>
+              }
+            </div>
+            <button class="panel-link" type="button" (click)="navigateTo('logs')">Log oldal</button>
+          </div>
+        </div>
+
+        <div class="audit-list">
+          @for (log of filteredAuditLogs; track log.title + log.time) {
+            <button class="audit-item" type="button" (click)="navigateTo('logs')">
+              <span class="audit-marker" [class.audit-marker-error]="log.type === 'error'" [class.audit-marker-auth]="log.type === 'auth'"></span>
+              <span class="audit-copy">
+                <span class="audit-title">{{ log.title }}</span>
+                <span class="audit-detail">{{ log.detail }}</span>
+              </span>
+              <span class="audit-meta">
+                <span class="audit-type">{{ log.type === 'error' ? 'Hiba' : log.type === 'auth' ? 'Auth' : 'Audit' }}</span>
+                <span class="audit-time">{{ log.time }}</span>
+              </span>
+            </button>
+          }
+        </div>
+      </article>
+    </div>
+
+    <aside class="tasks-column">
+      <article class="panel tasks-panel">
+        <div class="panel-header">
+          <div class="panel-heading">
+            <h2>Azonnali teendők</h2>
+            <p>Minden sor a megfelelő admin oldalra visz, hogy egy lépésből lehessen intézkedni.</p>
+          </div>
+        </div>
+
+        <ul class="task-list">
+          @for (item of actionItems; track item.label) {
+            <li>
+              <button class="task-link" type="button" (click)="navigateTo(item.route)">
+                <span class="task-count">{{ item.count }}</span>
+                <span class="task-copy">
+                  <span class="task-label">{{ item.count }} {{ item.label }}</span>
+                  <span class="task-description">{{ item.description }}</span>
+                </span>
+                <span class="task-arrow" aria-hidden="true">→</span>
+              </button>
             </li>
           }
-        }
-        @if (logSummary.recent.length > 2) {
-          <li class="more-row">+{{ logSummary.recent.length - 2 }} további log</li>
-        }
-      </ul>
-      <button class="btn btn-ghost preview-cta" (click)="onNavigate('logs')">Logok megnyitása →</button>
-    </div>
-  </div>
+        </ul>
+
+        <div class="tasks-footnote">
+          Kritikus figyelmeztetés és függő adminisztratív feladat egyetlen oldalon, külön részletező oldalakra bontva.
+        </div>
+      </article>
+    </aside>
+  </section>
 </section>

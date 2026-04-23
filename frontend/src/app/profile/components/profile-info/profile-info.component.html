@@ -214,6 +214,17 @@
   </div>
 </div>
 
+<app-image-crop-modal
+  [visible]="showAvatarCropper"
+  [imageFile]="avatarCropFile"
+  title="Profilkep kivagasa"
+  [aspectRatio]="1"
+  [maintainAspectRatio]="true"
+  [roundCropper]="true"
+  (cancel)="closeAvatarCropper()"
+  (apply)="applyAvatarCrop($event)"
+></app-image-crop-modal>
+
 <!-- Avatar Preview Modal -->
 @if (showAvatarPreview) {
 <div class="modal-backdrop" (click)="closeAvatarPreview()"></div>

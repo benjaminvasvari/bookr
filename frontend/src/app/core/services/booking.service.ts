@@ -7,7 +7,7 @@ import { map } from 'rxjs/operators';
 
 import { environment } from '../../../environments/environment';
 import { API_ENDPOINTS } from '../constants/api-endpoints';
-import { 
+import {
   Booking,
   ClientAppointment,
   ClientAppointmentsResponse,
@@ -16,6 +16,23 @@ import {
   UnavailableDatesResponse,
   OccupiedSlotsResponse
 } from '../models/booking.model';
+import { StaffDashboardAppointment } from '../models/staff.model';
+
+interface StaffDashboardTodayAppointmentsResponse {
+  result: Array<{
+    id: number;
+    clientName: string;
+    serviceName: string;
+    startTime: string;
+    endTime: string;
+    durationMinutes: number;
+    price: number;
+    currency: string;
+    status: string;
+  }>;
+  status: string;
+  statusCode: number;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -69,6 +86,28 @@ export class BookingService {
       )
       .pipe(
         map(response => response.data)
+      );
+  }
+
+  getStaffDashboardTodayAppointments(): Observable<StaffDashboardAppointment[]> {
+    return this.http
+      .get<StaffDashboardTodayAppointmentsResponse>(
+        `${this.apiUrl}${API_ENDPOINTS.APPOINTMENTS.STAFF_DASHBOARD_TODAY_APPOINTMENTS}`
+      )
+      .pipe(
+        map(response => response.result || []),
+        map(appointments => {
+          const today = new Date().toISOString().slice(0, 10);
+          return appointments.map(appointment => ({
+            id: appointment.id,
+            date: today,
+            time: appointment.startTime?.slice(0, 5) || '',
+            serviceName: appointment.serviceName || 'Szolgáltatás',
+            clientName: appointment.clientName || 'Vendég',
+            durationMinutes: appointment.durationMinutes || 0,
+            status: appointment.status || 'booked',
+          }));
+        })
       );
   }
 

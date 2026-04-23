@@ -17,6 +17,26 @@ import {
   StaffDashboardResponse,
 } from '../models/staff.model';
 
+export interface StaffWorkingHoursResponse {
+  data: Record<
+    string,
+    {
+      isAvailable: boolean;
+      startTime: string | null;
+      endTime: string | null;
+    }
+  >;
+  status: string;
+  statusCode: number;
+}
+
+export interface UpdateStaffWorkingHoursRequest {
+  dayOfWeek: string;
+  isAvailable: boolean;
+  startTime: string | null;
+  endTime: string | null;
+}
+
 export interface IndustryPageStaffResponse {
   result: Array<
     Pick<StaffMember, 'id' | 'displayName' | 'specialties' | 'bio' | 'imageUrl'>
@@ -61,6 +81,16 @@ export class StaffService {
       `${this.apiUrl}${API_ENDPOINTS.STAFF.DASHBOARD(userId)}`,
       { params }
     );
+  }
+
+  getStaffWorkingHours(): Observable<StaffWorkingHoursResponse['data']> {
+    return this.http
+      .get<StaffWorkingHoursResponse>(`${this.apiUrl}${API_ENDPOINTS.STAFF.WORKING_HOURS}`)
+      .pipe(map((response) => response.data || {}));
+  }
+
+  updateStaffWorkingHours(payload: UpdateStaffWorkingHoursRequest): Observable<unknown> {
+    return this.http.put(`${this.apiUrl}${API_ENDPOINTS.STAFF.UPDATE_WORKING_HOURS}`, payload);
   }
 
   getAllStaffForOwnerWithAppointments(companyId: number): Observable<OwnerStaffWithAppointmentsResponse> {

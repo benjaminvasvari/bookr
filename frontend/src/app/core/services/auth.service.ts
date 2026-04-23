@@ -10,11 +10,14 @@ import {
   LoginRequest,
   RegisterRequest,
   LoginResponse,
+  LoginSuccessResponse,
   RegisterResponse,
   RefreshTokenResponse,
   TokenRefreshRequest,
   VerifyEmailRequest,
   VerifyEmailResponse,
+  VerifyTwoFactorLoginRequest,
+  VerifyTwoFactorLoginResponse,
 } from '../models';
 
 @Injectable({
@@ -41,6 +44,29 @@ export class AuthService {
 
     return this.http
       .post<LoginResponse>(`${this.apiUrl}${API_ENDPOINTS.AUTH.LOGIN}`, loginData)
+      .pipe(
+        tap((response) => {
+          if (response.status === 'success') {
+            this.setSession(response);
+          }
+        })
+      );
+  }
+
+  /**
+   * Login 2FA megerősítése.
+   */
+  verifyTwoFactorLogin(
+    pendingToken: string,
+    code: number
+  ): Observable<VerifyTwoFactorLoginResponse> {
+    const request: VerifyTwoFactorLoginRequest = { pendingToken, code };
+
+    return this.http
+      .post<VerifyTwoFactorLoginResponse>(
+        `${this.apiUrl}${API_ENDPOINTS.AUTH.VERIFY_2FA_LOGIN}`,
+        request
+      )
       .pipe(
         tap((response) => {
           if (response.status === 'success') {
@@ -145,6 +171,14 @@ export class AuthService {
   }
 
   /**
+   * Aktuális user közvetlen frissítése.
+   */
+  updateCurrentUser(user: User): void {
+    localStorage.setItem(this.USER_KEY, JSON.stringify(user));
+    this.currentUserSubject.next(user);
+  }
+
+  /**
    * Aktuális user frissítése (users/me)
    * Akkor hasznos, ha a backend frissíti a companyId-t.
    */
@@ -159,8 +193,7 @@ export class AuthService {
             ...user,
           } as User;
 
-          localStorage.setItem(this.USER_KEY, JSON.stringify(mergedUser));
-          this.currentUserSubject.next(mergedUser);
+          this.updateCurrentUser(mergedUser);
         })
       );
   }
@@ -183,7 +216,7 @@ export class AuthService {
    * Session beállítása (token és user mentése)
    * A backend a tokeneket a user objektumon BELÜL küldi!
    */
-  private setSession(loginResponse: LoginResponse): void {
+  private setSession(loginResponse: LoginSuccessResponse): void {
     // Tokenek kinyerése a user objektumból
     const { accessToken, refreshToken, ...userData } = loginResponse.user;
 

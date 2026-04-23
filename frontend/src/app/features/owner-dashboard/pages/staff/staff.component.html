@@ -1,0 +1,322 @@
+<section class="staff-panel">
+	<header class="staff-topbar">
+		<div>
+			<h1>Dolgozók</h1>
+			<p class="subtitle">Csapatod áttekintése, elérhetőségek és státuszok.</p>
+		</div>
+		<div class="actions">
+			<button class="btn primary" type="button" (click)="openInviteModal()">Új dolgozó</button>
+		</div>
+	</header>
+
+	<div class="staff-toolbar">
+		<div class="pill">Dolgozó: {{ hasActiveFilters ? filteredActualStaff.length + '/' + activeStaffCount : activeStaffCount }} · Függőben: {{ hasActiveFilters ? filteredPendingInvites.length + '/' + pendingInvites.length : pendingInvites.length }}</div>
+		<label class="search-input">
+			<input type="text" placeholder="Keresés név, email vagy szerepkör szerint" [(ngModel)]="searchTerm" />
+		</label>
+		<select class="filter-select" [(ngModel)]="selectedRole">
+			<option value="all">Összes szerepkör</option>
+			@for (role of roleOptions; track role) {
+			<option [value]="role">{{ role }}</option>
+			}
+		</select>
+		<button class="btn ghost toolbar-clear" type="button" (click)="clearFilters()" [disabled]="!hasActiveFilters">Szűrés törlése</button>
+	</div>
+
+	<div class="staff-scroll">
+		<div class="staff-board">
+			@if (pendingActionError) {
+			<article class="staff-table-card error-card">
+				<p>{{ pendingActionError }}</p>
+			</article>
+			}
+
+			@if (isLoadingStaff) {
+			<article class="staff-table-card loading-card">
+				<p>Dolgozók betöltése...</p>
+			</article>
+			}
+
+			@if (loadError) {
+			<article class="staff-table-card error-card">
+				<p>{{ loadError }}</p>
+				<button class="btn ghost" type="button" (click)="retryLoad()">Újrapróbálás</button>
+			</article>
+			}
+
+			@for (invite of filteredPendingInvites; track trackByPendingInvite($index, invite)) {
+				<article class="staff-table-card pending-card">
+					<header class="card-header">
+						<div class="avatar pending-avatar">{{ getInviteInitials(invite.email) }}</div>
+						<div class="staff-info">
+							<h3>{{ invite.role }} (meghívott)</h3>
+							<p>{{ invite.email }}</p>
+						</div>
+						<div class="pending-header-actions">
+							<span class="status pending">Függőben</span>
+							<button class="btn ghost pending-remove-btn" type="button" (click)="removePendingInvite(invite)" [disabled]="isPendingDeleting(invite.id)">
+								@if (isPendingDeleting(invite.id)) {
+								Törlés...
+								} @else {
+								Visszavonás
+								}
+							</button>
+						</div>
+					</header>
+
+					<div class="pending-meta">
+						<span>Meghívó elküldve: {{ invite.sentAtLabel }}</span>
+						<span class="pending-dot"></span>
+						<span>Hitelesítés folyamatban</span>
+					</div>
+
+					<div class="pending-loader" aria-hidden="true"></div>
+
+					<table class="staff-table pending-table">
+						<thead>
+							<tr>
+								<th>Státusz</th>
+								<th>Teendő</th>
+								<th>Állapot</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td>
+									<span class="skeleton-line short"></span>
+								</td>
+								<td>
+									<span class="skeleton-line medium"></span>
+								</td>
+								<td>
+									<span class="skeleton-line short"></span>
+								</td>
+							</tr>
+							<tr>
+								<td>
+									<span class="skeleton-line short"></span>
+								</td>
+								<td>
+									<span class="skeleton-line long"></span>
+								</td>
+								<td>
+									<span class="skeleton-line short"></span>
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</article>
+			}
+
+			@for (staff of filteredActualStaff; track trackByStaff($index, staff)) {
+			<article class="staff-table-card">
+				<button
+					class="staff-card-toggle"
+					type="button"
+					(click)="openStaffContactModal(staff)"
+					aria-haspopup="dialog"
+					[attr.aria-label]="staff.displayName + ' kontakt adatainak megnyitása'"
+				>
+					<header class="card-header">
+						<div class="avatar">
+							@if (staff.imageUrl) {
+							<img class="avatar-image" [src]="staff.imageUrl" [alt]="staff.displayName" />
+							} @else {
+							{{ getStaffInitials(staff) }}
+							}
+						</div>
+						<div class="staff-info">
+							<h3>{{ staff.displayName }}</h3>
+							<p>{{ staff.specialties }}</p>
+						</div>
+						<div class="staff-header-side">
+							<span class="status" [class.online]="!isStaffCurrentlyBusy(staff)" [class.busy]="isStaffCurrentlyBusy(staff)">{{ getStaffStatusLabel(staff) }}</span>
+						</div>
+					</header>
+				</button>
+				<table class="staff-table">
+					<thead>
+						<tr>
+							<th>Időpont</th>
+							<th>Szolgáltatás</th>
+							<th>Ügyfél</th>
+						</tr>
+					</thead>
+					<tbody>
+						@if (staff.upcomingAppointments.length === 0) {
+						<tr>
+							<td colspan="3">Nincs közelgő időpont a mai napra.</td>
+						</tr>
+						} @else {
+							@for (appointment of staff.upcomingAppointments; track $index) {
+							<tr>
+								<td>{{ getAppointmentTimeLabel(appointment) }}</td>
+								<td>{{ appointment.serviceName || '-' }}</td>
+								<td>{{ appointment.clientName || '-' }}</td>
+							</tr>
+							}
+						}
+					</tbody>
+				</table>
+			</article>
+			}
+
+			@if (!isLoadingStaff && !loadError && actualStaff.length === 0 && pendingInvites.length === 0) {
+			<article class="staff-table-card empty-card">
+				<p>Még nincs dolgozó a cégedhez.</p>
+			</article>
+			}
+
+			@if (!isLoadingStaff && !loadError && hasActiveFilters && filteredActualStaff.length === 0 && filteredPendingInvites.length === 0 && (actualStaff.length > 0 || pendingInvites.length > 0)) {
+			<article class="staff-table-card empty-card">
+				<p>Nincs találat a megadott szűrőkkel.</p>
+			</article>
+			}
+		</div>
+	</div>
+</section>
+
+@if (showInviteModal) {
+	<div class="modal-overlay" (click)="closeInviteModal()">
+		<div class="modal-content invite-modal" (click)="$event.stopPropagation()">
+			@if (!inviteSent) {
+				<div class="modal-header">
+					<h2>Új dolgozó meghívása</h2>
+					<button class="close-btn" type="button" (click)="closeInviteModal()" [disabled]="isSendingInvite">&times;</button>
+				</div>
+
+				<div class="modal-body">
+					<p class="modal-description">Adj meg egy email címet és válassz szerepkört. A rendszer meghívó emailt küld az új kollégának.</p>
+
+					@if (inviteError) {
+					<p class="field-error invite-error">{{ inviteError }}</p>
+					}
+
+					<div class="form-group">
+						<label for="staff-invite-email">Email cím</label>
+						<input
+							id="staff-invite-email"
+							type="email"
+							[(ngModel)]="inviteForm.email"
+							(blur)="onEmailBlur()"
+							placeholder="pelda@email.com"
+							[disabled]="isSendingInvite"
+							[class.invalid]="emailTouched && !isValidEmail"
+						/>
+						@if (emailTouched && !isValidEmail) {
+							<p class="field-error">Érvénytelen Email cím</p>
+						}
+					</div>
+
+					<div class="form-group">
+						<label for="staff-invite-role">Szerepkör</label>
+						<input
+							id="staff-invite-role"
+							type="text"
+							[(ngModel)]="inviteForm.role"
+							(blur)="onRoleBlur()"
+							placeholder="pl. Fodrász, Masszőr, Barber"
+							[disabled]="isSendingInvite"
+							[class.invalid]="roleTouched && !inviteForm.role.trim()"
+						/>
+						@if (roleTouched && !inviteForm.role.trim()) {
+							<p class="field-error">A szerepkör megadása kötelező.</p>
+						}
+					</div>
+				</div>
+
+				<div class="modal-footer invite-modal-footer">
+					@if (!isSendingInvite) {
+						<button class="btn ghost invite-btn-cancel" type="button" (click)="closeInviteModal()">Mégse</button>
+					}
+					<button class="btn primary invite-btn-submit" type="button" (click)="submitInvite()" [disabled]="!canSubmitInvite">
+						@if (isSendingInvite) {
+							<span class="btn-loader"></span>
+							Küldés...
+						} @else {
+							Meghívó küldése
+						}
+					</button>
+				</div>
+			} @else {
+				<div class="invite-success" aria-live="polite">
+					<div class="success-icon-wrap">
+						<div class="success-icon">✓</div>
+					</div>
+					<h3>Sikeres meghívás</h3>
+					<p>Az email elküldve erre: <strong>{{ inviteForm.email }}</strong></p>
+					<span class="success-hint">A dolgozó a levélben tudja hitelesíteni a fiókját.</span>
+					<div class="success-progress"></div>
+				</div>
+			}
+		</div>
+	</div>
+}
+
+@if (selectedStaff) {
+	<div class="modal-overlay" (click)="closeStaffContactModal()">
+		<div class="modal-content contact-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" [attr.aria-label]="selectedStaff.displayName + ' kontakt adatai'">
+			<div class="modal-header contact-modal-header">
+				<div class="contact-modal-title-block">
+					<div class="avatar contact-modal-avatar">
+						@if (selectedStaff.imageUrl) {
+						<img class="avatar-image" [src]="selectedStaff.imageUrl" [alt]="selectedStaff.displayName" />
+						} @else {
+						{{ getStaffInitials(selectedStaff) }}
+						}
+					</div>
+					<div>
+						<h2>{{ selectedStaff.displayName }}</h2>
+						<p>{{ selectedStaff.specialties }}</p>
+					</div>
+				</div>
+				<button class="close-btn" type="button" (click)="closeStaffContactModal()">&times;</button>
+			</div>
+
+			<div class="modal-body contact-modal-body">
+				<div class="staff-contact-grid modal-contact-grid">
+					<div class="contact-item">
+						<div class="contact-head">
+							<span class="contact-icon" aria-hidden="true"><i class="fas fa-envelope"></i></span>
+							<span class="contact-label">Email</span>
+							@if (hasStaffEmail(selectedStaff)) {
+							<button class="contact-copy-btn" type="button" (click)="copyStaffEmail(selectedStaff)" [attr.aria-label]="selectedStaff.displayName + ' email címének másolása'">
+								@if (isContactCopied('email')) {
+								Másolva
+								} @else {
+								Másolás
+								}
+							</button>
+							}
+						</div>
+						@if (hasStaffEmail(selectedStaff)) {
+						<a class="contact-value contact-link" [href]="getStaffEmailHref(selectedStaff)">{{ getStaffEmail(selectedStaff) }}</a>
+						} @else {
+						<strong class="contact-value contact-value-muted">{{ getStaffEmail(selectedStaff) }}</strong>
+						}
+					</div>
+					<div class="contact-item">
+						<div class="contact-head">
+							<span class="contact-icon" aria-hidden="true"><i class="fas fa-phone"></i></span>
+							<span class="contact-label">Telefon</span>
+							@if (hasStaffPhone(selectedStaff)) {
+							<button class="contact-copy-btn" type="button" (click)="copyStaffPhone(selectedStaff)" [attr.aria-label]="selectedStaff.displayName + ' telefonszámának másolása'">
+								@if (isContactCopied('phone')) {
+								Másolva
+								} @else {
+								Másolás
+								}
+							</button>
+							}
+						</div>
+						@if (hasStaffPhone(selectedStaff)) {
+						<a class="contact-value contact-link" [href]="getStaffPhoneHref(selectedStaff)">{{ getStaffPhone(selectedStaff) }}</a>
+						} @else {
+						<strong class="contact-value contact-value-muted">{{ getStaffPhone(selectedStaff) }}</strong>
+						}
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+}

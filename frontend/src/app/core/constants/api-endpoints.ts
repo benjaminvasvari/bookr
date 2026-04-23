@@ -2,12 +2,20 @@
 export const API_ENDPOINTS = {
   AUTH: {
     LOGIN: '/auth/login',
+    VERIFY_2FA_LOGIN: '/auth/2fa/verify',
     REGISTER: '/auth/register',
     LOGOUT: '/auth/logout',
     REFRESH_TOKEN: '/auth/refresh',
     VERIFY_EMAIL: '/auth/verify',
     REQUEST_PASSWORD_RESET: '/auth/resetPassRequest',
     RESET_PASSWORD: '/auth/resetPassUpdate',
+  },
+
+  TWO_FACTOR: {
+    STATUS: '/2fa/status',
+    SETUP: '/2fa/setup',
+    CONFIRM: '/2fa/confirm',
+    DISABLE: '/2fa/disable',
   },
 
   COMPANIES: {
@@ -31,6 +39,8 @@ export const API_ENDPOINTS = {
     BY_COMPANY: (companyId: number) =>
       `/services/getServiceCategoriesWithServicesByCompanyId?id=${companyId}`,
     CATEGORIES: '/services/categories',
+    STAFF_SERVICES: '/services/getStaffServices',
+    UPDATE_STAFF_SERVICE: '/services/updateStaffServices',
   },
 
   SPECIALISTS: {
@@ -55,6 +65,7 @@ export const API_ENDPOINTS = {
     CREATE: '/appointments/createAppointment',
     WEEKLY_CALENDAR: '/appointments/getWeeklyCalendarAppointments',
     BY_CLIENT: '/appointments/getAppointmentsByClient',
+    STAFF_DASHBOARD_TODAY_APPOINTMENTS: '/appointments/staffDashboardTodayAppointments',
     SALES_OVERVIEW_REVENUE: (companyId: number, period: 'week' | 'month' | 'year') =>
       `/appointments/getSalesOverviewRevenueByCompany?companyId=${companyId}&period=${period}`,
     SALES_OVERVIEW_AVG_BASKET: (companyId: number, period: 'week' | 'month' | 'year') =>
@@ -82,7 +93,8 @@ export const API_ENDPOINTS = {
     UPDATE_PROFILE: '/users/updateProfile',
     CHANGE_PASSWORD: '/users/change-password',
     UPLOAD_AVATAR: '/images/uploadUserImage',
-    DELETE_AVATAR: '/users/deleteAvatar',
+    DELETE_AVATAR: (userId: number, imageId: number) => `/images/users/${userId}/${imageId}`,
+    GET_NOTIFICATION_SETTINGS: '/notifsetting/getAll',
     UPDATE_NOTIFICATION_SETTINGS: '/notifsetting/update',
     CLIENTS_BY_COMPANY: (companyId: number, page: number, pageSize: number) =>
       `/users/getClientsByCompany?companyId=${companyId}&page=${page}&pageSize=${pageSize}`,
@@ -110,6 +122,8 @@ export const API_ENDPOINTS = {
     OWNER_WITH_APPOINTMENTS: '/staff/getAllStaffForOwnerWithAppointments',
     INDUSTRY_PAGE: '/staff/getForIndustryPage',
     UPDATE_COLOR: '/staff/update-color',
+    WORKING_HOURS: '/staffworkingh/staffWorkingHours',
+    UPDATE_WORKING_HOURS: '/staffworkingh/updateStaffWorkingHours',
   },
   PENDING_STAFF: {
     INVITE: '/pending-staff/invite',
