@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence version="2.2" xmlns="http://xmlns.jcp.org/xml/ns/persistence">
+    <!-- Teszt persistence unit - nincs DB kapcsolat -->
+    <persistence-unit name="com.vizsgaremek_bookr_war_1.0-SNAPSHOTPU" transaction-type="RESOURCE_LOCAL">
+        <properties>
+            <property name="javax.persistence.jdbc.driver" value="org.h2.Driver"/>
+            <property name="javax.persistence.jdbc.url" value="jdbc:h2:mem:test"/>
+        </properties>
+    </persistence-unit>
+</persistence>

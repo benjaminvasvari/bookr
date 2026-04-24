@@ -220,9 +220,9 @@ public class AuthController {
     }
 
     @POST
-    @Path("resetPassUpdate")
+    @Path("passUpdate")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response resetPassUpdate(@HeaderParam("Authorization") String authHeader, String body) {
+    public Response passUpdate(@HeaderParam("Authorization") String authHeader, String body) {
         JSONObject bodyObject = new JSONObject(body);
 
         // Extract token from "Bearer <token>"

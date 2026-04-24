@@ -290,11 +290,11 @@ public class Tokens implements Serializable {
         }
     }
 
-    public static Tokens generatePasswordResetToken(Integer userId) {
+    public static Tokens generatePasswordUpdateToken(Integer userId) {
         EntityManager em = emf.createEntityManager();
 
         try {
-            StoredProcedureQuery spq = em.createStoredProcedureQuery("generatePasswordResetToken");
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("generatePasswordUpdateToken");
             spq.registerStoredProcedureParameter("idIN", Integer.class, ParameterMode.IN);
             spq.setParameter("idIN", userId);
 

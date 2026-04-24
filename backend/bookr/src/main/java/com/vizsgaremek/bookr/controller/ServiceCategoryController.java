@@ -23,7 +23,7 @@ import org.json.JSONObject;
  *
  * @author vben
  */
-@Path("services")
+@Path("serviceCategory")
 public class ServiceCategoryController {
 
     private ServiceCategoryService layer = new ServiceCategoryService();

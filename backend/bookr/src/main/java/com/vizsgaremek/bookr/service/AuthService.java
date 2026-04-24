@@ -546,7 +546,7 @@ public class AuthService {
             }
 
             // ========== RESET TOKEN GENERÁLÁS ==========
-            Tokens resetTokenResult = Tokens.generatePasswordResetToken(userId);
+            Tokens resetTokenResult = Tokens.generatePasswordUpdateToken(userId);
 
             if (resetTokenResult == null || resetTokenResult.getToken() == null) {
                 status = "serverError";

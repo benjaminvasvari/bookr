@@ -227,6 +227,22 @@ public class Users implements Serializable {
         }
     }
 
+    // getMe
+    public Users(Integer id, String firstName, String lastName, String email, String phone, Integer companyIdInt, String avatarUrl, String rolesString) {
+        this.id = id;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.email = email;
+        this.phone = phone;
+        this.companyIdInt = companyIdInt;
+        this.imageUrl = avatarUrl;
+        this.rolesString = rolesString;
+
+        if (rolesString != null && !rolesString.isEmpty()) {
+            this.roleName = rolesString.split(",")[0].trim();
+        }
+    }
+
     // getUserByRegToken constructor
     public Users(Integer id, String email, Date registerFinishedAt, boolean isActive) {
         this.id = id;
@@ -1174,6 +1190,45 @@ public class Users implements Serializable {
         } catch (Exception ex) {
             ex.printStackTrace();
             return false;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static Users getMe(Integer userId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getMe");
+            spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
+            spq.setParameter("userIdIN", userId);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            Object[] record = resultList.get(0);
+
+            return new Users(
+                    Integer.valueOf(record[0].toString()),       // id
+                    record[1] != null ? record[1].toString() : null, // first_name
+                    record[2] != null ? record[2].toString() : null, // last_name
+                    record[3].toString(),                        // email
+                    record[4].toString(),                        // phone
+                    record[5] == null ? null : Integer.valueOf(record[6].toString()), // company_id
+                    record[6] == null ? null : record[7].toString(), // imageUrl
+                    record[7] == null ? null : record[8].toString()  // roles
+            );
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
         } finally {
             if (em != null && em.isOpen()) {
                 em.close();

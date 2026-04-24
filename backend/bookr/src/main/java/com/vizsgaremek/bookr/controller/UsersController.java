@@ -7,8 +7,11 @@ package com.vizsgaremek.bookr.controller;
 import com.vizsgaremek.bookr.model.Users;
 import com.vizsgaremek.bookr.security.JWT;
 import com.vizsgaremek.bookr.service.UsersService;
+
 import static com.vizsgaremek.bookr.util.ErrorResponseBuilder.buildErrorResponse;
+
 import com.vizsgaremek.bookr.util.RoleChecker;
+
 import java.util.Objects;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.UriInfo;
@@ -22,6 +25,7 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+
 import org.json.JSONObject;
 
 /**
@@ -226,5 +230,24 @@ public class UsersController {
                 .entity(toReturn.toString())
                 .type(MediaType.APPLICATION_JSON)
                 .build();
+    }
+
+    @GET
+    @Path("me")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getMe(@HeaderParam("Authorization") String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return buildErrorResponse(401, "missingToken");
+        }
+
+        String jwtToken = authHeader.substring(7);
+        Boolean validJwt = JWT.validateAccessToken(jwtToken);
+
+        if (validJwt == null) return buildErrorResponse(401, "tokenExpired");
+        if (!validJwt) return buildErrorResponse(401, "invalidToken");
+
+        JSONObject toReturn = layer.getMe(jwtToken);
+        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                .entity(toReturn.toString()).type(MediaType.APPLICATION_JSON).build();
     }
 }
