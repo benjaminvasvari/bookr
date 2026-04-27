@@ -225,6 +225,7 @@ export class ProfileInfoComponent implements OnInit, OnDestroy {
           this.currentUser = refreshedUser;
           this.avatarUploadSuccess = true;
           this.closeAvatarPreview();
+          window.location.reload();
 
           // Success message hide after 3 seconds
           setTimeout(() => {

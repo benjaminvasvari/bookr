@@ -13,10 +13,18 @@
         [output]="'blob'"
         [maintainAspectRatio]="maintainAspectRatio"
         [aspectRatio]="aspectRatio"
+        [cropper]="cropperPosition"
+        [containWithinAspectRatio]="containWithinAspectRatio"
         [roundCropper]="roundCropper"
+        [cropperMaxWidth]="cropperMaxWidth"
+        [cropperMaxHeight]="cropperMaxHeight"
+        [cropperStaticWidth]="computedCropperStaticWidth"
+        [cropperStaticHeight]="computedCropperStaticHeight"
+        [allowMoveImage]="true"
         [onlyScaleDown]="true"
         [hideResizeSquares]="false"
         format="png"
+        (imageLoaded)="onImageLoaded($event)"
         (imageCropped)="onImageCropped($event)"
       ></image-cropper>
     </div>

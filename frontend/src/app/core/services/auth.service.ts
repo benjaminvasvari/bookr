@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { BehaviorSubject, map, Observable, tap } from 'rxjs';
 import { Router } from '@angular/router';
 
 import { environment } from '../../../environments/environment';
@@ -184,8 +184,15 @@ export class AuthService {
    */
   refreshCurrentUser(): Observable<User> {
     return this.http
-      .get<User>(`${this.apiUrl}${API_ENDPOINTS.USER.ME}`)
+      .get<User | { data?: User }>(`${this.apiUrl}${API_ENDPOINTS.USER.ME}`)
       .pipe(
+        map((response) => {
+          if (response && typeof response === 'object' && 'data' in response && response.data) {
+            return response.data;
+          }
+
+          return response as User;
+        }),
         tap((user) => {
           const currentUser = this.getCurrentUser();
           const mergedUser: User = {
