@@ -7,7 +7,9 @@
         class="search-input"
         placeholder="Keresés"
         [(ngModel)]="searchQuery"
+        (ngModelChange)="onSearchInputChange($event)"
         (keyup.enter)="onSearch()"
+        (blur)="closeSearchResults()"
       />
       <button class="search-icon" (click)="onSearch()" aria-label="Keresés indítása">
         <svg
@@ -26,6 +28,32 @@
           />
         </svg>
       </button>
+
+      @if (isLoadingSearch) {
+        <div class="search-dropdown">
+          <div class="search-dropdown-loading">
+            <div class="spinner spinner-sm"></div>
+            <span>Keresés...</span>
+          </div>
+        </div>
+      } @else if (showSearchResults) {
+        <div class="search-dropdown">
+          @if (searchResults.length === 0) {
+            <div class="search-dropdown-empty">Nincs találat</div>
+          } @else {
+            @for (company of searchResults; track company.id) {
+              <div class="search-dropdown-item" (mousedown)="onSearchResultClick(company)">
+                <img class="search-dropdown-img" [src]="company.imageUrl" [alt]="company.name" />
+                <div class="search-dropdown-info">
+                  <span class="search-dropdown-name">{{ company.name }}</span>
+                  <span class="search-dropdown-address">{{ company.address }}</span>
+                </div>
+                <span class="search-dropdown-rating">★ {{ company.rating }}</span>
+              </div>
+            }
+          }
+        </div>
+      }
     </div>
   </div>
 </section>

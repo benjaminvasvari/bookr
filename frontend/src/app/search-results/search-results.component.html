@@ -1,0 +1,112 @@
+<!-- Search Header -->
+<div class="search-header">
+  <div class="container">
+    <div class="search-bar-row">
+      <button class="back-btn" (click)="goHome()" aria-label="Vissza a főoldalra">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+      <div class="search-container">
+        <input
+          type="text"
+          class="search-input"
+          placeholder="Keresés..."
+          [(ngModel)]="searchQuery"
+          (ngModelChange)="onSearchInputChange($event)"
+          (keyup.enter)="onSearch()"
+          autofocus
+        />
+        <button class="search-icon" (click)="onSearch()" aria-label="Keresés indítása">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="3"/>
+            <path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    @if (searchQuery.trim() && !isLoading) {
+      <p class="results-meta">
+        @if (results.length > 0) {
+          <span class="results-count">{{ results.length }} találat</span> erre: <strong>"{{ searchQuery }}"</strong>
+        } @else if (hasSearched) {
+          Nincs találat erre: <strong>"{{ searchQuery }}"</strong>
+        }
+      </p>
+    }
+  </div>
+</div>
+
+<!-- Content -->
+<div class="content">
+  <div class="container">
+
+    <!-- Loading -->
+    @if (isLoading) {
+      <div class="loading-container">
+        <div class="spinner"></div>
+        <p class="loading-text">Keresés...</p>
+      </div>
+    }
+
+    <!-- Empty / no search yet -->
+    @else if (!hasSearched || !searchQuery.trim()) {
+      <div class="empty-state">
+        <div class="empty-icon">
+          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="11" cy="11" r="8" stroke="#c0c0c0" stroke-width="2"/>
+            <path d="M21 21l-4.35-4.35" stroke="#c0c0c0" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <p class="empty-title">Mire keresel?</p>
+        <p class="empty-sub">Írd be a keresési feltételt fent</p>
+      </div>
+    }
+
+    <!-- No results -->
+    @else if (results.length === 0) {
+      <div class="empty-state">
+        <div class="empty-icon">
+          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="11" cy="11" r="8" stroke="#c0c0c0" stroke-width="2"/>
+            <path d="M21 21l-4.35-4.35" stroke="#c0c0c0" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <p class="empty-title">Nincs találat</p>
+        <p class="empty-sub">Próbálj más kulcsszót!</p>
+      </div>
+    }
+
+    <!-- Results grid -->
+    @else {
+      <div class="results-grid">
+        @for (company of results; track company.id) {
+          <div class="result-card" (click)="goToCompany(company.id)">
+            <div class="card-image">
+              <img [src]="company.imageUrl" [alt]="company.name" loading="lazy" />
+            </div>
+            <div class="card-info">
+              <h3 class="card-name">{{ company.name }}</h3>
+              <div class="card-rating">
+                <span class="rating-value">{{ company.rating }}</span>
+                <span class="rating-stars">
+                  @for (star of getRatingStars(company.rating); track $index) {
+                    <span class="star" [class.star-empty]="!star.filled">★</span>
+                  }
+                </span>
+                <span class="review-count">({{ company.reviewCount }})</span>
+              </div>
+              <p class="card-address">{{ company.address }}</p>
+              <button class="btn-book" (click)="$event.stopPropagation(); goToCompany(company.id)">
+                Foglalás
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+  </div>
+</div>

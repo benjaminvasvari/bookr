@@ -1,7 +1,10 @@
-import { AfterViewInit, Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { Subject } from 'rxjs';
+import { debounceTime, distinctUntilChanged, switchMap, takeUntil } from 'rxjs/operators';
+import { of } from 'rxjs';
 import { Company } from '../core/models';
 import { CompaniesService } from '../core/services/companies.service';
 import { Title } from '@angular/platform-browser';
@@ -22,11 +25,18 @@ interface Review {
   templateUrl: './main-page.component.html',
   styleUrls: ['./main-page.component.css'],
 })
-export class MainPageComponent implements OnInit, AfterViewInit {
+export class MainPageComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('reviewsCarousel') reviewsCarousel?: ElementRef<HTMLDivElement>;
 
   searchQuery: string = '';
   activeReviewIndex = 0;
+
+  // Search
+  searchResults: Company[] = [];
+  isLoadingSearch: boolean = false;
+  showSearchResults: boolean = false;
+  private searchSubject$ = new Subject<string>();
+  private destroy$ = new Subject<void>();
 
   // Company lists
   topRecommendations: Company[] = [];
@@ -116,12 +126,44 @@ export class MainPageComponent implements OnInit, AfterViewInit {
     this.loadTopRecommendations();
     this.loadNewServices();
     this.loadFeaturedServices();
-        this.title.setTitle(`Bookr`);
+    this.title.setTitle(`Bookr`);
 
+    this.searchSubject$
+      .pipe(
+        debounceTime(400),
+        distinctUntilChanged(),
+        switchMap((query) => {
+          if (!query.trim()) {
+            this.searchResults = [];
+            this.showSearchResults = false;
+            this.isLoadingSearch = false;
+            return of([]);
+          }
+          this.isLoadingSearch = true;
+          return this.companiesService.searchCompanies(query);
+        }),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: (results: Company[]) => {
+          this.searchResults = results;
+          this.isLoadingSearch = false;
+          this.showSearchResults = true;
+        },
+        error: () => {
+          this.searchResults = [];
+          this.isLoadingSearch = false;
+        },
+      });
   }
 
   ngAfterViewInit(): void {
     this.onReviewsScroll();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   loadTopRecommendations(): void {
@@ -194,10 +236,26 @@ export class MainPageComponent implements OnInit, AfterViewInit {
 
   onSearch(): void {
     if (this.searchQuery.trim()) {
-      console.log('Searching for:', this.searchQuery);
-      // TODO: Navigate to search results page
-      // this.router.navigate(['/search'], { queryParams: { q: this.searchQuery } });
+      this.router.navigate(['/search'], { queryParams: { q: this.searchQuery } });
+      this.showSearchResults = false;
     }
+  }
+
+  onSearchInputChange(value: string): void {
+    this.searchSubject$.next(value);
+    if (!value.trim()) {
+      this.showSearchResults = false;
+    }
+  }
+
+  onSearchResultClick(company: Company): void {
+    this.showSearchResults = false;
+    this.searchQuery = '';
+    this.goToService(company.id);
+  }
+
+  closeSearchResults(): void {
+    this.showSearchResults = false;
   }
 
   goToService(serviceId: number): void {

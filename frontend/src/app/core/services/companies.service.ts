@@ -158,10 +158,15 @@ export class CompaniesService {
   /**
    * Cégek keresése
    */
-  searchCompanies(query: string): Observable<Company[]> {
-    const params = new HttpParams().set('q', query);
+  searchCompanies(query: string, page: number = 1, pageSize: number = 10): Observable<Company[]> {
+    const params = new HttpParams()
+      .set('q', query)
+      .set('page', page.toString())
+      .set('pageSize', pageSize.toString());
 
-    return this.http.get<Company[]>(`${this.apiUrl}${API_ENDPOINTS.COMPANIES.SEARCH}`, { params });
+    return this.http
+      .get<any>(`${this.apiUrl}${API_ENDPOINTS.COMPANIES.SEARCH}`, { params })
+      .pipe(map((response: any) => response.result?.data || []));
   }
 
   /**

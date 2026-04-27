@@ -15,6 +15,7 @@ import { AppointmentPaymentComponent } from './appointment-payment/appointment-p
 import { authGuard } from './core/guards/auth.guard';
 import { roleGuard } from './core/guards/role.guard';
 import { ResetPasswordComponent } from './reset-password/reset-password.component';
+import { SearchResultsComponent } from './search-results/search-results.component';
 
 const settingsLeaveGuard: CanDeactivateFn<{ canDeactivate: () => boolean }> = (component) =>
   component.canDeactivate();
@@ -23,6 +24,11 @@ export const appRoutes: Routes = [
   {
     path: '',
     component: MainPageComponent,
+    data: { showFooter: true },
+  },
+  {
+    path: 'search',
+    component: SearchResultsComponent,
     data: { showFooter: true },
   },
   {

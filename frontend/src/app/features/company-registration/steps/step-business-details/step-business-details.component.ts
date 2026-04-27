@@ -19,6 +19,7 @@ export class StepBusinessDetailsComponent implements OnInit {
   @Input() initialData: any;
 
   businessForm: FormGroup;
+  minBookingHoursSameDayPickerModel: Date | null = null;
 
   // Pénznem csak HUF marad
   currency = 'HUF';
@@ -67,6 +68,16 @@ export class StepBusinessDetailsComponent implements OnInit {
       this.emitFormStatus();
     });
 
+    this.businessForm.get('minBookingHoursSameDay')?.valueChanges.subscribe((value) => {
+      const nextModel = typeof value === 'string' ? this.parseTimeString(value) : null;
+      const currentTime = this.minBookingHoursSameDayPickerModel?.getTime() ?? null;
+      const nextTime = nextModel?.getTime() ?? null;
+
+      if (currentTime !== nextTime) {
+        this.minBookingHoursSameDayPickerModel = nextModel;
+      }
+    });
+
     this.businessForm.get('minBookingSameDayNone')?.valueChanges.subscribe((isNone) => {
       const control = this.businessForm.get('minBookingHoursSameDay');
       if (isNone) {
@@ -90,6 +101,10 @@ export class StepBusinessDetailsComponent implements OnInit {
         this.businessForm.get('minBookingHoursSameDay')?.disable({ emitEvent: false });
       }
     }
+
+    this.minBookingHoursSameDayPickerModel = this.parseTimeString(
+      this.businessForm.get('minBookingHoursSameDay')?.value
+    );
 
     // Kezdeti validitás kibocsátása
     this.emitFormStatus();
@@ -146,21 +161,13 @@ export class StepBusinessDetailsComponent implements OnInit {
     return this.businessForm.valid;
   }
 
-  get minBookingHoursSameDayModel(): Date | null {
-    const value = this.businessForm.get('minBookingHoursSameDay')?.value;
-    if (typeof value !== 'string') {
-      return null;
-    }
-
-    return this.parseTimeString(value);
-  }
-
   onMinBookingHoursSameDayPickerChange(value: Date | null): void {
     const formatted = this.formatTime(value);
     if (!formatted) {
       return;
     }
 
+    this.minBookingHoursSameDayPickerModel = value;
     this.businessForm.get('minBookingHoursSameDay')?.setValue(formatted);
   }
 
