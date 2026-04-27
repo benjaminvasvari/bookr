@@ -27,6 +27,7 @@ export class StepOpeningHoursComponent implements OnInit {
   @Input() initialData: any;
 
   openingHoursForm: FormGroup;
+  dayTimeModels: Record<number, { open: Date | null; close: Date | null }> = {};
   
   days: DayOpeningHours[] = [
     { dayName: 'Hétfő', dayNumber: 1, isOpen: true, openTime: '09:00', closeTime: '17:00' },
@@ -50,6 +51,8 @@ export class StepOpeningHoursComponent implements OnInit {
       this.days = this.initialData.days;
     }
 
+    this.refreshDayTimeModels();
+
     // Kezdeti validitás kibocsátása
     this.emitFormStatus();
   }
@@ -67,6 +70,7 @@ export class StepOpeningHoursComponent implements OnInit {
     const day = this.days.find(d => d.dayNumber === dayNumber);
     if (day) {
       day.isOpen = !day.isOpen;
+      this.updateDayTimeModel(day);
       this.emitFormStatus();
     }
   }
@@ -76,6 +80,7 @@ export class StepOpeningHoursComponent implements OnInit {
     const day = this.days.find(d => d.dayNumber === dayNumber);
     if (day) {
       day.openTime = time;
+      this.updateDayTimeModel(day);
       this.emitFormStatus();
     }
   }
@@ -85,6 +90,7 @@ export class StepOpeningHoursComponent implements OnInit {
     const day = this.days.find(d => d.dayNumber === dayNumber);
     if (day) {
       day.closeTime = time;
+      this.updateDayTimeModel(day);
       this.emitFormStatus();
     }
   }
@@ -102,6 +108,7 @@ export class StepOpeningHoursComponent implements OnInit {
         day.openTime = '09:00';
         day.closeTime = '17:00';
       }
+      this.updateDayTimeModel(day);
     });
     this.emitFormStatus();
   }
@@ -110,6 +117,7 @@ export class StepOpeningHoursComponent implements OnInit {
   setAllDaysClosed(): void {
     this.days.forEach(day => {
       day.isOpen = false;
+      this.updateDayTimeModel(day);
     });
     this.emitFormStatus();
   }
@@ -123,6 +131,14 @@ export class StepOpeningHoursComponent implements OnInit {
   isFormValid(): boolean {
     // Az opening hours opcionális
     return true;
+  }
+
+  getDayOpenTimeModel(dayNumber: number): Date | null {
+    return this.dayTimeModels[dayNumber]?.open ?? null;
+  }
+
+  getDayCloseTimeModel(dayNumber: number): Date | null {
+    return this.dayTimeModels[dayNumber]?.close ?? null;
   }
 
   toTimeModel(value: string): Date | null {
@@ -177,5 +193,17 @@ export class StepOpeningHoursComponent implements OnInit {
     const hours = String(value.getHours()).padStart(2, '0');
     const minutes = String(value.getMinutes()).padStart(2, '0');
     return `${hours}:${minutes}`;
+  }
+
+  private refreshDayTimeModels(): void {
+    this.dayTimeModels = {};
+    this.days.forEach(day => this.updateDayTimeModel(day));
+  }
+
+  private updateDayTimeModel(day: DayOpeningHours): void {
+    this.dayTimeModels[day.dayNumber] = {
+      open: this.toTimeModel(day.openTime),
+      close: this.toTimeModel(day.closeTime)
+    };
   }
 }

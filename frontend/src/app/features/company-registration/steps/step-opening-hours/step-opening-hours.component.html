@@ -25,7 +25,7 @@
                 id="open-{{ day.dayNumber }}"
                 matInput
                 [matTimepicker]="openPicker"
-                [ngModel]="toTimeModel(day.openTime)"
+                [ngModel]="getDayOpenTimeModel(day.dayNumber)"
                 (ngModelChange)="onOpenTimePickerChange(day.dayNumber, $event)"
                 class="time-input"
                 readonly
@@ -41,7 +41,7 @@
                 id="close-{{ day.dayNumber }}"
                 matInput
                 [matTimepicker]="closePicker"
-                [ngModel]="toTimeModel(day.closeTime)"
+                [ngModel]="getDayCloseTimeModel(day.dayNumber)"
                 (ngModelChange)="onCloseTimePickerChange(day.dayNumber, $event)"
                 class="time-input"
                 readonly
