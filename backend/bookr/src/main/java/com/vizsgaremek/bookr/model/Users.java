@@ -1221,9 +1221,9 @@ public class Users implements Serializable {
                     record[2] != null ? record[2].toString() : null, // last_name
                     record[3].toString(),                        // email
                     record[4].toString(),                        // phone
-                    record[5] == null ? null : Integer.valueOf(record[6].toString()), // company_id
-                    record[6] == null ? null : record[7].toString(), // imageUrl
-                    record[7] == null ? null : record[8].toString()  // roles
+                    record[5] == null ? null : Integer.valueOf(record[5].toString()), // company_id
+                    record[6] == null ? null : record[6].toString(), // imageUrl
+                    record[7] == null ? null : record[7].toString()  // roles
             );
 
         } catch (Exception ex) {
