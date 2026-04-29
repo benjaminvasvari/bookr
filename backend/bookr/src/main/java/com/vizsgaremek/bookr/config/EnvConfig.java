@@ -54,6 +54,14 @@ public class EnvConfig {
             LOGGER.warning("Classpath-ról való olvasás sikertelen: " + e.getMessage());
         }
 
+        // 2. Próbáljuk a /opt/bookr/config/.env útvonalról
+        File serverEnvFile = new File("/opt/bookr/config/.env");
+        if (serverEnvFile.exists()) {
+            LOGGER.info("✓ .env fájl betöltve: /opt/bookr/config/.env");
+            loadFromFile(serverEnvFile);
+            return;
+        }
+
         // Ha egyik sem sikerült
         String currentDir = System.getProperty("user.dir");
         throw new IllegalStateException(
