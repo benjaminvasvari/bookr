@@ -4,19 +4,20 @@
  */
 package com.vizsgaremek.bookr.controller;
 
+import com.vizsgaremek.bookr.security.JWT;
 import com.vizsgaremek.bookr.service.ServiceCategoryService;
+
+import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.UriInfo;
-import javax.ws.rs.Produces;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.PUT;
-import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+
+import com.vizsgaremek.bookr.util.RoleChecker;
 import org.json.JSONArray;
 import org.json.JSONObject;
+
+import static com.vizsgaremek.bookr.util.ErrorResponseBuilder.buildErrorResponse;
 
 /**
  * REST Web Service
@@ -27,6 +28,7 @@ import org.json.JSONObject;
 public class ServiceCategoryController {
 
     private ServiceCategoryService layer = new ServiceCategoryService();
+    private RoleChecker RoleChecker = new RoleChecker();
 
     @Context
     private UriInfo context;
@@ -72,13 +74,13 @@ public class ServiceCategoryController {
             // Becsomagoljuk JSONObject-be
             JSONObject response = new JSONObject();
 
-            if (categories != null && categories.length() > 0) {
+            if (categories != null) {
                 response.put("statusCode", 200);
                 response.put("message", "Categories retrieved successfully");
                 response.put("data", categories);
             } else {
-                response.put("statusCode", 400);
-                response.put("message", "InvalidParam");
+                response.put("statusCode", 404);
+                response.put("message", "Company not found");
                 response.put("data", new JSONArray());
             }
 
@@ -102,5 +104,50 @@ public class ServiceCategoryController {
                     .type(MediaType.APPLICATION_JSON)
                     .build();
         }
+    }
+
+    @POST
+    @Path("createServiceCategory")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response createServiceCategory(@HeaderParam("Authorization") String authHeader, String body) {
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return buildErrorResponse(401, "missingToken");
+        }
+
+        String jwtToken = authHeader.substring(7);
+        Boolean validJwt = JWT.validateAccessToken(jwtToken);
+
+        if (validJwt == null) {
+            return buildErrorResponse(401, "tokenExpired");
+        } else if (validJwt == false) {
+            return buildErrorResponse(401, "invalidToken");
+        }
+
+        String userRoles = JWT.getRolesFromAccessToken(jwtToken);
+        boolean hasPermission = RoleChecker.hasAllRoles(userRoles, "client", "owner")
+                || RoleChecker.hasAllRoles(userRoles, "client", "superadmin");
+        if (!hasPermission) {
+            return buildErrorResponse(403, "forbidden");
+        }
+
+        Integer companyId = JWT.getCompanyIdFromAccessToken(jwtToken);
+
+        JSONObject bodyObj = new JSONObject(body);
+
+        if (!bodyObj.has("name") || bodyObj.isNull("name") || bodyObj.getString("name").trim().isEmpty()) {
+            return buildErrorResponse(400, "missingFields");
+        }
+
+        String name = bodyObj.getString("name").trim();
+        String description = bodyObj.optString("description", null);
+
+        JSONObject toReturn = layer.createServiceCategory(companyId, name, description);
+
+        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                .entity(toReturn.toString())
+                .type(MediaType.APPLICATION_JSON)
+                .build();
     }
 }

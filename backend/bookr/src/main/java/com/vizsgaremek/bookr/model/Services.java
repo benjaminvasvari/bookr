@@ -6,6 +6,7 @@ package com.vizsgaremek.bookr.model;
 
 import com.vizsgaremek.bookr.DTO.OwnerPanelDTO;
 import com.vizsgaremek.bookr.DTO.staffPanelDTO;
+import com.vizsgaremek.bookr.util.StoredProcedureUtil;
 
 import static com.vizsgaremek.bookr.model.Users.emf;
 
@@ -48,17 +49,17 @@ import javax.xml.bind.annotation.XmlTransient;
 @Table(name = "services")
 @XmlRootElement
 @NamedQueries({
-        @NamedQuery(name = "Services.findAll", query = "SELECT s FROM Services s"),
-        @NamedQuery(name = "Services.findById", query = "SELECT s FROM Services s WHERE s.id = :id"),
-        @NamedQuery(name = "Services.findByName", query = "SELECT s FROM Services s WHERE s.name = :name"),
-        @NamedQuery(name = "Services.findByDurationMinutes", query = "SELECT s FROM Services s WHERE s.durationMinutes = :durationMinutes"),
-        @NamedQuery(name = "Services.findByPrice", query = "SELECT s FROM Services s WHERE s.price = :price"),
-        @NamedQuery(name = "Services.findByCurrency", query = "SELECT s FROM Services s WHERE s.currency = :currency"),
-        @NamedQuery(name = "Services.findByIsActive", query = "SELECT s FROM Services s WHERE s.isActive = :isActive"),
-        @NamedQuery(name = "Services.findByCreatedAt", query = "SELECT s FROM Services s WHERE s.createdAt = :createdAt"),
-        @NamedQuery(name = "Services.findByUpdatedAt", query = "SELECT s FROM Services s WHERE s.updatedAt = :updatedAt"),
-        @NamedQuery(name = "Services.findByDeletedAt", query = "SELECT s FROM Services s WHERE s.deletedAt = :deletedAt"),
-        @NamedQuery(name = "Services.findByIsDeleted", query = "SELECT s FROM Services s WHERE s.isDeleted = :isDeleted")})
+    @NamedQuery(name = "Services.findAll", query = "SELECT s FROM Services s"),
+    @NamedQuery(name = "Services.findById", query = "SELECT s FROM Services s WHERE s.id = :id"),
+    @NamedQuery(name = "Services.findByName", query = "SELECT s FROM Services s WHERE s.name = :name"),
+    @NamedQuery(name = "Services.findByDurationMinutes", query = "SELECT s FROM Services s WHERE s.durationMinutes = :durationMinutes"),
+    @NamedQuery(name = "Services.findByPrice", query = "SELECT s FROM Services s WHERE s.price = :price"),
+    @NamedQuery(name = "Services.findByCurrency", query = "SELECT s FROM Services s WHERE s.currency = :currency"),
+    @NamedQuery(name = "Services.findByIsActive", query = "SELECT s FROM Services s WHERE s.isActive = :isActive"),
+    @NamedQuery(name = "Services.findByCreatedAt", query = "SELECT s FROM Services s WHERE s.createdAt = :createdAt"),
+    @NamedQuery(name = "Services.findByUpdatedAt", query = "SELECT s FROM Services s WHERE s.updatedAt = :updatedAt"),
+    @NamedQuery(name = "Services.findByDeletedAt", query = "SELECT s FROM Services s WHERE s.deletedAt = :deletedAt"),
+    @NamedQuery(name = "Services.findByIsDeleted", query = "SELECT s FROM Services s WHERE s.isDeleted = :isDeleted")})
 public class Services implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -496,6 +497,51 @@ public class Services implements Serializable {
             throw ex;
         } finally {
             em.close();
+        }
+    }
+
+    public static Integer createService(Integer companyId, String name, String description,
+            Integer durationMinutes, Double price,
+            Integer categoryId, Boolean isActive) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("createService");
+
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("nameIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("descriptionIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("durationMinutesIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("priceIN", Double.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("categoryIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("isActiveIN", Boolean.class, ParameterMode.IN);
+
+            spq.setParameter("companyIdIN", companyId);
+            spq.setParameter("nameIN", name);
+            StoredProcedureUtil.setNullableParameter(spq, "descriptionIN", description);
+            spq.setParameter("durationMinutesIN", durationMinutes);
+            spq.setParameter("priceIN", price);
+            spq.setParameter("categoryIdIN", categoryId);
+            spq.setParameter("isActiveIN", isActive);
+
+            spq.execute();
+
+            List<?> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            Object record = resultList.get(0);
+            return ((Number) record).intValue();
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
         }
     }
 }

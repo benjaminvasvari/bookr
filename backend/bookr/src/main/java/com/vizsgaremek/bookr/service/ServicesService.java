@@ -187,4 +187,34 @@ public class ServicesService {
 
         return toReturn;
     }
+
+    public JSONObject createService(Integer companyId, String name, String description,
+            Integer durationMinutes, Double price,
+            Integer categoryId, Boolean isActive) {
+
+        JSONObject toReturn = new JSONObject();
+
+        Boolean companyExist = CompaniesService.validateCompanyExist(companyId);
+        if (!companyExist) {
+            toReturn.put("statusCode", 404);
+            toReturn.put("status", "NotFound");
+            toReturn.put("message", "Company not found with ID: " + companyId);
+            return toReturn;
+        }
+
+        Integer newServiceId = layer.createService(companyId, name, description,
+                durationMinutes, price, categoryId, isActive);
+
+        if (newServiceId == null) {
+            toReturn.put("statusCode", 500);
+            toReturn.put("status", "ModelException");
+            toReturn.put("message", "Internal server error");
+        } else {
+            toReturn.put("statusCode", 201);
+            toReturn.put("status", "success");
+            toReturn.put("serviceId", newServiceId);
+        }
+
+        return toReturn;
+    }
 }

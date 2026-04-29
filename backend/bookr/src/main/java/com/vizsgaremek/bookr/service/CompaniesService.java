@@ -35,7 +35,6 @@ import org.json.JSONObject;
 public class CompaniesService {
 
     private Companies layer = new Companies();
-    private ServiceCategoryService serviceCategoryService = new ServiceCategoryService();
     private Users Users = new Users();
     private UserXRole UserXRole = new UserXRole();
     private AuditLogService AuditLogService = new AuditLogService();
@@ -64,7 +63,8 @@ public class CompaniesService {
                 return error;
             }
 
-            // 3. SERVICE CATEGORIES (csoportosítva!)  ← JAVÍTVA!
+            // 3. SERVICE CATEGORIES
+            ServiceCategoryService serviceCategoryService = new ServiceCategoryService();
             JSONArray serviceCategories = serviceCategoryService.getServiceCategoriesWithServicesByCompanyId(id);
 
             // 4. REVIEWS

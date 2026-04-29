@@ -5,9 +5,11 @@
 package com.vizsgaremek.bookr.service;
 
 import com.vizsgaremek.bookr.model.ServiceCategories;
+
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -18,6 +20,7 @@ import org.json.JSONObject;
 public class ServiceCategoryService {
 
     private ServiceCategories layer = new ServiceCategories();
+    private CompaniesService CompaniesService = new CompaniesService();
 
     private String formatDuration(int minutes) {
         if (minutes < 60) {
@@ -59,11 +62,11 @@ public class ServiceCategoryService {
                 if (service.getServiceId() != null) {
                     JSONObject serviceObj = new JSONObject();
 
-                    serviceObj.put("id", service.getServiceId());
-                    serviceObj.put("name", service.getServiceName());
-                    serviceObj.put("duration", formatDuration(service.getServiceDurationMinutes()));
-                    serviceObj.put("price", service.getServicePrice());
-                    serviceObj.put("currency", service.getServiceCurrency());
+                    serviceObj.put("id", service.getServiceId() != null ? service.getServiceId() : JSONObject.NULL);
+                    serviceObj.put("name", service.getServiceName() != null ? service.getServiceName() : JSONObject.NULL);
+                    serviceObj.put("duration", service.getServiceDurationMinutes() != null ? formatDuration(service.getServiceDurationMinutes()) : JSONObject.NULL);
+                    serviceObj.put("price", service.getServicePrice() != null ? service.getServicePrice() : JSONObject.NULL);
+                    serviceObj.put("currency", service.getServiceCurrency() != null ? service.getServiceCurrency() : JSONObject.NULL);
 
                     category.getJSONArray("services").put(serviceObj);
                 }
@@ -81,6 +84,33 @@ public class ServiceCategoryService {
             e.printStackTrace();
             return null;
         }
+    }
+
+    public JSONObject createServiceCategory(Integer companyId, String name, String description) {
+
+        JSONObject toReturn = new JSONObject();
+
+        Boolean companyExist = CompaniesService.validateCompanyExist(companyId);
+        if (!companyExist) {
+            toReturn.put("statusCode", 404);
+            toReturn.put("status", "NotFound");
+            toReturn.put("message", "Company not found with ID: " + companyId);
+            return toReturn;
+        }
+
+        Integer newCategoryId = layer.createServiceCategory(companyId, name, description);
+
+        if (newCategoryId == null) {
+            toReturn.put("statusCode", 500);
+            toReturn.put("status", "ModelException");
+            toReturn.put("message", "Internal server error");
+        } else {
+            toReturn.put("statusCode", 201);
+            toReturn.put("status", "success");
+            toReturn.put("categoryId", newCategoryId);
+        }
+
+        return toReturn;
     }
 
 }

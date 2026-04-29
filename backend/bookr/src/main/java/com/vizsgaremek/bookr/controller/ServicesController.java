@@ -18,6 +18,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
+import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PUT;
 import javax.ws.rs.QueryParam;
@@ -250,5 +251,64 @@ public class ServicesController {
         JSONObject toReturn = layer.updateStaffService(userId, serviceId, isAssigned);
 
         return Response.status(Integer.parseInt(toReturn.get("statusCode").toString())).entity(toReturn.toString()).type(MediaType.APPLICATION_JSON).build();
+    }
+
+    @POST
+    @Path("createService")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response createService(@HeaderParam("Authorization") String authHeader, String body) {
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return buildErrorResponse(401, "missingToken");
+        }
+
+        String jwtToken = authHeader.substring(7);
+        Boolean validJwt = JWT.validateAccessToken(jwtToken);
+
+        if (validJwt == null) {
+            return buildErrorResponse(401, "tokenExpired");
+        } else if (validJwt == false) {
+            return buildErrorResponse(401, "invalidToken");
+        }
+
+        String userRoles = JWT.getRolesFromAccessToken(jwtToken);
+        boolean hasPermission = RoleChecker.hasAllRoles(userRoles, "client", "owner")
+                || RoleChecker.hasAllRoles(userRoles, "client", "superadmin");
+        if (!hasPermission) {
+            return buildErrorResponse(403, "forbidden");
+        }
+
+        Integer companyId = JWT.getCompanyIdFromAccessToken(jwtToken);
+
+        JSONObject bodyObj = new JSONObject(body);
+
+        if (!bodyObj.has("name") || bodyObj.isNull("name") || bodyObj.getString("name").trim().isEmpty()) {
+            return buildErrorResponse(400, "missingFields");
+        }
+        if (!bodyObj.has("durationMinutes") || bodyObj.isNull("durationMinutes")) {
+            return buildErrorResponse(400, "missingFields");
+        }
+        if (!bodyObj.has("price") || bodyObj.isNull("price")) {
+            return buildErrorResponse(400, "missingFields");
+        }
+        if (!bodyObj.has("categoryId") || bodyObj.isNull("categoryId")) {
+            return buildErrorResponse(400, "missingFields");
+        }
+
+        String name = bodyObj.getString("name").trim();
+        String description = bodyObj.optString("description", null);
+        Integer durationMinutes = bodyObj.getInt("durationMinutes");
+        Double price = bodyObj.getDouble("price");
+        Integer categoryId = bodyObj.getInt("categoryId");
+        Boolean isActive = bodyObj.optBoolean("isActive", true);
+
+        JSONObject toReturn = layer.createService(companyId, name, description,
+                durationMinutes, price, categoryId, isActive);
+
+        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                .entity(toReturn.toString())
+                .type(MediaType.APPLICATION_JSON)
+                .build();
     }
 }
