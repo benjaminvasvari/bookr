@@ -11,6 +11,7 @@ import com.vizsgaremek.bookr.model.Users;
 import com.vizsgaremek.bookr.security.JWT;
 
 import static com.vizsgaremek.bookr.util.ErrorResponseBuilder.buildErrorResponseJSON;
+import com.vizsgaremek.bookr.util.FileStorageUtil;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
@@ -338,7 +339,7 @@ public class AppointmentsService {
                     group.put("status", rawAppt.getString("status"));
                     group.put("companyId", companyId);
                     group.put("companyName", company.getName());
-                    group.put("companyLogo", company.getImageUrl());
+                    group.put("companyLogo", FileStorageUtil.buildFullUrl(company.getImageUrl()));
                     group.put("staffId", staffId);
                     group.put("staffName", staff.getDisplayName());
                     group.put("services", new JSONArray());
