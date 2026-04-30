@@ -5,6 +5,48 @@
     <p class="section-subtitle">Itt kezelheted a fiók beállításaidat</p>
   </div>
 
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">Megjelenés</h2>
+    </div>
+    <div class="card-body">
+      <div class="appearance-settings-group">
+        <div class="setting-item appearance-setting" [class.disabled]="followSystemTheme">
+          <div class="setting-info">
+            <h3 class="setting-title">Dark mode</h3>
+            <p class="setting-description">
+              {{ followSystemTheme ? 'A rendszer beállítása vezérli ezt a kapcsolót' : 'Sötét téma az összes oldalon' }}
+            </p>
+          </div>
+          <label class="toggle-switch">
+            <input
+              type="checkbox"
+              [(ngModel)]="isDarkMode"
+              (change)="onDarkModeChange()"
+              [disabled]="followSystemTheme"
+            />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-item appearance-setting">
+          <div class="setting-info">
+            <h3 class="setting-title">Rendszer téma követése</h3>
+            <p class="setting-description">Automatikusan a rendszer világos/sötét témáját használja</p>
+          </div>
+          <label class="toggle-switch">
+            <input
+              type="checkbox"
+              [(ngModel)]="followSystemTheme"
+              (change)="onFollowSystemThemeChange()"
+            />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Notification Settings Card -->
   <div class="card">
     <div class="card-header">
@@ -85,6 +127,56 @@
     <div class="card-header">
       <h2 class="card-title">Jelszó megváltoztatása</h2>
       <button class="btn-toggle" (click)="openPasswordModal()">Jelszó változtatás</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-heading-group">
+        <h2 class="card-title">Kétlépcsős azonosítás</h2>
+        <span class="status-badge" [class.enabled]="twoFactorEnabled">
+          {{ twoFactorEnabled ? 'Bekapcsolva' : 'Kikapcsolva' }}
+        </span>
+      </div>
+    </div>
+    <div class="card-body">
+      @if (twoFactorSuccess) {
+        <div class="alert alert-success">
+          <svg class="alert-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+          </svg>
+          <span>{{ twoFactorSuccess }}</span>
+        </div>
+      }
+
+      @if (twoFactorError && !showTwoFactorModal) {
+        <div class="alert alert-error">
+          <span>{{ twoFactorError }}</span>
+        </div>
+      }
+
+      <div class="setting-item security-setting">
+        <div class="setting-info">
+          <h3 class="setting-title">2FA bejelentkezés</h3>
+          <p class="setting-description">
+            Bejelentkezéskor egy második megerősítési lépést is kér a rendszer a nagyobb
+            biztonságért.
+          </p>
+          <p class="setting-note">
+            Bekapcsoláskor be kell olvasnod a QR-kódot a telefonos authenticator alkalmazásoddal,
+            majd meg kell adnod az ott látható 6 jegyű kódot.
+          </p>
+        </div>
+        <label class="toggle-switch">
+          <input
+            type="checkbox"
+            [checked]="twoFactorEnabled"
+            (change)="onTwoFactorToggleChange($event)"
+            [disabled]="isSavingTwoFactor"
+          />
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
     </div>
   </div>
 
@@ -180,6 +272,154 @@
           </button>
         </div>
       }
+    </div>
+  </div>
+}
+
+<!-- Two Factor Modal -->
+@if (showTwoFactorModal) {
+  <div class="modal-backdrop" (click)="closeTwoFactorModal()"></div>
+  <div class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">
+          {{ twoFactorMode === 'enable' ? 'Kétlépcsős azonosítás bekapcsolása' : 'Kétlépcsős azonosítás kikapcsolása' }}
+        </h3>
+        <button
+          class="modal-close"
+          (click)="closeTwoFactorModal()"
+          [disabled]="isSavingTwoFactor || isLoadingTwoFactorSetup"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+            <path
+              d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+            />
+          </svg>
+        </button>
+      </div>
+
+      <form [formGroup]="twoFactorForm" class="modal-body">
+        @if (twoFactorError) {
+          <div class="alert alert-error">
+            <span>{{ twoFactorError }}</span>
+          </div>
+        }
+
+        @if (twoFactorMode === 'enable') {
+          @if (recoveryCodes.length) {
+            <div class="alert alert-success">
+              <svg class="alert-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+              </svg>
+              <span>{{ twoFactorSuccess }}</span>
+            </div>
+
+            <p class="modal-description">
+              Mentsd el ezeket a helyreállító kódokat biztonságos helyre. Ezekkel akkor is be tudsz
+              lépni, ha nincs nálad a telefonod.
+            </p>
+
+            <div class="recovery-codes-card">
+              <div class="recovery-codes-grid">
+                @for (code of recoveryCodes; track code) {
+                  <div class="recovery-code-item">{{ code }}</div>
+                }
+              </div>
+            </div>
+          } @else if (isLoadingTwoFactorSetup) {
+            <div class="two-factor-loading-state">
+              <div class="loading-spinner"></div>
+              <p class="modal-description">QR-kód előkészítése folyamatban...</p>
+            </div>
+          } @else {
+            <p class="modal-description">
+              Olvasd be a QR-kódot Google Authenticator, Microsoft Authenticator vagy más TOTP
+              alkalmazással, majd add meg az ott megjelenő 6 jegyű kódot.
+            </p>
+
+            <div class="two-factor-setup-card">
+              @if (twoFactorQrCodeDataUrl) {
+                <div class="qr-preview">
+                  <img [src]="twoFactorQrCodeDataUrl" alt="2FA QR kód" class="qr-image" />
+                </div>
+              }
+
+              <div class="setup-secret-block">
+                <span class="setup-label">Setup secret</span>
+                <code class="setup-secret">{{ twoFactorSetupSecret }}</code>
+                <p class="setup-secret-note">
+                  Ha a QR-kódot valamiért nem tudod beolvasni, ezt a secretet kézzel is megadhatod
+                  az authenticator alkalmazásban.
+                </p>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">6 jegyű hitelesítő kód</label>
+              <input
+                type="text"
+                class="form-input"
+                formControlName="verificationCode"
+                placeholder="123456"
+                inputmode="numeric"
+                maxlength="6"
+                autocomplete="one-time-code"
+              />
+            </div>
+          }
+        } @else {
+          <p class="modal-description">
+            A kikapcsoláshoz add meg a telefonos authenticator alkalmazásod jelenlegi 6 jegyű kódját.
+          </p>
+
+          <div class="form-group">
+            <label class="form-label">6 jegyű hitelesítő kód</label>
+            <input
+              type="text"
+              class="form-input"
+              formControlName="verificationCode"
+              placeholder="123456"
+              inputmode="numeric"
+              maxlength="6"
+              autocomplete="one-time-code"
+            />
+          </div>
+        }
+      </form>
+
+      <div class="modal-footer">
+        @if (recoveryCodes.length) {
+          <button type="button" class="btn btn-secondary" (click)="downloadRecoveryCodes()">
+            Letöltés .txt-ként
+          </button>
+          <button type="button" class="btn btn-primary" (click)="closeTwoFactorModal()">
+            Bezárás
+          </button>
+        } @else {
+          <button
+            type="button"
+            class="btn btn-secondary"
+            (click)="closeTwoFactorModal()"
+            [disabled]="isSavingTwoFactor || isLoadingTwoFactorSetup"
+          >
+            Mégse
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            (click)="twoFactorMode === 'enable' ? confirmEnableTwoFactor() : confirmDisableTwoFactor()"
+            [disabled]="twoFactorForm.invalid || isSavingTwoFactor || isLoadingTwoFactorSetup"
+          >
+            @if (isSavingTwoFactor) {
+              <span>Mentés...</span>
+            } @else if (twoFactorMode === 'enable') {
+              <span>2FA bekapcsolása</span>
+            } @else {
+              <span>2FA kikapcsolása</span>
+            }
+          </button>
+        }
+      </div>
     </div>
   </div>
 }

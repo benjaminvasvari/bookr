@@ -186,17 +186,51 @@ export class RegisterComponent implements OnInit, OnDestroy {
         this.isLoading = false;
 
         // Hibaüzenet beállítása
-        if (error.message && error.message.includes('email')) {
+        if (this.isDuplicateEmailError(error)) {
           this.errorMessage = 'Ez az email cím már regisztrálva van.';
-        } else if (error.message) {
-          this.errorMessage = error.message;
         } else {
-          this.errorMessage = 'Sikertelen regisztráció. Kérlek próbáld újra későb';
+          this.errorMessage = 'Sikertelen regisztráció. Kérlek próbáld újra később.';
         }
 
         console.error('Registration error:', error);
       },
     });
+  }
+
+  private isDuplicateEmailError(error: any): boolean {
+    const status = error?.status ?? error?.error?.statusCode;
+    if (status === 409) {
+      return true;
+    }
+
+    const message = [
+      error?.message,
+      error?.error?.message,
+      error?.error?.error,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+
+    return (
+      message.includes('email') &&
+      (
+        message.includes('már') ||
+        message.includes('mar') ||
+        message.includes('already') ||
+        message.includes('exists') ||
+        message.includes('taken') ||
+        message.includes('used') ||
+        message.includes('verified') ||
+        message.includes('hiteles') ||
+        message.includes('hitelsit') ||
+        message.includes('megerosit') ||
+        message.includes('megerősít') ||
+        message.includes('regisztr') ||
+        message.includes('letez') ||
+        message.includes('foglalt')
+      )
+    );
   }
 
   private markCurrentStepTouched(): void {

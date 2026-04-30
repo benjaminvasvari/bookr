@@ -157,3 +157,13 @@
     </div>
   </div>
 </div>
+
+<app-image-crop-modal
+  [visible]="showCropModal"
+  [imageFile]="cropSourceFile"
+  title="Kep kivagasa"
+  [maintainAspectRatio]="false"
+  [roundCropper]="false"
+  (cancel)="closeCropModal()"
+  (apply)="applyCrop($event)"
+></app-image-crop-modal>

@@ -1,6 +1,6 @@
 /* Footer Main */
 .footer {
-  background: linear-gradient(135deg, #1e3a52 0%, #2c3e50 100%);
+  background: linear-gradient(180deg, #27455d 0%, #233c52 100%);
   color: white;
   padding: 60px 0 0 0;
   margin-top: auto;
@@ -146,10 +146,11 @@
 
 /* Footer Bottom */
 .footer-bottom {
-  width: 100vw;
+  width: 100%;
   padding: 30px 0;
   margin: 0;
-  background: rgba(0, 0, 0, 0.2);
+  background: transparent;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .footer-bottom-content {

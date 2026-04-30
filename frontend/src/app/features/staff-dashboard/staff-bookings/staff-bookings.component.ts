@@ -1,14 +1,14 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
-interface StaffBookingItem {
-  id: number;
-  date: string;
-  time: string;
-  serviceName: string;
-  clientName: string;
+import { BookingService } from '../../../core/services/booking.service';
+import { StaffDashboardAppointment } from '../../../core/models/staff.model';
+
+interface StaffBookingItem extends StaffDashboardAppointment {
   status: 'confirmed' | 'pending' | 'cancelled';
 }
+
+type StaffBookingStatus = StaffBookingItem['status'];
 
 @Component({
   selector: 'app-staff-bookings',
@@ -17,31 +17,159 @@ interface StaffBookingItem {
   templateUrl: './staff-bookings.component.html',
   styleUrl: './staff-bookings.component.css',
 })
-export class StaffBookingsComponent {
-  bookings: StaffBookingItem[] = [
-    {
-      id: 1,
-      date: '2026-02-05',
-      time: '09:30',
-      serviceName: 'Hajvágás',
-      clientName: 'Kiss Anna',
-      status: 'confirmed',
-    },
-    {
-      id: 2,
-      date: '2026-02-05',
-      time: '11:00',
-      serviceName: 'Szakáll igazítás',
-      clientName: 'Nagy Bálint',
-      status: 'pending',
-    },
-    {
-      id: 3,
-      date: '2026-02-06',
-      time: '14:00',
-      serviceName: 'Festés',
-      clientName: 'Kovács Lili',
-      status: 'cancelled',
-    },
-  ];
+export class StaffBookingsComponent implements OnInit {
+  private readonly today = new Date();
+  private readonly todayIso = this.toIsoDate(this.today);
+  bookings: StaffBookingItem[] = [];
+  isLoading = true;
+  errorMessage = '';
+
+  constructor(private readonly bookingService: BookingService) {}
+
+  ngOnInit(): void {
+    this.loadTodayBookings();
+  }
+
+  get sortedBookings(): StaffBookingItem[] {
+    return this.bookings
+      .slice()
+      .sort((a, b) => this.toTimestamp(a) - this.toTimestamp(b));
+  }
+
+  get todayBookings(): StaffBookingItem[] {
+    return this.sortedBookings.filter((booking) => booking.date === this.todayIso);
+  }
+
+  get hasTodayBookings(): boolean {
+    return this.todayBookings.length > 0;
+  }
+
+  get todayLabel(): string {
+    return this.formatLongDate(this.todayIso);
+  }
+
+  get totalBookings(): number {
+    return this.todayBookings.length;
+  }
+
+  get confirmedBookingsCount(): number {
+    return this.getBookingCountByStatus('confirmed');
+  }
+
+  get pendingBookingsCount(): number {
+    return this.getBookingCountByStatus('pending');
+  }
+
+  get cancelledBookingsCount(): number {
+    return this.getBookingCountByStatus('cancelled');
+  }
+
+  getStatusLabel(status: StaffBookingItem['status']): string {
+    if (status === 'confirmed') {
+      return 'Visszaigazolt';
+    }
+
+    if (status === 'pending') {
+      return 'Folyamatban';
+    }
+
+    return 'Lemondva';
+  }
+
+  formatDate(dateValue: string): string {
+    const date = this.parseDateValue(dateValue);
+
+    if (!date) {
+      return dateValue;
+    }
+
+    return date.toLocaleDateString('hu-HU', {
+      month: 'short',
+      day: 'numeric',
+      weekday: 'short',
+    });
+  }
+
+  formatLongDate(dateValue: string): string {
+    const date = this.parseDateValue(dateValue);
+
+    if (!date) {
+      return dateValue;
+    }
+
+    return date.toLocaleDateString('hu-HU', {
+      month: 'long',
+      day: 'numeric',
+      weekday: 'long',
+    });
+  }
+
+  trackByBooking(_: number, booking: StaffBookingItem): number {
+    return booking.id;
+  }
+
+  private loadTodayBookings(): void {
+    this.isLoading = true;
+    this.errorMessage = '';
+
+    this.bookingService.getStaffDashboardTodayAppointments().subscribe({
+      next: (appointments) => {
+        this.bookings = appointments.map((appointment) => ({
+          ...appointment,
+          status: this.mapApiStatus(appointment.status),
+        }));
+        this.isLoading = false;
+      },
+      error: () => {
+        this.bookings = [];
+        this.errorMessage = 'Nem sikerült betölteni a mai foglalásokat.';
+        this.isLoading = false;
+      },
+    });
+  }
+
+  private mapApiStatus(status: string | undefined): StaffBookingStatus {
+    const normalized = (status || '').trim().toLowerCase();
+
+    if (normalized === 'cancelled' || normalized === 'canceled') {
+      return 'cancelled';
+    }
+
+    if (normalized === 'pending') {
+      return 'pending';
+    }
+
+    return 'confirmed';
+  }
+
+  private getBookingCountByStatus(status: StaffBookingStatus): number {
+    return this.todayBookings.filter((booking) => booking.status === status).length;
+  }
+
+  private parseDateValue(value: string): Date | null {
+    if (!value) {
+      return null;
+    }
+
+    const parsed = new Date(`${value}T00:00:00`);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  private toIsoDate(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private toTimestamp(booking: StaffBookingItem): number {
+    const isoCandidate = `${booking.date}T${booking.time}:00`;
+    const parsed = new Date(isoCandidate);
+
+    if (Number.isNaN(parsed.getTime())) {
+      return Number.MAX_SAFE_INTEGER;
+    }
+
+    return parsed.getTime();
+  }
 }

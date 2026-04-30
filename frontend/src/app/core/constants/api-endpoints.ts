@@ -2,12 +2,20 @@
 export const API_ENDPOINTS = {
   AUTH: {
     LOGIN: '/auth/login',
+    VERIFY_2FA_LOGIN: '/auth/2fa/verify',
     REGISTER: '/auth/register',
     LOGOUT: '/auth/logout',
     REFRESH_TOKEN: '/auth/refresh',
     VERIFY_EMAIL: '/auth/verify',
     REQUEST_PASSWORD_RESET: '/auth/resetPassRequest',
     RESET_PASSWORD: '/auth/resetPassUpdate',
+  },
+
+  TWO_FACTOR: {
+    STATUS: '/2fa/status',
+    SETUP: '/2fa/setup',
+    CONFIRM: '/2fa/confirm',
+    DISABLE: '/2fa/disable',
   },
 
   COMPANIES: {
@@ -20,6 +28,9 @@ export const API_ENDPOINTS = {
     SEARCH: '/companies/search',
     BUSINESS_CATEGORIES: '/businesscat/getAll',
     REGISTER: '/companies/createFull',
+    UPDATE: '/companies/updateCompany',
+    BOOKING_RULES: '/companies/getCompanyBookingRules',
+    UPDATE_BOOKING_RULES: '/companies/updateCompanyBookingRules',
   },
 
   SERVICES: {
@@ -28,6 +39,8 @@ export const API_ENDPOINTS = {
     BY_COMPANY: (companyId: number) =>
       `/services/getServiceCategoriesWithServicesByCompanyId?id=${companyId}`,
     CATEGORIES: '/services/categories',
+    STAFF_SERVICES: '/services/getStaffServices',
+    UPDATE_STAFF_SERVICE: '/services/updateStaffServices',
   },
 
   SPECIALISTS: {
@@ -50,13 +63,28 @@ export const API_ENDPOINTS = {
     UNAVAILABLE_DATES: '/appointments/unavailable-dates',
     OCCUPIED_SLOTS: '/appointments/occupied-slots',
     CREATE: '/appointments/createAppointment',
+    WEEKLY_CALENDAR: '/appointments/getWeeklyCalendarAppointments',
     BY_CLIENT: '/appointments/getAppointmentsByClient',
+    STAFF_DASHBOARD_TODAY_APPOINTMENTS: '/appointments/staffDashboardTodayAppointments',
+    SALES_OVERVIEW_REVENUE: (companyId: number, period: 'week' | 'month' | 'year') =>
+      `/appointments/getSalesOverviewRevenueByCompany?companyId=${companyId}&period=${period}`,
+    SALES_OVERVIEW_AVG_BASKET: (companyId: number, period: 'week' | 'month' | 'year') =>
+      `/appointments/getSalesOverviewAvgBasket?companyId=${companyId}&period=${period}`,
+    SALES_OVERVIEW_BOOKINGS_COUNT: (companyId: number, period: 'week' | 'month' | 'year') =>
+      `/appointments/getSalesOverviewBookingsCount?companyId=${companyId}&period=${period}`,
+    SALES_OVERVIEW_RETURNING_CLIENTS: (companyId: number, period: 'week' | 'month' | 'year') =>
+      `/appointments/getSalesOverviewReturningClients?companyId=${companyId}&period=${period}`,
+    SALES_REVENUE_CHART: (companyId: number, period: 'week' | 'month' | 'year') =>
+      `/appointments/getSalesRevenueChart?companyId=${companyId}&period=${period}`,
+    SALES_TOP_SERVICES: (companyId: number, period: 'week' | 'month' | 'year') =>
+      `/services/getSalesTopServices?companyId=${companyId}&period=${period}`,
   },
 
   REVIEWS: {
     LIST: '/reviews',
     CREATE: '/reviews',
     BY_COMPANY: (companyId: number) => `/companies/${companyId}/reviews`,
+    OWNER_PANEL: '/reviews/getOwnerPanelReviews',
   },
 
   USER: {
@@ -64,16 +92,42 @@ export const API_ENDPOINTS = {
     PROFILE: '/users/profile',
     UPDATE_PROFILE: '/users/updateProfile',
     CHANGE_PASSWORD: '/users/change-password',
-    UPLOAD_AVATAR: '/users/uploadAvatar',
-    DELETE_AVATAR: '/users/deleteAvatar',
+    UPLOAD_AVATAR: '/images/uploadUserImage',
+    DELETE_AVATAR: (userId: number, imageId: number) => `/images/users/${userId}/${imageId}`,
+    GET_NOTIFICATION_SETTINGS: '/notifsetting/getAll',
     UPDATE_NOTIFICATION_SETTINGS: '/notifsetting/update',
     CLIENTS_BY_COMPANY: (companyId: number, page: number, pageSize: number) =>
       `/users/getClientsByCompany?companyId=${companyId}&page=${page}&pageSize=${pageSize}`,
   },
 
+  IMAGES: {
+    BY_COMPANY: (companyId: number) => `/images/getCompanyImages?companyId=${companyId}`,
+  },
+
+  OPENING_HOURS: {
+    OWNER_PANEL: '/openinghours/getForOwnerPanel',
+    UPDATE: '/openinghours/update',
+  },
+
+  TEMPORARY_CLOSED: {
+    GET_ALL: '/temporary-closed/getAll',
+    CREATE: '/temporary-closed/create',
+    UPDATE: (id: number) => `/temporary-closed/update?id=${id}`,
+    DELETE: (id: number) => `/temporary-closed/delete?id=${id}`,
+  },
+
   STAFF: {
     BY_COMPANY_AND_SERVICES: '/staff/by-company-and-services',
     DASHBOARD: (userId: number) => `/staff/dashboard/${userId}`,
+    OWNER_WITH_APPOINTMENTS: '/staff/getAllStaffForOwnerWithAppointments',
+    INDUSTRY_PAGE: '/staff/getForIndustryPage',
+    UPDATE_COLOR: '/staff/update-color',
+    WORKING_HOURS: '/staffworkingh/staffWorkingHours',
+    UPDATE_WORKING_HOURS: '/staffworkingh/updateStaffWorkingHours',
+  },
+  PENDING_STAFF: {
+    INVITE: '/pending-staff/invite',
+    CANCEL_INVITE: (id: number) => `/pending-staff/cancel-invite?id=${id}`,
   },
   DASHBOARDS: {
     OWNER: '/dashboards/owner',

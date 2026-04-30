@@ -1,57 +1,270 @@
 <section class="page">
-  <header class="page-header">
-    <div>
-      <h1>Cégek</h1>
-      <p>Teljes céglista, státuszok és admin műveletek.</p>
-    </div>
-    <div class="header-actions">
-      <button class="btn btn-primary" type="button" (click)="onCreateCompany()">Új cég</button>
-      <button class="btn btn-secondary" type="button" (click)="onExportCompanies()">Tömeges export</button>
-    </div>
-  </header>
+  @if (companyExportFeedback) {
+    <section
+      class="export-feedback"
+      [class.export-feedback-success]="companyExportFeedback.tone === 'success'"
+      [class.export-feedback-error]="companyExportFeedback.tone === 'error'"
+      [class.export-feedback-info]="companyExportFeedback.tone === 'info'"
+      aria-live="polite"
+    >
+      <div class="export-feedback-copy">
+        <span class="export-feedback-kicker">Bookr export</span>
+        <strong>{{ companyExportFeedback.title }}</strong>
+        <p>{{ companyExportFeedback.detail }}</p>
+        @if (companyExportFeedback.meta) {
+          <span class="export-feedback-meta">{{ companyExportFeedback.meta }}</span>
+        }
+      </div>
+      <button class="export-feedback-close" type="button" (click)="closeCompanyExportFeedback()" aria-label="Értesítés bezárása">✕</button>
+    </section>
+  }
 
-  <div class="filters">
-    <div class="filter-chip">Aktív</div>
-    <div class="filter-chip">Felfüggesztett</div>
-    <div class="filter-chip">Új</div>
-    <div class="filter-chip">Váltás eszköz</div>
-  </div>
+  <section class="company-toolbar">
+    <label class="search-field" for="company-search">
+      <i class="fas fa-search" aria-hidden="true"></i>
+      <input
+        id="company-search"
+        type="search"
+        [(ngModel)]="searchTerm"
+        placeholder="Keresés cég neve vagy város alapján..."
+        aria-label="Keresés cég neve vagy város alapján"
+      />
+      @if (searchTerm) {
+        <button class="clear-search-btn" type="button" (click)="clearSearch()" aria-label="Keresés törlése">✕</button>
+      }
+    </label>
 
-  <div class="table-card">
-    <div class="table-head">
-      <span>Cég</span>
-      <span>Tulajdonos</span>
-      <span>Staff</span>
-      <span>Státusz</span>
-      <span>Műveletek</span>
-    </div>
-    <div class="table-row">
-      <div>
-        <strong>Példa cég 01</strong>
-        <span class="sub">Budapest</span>
+    <div class="toolbar-meta">
+      <div class="filters" role="tablist" aria-label="Cég státuszszűrők">
+        @for (filter of filters; track filter.value) {
+          <button
+            class="filter-chip"
+            type="button"
+            [class.active]="selectedFilter === filter.value"
+            [attr.aria-pressed]="selectedFilter === filter.value"
+            (click)="setFilter(filter.value)"
+          >
+            {{ filter.label }}
+          </button>
+        }
       </div>
-      <div>Tulajdonos 01</div>
-      <div>12</div>
-      <div><span class="status-pill active">Aktív</span></div>
-      <div class="actions">
-        <button class="btn btn-ghost" type="button" (click)="onChangeOwner('Példa cég 01')">Tulajdonos csere</button>
-        <button class="btn btn-outline" type="button" (click)="onViewStaff('Példa cég 01')">Staff lista</button>
-        <button class="btn btn-danger" type="button" (click)="onSuspendCompany('Példa cég 01')">Tiltás</button>
-      </div>
-    </div>
-    <div class="table-row">
-      <div>
-        <strong>Példa cég 02</strong>
-        <span class="sub">Szeged</span>
-      </div>
-      <div>Tulajdonos 02</div>
-      <div>6</div>
-      <div><span class="status-pill warn">Vizsgálat</span></div>
-      <div class="actions">
-        <button class="btn btn-ghost" type="button" (click)="onOverrideRole('Példa cég 02')">Szerep felülírás</button>
-        <button class="btn btn-outline" type="button" (click)="onViewBookings('Példa cég 02')">Foglalások</button>
-        <button class="btn btn-danger" type="button" (click)="onLockCompany('Példa cég 02')">Zárolás</button>
+
+      <div class="toolbar-side">
+        <div class="header-actions toolbar-actions">
+          <button class="btn btn-primary" type="button" (click)="onCreateCompany()">Új cég</button>
+          <button
+            class="btn btn-secondary"
+            type="button"
+            [class.btn-success-state]="hasRecentCompanyExport"
+            [disabled]="isExportingCompanies"
+            (click)="onExportCompanies()"
+          >
+            {{ exportButtonLabel }}
+          </button>
+        </div>
       </div>
     </div>
-  </div>
+  </section>
+
+  <section class="company-list" aria-label="Cégkártyák">
+    @for (company of filteredCompanies; track company.name) {
+      <article
+        class="company-card"
+        [class.company-card-active]="company.status === 'Aktív'"
+        [class.company-card-suspended]="company.status === 'Felfüggesztett'"
+        [class.company-card-new]="company.status === 'Új'"
+      >
+        <div class="company-card-main">
+          <div class="company-card-heading">
+            <div class="company-name-row">
+              <h2>{{ company.name }}</h2>
+            </div>
+
+            <div class="company-badges">
+              <span class="meta-chip" [class]="'meta-chip ' + getPlanClass(company.plan)">{{ company.plan }}</span>
+              <span class="status-chip" [class]="'status-chip ' + getStatusClass(company.status)">
+                <span class="status-dot" aria-hidden="true"></span>
+                {{ company.status }}
+              </span>
+            </div>
+          </div>
+
+          <p class="company-meta">{{ company.city }} · {{ company.email }}</p>
+
+          <div class="company-stats">
+            <span><strong>Tulajdonos:</strong> {{ company.owner }}</span>
+            <span><strong>Staff:</strong> {{ company.staffCount }}</span>
+            <span><strong>Foglalás ma:</strong> {{ company.bookingsToday }}</span>
+          </div>
+
+          <div class="company-admin-meta">
+            <span class="meta-chip verification-chip" [class]="'meta-chip verification-chip ' + getVerificationClass(company.verification)">
+              {{ company.verification }}
+            </span>
+            @if (company.lastAdminUpdate) {
+              <span class="admin-update-time">Frissítve: {{ company.lastAdminUpdate }}</span>
+            }
+          </div>
+
+          <p class="admin-note">{{ company.internalNote }}</p>
+        </div>
+
+        <div class="company-card-actions">
+          <button class="btn btn-ghost list-action-btn" type="button" (click)="openCompanyEditModal(company.name)">Szerkesztés</button>
+          <button
+            class="btn status-action-btn"
+            [class.status-action-suspend]="company.status === 'Aktív'"
+            [class.status-action-activate]="company.status !== 'Aktív'"
+            type="button"
+            (click)="toggleCompanyStatus(company.name)"
+          >
+            {{ getStatusActionLabel(company.status) }}
+          </button>
+          <button class="btn btn-outline" type="button" (click)="onViewBookings(company.name)">Foglalások</button>
+          <button
+            class="icon-danger-btn list-menu-btn"
+            type="button"
+            (click)="openCompanyActionMenu(company.name)"
+            aria-label="További cégműveletek"
+            title="További cégműveletek"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M6 12a1.5 1.5 0 1 1 0.001 0A1.5 1.5 0 0 1 6 12zm6 0a1.5 1.5 0 1 1 0.001 0A1.5 1.5 0 0 1 12 12zm6 0a1.5 1.5 0 1 1 0.001 0A1.5 1.5 0 0 1 18 12z" />
+            </svg>
+          </button>
+        </div>
+      </article>
+    }
+    @empty {
+      <div class="empty-state">
+        <h2>Nincs találat</h2>
+        <p>A megadott keresésre vagy szűrőre nem találtunk céget.</p>
+        <button class="btn btn-outline" type="button" (click)="clearSearch(); setFilter('all')">Szűrők törlése</button>
+      </div>
+    }
+  </section>
+
+  @if (isCompanyEditModalOpen && companyEditDraft) {
+    <div class="action-modal-backdrop" (click)="closeCompanyEditModal()">
+      <section class="action-modal edit-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-label="Cég admin szerkesztése">
+        <header class="action-modal-header">
+          <div>
+            <h2>{{ editingCompanyName }} szerkesztése</h2>
+            <p class="action-modal-subtitle">Csak superadmin szintű mezők módosíthatók, kötelező indoklással és audit nyommal.</p>
+          </div>
+          <button class="modal-close-btn" type="button" (click)="closeCompanyEditModal()" aria-label="Bezárás">✕</button>
+        </header>
+
+        <div class="edit-scope-banner">
+          Ezzel a panellel státuszt, csomagot, tulajdonost, verifikációt és belső admin megjegyzést kezelsz, nem az üzleti működési beállításokat.
+        </div>
+
+        <div class="edit-form-grid">
+          <label class="form-field">
+            <span>Tulajdonos</span>
+            <input type="text" [(ngModel)]="companyEditDraft.owner" placeholder="Tulajdonos neve" />
+          </label>
+
+          <label class="form-field">
+            <span>Csomag</span>
+            <select [(ngModel)]="companyEditDraft.plan">
+              @for (plan of planOptions; track plan) {
+                <option [ngValue]="plan">{{ plan }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="form-field">
+            <span>Státusz</span>
+            <select [(ngModel)]="companyEditDraft.status">
+              @for (status of statusOptions; track status) {
+                <option [ngValue]="status">{{ status }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="form-field">
+            <span>Verifikáció</span>
+            <select [(ngModel)]="companyEditDraft.verification">
+              @for (verification of verificationOptions; track verification) {
+                <option [ngValue]="verification">{{ verification }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="form-field form-field-wide">
+            <span>Belső admin megjegyzés</span>
+            <textarea
+              rows="3"
+              [(ngModel)]="companyEditDraft.internalNote"
+              placeholder="Rövid belső megjegyzés a cég admin állapotáról"
+            ></textarea>
+          </label>
+
+          <label class="form-field form-field-wide">
+            <span>Módosítás oka</span>
+            <textarea
+              rows="4"
+              [(ngModel)]="companyEditDraft.changeReason"
+              placeholder="Miért történik ez a superadmin módosítás?"
+            ></textarea>
+          </label>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn btn-ghost" type="button" (click)="closeCompanyEditModal()">Mégse</button>
+          <button class="btn btn-primary" type="button" [disabled]="!canSaveCompanyEdit" (click)="saveCompanyEdit()">Mentés és audit</button>
+        </div>
+      </section>
+    </div>
+  }
+
+  @if (isCompanyActionModalOpen) {
+    <div class="action-modal-backdrop" (click)="closeCompanyActionMenu()">
+      <section class="action-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-label="Cég admin műveletek">
+        <header class="action-modal-header">
+          <h2>{{ selectedCompany }} kezelése</h2>
+          <button class="modal-close-btn" type="button" (click)="closeCompanyActionMenu()" aria-label="Bezárás">✕</button>
+        </header>
+        <p class="action-modal-subtitle">Válassz műveletet a céggel kapcsolatban:</p>
+
+        <div class="action-options">
+          <button class="action-option option-muted" type="button" (click)="onChangeOwner(selectedCompany)">
+            <span class="option-title">Tulajdonos csere</span>
+            <span class="option-text">Másik tulajdonos hozzárendelése admin jóváhagyással.</span>
+          </button>
+
+          <button class="action-option option-warn" type="button" (click)="onSuspendCompany(selectedCompany)">
+            <span class="option-title">Felfüggesztés</span>
+            <span class="option-text">A cég ideiglenesen nem tud új foglalást fogadni.</span>
+          </button>
+
+          <button class="action-option option-danger" type="button" (click)="onLockCompany(selectedCompany)">
+            <span class="option-title">Zárolás</span>
+            <span class="option-text">A belépés és érzékeny módosítások tiltása azonnal.</span>
+          </button>
+
+          <button class="action-option option-muted" type="button" (click)="onFreezeBookings(selectedCompany)">
+            <span class="option-title">Foglalások befagyasztása</span>
+            <span class="option-text">Meglévő foglalások maradnak, újak nem érkezhetnek.</span>
+          </button>
+
+          <button class="action-option option-muted" type="button" (click)="onArchiveCompany(selectedCompany)">
+            <span class="option-title">Archiválás</span>
+            <span class="option-text">A cég kikerül az aktív listából, adatai megmaradnak.</span>
+          </button>
+
+          <button class="action-option option-danger" type="button" (click)="onDisableCompany(selectedCompany)">
+            <span class="option-title">Végleges letiltás</span>
+            <span class="option-text">Szigorú tiltás, csak admin jóváhagyással visszaállítható.</span>
+          </button>
+
+          <button class="action-option option-danger" type="button" (click)="onDeleteCompany(selectedCompany)">
+            <span class="option-title">Törlés</span>
+            <span class="option-text">A cég rekordja és kapcsolt admin adatai végleg eltávolításra kerülnek.</span>
+          </button>
+        </div>
+      </section>
+    </div>
+  }
 </section>

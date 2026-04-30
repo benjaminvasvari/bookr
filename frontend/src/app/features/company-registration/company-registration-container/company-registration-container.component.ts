@@ -147,9 +147,8 @@ export class CompanyRegistrationContainerComponent implements OnInit {
         this.cookieService.setCookie('bookr_company_info', data);
         break;
       case 3:
-        data = this.stepImageUpload?.getFormData();
-        this.registrationData.imageUpload = data;
-        this.cookieService.setCookie('bookr_image_upload', data);
+        this.registrationData.imageUpload = this.stepImageUpload?.getFormData();
+        // Képadatokat (base64/File) NEM mentjük cookie-ba – túl nagy, lefagyasztja a böngészőt
         break;
       case 4:
         data = this.stepBusinessDetails?.getFormData();
@@ -177,7 +176,7 @@ export class CompanyRegistrationContainerComponent implements OnInit {
         break;
       case 3:
         this.registrationData.imageUpload = data;
-        this.cookieService.setCookie('bookr_image_upload', data);
+        // Képadatokat NEM mentjük cookie-ba
         break;
       case 4:
         this.registrationData.businessDetails = data;

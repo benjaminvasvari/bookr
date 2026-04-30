@@ -1,0 +1,38 @@
+@if (visible && imageFile) {
+<div class="crop-modal-backdrop" (click)="onCancel()"></div>
+<div class="crop-modal-shell" role="dialog" aria-modal="true" [attr.aria-label]="title">
+  <div class="crop-modal-card" (click)="$event.stopPropagation()">
+    <div class="crop-modal-header">
+      <h3>{{ title }}</h3>
+      <button type="button" class="crop-modal-close" (click)="onCancel()" aria-label="Bezárás">×</button>
+    </div>
+
+    <div class="crop-modal-body">
+      <image-cropper
+        [imageFile]="imageFile"
+        [output]="'blob'"
+        [maintainAspectRatio]="maintainAspectRatio"
+        [aspectRatio]="aspectRatio"
+        [cropper]="cropperPosition"
+        [containWithinAspectRatio]="containWithinAspectRatio"
+        [roundCropper]="roundCropper"
+        [cropperMaxWidth]="cropperMaxWidth"
+        [cropperMaxHeight]="cropperMaxHeight"
+        [cropperStaticWidth]="computedCropperStaticWidth"
+        [cropperStaticHeight]="computedCropperStaticHeight"
+        [allowMoveImage]="true"
+        [onlyScaleDown]="true"
+        [hideResizeSquares]="false"
+        format="png"
+        (imageLoaded)="onImageLoaded($event)"
+        (imageCropped)="onImageCropped($event)"
+      ></image-cropper>
+    </div>
+
+    <div class="crop-modal-footer">
+      <button type="button" class="crop-btn crop-btn-secondary" (click)="onCancel()">Mégse</button>
+      <button type="button" class="crop-btn crop-btn-primary" (click)="onApply()">Kivágás alkalmazása</button>
+    </div>
+  </div>
+</div>
+}

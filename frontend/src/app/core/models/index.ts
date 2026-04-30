@@ -5,3 +5,4 @@ export * from './booking.model';
 export * from './user.model';
 export * from './owner-dashboard.model';
 export * from './owner-clients.model';
+export * from './chat.model';

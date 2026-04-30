@@ -1,0 +1,117 @@
+<section class="reviews-panel">
+	<header class="reviews-topbar">
+		<div>
+			<h1>Értékelések</h1>
+			<p class="subtitle">Ügyfél visszajelzések gyors áttekintése.</p>
+		</div>
+	</header>
+
+	<div class="reviews-toolbar">
+		<label class="search-input">
+			<input
+				#searchInput
+				type="text"
+				placeholder="Keresés ügyfél vagy szolgáltatás szerint"
+				[value]="searchTerm"
+				(input)="onSearchChange(searchInput.value)"
+			/>
+		</label>
+
+		<div class="toolbar-right">
+			<!-- Sort Controls -->
+			<div class="sort-group">
+				@for (option of sortOptions; track option.id; let isFirst = $first) {
+					@if (!isFirst) {
+						<div class="sort-divider"></div>
+					}
+					<button
+						type="button"
+						class="sort-text"
+						[class.active]="option.isSelected"
+						(click)="toggleSort(option.id)"
+					>
+						{{ option.label }}
+					</button>
+				}
+			</div>
+
+			<!-- Star Rating Filter -->
+			<div class="star-rating">
+				@for (i of [0, 1, 2, 3, 4]; track i) {
+					<button
+						type="button"
+						class="star"
+						[class.filled]="getStarFillPercentage(i) > 0 || (ratingHoverIndex !== null && i < ratingHoverIndex)"
+						(mouseenter)="onStarHover(i)"
+						(mouseleave)="onStarHoverLeave()"
+						(click)="selectRating(i + 1)"
+						[attr.aria-label]="(i + 1) + ' csillag'"
+					>
+						<span 
+							class="star-inner" 
+							[style.--fill.%]="getStarFillPercentage(i) || (ratingHoverIndex !== null && i < ratingHoverIndex ? 100 : 0)"
+						>★</span>
+					</button>
+				}
+			</div>
+
+			<button
+				type="button"
+				class="clear-filters-btn"
+				(click)="clearAllFilters()"
+				[disabled]="!hasActiveFilters"
+			>
+				Szűrések törlése
+			</button>
+		</div>
+	</div>
+
+	<section class="reviews-list" [class.is-refreshing]="isLoading && displayedReviews.length > 0">
+		@if (isLoading && displayedReviews.length === 0) {
+			<div class="loading-state">
+				<p>Betöltés folyamatban...</p>
+			</div>
+		}
+
+		@if (errorMessage && !isLoading && displayedReviews.length === 0) {
+			<div class="error-state">
+				<p>{{ errorMessage }}</p>
+			</div>
+		}
+
+		@if (!isLoading && displayedReviews.length === 0 && !errorMessage) {
+			<div class="empty-state">
+				<p>Nincsenek elérhető értékelések.</p>
+			</div>
+		}
+
+		@for (review of displayedReviews; track review.reviewId) {
+			<article class="review-card">
+				<div class="review-head">
+					<div class="avatar">{{ getHungarianName(review.clientName).substring(0, 2).toUpperCase() }}</div>
+					<div class="review-meta">
+						<h3>{{ getHungarianName(review.clientName) }}</h3>
+						<p class="muted">Értékelés dátuma: {{ formatDate(review.createdAt) }}</p>
+					</div>
+					<div class="rating">
+						<div class="rating-stars" [attr.aria-label]="review.rating + ' csillag'">
+							@for (star of [1, 2, 3, 4, 5]; track star) {
+								<span class="rating-star" [class.active]="star <= review.rating">★</span>
+							}
+						</div>
+						<span class="rating-score">{{ review.rating }}.0</span>
+					</div>
+				</div>
+				<div class="review-pills">
+					<span class="review-pill service-pill">{{ review.serviceName }}</span>
+					<span class="review-pill date-pill">{{ formatDate(review.appointmentDate) }}</span>
+				</div>
+				@if (review.comment && review.comment.trim().length > 0) {
+					<p class="review-text">{{ review.comment }}</p>
+				} @else {
+					<div class="review-text-spacer" aria-hidden="true"></div>
+				}
+			</article>
+		}
+	</section>
+</section>

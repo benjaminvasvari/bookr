@@ -85,20 +85,45 @@
           }
         </div>
 
-        <!-- Cím -->
+        <!-- Ország -->
         <div class="form-group full-width">
-          <label for="address">Utca és házszám <span class="required">*</span></label>
+          <label for="country">Ország <span class="required">*</span></label>
           <input
             type="text"
-            id="address"
-            formControlName="address"
+            id="country"
+            formControlName="country"
             class="form-control"
-            [class.error]="isFieldInvalid('address')"
-            placeholder="pl. Váci utca 15."
+            [class.error]="isFieldInvalid('country')"
+            placeholder="Magyarország"
           />
-          @if (isFieldInvalid('address')) {
+          @if (isFieldInvalid('country')) {
             <span class="error-message">
-              A cím megadása kötelező
+              Az ország megadása kötelező
+            </span>
+          }
+        </div>
+
+        <!-- Irányítószám -->
+        <div class="form-group">
+          <label for="postalCode">Irányítószám <span class="required">*</span></label>
+          <input
+            type="text"
+            id="postalCode"
+            formControlName="postalCode"
+            class="form-control"
+            [class.error]="isFieldInvalid('postalCode')"
+            placeholder="pl. 1052"
+            maxlength="4"
+            inputmode="numeric"
+          />
+          @if (isFieldInvalid('postalCode')) {
+            <span class="error-message">
+              @if (companyForm.get('postalCode')?.errors?.['required']) {
+                Az irányítószám megadása kötelező
+              }
+              @if (companyForm.get('postalCode')?.errors?.['pattern']) {
+                4 számjegyű irányítószámot adjon meg
+              }
             </span>
           }
         </div>
@@ -121,44 +146,20 @@
           }
         </div>
 
-        <!-- Irányítószám -->
-        <div class="form-group">
-          <label for="postalCode">Irányítószám <span class="required">*</span></label>
-          <input
-            type="text"
-            id="postalCode"
-            formControlName="postalCode"
-            class="form-control"
-            [class.error]="isFieldInvalid('postalCode')"
-            placeholder="pl. 1052"
-            maxlength="4"
-          />
-          @if (isFieldInvalid('postalCode')) {
-            <span class="error-message">
-              @if (companyForm.get('postalCode')?.errors?.['required']) {
-                Az irányítószám megadása kötelező
-              }
-              @if (companyForm.get('postalCode')?.errors?.['pattern']) {
-                4 számjegyű irányítószámot adjon meg
-              }
-            </span>
-          }
-        </div>
-
-        <!-- Ország -->
+        <!-- Cím -->
         <div class="form-group full-width">
-          <label for="country">Ország <span class="required">*</span></label>
+          <label for="address">Utca és házszám <span class="required">*</span></label>
           <input
             type="text"
-            id="country"
-            formControlName="country"
+            id="address"
+            formControlName="address"
             class="form-control"
-            [class.error]="isFieldInvalid('country')"
-            placeholder="Magyarország"
+            [class.error]="isFieldInvalid('address')"
+            placeholder="pl. Váci utca 15."
           />
-          @if (isFieldInvalid('country')) {
+          @if (isFieldInvalid('address')) {
             <span class="error-message">
-              Az ország megadása kötelező
+              A cím megadása kötelező
             </span>
           }
         </div>

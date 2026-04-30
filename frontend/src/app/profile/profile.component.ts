@@ -48,8 +48,10 @@ export class ProfileComponent implements OnInit {
 
     // Check for fragment to set active tab
     this.route.fragment.subscribe(fragment => {
-      if (fragment && (fragment === 'info' || fragment === 'bookings' || fragment === 'favorites' || fragment === 'settings')) {
-        this.activeTab = fragment as TabType;
+      if (fragment && this.isValidTab(fragment)) {
+        this.activeTab = fragment;
+      } else if (!fragment) {
+        this.updateUrlFragment(this.activeTab, true);
       }
     });
 
@@ -58,7 +60,12 @@ export class ProfileComponent implements OnInit {
   }
 
   selectTab(tab: TabType): void {
+    if (this.activeTab === tab) {
+      return;
+    }
+
     this.activeTab = tab;
+    this.updateUrlFragment(tab);
   }
 
   isActive(tab: TabType): boolean {
@@ -67,5 +74,18 @@ export class ProfileComponent implements OnInit {
 
   onLogout(): void {
     this.authService.logout();
+  }
+
+  private isValidTab(tab: string): tab is TabType {
+    return tab === 'info' || tab === 'bookings' || tab === 'favorites' || tab === 'settings';
+  }
+
+  private updateUrlFragment(tab: TabType, replaceUrl = false): void {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      fragment: tab,
+      queryParamsHandling: 'preserve',
+      replaceUrl,
+    });
   }
 }

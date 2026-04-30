@@ -1,7 +1,17 @@
 <div class="login-container">
   <div class="login-content">
     <div class="login-form-wrapper">
-      <h1 class="login-title">BEJELENTKEZÉS</h1>
+      <h1 class="login-title">{{ isTwoFactorStep ? '2FA MEGERŐSÍTÉS' : 'BEJELENTKEZÉS' }}</h1>
+
+      @if (isTwoFactorStep) {
+        <div class="login-step-note">
+          <div class="step-badge">2. lépés</div>
+          <p>
+            Add meg a telefonos authenticator alkalmazásod aktuális 6 jegyű kódját a
+            bejelentkezés befejezéséhez.
+          </p>
+        </div>
+      }
       
       <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
         
@@ -51,28 +61,72 @@
           </div>
         </div>
 
-        <!-- Backend hibaüzenet megjelenítése -->
-        <div *ngIf="errorMessage" class="backend-error-message">
+        @if (isTwoFactorStep) {
+          <div class="input-group verification-group">
+            <input
+              [type]="hideVerificationCode ? 'password' : 'text'"
+              id="verificationCode"
+              formControlName="verificationCode"
+              placeholder=" "
+              inputmode="numeric"
+              maxlength="6"
+              autocomplete="one-time-code"
+              [class.invalid]="verificationCode.invalid && isSubmitted"
+            >
+            <label for="verificationCode">Hitelesítő kód</label>
+            <i class="fas fa-shield-halved input-icon"></i>
+
+            <button
+              type="button"
+              class="toggle-password"
+              (click)="toggleVerificationCodeVisibility()"
+              [attr.aria-label]="hideVerificationCode ? 'Kód megjelenítése' : 'Kód elrejtése'"
+            >
+              <i [class]="hideVerificationCode ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+            </button>
+
+            <div class="error-messages">
+              <div class="error-message" [style.opacity]="verificationCodeErrorMessage ? '1' : '0'">
+                {{ verificationCodeErrorMessage || '&nbsp;' }}
+              </div>
+            </div>
+          </div>
+        }
+
+        @if (errorMessage) {
+        <div class="backend-error-message">
           <i class="fas fa-exclamation-circle"></i>
           {{ errorMessage }}
         </div>
+        }
 
-        <!-- Submit gomb -->
         <button 
           type="submit" 
           class="btn-submit"
-          [disabled]="loginForm.invalid || isLoading">
+          [disabled]="(isTwoFactorStep ? verificationCode.invalid : email.invalid || password.invalid) || isLoading">
           
-          <!-- Loading spinner VAGY szöveg -->
-          <span *ngIf="!isLoading">FOLYTATÁS</span>
-          <span *ngIf="isLoading">
+          @if (!isLoading) {
+            <span>{{ isTwoFactorStep ? 'MEGERŐSÍTÉS' : 'FOLYTATÁS' }}</span>
+          } @else {
+          <span>
             <i class="fas fa-spinner fa-spin"></i> BEJELENTKEZÉS...
           </span>
+          }
         </button>
+
+        @if (isTwoFactorStep) {
+          <button
+            type="button"
+            class="btn-secondary-action"
+            (click)="backToPasswordLogin()"
+            [disabled]="isLoading"
+          >
+            Vissza az előző lépéshez
+          </button>
+        }
 
         <div class="divider"></div>
 
-        <!-- Regisztráció link -->
         <div class="register-section">
           <p class="register-text">Nincs még fiókod?</p>
           <a (click)="navigateToRegister()" class="register-link">Regisztrálj most!</a>
