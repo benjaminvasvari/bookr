@@ -13,18 +13,23 @@ import com.vizsgaremek.bookr.model.Reviews;
 import com.vizsgaremek.bookr.model.UserXRole;
 import com.vizsgaremek.bookr.model.Users;
 import com.vizsgaremek.bookr.security.JWT;
+
 import static com.vizsgaremek.bookr.util.ErrorResponseBuilder.buildErrorResponseJSON;
+
 import com.vizsgaremek.bookr.util.FileStorageUtil;
 import com.vizsgaremek.bookr.util.ValidationUtil;
+
 import static com.vizsgaremek.bookr.util.ValidationUtil.isValidEmail;
 import static com.vizsgaremek.bookr.util.ValidationUtil.isValidHungarianPhone;
 import static com.vizsgaremek.bookr.util.ValidationUtil.isValidUrl;
+
 import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.Map;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -771,6 +776,75 @@ public class CompaniesService {
             statusCode = 500;
             toReturn.put("status", status);
             toReturn.put("statusCode", statusCode);
+        }
+
+        return toReturn;
+    }
+
+    public JSONObject searchCompanies(String query, String pageStr, String pageSizeStr) {
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        try {
+            // Validáció
+            if (query == null || query.isBlank()) {
+                return buildErrorResponseJSON(400, "QueryRequired");
+            }
+
+            int page = 1;
+            int pageSize = 10;
+
+            try {
+                if (pageStr != null && !pageStr.isBlank()) page = Integer.parseInt(pageStr);
+                if (pageSizeStr != null && !pageSizeStr.isBlank()) pageSize = Integer.parseInt(pageSizeStr);
+            } catch (NumberFormatException e) {
+                return buildErrorResponseJSON(400, "InvalidPaginationParams");
+            }
+
+            if (page <= 0 || pageSize <= 0) {
+                return buildErrorResponseJSON(400, "InvalidPaginationParams");
+            }
+
+            // Adatbázis lekérdezés
+            List<Companies> modelResult = Companies.searchCompanies(query.trim(), page, pageSize);
+
+            if (modelResult == null) {
+                return buildErrorResponseJSON(500, "InternalServerError");
+            }
+
+            // Cégek összerakása
+            JSONArray companiesArray = new JSONArray();
+
+            for (Companies company : modelResult) {
+                JSONObject obj = new JSONObject();
+                obj.put("id", company.getId());
+                obj.put("name", company.getName());
+                obj.put("city", company.getCity() != null ? company.getCity() : JSONObject.NULL);
+                obj.put("address", company.getAddress() != null ? company.getAddress() : JSONObject.NULL);
+                obj.put("rating", company.getRating());
+                obj.put("reviewCount", company.getReviewCount());
+                obj.put("imageUrl", FileStorageUtil.buildFullUrl(company.getImageUrl()));
+                companiesArray.put(obj);
+            }
+
+            int total = modelResult.isEmpty() ? 0 : modelResult.get(0).getTotal();
+
+            // Result object
+            JSONObject resultObj = new JSONObject();
+            resultObj.put("total", total);
+            resultObj.put("page", page);
+            resultObj.put("pageSize", pageSize);
+            resultObj.put("data", companiesArray);
+
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+            toReturn.put("result", resultObj);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            toReturn.put("status", "InternalServerError");
+            toReturn.put("statusCode", 500);
         }
 
         return toReturn;

@@ -6,7 +6,9 @@ package com.vizsgaremek.bookr.model;
 
 import static com.vizsgaremek.bookr.model.Users.emf;
 import static com.vizsgaremek.bookr.model.Users.formatter;
+
 import com.vizsgaremek.bookr.util.StoredProcedureUtil;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -45,24 +47,24 @@ import javax.xml.bind.annotation.XmlTransient;
 @Table(name = "companies")
 @XmlRootElement
 @NamedQueries({
-    @NamedQuery(name = "Companies.findAll", query = "SELECT c FROM Companies c"),
-    @NamedQuery(name = "Companies.findById", query = "SELECT c FROM Companies c WHERE c.id = :id"),
-    @NamedQuery(name = "Companies.findByName", query = "SELECT c FROM Companies c WHERE c.name = :name"),
-    @NamedQuery(name = "Companies.findByCity", query = "SELECT c FROM Companies c WHERE c.city = :city"),
-    @NamedQuery(name = "Companies.findByPostalCode", query = "SELECT c FROM Companies c WHERE c.postalCode = :postalCode"),
-    @NamedQuery(name = "Companies.findByCountry", query = "SELECT c FROM Companies c WHERE c.country = :country"),
-    @NamedQuery(name = "Companies.findByPhone", query = "SELECT c FROM Companies c WHERE c.phone = :phone"),
-    @NamedQuery(name = "Companies.findByEmail", query = "SELECT c FROM Companies c WHERE c.email = :email"),
-    @NamedQuery(name = "Companies.findByWebsite", query = "SELECT c FROM Companies c WHERE c.website = :website"),
-    @NamedQuery(name = "Companies.findByBookingAdvanceDays", query = "SELECT c FROM Companies c WHERE c.bookingAdvanceDays = :bookingAdvanceDays"),
-    @NamedQuery(name = "Companies.findByCancellationHours", query = "SELECT c FROM Companies c WHERE c.cancellationHours = :cancellationHours"),
-    @NamedQuery(name = "Companies.findByCreatedAt", query = "SELECT c FROM Companies c WHERE c.createdAt = :createdAt"),
-    @NamedQuery(name = "Companies.findByUpdatedAt", query = "SELECT c FROM Companies c WHERE c.updatedAt = :updatedAt"),
-    @NamedQuery(name = "Companies.findByDeletedAt", query = "SELECT c FROM Companies c WHERE c.deletedAt = :deletedAt"),
-    @NamedQuery(name = "Companies.findByIsDeleted", query = "SELECT c FROM Companies c WHERE c.isDeleted = :isDeleted"),
-    @NamedQuery(name = "Companies.findByIsActive", query = "SELECT c FROM Companies c WHERE c.isActive = :isActive"),
-    @NamedQuery(name = "Companies.findByAllowSameDayBooking", query = "SELECT c FROM Companies c WHERE c.allowSameDayBooking = :allowSameDayBooking"),
-    @NamedQuery(name = "Companies.findByMinimumBookingHoursAhead", query = "SELECT c FROM Companies c WHERE c.minimumBookingHoursAhead = :minimumBookingHoursAhead")})
+        @NamedQuery(name = "Companies.findAll", query = "SELECT c FROM Companies c"),
+        @NamedQuery(name = "Companies.findById", query = "SELECT c FROM Companies c WHERE c.id = :id"),
+        @NamedQuery(name = "Companies.findByName", query = "SELECT c FROM Companies c WHERE c.name = :name"),
+        @NamedQuery(name = "Companies.findByCity", query = "SELECT c FROM Companies c WHERE c.city = :city"),
+        @NamedQuery(name = "Companies.findByPostalCode", query = "SELECT c FROM Companies c WHERE c.postalCode = :postalCode"),
+        @NamedQuery(name = "Companies.findByCountry", query = "SELECT c FROM Companies c WHERE c.country = :country"),
+        @NamedQuery(name = "Companies.findByPhone", query = "SELECT c FROM Companies c WHERE c.phone = :phone"),
+        @NamedQuery(name = "Companies.findByEmail", query = "SELECT c FROM Companies c WHERE c.email = :email"),
+        @NamedQuery(name = "Companies.findByWebsite", query = "SELECT c FROM Companies c WHERE c.website = :website"),
+        @NamedQuery(name = "Companies.findByBookingAdvanceDays", query = "SELECT c FROM Companies c WHERE c.bookingAdvanceDays = :bookingAdvanceDays"),
+        @NamedQuery(name = "Companies.findByCancellationHours", query = "SELECT c FROM Companies c WHERE c.cancellationHours = :cancellationHours"),
+        @NamedQuery(name = "Companies.findByCreatedAt", query = "SELECT c FROM Companies c WHERE c.createdAt = :createdAt"),
+        @NamedQuery(name = "Companies.findByUpdatedAt", query = "SELECT c FROM Companies c WHERE c.updatedAt = :updatedAt"),
+        @NamedQuery(name = "Companies.findByDeletedAt", query = "SELECT c FROM Companies c WHERE c.deletedAt = :deletedAt"),
+        @NamedQuery(name = "Companies.findByIsDeleted", query = "SELECT c FROM Companies c WHERE c.isDeleted = :isDeleted"),
+        @NamedQuery(name = "Companies.findByIsActive", query = "SELECT c FROM Companies c WHERE c.isActive = :isActive"),
+        @NamedQuery(name = "Companies.findByAllowSameDayBooking", query = "SELECT c FROM Companies c WHERE c.allowSameDayBooking = :allowSameDayBooking"),
+        @NamedQuery(name = "Companies.findByMinimumBookingHoursAhead", query = "SELECT c FROM Companies c WHERE c.minimumBookingHoursAhead = :minimumBookingHoursAhead")})
 public class Companies implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -163,6 +165,9 @@ public class Companies implements Serializable {
 
     @Transient
     private String ownerEmail;
+
+    @Transient
+    private Integer total;
 
     public Companies() {
     }
@@ -301,8 +306,18 @@ public class Companies implements Serializable {
         this.website = website;
         this.businessCategoryIdInt = businessCategoryIdInt;
     }
-    
-    
+
+    public Companies(Integer id, String name, String city, String address, Double rating, Integer reviewCount, String imageUrl, Integer total) {
+        this.id = id;
+        this.name = name;
+        this.city = city;
+        this.address = address;
+        this.rating = rating;
+        this.reviewCount = reviewCount;
+        this.imageUrl = imageUrl;
+        this.total = total;
+    }
+
 
     public Integer getId() {
         return id;
@@ -450,6 +465,14 @@ public class Companies implements Serializable {
 
     public Integer getMinimumBookingHoursAhead() {
         return minimumBookingHoursAhead;
+    }
+
+    public Integer getTotal() {
+        return total;
+    }
+
+    public void setTotal(Integer total) {
+        this.total = total;
     }
 
     public void setMinimumBookingHoursAhead(Integer minimumBookingHoursAhead) {
@@ -1182,6 +1205,62 @@ public class Companies implements Serializable {
         } catch (Exception ex) {
             ex.printStackTrace();
             return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static List<Companies> searchCompanies(String query, Integer page, Integer pageSize) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("searchCompanies");
+            spq.registerStoredProcedureParameter("queryIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("pageIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("pageSizeIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("totalOUT", Integer.class, ParameterMode.OUT);
+
+            spq.setParameter("queryIN", query);
+            spq.setParameter("pageIN", page);
+            spq.setParameter("pageSizeIN", pageSize);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            int total = 0;
+            Object totalResult = spq.getOutputParameterValue("totalOUT");
+            if (totalResult != null) {
+                total = Integer.valueOf(totalResult.toString());
+            }
+
+            if (resultList.isEmpty()) {
+                return new ArrayList<>();
+            }
+
+            List<Companies> companiesList = new ArrayList<>();
+
+            for (Object[] record : resultList) {
+                Companies company = new Companies(
+                        Integer.valueOf(record[0].toString()),
+                        record[1].toString(),
+                        record[2] != null ? record[2].toString() : null,
+                        record[3] != null ? record[3].toString() : null,
+                        record[4] != null ? Double.parseDouble(record[4].toString()) : 0.0,
+                        record[5] != null ? Integer.valueOf(record[5].toString()) : 0,
+                        record[6] != null ? record[6].toString() : null,
+                        total
+                );
+                companiesList.add(company);
+            }
+
+            return companiesList;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return new ArrayList<>();
         } finally {
             if (em != null && em.isOpen()) {
                 em.close();

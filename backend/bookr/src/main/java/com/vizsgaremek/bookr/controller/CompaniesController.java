@@ -8,8 +8,11 @@ import com.vizsgaremek.bookr.DTO.CompanyRegisterRequest;
 import com.vizsgaremek.bookr.model.Companies;
 import com.vizsgaremek.bookr.security.JWT;
 import com.vizsgaremek.bookr.service.CompaniesService;
+
 import static com.vizsgaremek.bookr.util.ErrorResponseBuilder.buildErrorResponse;
+
 import com.vizsgaremek.bookr.util.RoleChecker;
+
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.Produces;
@@ -22,6 +25,7 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+
 import netscape.javascript.JSObject;
 import org.json.JSONObject;
 
@@ -403,6 +407,22 @@ public class CompaniesController {
         );
 
         JSONObject toReturn = layer.updateCompany(companyId, request);
+
+        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                .entity(toReturn.toString())
+                .type(MediaType.APPLICATION_JSON)
+                .build();
+    }
+
+    @GET
+    @Path("search")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response searchCompanies(
+            @QueryParam("q") String query,
+            @QueryParam("page") String page,
+            @QueryParam("pageSize") String pageSize) {
+
+        JSONObject toReturn = layer.searchCompanies(query, page, pageSize);
 
         return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
                 .entity(toReturn.toString())
