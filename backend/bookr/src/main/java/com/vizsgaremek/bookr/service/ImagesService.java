@@ -58,7 +58,7 @@ public class ImagesService {
                 JSONObject actualImageObject = new JSONObject();
 
                 actualImageObject.put("id", actualImage.getId());
-                actualImageObject.put("url", actualImage.getUrl());
+                actualImageObject.put("url", FileStorageUtil.buildFullUrl(actualImage.getUrl()));
                 actualImageObject.put("isMain", actualImage.getIsMain());
                 actualImageObject.put("uploadedAt", actualImage.getUploadedAt());
 
