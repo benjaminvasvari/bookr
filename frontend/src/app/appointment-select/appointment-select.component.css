@@ -129,13 +129,12 @@
 
 .appointment-container {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr) 400px;
   gap: 2rem;
-  max-width: 1400px;
+  max-width: 1320px;
   margin-left: auto;
   margin-right: auto;
   padding: 2rem;
-  padding-right: 430px;
   min-height: calc(100vh - 80px);
   position: relative;
 }
@@ -597,21 +596,17 @@
    ============================================ */
 
 .cart-section {
-  position: fixed;
+  position: sticky;
   top: 100px;
-  right: 2rem;
-  width: 400px;
-  z-index: 250;
+  width: 100%;
+  align-self: start;
+  z-index: 20;
 }
 
-@media (max-width: 1280px) {
+@media (max-width: 1200px) {
   .appointment-container {
-    padding-right: 390px;
-  }
-
-  .cart-section {
-    width: 360px;
-    right: 1.5rem;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 1.5rem;
   }
 }
 
@@ -909,7 +904,9 @@
 @media (max-width: 992px) {
   .appointment-container {
     grid-template-columns: 1fr;
-    padding-right: 2rem;
+    padding: 1rem;
+    padding-bottom: calc(210px + env(safe-area-inset-bottom));
+    min-height: auto;
   }
 
   .cart-section {
@@ -918,17 +915,22 @@
     left: 0;
     right: 0;
     top: auto;
-    background: white;
-    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
-    padding: 1rem;
+    background: transparent;
+    box-shadow: none;
+    padding: 0.75rem;
     z-index: 1000;
     max-height: none;
     margin-top: 0;
   }
 
   .cart-card {
-    border: none;
-    padding: 0;
+    border-radius: 20px;
+    border: 1px solid #d5deea;
+    padding: 0.95rem 1rem calc(0.95rem + env(safe-area-inset-bottom));
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.2);
+    max-height: none;
+    overflow: visible;
   }
 
   .company-info,
@@ -939,7 +941,16 @@
   }
 
   .specialists-section {
-    padding-bottom: 150px;
+    padding-bottom: 0;
+  }
+
+  .cart-summary {
+    padding-bottom: 0.8rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .continue-btn {
+    border-radius: 14px;
   }
 
   .specialists-grid {
@@ -948,10 +959,6 @@
 }
 
 @media (max-width: 768px) {
-  .appointment-container {
-    padding: 1rem;
-  }
-
   .specialists-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -982,6 +989,15 @@
     transform: none;
     min-width: auto;
   }
+
+  .cart-section {
+    padding: 0.55rem;
+  }
+
+  .cart-card {
+    border-radius: 16px;
+    padding: 0.8rem 0.85rem calc(0.8rem + env(safe-area-inset-bottom));
+  }
 }
 
 @media (max-width: 480px) {
@@ -1007,5 +1023,250 @@
   .nav-btn {
     width: 100%;
     justify-content: center;
+  }
+}
+
+:host-context(body.dark-mode) .appointment-container {
+  background: transparent;
+}
+
+:host-context(body.dark-mode) .error-banner {
+  background: rgba(127, 29, 29, 0.26);
+  border-color: rgba(248, 113, 113, 0.46);
+  color: #fecaca;
+  box-shadow: 0 10px 18px rgba(2, 6, 23, 0.34);
+}
+
+:host-context(body.dark-mode) .dismiss-btn,
+:host-context(body.dark-mode) .dismiss-btn:hover {
+  color: #fecaca;
+}
+
+:host-context(body.dark-mode) .specialists-section h2,
+:host-context(body.dark-mode) .specialists-section h3,
+:host-context(body.dark-mode) .specialists-section h4,
+:host-context(body.dark-mode) .calendar-section h4,
+:host-context(body.dark-mode) .specialist-card h4,
+:host-context(body.dark-mode) .company-details h3,
+:host-context(body.dark-mode) .rating span:first-child,
+:host-context(body.dark-mode) .info-row .value,
+:host-context(body.dark-mode) .cart-summary,
+:host-context(body.dark-mode) .cart-item-info h4,
+:host-context(body.dark-mode) .cart-item-price {
+  color: #f8fafc !important;
+}
+
+:host-context(body.dark-mode) .specialization,
+:host-context(body.dark-mode) .loading-specialists,
+:host-context(body.dark-mode) .no-specialists,
+:host-context(body.dark-mode) .loading-slots,
+:host-context(body.dark-mode) .no-slots-available,
+:host-context(body.dark-mode) .address,
+:host-context(body.dark-mode) .info-row .label,
+:host-context(body.dark-mode) .empty-cart,
+:host-context(body.dark-mode) .cart-item-info p,
+:host-context(body.dark-mode) .no-slots-available small {
+  color: #b8c6d6;
+}
+
+:host-context(body.dark-mode) .loading-specialists,
+:host-context(body.dark-mode) .no-specialists {
+  background: #1b2a3a;
+  border-color: #3a5269;
+}
+
+:host-context(body.dark-mode) .no-specialists i,
+:host-context(body.dark-mode) .no-slots-available i,
+:host-context(body.dark-mode) .empty-cart i {
+  color: #5f7489;
+}
+
+:host-context(body.dark-mode) .secondary-btn {
+  background: #233447;
+  border-color: #38a179;
+  color: #a7f3d0;
+}
+
+:host-context(body.dark-mode) .secondary-btn:hover {
+  background: #38a179;
+  color: #f8fafc;
+}
+
+:host-context(body.dark-mode) .specialist-card {
+  background: #1b2a3a;
+  border-color: #3a5269;
+}
+
+:host-context(body.dark-mode) .specialist-card:hover {
+  border-color: #4d6883;
+  box-shadow: 0 8px 16px rgba(2, 6, 23, 0.3);
+}
+
+:host-context(body.dark-mode) .specialist-card.selected {
+  background: #22384a;
+  border-color: #38a179;
+  box-shadow: 0 10px 18px rgba(16, 185, 129, 0.2);
+}
+
+:host-context(body.dark-mode) .specialist-image {
+  border-color: #4a647e;
+}
+
+:host-context(body.dark-mode) .specialist-card.selected .specialist-image {
+  border-color: #38a179;
+}
+
+:host-context(body.dark-mode) .calendar-section {
+  background: #1b2532;
+  border-color: #2f4257;
+  box-shadow: 0 10px 24px rgba(2, 6, 23, 0.32);
+}
+
+:host-context(body.dark-mode) .nav-btn {
+  background: #233447;
+  border-color: #3a5269;
+  color: #c7d5e4;
+}
+
+:host-context(body.dark-mode) .nav-btn:hover:not(:disabled) {
+  background: #38a179;
+  border-color: #38a179;
+  color: #f8fafc;
+}
+
+:host-context(body.dark-mode) .nav-btn:disabled {
+  background: #263748;
+  border-color: #3b4f62;
+  color: #8ea3b8;
+}
+
+:host-context(body.dark-mode) .day-column {
+  background: #243447;
+  border-color: #3a5269;
+}
+
+:host-context(body.dark-mode) .day-name {
+  color: #aebfd1;
+}
+
+:host-context(body.dark-mode) .day-number {
+  color: #eaf2fb;
+}
+
+:host-context(body.dark-mode) .day-column.disabled {
+  background: #1e2e40;
+  border-color: #334a60;
+  color: #7f93a7;
+}
+
+:host-context(body.dark-mode) .day-column.today {
+  border-color: #60a5fa;
+}
+
+:host-context(body.dark-mode) .day-column:not(.disabled):hover {
+  background: #2c4156;
+  border-color: #4d6883;
+}
+
+:host-context(body.dark-mode) .day-column.selected {
+  background: #38a179;
+  border-color: #38a179;
+}
+
+:host-context(body.dark-mode) .day-column.selected:hover {
+  background: #2f8d66;
+  border-color: #2f8d66;
+}
+
+:host-context(body.dark-mode) .no-slots-available {
+  background: #1f3042;
+}
+
+:host-context(body.dark-mode) .time-slot-btn {
+  background: #243447;
+  border-color: #3a5269;
+  color: #e3ebf5;
+}
+
+:host-context(body.dark-mode) .time-slot-btn:hover:not(:disabled) {
+  border-color: #4d6883;
+  background: #2c4156;
+}
+
+:host-context(body.dark-mode) .time-slot-btn.selected {
+  background: #38a179;
+  border-color: #38a179;
+  color: #f8fafc;
+}
+
+:host-context(body.dark-mode) .time-slot-btn.selected:hover {
+  background: #2f8d66;
+  border-color: #2f8d66;
+}
+
+:host-context(body.dark-mode) .time-slot-btn.unavailable {
+  background: #1d2c3b;
+  border-color: #334a60;
+  color: #8399ae;
+}
+
+:host-context(body.dark-mode) .cart-card {
+  background: #1b2532;
+  border-color: #2f4257;
+  box-shadow: 0 10px 24px rgba(2, 6, 23, 0.32);
+}
+
+:host-context(body.dark-mode) .warning-message {
+  background: rgba(217, 119, 6, 0.2);
+  border-color: rgba(245, 158, 11, 0.42);
+  color: #fde68a;
+}
+
+:host-context(body.dark-mode) .company-info,
+:host-context(body.dark-mode) .cart-summary {
+  border-bottom-color: #2f4257;
+}
+
+:host-context(body.dark-mode) .company-image {
+  background: #25364a;
+}
+
+:host-context(body.dark-mode) .selected-specialist-info,
+:host-context(body.dark-mode) .selected-appointment-info {
+  background: rgba(16, 185, 129, 0.16);
+  border-color: rgba(52, 211, 153, 0.42);
+}
+
+:host-context(body.dark-mode) .cart-item {
+  background: #243447;
+  border: 1px solid #3a5269;
+}
+
+:host-context(body.dark-mode) .continue-btn {
+  background: #38a179;
+  color: #f8fafc;
+}
+
+:host-context(body.dark-mode) .continue-btn:hover:not(:disabled) {
+  background: #2f8d66;
+  box-shadow: 0 8px 14px rgba(16, 185, 129, 0.24);
+}
+
+:host-context(body.dark-mode) .continue-btn:disabled {
+  background: #3b4f63;
+  color: #99acc0;
+  opacity: 1;
+}
+
+@media (max-width: 992px) {
+  :host-context(body.dark-mode) .cart-section {
+    background: transparent;
+    box-shadow: none;
+  }
+
+  :host-context(body.dark-mode) .cart-card {
+    background: rgba(18, 31, 45, 0.98);
+    border-color: #2f4257;
+    box-shadow: 0 12px 26px rgba(2, 6, 23, 0.44);
   }
 }

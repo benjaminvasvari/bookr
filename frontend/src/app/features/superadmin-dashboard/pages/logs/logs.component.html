@@ -1,37 +1,202 @@
 <section class="page">
-  <header class="page-header">
-    <div>
-      <h1>Logok</h1>
-      <p>Rendszer logok, audit és riasztások.</p>
-    </div>
-    <div class="header-actions">
-      <button class="btn btn-primary" type="button" (click)="onAddFilter()">Új szűrő</button>
-      <button class="btn btn-secondary" type="button" (click)="onExportLogs()">Export</button>
-    </div>
-  </header>
+  @if (exportFeedback) {
+    <section
+      class="export-feedback"
+      [class.export-feedback-success]="exportFeedback.tone === 'success'"
+      [class.export-feedback-error]="exportFeedback.tone === 'error'"
+      [class.export-feedback-info]="exportFeedback.tone === 'info'"
+      aria-live="polite"
+    >
+      <div class="export-feedback-copy">
+        <span class="export-feedback-kicker">Bookr export</span>
+        <strong>{{ exportFeedback.title }}</strong>
+        <p>{{ exportFeedback.detail }}</p>
+        @if (exportFeedback.meta) {
+          <span class="export-feedback-meta">{{ exportFeedback.meta }}</span>
+        }
+      </div>
+      <button class="export-feedback-close" type="button" (click)="closeExportFeedback()" aria-label="Értesítés bezárása">✕</button>
+    </section>
+  }
 
-  <div class="filters">
-    <div class="filter-chip">Auth</div>
-    <div class="filter-chip">Foglalás</div>
-    <div class="filter-chip">Szerep változás</div>
-    <div class="filter-chip">API hiba</div>
-  </div>
+  <section class="stats-row" aria-label="Log súlyossági statisztikák">
+    @for (stat of severityStats; track stat.severity) {
+      <button
+        class="stat-card"
+        type="button"
+        [class.active]="selectedSeverity === stat.severity"
+        [class]="'stat-card ' + getSeverityClass(stat.severity)"
+        (click)="onSelectSeverityStat(stat.severity)"
+      >
+        <span class="stat-icon">{{ getSeverityIcon(stat.severity) }}</span>
+        <span class="stat-value">{{ stat.count }}</span>
+        <span class="stat-label">{{ stat.label }}</span>
+      </button>
+    }
 
-  <div class="log-card">
-    <div class="log-head">
-      <span>Idő</span>
-      <span>Esemény</span>
-      <span>Cél</span>
-      <span>Műveletek</span>
+    <div class="stat-total">
+      <span class="stat-total-label">Ma összesen</span>
+      <strong class="stat-total-value">{{ totalEventsToday }}</strong>
+      <span class="stat-total-label">esemény</span>
     </div>
-    <div class="log-row">
-      <div>10:22</div>
-      <div>Szerep módosítás</div>
-      <div>Példa cég 01</div>
-      <div class="actions">
-        <button class="btn btn-ghost" type="button" (click)="onViewLog('LOG-01')">Részletek</button>
-        <button class="btn btn-outline" type="button" (click)="onInvestigateLog('LOG-01')">Vizsgálat</button>
+  </section>
+
+  <section class="filters-panel">
+    <div class="filters-stack">
+      <div class="filter-group">
+        <span class="filter-label">Típus</span>
+        <div class="filter-row">
+          @for (filter of typeFilters; track filter.value) {
+            <button
+              class="filter-chip"
+              type="button"
+              [class.active]="selectedType === filter.value"
+              (click)="setTypeFilter(filter.value)"
+            >
+              {{ filter.label }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <span class="filter-label">Súlyosság</span>
+        <div class="filter-row">
+          @for (filter of severityFilters; track filter.value) {
+            <button
+              class="filter-chip"
+              type="button"
+              [class.active]="selectedSeverity === filter.value"
+              (click)="setSeverityFilter(filter.value)"
+            >
+              {{ filter.label }}
+            </button>
+          }
+        </div>
       </div>
     </div>
-  </div>
+
+    <div class="filter-group filter-group-actions">
+      <span class="filter-label">Műveletek</span>
+      <div class="filter-row header-actions toolbar-actions">
+        <button class="btn btn-header-primary" type="button" (click)="onAddFilter()">Új szűrő</button>
+        <button
+          class="btn btn-header-secondary"
+          type="button"
+          [class.btn-success-state]="hasRecentLogExport"
+          [disabled]="isExportingLogs"
+          (click)="onExportLogs()"
+        >
+          {{ exportButtonLabel }}
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section class="log-feed" aria-label="Audit log feed">
+    @for (log of filteredLogs; track log.id) {
+      <article class="log-entry" [class.expanded]="isExpanded(log.id)" [class]="'log-entry ' + getSeverityClass(log.severity)">
+        <button class="log-summary" type="button" (click)="toggleLog(log.id)">
+          <span class="severity-rail" aria-hidden="true"></span>
+
+          <div class="summary-main">
+            <div class="summary-topline">
+              <span class="log-time">{{ log.time }}</span>
+              <span class="log-title">{{ log.title }}</span>
+              <span class="log-actor">{{ log.actor }}</span>
+            </div>
+
+            <div class="summary-subline">
+              <span>{{ log.summary }}</span>
+              <span class="type-chip">{{ getTypeLabel(log.type) }}</span>
+            </div>
+          </div>
+
+          <div class="summary-actions">
+            <span class="severity-pill" [class]="'severity-pill ' + getSeverityClass(log.severity)">
+              {{ getSeverityLabel(log.severity) }}
+            </span>
+            <span class="toggle-indicator">{{ isExpanded(log.id) ? '▲' : '▼' }}</span>
+          </div>
+        </button>
+
+        @if (isExpanded(log.id)) {
+          <div class="log-expanded">
+            <div class="expanded-grid">
+              <div class="detail-list">
+                <div class="detail-row">
+                  <span class="detail-key">Esemény</span>
+                  <span class="detail-value">{{ log.summary }}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-key">IP</span>
+                  <span class="detail-value">{{ log.ip }}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-key">User agent</span>
+                  <span class="detail-value">{{ log.userAgent }}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-key">Entitás</span>
+                  <span class="detail-value">{{ log.entity }}</span>
+                </div>
+              </div>
+
+              <div class="json-panels">
+                @if (log.oldValues) {
+                  <section class="json-card">
+                    <header>old_values</header>
+                    <div class="json-content">
+                      @for (entry of log.oldValues | keyvalue; track entry.key) {
+                        <div class="json-row">
+                          <span class="json-key">{{ entry.key }}</span>
+                          <span class="json-value">{{ entry.value }}</span>
+                        </div>
+                      }
+                    </div>
+                  </section>
+                }
+
+                @if (log.newValues) {
+                  <section class="json-card json-card-next">
+                    <header>new_values</header>
+                    <div class="json-content">
+                      @for (entry of log.newValues | keyvalue; track entry.key) {
+                        <div class="json-row">
+                          <span class="json-key">{{ entry.key }}</span>
+                          <span class="json-value">{{ entry.value }}</span>
+                        </div>
+                      }
+                    </div>
+                  </section>
+                }
+              </div>
+            </div>
+
+            <div class="expanded-actions">
+              @for (action of log.actions; track action.id) {
+                <button
+                  class="btn feed-action-btn"
+                  type="button"
+                  [class.feed-action-primary]="action.tone === 'primary'"
+                  [class.feed-action-secondary]="action.tone === 'secondary'"
+                  [class.feed-action-danger]="action.tone === 'danger'"
+                  (click)="onRunLogAction(log.id, action.id)"
+                >
+                  {{ action.label }}
+                </button>
+              }
+            </div>
+          </div>
+        }
+      </article>
+    }
+
+    @empty {
+      <div class="empty-state">
+        <h2>Nincs találat</h2>
+        <p>A jelenlegi típus és súlyosság szűrő mellett nincs megjeleníthető log esemény.</p>
+      </div>
+    }
+  </section>
 </section>

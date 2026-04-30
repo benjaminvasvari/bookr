@@ -324,3 +324,54 @@
     opacity: 1;
   }
 }
+
+:host-context(body.dark-mode) .registration-container {
+  background: linear-gradient(135deg, #0f1720 0%, #111b27 100%);
+}
+
+:host-context(body.dark-mode) .registration-header h1,
+:host-context(body.dark-mode) .content-card h2,
+:host-context(body.dark-mode) .success-modal h2 {
+  color: #f8fafc;
+}
+
+:host-context(body.dark-mode) .subtitle,
+:host-context(body.dark-mode) .success-modal p,
+:host-context(body.dark-mode) .redirect-text {
+  color: #b8c6d6;
+}
+
+:host-context(body.dark-mode) .content-card {
+  background: #1b2532;
+  border-color: #2f4257;
+  box-shadow: 0 12px 28px rgba(2, 6, 23, 0.34);
+}
+
+:host-context(body.dark-mode) .content-card:hover {
+  box-shadow: 0 16px 34px rgba(2, 6, 23, 0.4);
+}
+
+:host-context(body.dark-mode) .step-navigation {
+  border-top-color: #2f4257;
+}
+
+:host-context(body.dark-mode) .btn-secondary {
+  background: #243447;
+  color: #d9e6f2;
+  border-color: #3a5269;
+}
+
+:host-context(body.dark-mode) .btn-secondary:hover:not(:disabled) {
+  background: #2b3f54;
+  border-color: #4b6783;
+  color: #eef5fc;
+}
+
+:host-context(body.dark-mode) .success-modal-overlay {
+  background: rgba(2, 6, 23, 0.74);
+}
+
+:host-context(body.dark-mode) .success-modal {
+  background: #1b2532;
+  border: 1px solid #2f4257;
+}

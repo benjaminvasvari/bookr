@@ -12,6 +12,7 @@ import { BookingService } from '../core/services/booking.service';
 import { CompaniesService } from '../core/services/companies.service';
 import { CompanyShort } from '../core/models/company.model';
 import { SuccessOverlayComponent } from '../shared/components/success-overlay/success-overlay.component';
+import { AuthService } from '../core/services/auth.service';
 
 @Component({
   selector: 'app-appointment-payment',
@@ -34,13 +35,15 @@ export class AppointmentPaymentComponent implements OnInit {
   // Success overlay
   showSuccessOverlay = false;
   isSubmitting = false;
+  showLoginRequiredModal = false;
 
   constructor(
     private router: Router,
     private route: ActivatedRoute,
     private cartService: CartService,
     private bookingService: BookingService,
-    private companiesService: CompaniesService
+    private companiesService: CompaniesService,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
@@ -88,6 +91,11 @@ export class AppointmentPaymentComponent implements OnInit {
   }
 
   confirmBooking(): void {
+    if (!this.authService.isAuthenticated()) {
+      this.showLoginRequiredModal = true;
+      return;
+    }
+
     if (!this.selectedPaymentMethod || !this.companyId || !this.specialist || !this.appointment) {
       return;
     }
@@ -129,6 +137,17 @@ export class AppointmentPaymentComponent implements OnInit {
 
     // Navigálás a főoldalra (main page)
     this.router.navigate(['/']);
+  }
+
+  closeLoginRequiredModal(): void {
+    this.showLoginRequiredModal = false;
+  }
+
+  goToLoginForBooking(): void {
+    this.showLoginRequiredModal = false;
+    this.router.navigate(['/login'], {
+      queryParams: { returnUrl: this.router.url },
+    });
   }
 
   getCartTotal(): number {

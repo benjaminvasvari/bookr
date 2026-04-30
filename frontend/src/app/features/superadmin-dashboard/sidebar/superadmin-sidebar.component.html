@@ -1,0 +1,53 @@
+<aside class="superadmin-sidebar" [class.is-expanded]="isExpanded">
+  <div class="sidebar-header">
+    @if (isExpanded) {
+      <div class="brand-block" aria-label="Bookr Admin Panel">
+        <img class="brand-icon brand-icon-expanded" src="../../../../../assets/images/logo.png" alt="Bookr logo" />
+        <span class="brand-tagline">Admin Panel</span>
+      </div>
+    } @else {
+      <img class="brand-icon" src="../../../../../assets/images/logo.png" alt="Bookr logo" />
+    }
+  </div>
+
+  <nav class="sidebar-nav">
+    <a class="home-link" routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+      <i class="fas fa-home"></i>
+      <span class="nav-label">Home</span>
+    </a>
+    <div class="nav-divider"></div>
+    <a routerLink="/superadmin/overview" routerLinkActive="active">
+      <i class="fas fa-shield-alt"></i>
+      <span class="nav-label">Áttekintés</span>
+    </a>
+    <a routerLink="/superadmin/companies" routerLinkActive="active">
+      <i class="fas fa-building"></i>
+      <span class="nav-label">Cégek</span>
+    </a>
+    <a routerLink="/superadmin/staff" routerLinkActive="active">
+      <i class="fas fa-user-friends"></i>
+      <span class="nav-label">Staff</span>
+    </a>
+    <a routerLink="/superadmin/owners" routerLinkActive="active">
+      <i class="fas fa-user-tie"></i>
+      <span class="nav-label">Tulajdonosok</span>
+    </a>
+    <a routerLink="/superadmin/bookings" routerLinkActive="active">
+      <i class="fas fa-calendar-check"></i>
+      <span class="nav-label">Foglalások</span>
+    </a>
+    <a routerLink="/superadmin/logs" routerLinkActive="active">
+      <i class="fas fa-file-alt"></i>
+      <span class="nav-label">Logok</span>
+    </a>
+    <div class="nav-divider"></div>
+    <button
+      class="collapse-toggle-btn"
+      type="button"
+      (click)="toggleSidebar()"
+      [attr.aria-label]="isExpanded ? 'Oldalsáv összecsukása' : 'Oldalsáv kinyitása'"
+    >
+      <i class="fas" [class.fa-chevron-left]="isExpanded" [class.fa-chevron-right]="!isExpanded" aria-hidden="true"></i>
+    </button>
+  </nav>
+</aside>

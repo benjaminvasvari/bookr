@@ -1,0 +1,161 @@
+<section class="staff-work-settings-page container-fluid py-3 py-md-4">
+  <div class="page-header mb-3 mb-md-4">
+    <h1 class="page-title">Munkaidő és saját szolgáltatások</h1>
+    <p class="page-subtitle">Itt állítod be, mikor vagy foglalható, és mely szolgáltatások jelenjenek meg nálad.</p>
+  </div>
+
+  @if (errorMessage) {
+    <div class="page-state error mb-3">{{ errorMessage }}</div>
+  }
+
+  <div class="row g-3 g-xl-4">
+    <div class="col-12 col-xxl-7">
+      <article class="work-card h-100">
+        <header class="work-card-header">
+          <div>
+            <h2 class="card-title">Munkaidő</h2>
+            <p class="card-subtitle">Napi elérhetőség és foglalható idősávok</p>
+          </div>
+          @if (isWorkingHoursSaving || workingHoursSaveMessage || workingHoursUpdateError) {
+            <div
+              class="header-status"
+              [class.saving]="isWorkingHoursSaving"
+              [class.error]="workingHoursUpdateError.length > 0"
+            >
+              @if (isWorkingHoursSaving) {
+                <span class="mini-spinner" aria-hidden="true"></span>
+              }
+              {{ workingHoursUpdateError || workingHoursSaveMessage }}
+            </div>
+          }
+
+        </header>
+
+        <div class="work-card-body">
+          @if (isLoadingWorkingHours) {
+            <div class="loading-card">
+              <div class="loading-spinner"></div>
+              <p>Munkaidők betöltése...</p>
+            </div>
+          } @else if (workingHoursLoadError) {
+            <div class="page-state error">{{ workingHoursLoadError }}</div>
+          } @else {
+            <div class="working-hours-list">
+              @for (day of workingHours; track trackByDay($index, day)) {
+                <div class="hours-row" [class.closed]="!day.enabled">
+                  <div class="day-info">
+                    <strong>{{ day.label }}</strong>
+                    <span class="day-status" [class.closed]="!day.enabled">
+                      {{ day.enabled ? 'Foglalható' : 'Zárva' }}
+                    </span>
+                  </div>
+
+                  <div class="availability-toggle">
+                    <label class="toggle-switch" [attr.aria-label]="day.label + ' elérhetőség'">
+                      <input type="checkbox" [(ngModel)]="day.enabled" (ngModelChange)="onWorkingDayAvailabilityChange(day)" />
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+
+                  <div class="time-inputs" [class.closed]="!day.enabled">
+                    <label class="time-field">
+                      <span>Kezdés</span>
+                      <input
+                        class="form-control"
+                        type="time"
+                        [(ngModel)]="day.start"
+                        (ngModelChange)="onWorkingHoursTimeChange(day, 'start', $event)"
+                        [disabled]="!day.enabled"
+                      />
+                    </label>
+                    <span class="time-separator">-</span>
+                    <label class="time-field">
+                      <span>Vége</span>
+                      <input
+                        class="form-control"
+                        type="time"
+                        [(ngModel)]="day.end"
+                        (ngModelChange)="onWorkingHoursTimeChange(day, 'end', $event)"
+                        [disabled]="!day.enabled"
+                      />
+                    </label>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+
+        </div>
+      </article>
+    </div>
+
+    <div class="col-12 col-xxl-5">
+      <article class="work-card service-card">
+        <header class="work-card-header">
+          <div>
+            <h2 class="card-title">Saját szolgáltatások</h2>
+      <p class="card-subtitle">Válaszd ki, mely alap szolgáltatásokat tudod vállalni</p>
+          </div>
+          @if (isServicesSaving || serviceSaveMessage || serviceUpdateError) {
+            <div
+              class="header-status"
+              [class.saving]="isServicesSaving"
+              [class.error]="serviceUpdateError.length > 0"
+            >
+              @if (isServicesSaving) {
+                <span class="mini-spinner" aria-hidden="true"></span>
+              }
+              {{ serviceUpdateError || serviceSaveMessage }}
+            </div>
+          }
+        </header>
+
+        <div class="work-card-body service-card-body">
+          @if (isLoadingServices) {
+            <div class="loading-card">
+              <div class="loading-spinner"></div>
+              <p>Szolgáltatások betöltése...</p>
+            </div>
+          } @else {
+            <div class="service-groups">
+              @for (group of serviceGroups; track group.category) {
+                <section class="service-group">
+                  <header class="service-group-header">
+                    <h3>{{ group.category }}</h3>
+                    <span>{{ group.services.length }} db</span>
+                  </header>
+
+                  <div class="service-list">
+                    @for (service of group.services; track trackByService($index, service)) {
+                      <div class="service-row" [class.inactive]="!service.enabled">
+                        <div class="service-copy">
+              <strong>{{ service.name }}</strong>
+                          <span>{{ service.duration }} · {{ formatPrice(service.price, service.currency) }}</span>
+                        </div>
+
+                        <label class="toggle-switch service-toggle" [attr.aria-label]="service.name + ' foglalhatóság'">
+                          <input
+                            type="checkbox"
+                            [(ngModel)]="service.enabled"
+                            (ngModelChange)="onServiceAvailabilityChange(service)"
+                            [disabled]="isServiceSaving(service)"
+                          />
+                          <span class="toggle-slider"></span>
+                        </label>
+                      </div>
+                    }
+                  </div>
+                </section>
+              }
+
+              @if (serviceGroups.length === 0 && !isLoadingServices) {
+                <div class="page-state">Nincs elérhető szolgáltatás a cégedhez.</div>
+              }
+            </div>
+
+          }
+        </div>
+      </article>
+    </div>
+  </div>
+</section>

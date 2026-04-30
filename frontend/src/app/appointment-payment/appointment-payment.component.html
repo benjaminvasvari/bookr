@@ -190,3 +190,23 @@
     (completed)="onSuccessCompleted()"
   />
 }
+
+@if (showLoginRequiredModal) {
+  <div class="auth-modal-overlay" (click)="closeLoginRequiredModal()">
+    <div class="auth-modal" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-label="Bejelentkezés szükséges">
+      <div class="auth-modal-header">
+        <h3>Bejelentkezés szükséges</h3>
+        <button class="auth-close-btn" type="button" (click)="closeLoginRequiredModal()" aria-label="Bezárás">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <p class="auth-modal-copy">A foglalás véglegesítéséhez be kell jelentkezned.</p>
+
+      <div class="auth-modal-actions">
+        <button class="btn-secondary-auth" type="button" (click)="closeLoginRequiredModal()">Mégse</button>
+        <button class="btn-primary-auth" type="button" (click)="goToLoginForBooking()">Bejelentkezés</button>
+      </div>
+    </div>
+  </div>
+}

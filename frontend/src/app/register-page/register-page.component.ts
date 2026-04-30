@@ -53,7 +53,7 @@ export class RegisterComponent implements OnInit, OnDestroy {
         lastName: ['', [Validators.required, CustomValidators.name()]],
         firstName: ['', [Validators.required, CustomValidators.name()]],
         email: ['', [Validators.required, CustomValidators.email()]],
-        phone: ['', [Validators.required, CustomValidators.phone()]],
+        phone: ['', [Validators.required, CustomValidators.hungarianPhone()]],
         password: ['', [Validators.required, passwordValidator()]],
         confirmPassword: ['', Validators.required],
       },
@@ -147,6 +147,22 @@ export class RegisterComponent implements OnInit, OnDestroy {
     return [];
   }
 
+  getEmailErrors(): string[] {
+    const emailControl = this.registerForm.get('email');
+    if (emailControl?.errors && (emailControl.dirty || emailControl.touched)) {
+      return getValidationErrorMessages(emailControl.errors, 'email cím');
+    }
+    return [];
+  }
+
+  getPhoneErrors(): string[] {
+    const phoneControl = this.registerForm.get('phone');
+    if (phoneControl?.errors && (phoneControl.dirty || phoneControl.touched)) {
+      return getValidationErrorMessages(phoneControl.errors, 'telefonszám');
+    }
+    return [];
+  }
+
   onSubmit(): void {
     if (this.registerForm.invalid) {
       this.errorMessage = 'Kérjük, javítsd ki a hibákat a folytatáshoz.';
@@ -186,17 +202,51 @@ export class RegisterComponent implements OnInit, OnDestroy {
         this.isLoading = false;
 
         // Hibaüzenet beállítása
-        if (error.message && error.message.includes('email')) {
+        if (this.isDuplicateEmailError(error)) {
           this.errorMessage = 'Ez az email cím már regisztrálva van.';
-        } else if (error.message) {
-          this.errorMessage = error.message;
         } else {
-          this.errorMessage = 'Sikertelen regisztráció. Kérlek próbáld újra későb';
+          this.errorMessage = 'Sikertelen regisztráció. Kérlek próbáld újra később.';
         }
 
         console.error('Registration error:', error);
       },
     });
+  }
+
+  private isDuplicateEmailError(error: any): boolean {
+    const status = error?.status ?? error?.error?.statusCode;
+    if (status === 409) {
+      return true;
+    }
+
+    const message = [
+      error?.message,
+      error?.error?.message,
+      error?.error?.error,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+
+    return (
+      message.includes('email') &&
+      (
+        message.includes('már') ||
+        message.includes('mar') ||
+        message.includes('already') ||
+        message.includes('exists') ||
+        message.includes('taken') ||
+        message.includes('used') ||
+        message.includes('verified') ||
+        message.includes('hiteles') ||
+        message.includes('hitelsit') ||
+        message.includes('megerosit') ||
+        message.includes('megerősít') ||
+        message.includes('regisztr') ||
+        message.includes('letez') ||
+        message.includes('foglalt')
+      )
+    );
   }
 
   private markCurrentStepTouched(): void {

@@ -58,37 +58,12 @@
 /* ============================================ */
 
 .slots-container {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  grid-template-rows: auto auto;
-  gap: 16px;
+  display: block;
   margin-bottom: 24px;
   background: #f9fafb;
   padding: 20px;
   border-radius: 10px;
   border: 1px dashed #cbd5e0;
-}
-
-/* SLOT-MAIN legyen az első sorban, teljes szélességben */
-.slot-main {
-  grid-row: 1;
-  grid-column: 1 / 4;
-}
-
-/* A kis slotok a második sorban */
-.slot-small:nth-of-type(2) {
-  grid-column: 1;
-  grid-row: 2;
-}
-
-.slot-small:nth-of-type(3) {
-  grid-column: 2;
-  grid-row: 2;
-}
-
-.slot-small:nth-of-type(4) {
-  grid-column: 3;
-  grid-row: 2;
 }
 
 /* ============================================ */
@@ -122,11 +97,6 @@
   min-height: 240px;
 }
 
-.slot-small {
-  aspect-ratio: 1;
-  min-height: 110px;
-}
-
 /* ============================================ */
 /* SLOT CONTENT                                 */
 /* ============================================ */
@@ -148,10 +118,6 @@
   color: #38a179;
   font-size: 32px;
   transition: all 0.3s ease;
-}
-
-.slot-small .slot-empty {
-  font-size: 24px;
 }
 
 .slot-empty span {
@@ -264,30 +230,7 @@
 
 @media (max-width: 768px) {
   .slots-container {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto auto auto;
     padding: 16px;
-    gap: 12px;
-  }
-
-  .slot-main {
-    grid-row: 1;
-    grid-column: 1;
-  }
-
-  .slot-small:nth-of-type(2) {
-    grid-column: 1;
-    grid-row: 2;
-  }
-
-  .slot-small:nth-of-type(3) {
-    grid-column: 1;
-    grid-row: 3;
-  }
-
-  .slot-small:nth-of-type(4) {
-    grid-column: 1;
-    grid-row: 4;
   }
 }
 
@@ -297,23 +240,47 @@
   }
 
   .slots-container {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto;
     padding: 16px;
-    gap: 12px;
-  }
-
-  .slot-main,
-  .slot-small {
-    grid-column: 1 !important;
-    grid-row: auto !important;
   }
 
   .slot-main {
     aspect-ratio: 16 / 9;
   }
+}
 
-  .slot-small {
-    aspect-ratio: 1;
-  }
+:host-context(body.dark-mode) .form-description {
+  background: #233447;
+  border-left-color: #38a179;
+}
+
+:host-context(body.dark-mode) .form-description p,
+:host-context(body.dark-mode) .images-section > label,
+:host-context(body.dark-mode) .images-info {
+  color: #d5e1ee;
+}
+
+:host-context(body.dark-mode) .optional {
+  color: #9cb0c4;
+}
+
+:host-context(body.dark-mode) .images-section {
+  background: #1f2d3d;
+  border-color: #304457;
+  box-shadow: none;
+}
+
+:host-context(body.dark-mode) .slots-container,
+:host-context(body.dark-mode) .slot {
+  background: #223244;
+  border-color: #3a5269;
+}
+
+:host-context(body.dark-mode) .slot-empty,
+:host-context(body.dark-mode) .slot-empty span {
+  color: #9fb1c4;
+}
+
+:host-context(body.dark-mode) .images-info {
+  background: #233447;
+  border-left-color: #38a179;
 }

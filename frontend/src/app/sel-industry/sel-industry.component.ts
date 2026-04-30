@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 
@@ -11,6 +11,7 @@ import { Company } from '../core/models';
 import { CompaniesService } from '../core/services/companies.service';
 import { Service } from '../core/models/service.model';
 import { Favorite, FavoritesService } from '../core/services/favorites.service';
+import { IndustryPageStaffResponse, StaffService } from '../core/services/staff.service';
 import { combineLatest, Subscription } from 'rxjs';
 
 type LeafletModule = typeof import('leaflet');
@@ -36,6 +37,7 @@ interface TeamMember {
   initials: string;
   role: string;
   bio?: string;
+  imageUrl?: string;
 }
 
 @Component({
@@ -65,7 +67,7 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
     budapest: { lat: 47.4979, lng: 19.0402 },
     pecs: { lat: 46.0727, lng: 18.2323 },
     debrecen: { lat: 47.5316, lng: 21.6273 },
-    szeged: { lat: 46.2530, lng: 20.1414 },
+    szeged: { lat: 46.253, lng: 20.1414 },
     gyor: { lat: 47.6875, lng: 17.6504 },
     miskolc: { lat: 48.1035, lng: 20.7784 },
     nyiregyhaza: { lat: 47.9495, lng: 21.7244 },
@@ -73,36 +75,7 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
   };
   private readonly expandedTeamBioIds = new Set<number>();
   private readonly expandedReviewIds = new Set<number>();
-  public readonly teamMembers: TeamMember[] = [
-    {
-      id: 1,
-      name: 'Kovács Anna',
-      initials: 'KA',
-      role: 'Senior Stylist',
-      bio: 'Precíz hajvágás és modern színtechnikák specialistája, vendégközpontú szemlélettel.',
-    },
-    {
-      id: 2,
-      name: 'Nagy Dániel',
-      initials: 'ND',
-      role: 'Barber & Grooming Expert',
-      bio: 'Férfi haj- és szakállformázásban erős, klasszikus és trendi vonalon egyaránt.',
-    },
-    {
-      id: 3,
-      name: 'Tóth Petra',
-      initials: 'TP',
-      role: 'Color Specialist',
-      bio: 'Kíméletes, tartós és természetes hatású színezések, kiemelt fókuszban a hajvédelem, személyre szabott otthoni rutinnal és hosszú távú hajegészség támogatással.',
-    },
-    {
-      id: 4,
-      name: 'Szabó Máté',
-      initials: 'SM',
-      role: 'Junior Stylist',
-      bio: '',
-    },
-  ];
+  teamMembers: TeamMember[] = [];
   private favoritesLoaded = false;
   private favorites: Favorite[] = [];
   private routeSubscription?: Subscription;
@@ -116,7 +89,8 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
     private router: Router,
     private companiesService: CompaniesService,
     private title: Title,
-    private favoritesService: FavoritesService
+    private favoritesService: FavoritesService,
+    private staffService: StaffService,
   ) {}
 
   ngOnInit(): void {
@@ -124,12 +98,13 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
     this.routeSubscription = this.route.params.subscribe((params) => {
       this.companyId = +params['id'];
       this.loadCompanyDetails();
+      this.loadTeamMembers();
       this.updateFavoriteState();
     });
 
     this.favoritesSubscription = combineLatest([
       this.favoritesService.favorites$,
-      this.favoritesService.favoritesLoaded$
+      this.favoritesService.favoritesLoaded$,
     ]).subscribe(([favorites, loaded]) => {
       this.favorites = favorites;
       this.favoritesLoaded = loaded;
@@ -171,6 +146,15 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
     if (event.target === event.currentTarget) {
       this.closeImagePreview();
     }
+  }
+
+  @HostListener('document:keydown.escape')
+  handleEscapeKey(): void {
+    if (!this.selectedImagePreview) {
+      return;
+    }
+
+    this.closeImagePreview();
   }
 
   loadCompanyDetails(): void {
@@ -219,6 +203,56 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
     });
   }
 
+  private loadTeamMembers(): void {
+    if (!this.companyId) {
+      this.teamMembers = [];
+      return;
+    }
+
+    this.staffService.getStaffForIndustryPage(this.companyId).subscribe({
+      next: (staffMembers) => {
+        this.expandedTeamBioIds.clear();
+        this.teamMembers = staffMembers.map((member) => this.mapStaffToTeamMember(member));
+      },
+      error: (error) => {
+        console.error('Hiba a csapattagok betöltése során:', error);
+        this.teamMembers = [];
+      },
+    });
+  }
+
+  private mapStaffToTeamMember(
+    staffMember: IndustryPageStaffResponse['result'][number],
+  ): TeamMember {
+    const displayName = staffMember.displayName?.trim() || 'Névtelen munkatárs';
+
+    return {
+      id: staffMember.id,
+      name: displayName,
+      initials: this.getInitials(displayName),
+      role: staffMember.specialties?.trim() || 'Munkatárs',
+      bio: staffMember.bio?.trim() || '',
+      imageUrl: staffMember.imageUrl?.trim() || '',
+    };
+  }
+
+  private getInitials(fullName: string): string {
+    const parts = fullName
+      .trim()
+      .split(/\s+/)
+      .filter((part) => part.length > 0);
+
+    if (parts.length === 0) {
+      return '??';
+    }
+
+    if (parts.length === 1) {
+      return parts[0].slice(0, 2).toUpperCase();
+    }
+
+    return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+  }
+
   selectCategory(categoryId: number): void {
     this.selectedCategoryId = categoryId;
   }
@@ -249,7 +283,7 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
     }
 
     this.isFavorite = this.favorites.some(
-      (favorite) => favorite.company.companyId === this.companyId
+      (favorite) => favorite.company.companyId === this.companyId,
     );
   }
 
@@ -417,7 +451,7 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
       }
 
       void this.initializeMap();
-    }, 0);
+    }, 80);
   }
 
   private async initializeMap(): Promise<void> {
@@ -427,6 +461,11 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
 
     const container = this.mapElement?.nativeElement;
     if (!container) {
+      this.scheduleMapInitialization();
+      return;
+    }
+
+    if (container.clientWidth === 0 || container.clientHeight === 0) {
       this.scheduleMapInitialization();
       return;
     }
@@ -441,18 +480,20 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const coordinates =
-      (await this.geocodeAddress(address)) ??
-      this.getCityFallbackCoordinates() ??
-      this.defaultMapCoordinates;
+    const fallbackCoordinates = this.getCityFallbackCoordinates() ?? this.defaultMapCoordinates;
+    const coordinates = await this.resolveCoordinates(address, fallbackCoordinates);
 
     try {
       const L = await this.getLeaflet();
       this.destroyMap();
 
       this.map = L.map(container, {
-        zoomControl: true,
+        zoomControl: false,
         scrollWheelZoom: false,
+        doubleClickZoom: false,
+        boxZoom: false,
+        touchZoom: false,
+        keyboard: false,
       }).setView([coordinates.lat, coordinates.lng], 15);
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -480,6 +521,7 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
 
       this.isMapLoading = false;
       setTimeout(() => this.map?.invalidateSize(), 50);
+      setTimeout(() => this.map?.invalidateSize(), 250);
     } catch (error) {
       console.error('Map initialization error:', error);
       this.isMapLoading = false;
@@ -487,11 +529,33 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
     }
   }
 
+  private async resolveCoordinates(
+    address: string,
+    fallbackCoordinates: { lat: number; lng: number },
+  ): Promise<{ lat: number; lng: number }> {
+    try {
+      const geocodedCoordinates = await Promise.race([
+        this.geocodeAddress(address),
+        this.waitForMs(2500).then(() => null),
+      ]);
+
+      return geocodedCoordinates ?? fallbackCoordinates;
+    } catch {
+      return fallbackCoordinates;
+    }
+  }
+
+  private waitForMs(milliseconds: number): Promise<void> {
+    return new Promise((resolve) => {
+      window.setTimeout(resolve, milliseconds);
+    });
+  }
+
   private async getLeaflet(): Promise<LeafletModule> {
     if (!this.leaflet) {
-      this.leaflet = await import('leaflet');
+      const mod = await import('leaflet');
+      this.leaflet = (mod.default || mod) as LeafletModule;
     }
-
     return this.leaflet;
   }
 
@@ -511,7 +575,9 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
     return null;
   }
 
-  private async geocodeWithNominatim(address: string): Promise<{ lat: number; lng: number } | null> {
+  private async geocodeWithNominatim(
+    address: string,
+  ): Promise<{ lat: number; lng: number } | null> {
     try {
       const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`;
       const response = await this.fetchWithTimeout(url, {
@@ -654,5 +720,4 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
       this.map = undefined;
     }
   }
-
 }

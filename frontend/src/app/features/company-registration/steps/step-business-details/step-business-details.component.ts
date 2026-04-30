@@ -1,11 +1,16 @@
 import { Component, EventEmitter, Output, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FormsModule } from '@angular/forms';
+import { MatInputModule } from '@angular/material/input';
+import { MatTimepickerModule } from '@angular/material/timepicker';
+import { MatNativeDateModule } from '@angular/material/core';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-step-business-details',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, MatInputModule, MatTimepickerModule, MatNativeDateModule, MatTooltipModule],
   templateUrl: './step-business-details.component.html',
   styleUrls: ['./step-business-details.component.css']
 })
@@ -15,6 +20,7 @@ export class StepBusinessDetailsComponent implements OnInit {
   @Input() initialData: any;
 
   businessForm: FormGroup;
+  minBookingHoursSameDayPickerModel: Date | null = null;
 
   // Pénznem csak HUF marad
   currency = 'HUF';
@@ -63,6 +69,16 @@ export class StepBusinessDetailsComponent implements OnInit {
       this.emitFormStatus();
     });
 
+    this.businessForm.get('minBookingHoursSameDay')?.valueChanges.subscribe((value) => {
+      const nextModel = typeof value === 'string' ? this.parseTimeString(value) : null;
+      const currentTime = this.minBookingHoursSameDayPickerModel?.getTime() ?? null;
+      const nextTime = nextModel?.getTime() ?? null;
+
+      if (currentTime !== nextTime) {
+        this.minBookingHoursSameDayPickerModel = nextModel;
+      }
+    });
+
     this.businessForm.get('minBookingSameDayNone')?.valueChanges.subscribe((isNone) => {
       const control = this.businessForm.get('minBookingHoursSameDay');
       if (isNone) {
@@ -86,6 +102,10 @@ export class StepBusinessDetailsComponent implements OnInit {
         this.businessForm.get('minBookingHoursSameDay')?.disable({ emitEvent: false });
       }
     }
+
+    this.minBookingHoursSameDayPickerModel = this.parseTimeString(
+      this.businessForm.get('minBookingHoursSameDay')?.value
+    );
 
     // Kezdeti validitás kibocsátása
     this.emitFormStatus();
@@ -140,5 +160,66 @@ export class StepBusinessDetailsComponent implements OnInit {
 
   isFormValid(): boolean {
     return this.businessForm.valid;
+  }
+
+  onMinBookingHoursSameDayPickerChange(value: Date | null): void {
+    const formatted = this.formatTime(value);
+    if (!formatted) {
+      return;
+    }
+
+    this.minBookingHoursSameDayPickerModel = value;
+    this.businessForm.get('minBookingHoursSameDay')?.setValue(formatted);
+  }
+
+  isSameDayNone(): boolean {
+    return this.businessForm.get('minBookingSameDayNone')?.value === true;
+  }
+
+  setSameDayMode(isNone: boolean): void {
+    const control = this.businessForm.get('minBookingSameDayNone');
+    if (!control) {
+      return;
+    }
+
+    if (control.value !== isNone) {
+      control.setValue(isNone);
+    }
+  }
+
+  private parseTimeString(value: string): Date | null {
+    const normalized = value?.trim() ?? '';
+    if (!/^\d{2}:\d{2}$/.test(normalized)) {
+      return null;
+    }
+
+    const [hoursRaw, minutesRaw] = normalized.split(':');
+    const hours = Number(hoursRaw);
+    const minutes = Number(minutesRaw);
+
+    if (
+      !Number.isInteger(hours) ||
+      !Number.isInteger(minutes) ||
+      hours < 0 ||
+      hours > 23 ||
+      minutes < 0 ||
+      minutes > 59
+    ) {
+      return null;
+    }
+
+    const date = new Date();
+    date.setHours(hours, minutes, 0, 0);
+    return date;
+  }
+
+  private formatTime(value: Date | null): string {
+    if (!value || Number.isNaN(value.getTime())) {
+      return '';
+    }
+
+    const hours = String(value.getHours()).padStart(2, '0');
+    const minutes = String(value.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
   }
 }

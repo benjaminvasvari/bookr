@@ -1,13 +1,12 @@
 .payment-container {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr) 400px;
   gap: 2rem;
-  max-width: 1400px;
+  max-width: 1320px;
   margin-left: auto;
   margin-right: auto;
   margin-top: 100px;
   padding: 2rem;
-  padding-right: 430px;
   min-height: calc(100vh - 80px);
 }
 
@@ -307,11 +306,11 @@
 
 /* JOBB OLDAL - Kosár */
 .cart-section {
-  position: fixed;
+  position: sticky;
   top: 100px;
-  right: 2rem;
-  width: 400px;
-  z-index: 250;
+  width: 100%;
+  align-self: start;
+  z-index: 20;
 }
 
 .cart-card {
@@ -326,14 +325,10 @@
   overflow-y: auto;
 }
 
-@media (max-width: 1280px) {
+@media (max-width: 1200px) {
   .payment-container {
-    padding-right: 390px;
-  }
-
-  .cart-section {
-    right: 1.5rem;
-    width: 360px;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 1.5rem;
   }
 }
 
@@ -455,11 +450,93 @@
   opacity: 0.5;
 }
 
+.auth-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  padding: 1rem;
+}
+
+.auth-modal {
+  width: 100%;
+  max-width: 420px;
+  background: #ffffff;
+  border: 1px solid #dee2e6;
+  border-radius: 14px;
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.24);
+  padding: 1.1rem 1.2rem 1.2rem;
+}
+
+.auth-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+}
+
+.auth-modal-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #2c3e50;
+}
+
+.auth-close-btn {
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: #eef2f6;
+  color: #475569;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.auth-modal-copy {
+  margin: 0;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.auth-modal-actions {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.7rem;
+}
+
+.btn-secondary-auth,
+.btn-primary-auth {
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 0.6rem 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-secondary-auth {
+  background: #f1f5f9;
+  border-color: #d7e0ea;
+  color: #334155;
+}
+
+.btn-primary-auth {
+  background: #38a179;
+  border-color: #38a179;
+  color: #ffffff;
+}
+
 /* Responsive */
 @media (max-width: 992px) {
   .payment-container {
     grid-template-columns: 1fr;
-    padding-right: 2rem;
+    margin-top: 84px;
+    padding: 1rem;
+    padding-bottom: calc(210px + env(safe-area-inset-bottom));
+    min-height: auto;
   }
 
   .cart-section {
@@ -468,16 +545,21 @@
     left: 0;
     right: 0;
     top: auto;
-    background: white;
-    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
-    padding: 1rem;
+    background: transparent;
+    box-shadow: none;
+    padding: 0.75rem;
     z-index: 1000;
     max-height: none;
   }
 
   .cart-card {
-    border: none;
-    padding: 0;
+    border-radius: 20px;
+    border: 1px solid #d5deea;
+    padding: 0.95rem 1rem calc(0.95rem + env(safe-area-inset-bottom));
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.2);
+    max-height: none;
+    overflow: visible;
   }
 
   .company-info,
@@ -488,15 +570,20 @@
   }
 
   .summary-section {
-    padding-bottom: 150px;
+    padding-bottom: 0;
+  }
+
+  .cart-summary {
+    padding-bottom: 0.8rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .continue-btn {
+    border-radius: 14px;
   }
 }
 
 @media (max-width: 768px) {
-  .payment-container {
-    padding: 1rem;
-  }
-
   .summary-block {
     padding: 1rem 1.5rem;
   }
@@ -514,6 +601,15 @@
   .payment-icon i {
     font-size: 1.5rem;
   }
+
+  .cart-section {
+    padding: 0.55rem;
+  }
+
+  .cart-card {
+    border-radius: 16px;
+    padding: 0.8rem 0.85rem calc(0.8rem + env(safe-area-inset-bottom));
+  }
 }
 
 @media (max-width: 480px) {
@@ -527,5 +623,180 @@
 
   .total-price {
     font-size: 1.25rem;
+  }
+}
+
+:host-context(body.dark-mode) .payment-container {
+  background: transparent;
+}
+
+:host-context(body.dark-mode) .summary-section h2,
+:host-context(body.dark-mode) .summary-section h3,
+:host-context(body.dark-mode) .block-header,
+:host-context(body.dark-mode) .company-details h3,
+:host-context(body.dark-mode) .rating span:first-child,
+:host-context(body.dark-mode) .specialist-details h4,
+:host-context(body.dark-mode) .summary-row .value,
+:host-context(body.dark-mode) .service-info h4,
+:host-context(body.dark-mode) .service-price,
+:host-context(body.dark-mode) .total-label,
+:host-context(body.dark-mode) .total-price,
+:host-context(body.dark-mode) .payment-details h4,
+:host-context(body.dark-mode) .info-row .value,
+:host-context(body.dark-mode) .cart-summary,
+:host-context(body.dark-mode) .cart-item-info h4,
+:host-context(body.dark-mode) .cart-item-price {
+  color: #f8fafc !important;
+}
+
+:host-context(body.dark-mode) .address,
+:host-context(body.dark-mode) .specialization,
+:host-context(body.dark-mode) .summary-row .label,
+:host-context(body.dark-mode) .service-info p,
+:host-context(body.dark-mode) .payment-details p,
+:host-context(body.dark-mode) .info-row .label,
+:host-context(body.dark-mode) .cart-item-info p {
+  color: #b8c6d6;
+}
+
+:host-context(body.dark-mode) .summary-card,
+:host-context(body.dark-mode) .cart-card,
+:host-context(body.dark-mode) .payment-card {
+  background: #1b2532;
+  border-color: #2f4257;
+  box-shadow: 0 10px 24px rgba(2, 6, 23, 0.32);
+}
+
+:host-context(body.dark-mode) .summary-block {
+  border-bottom-color: #2f4257;
+}
+
+:host-context(body.dark-mode) .block-header i {
+  color: #4fd1a1;
+}
+
+:host-context(body.dark-mode) .company-image,
+:host-context(body.dark-mode) .payment-icon {
+  background: #243447;
+}
+
+:host-context(body.dark-mode) .specialist-image-small {
+  border-color: #3a5269;
+}
+
+:host-context(body.dark-mode) .service-item,
+:host-context(body.dark-mode) .cart-item {
+  background: #243447;
+  border: 1px solid #3a5269;
+}
+
+:host-context(body.dark-mode) .total-block {
+  background: #1f3042;
+}
+
+:host-context(body.dark-mode) .payment-card:hover {
+  border-color: #4d6883;
+  box-shadow: 0 8px 16px rgba(2, 6, 23, 0.3);
+}
+
+:host-context(body.dark-mode) .payment-card.selected {
+  background: #22384a;
+  border-color: #38a179;
+  box-shadow: 0 10px 18px rgba(16, 185, 129, 0.2);
+}
+
+:host-context(body.dark-mode) .payment-icon i {
+  color: #b8c6d6;
+}
+
+:host-context(body.dark-mode) .payment-card.selected .payment-icon {
+  background: #38a179;
+}
+
+:host-context(body.dark-mode) .payment-card.selected .payment-icon i {
+  color: #f8fafc;
+}
+
+:host-context(body.dark-mode) .selected-specialist-info,
+:host-context(body.dark-mode) .selected-appointment-info {
+  background: rgba(16, 185, 129, 0.16);
+  border-color: rgba(52, 211, 153, 0.42);
+}
+
+:host-context(body.dark-mode) .cart-summary {
+  border-bottom-color: #2f4257;
+}
+
+:host-context(body.dark-mode) .warning-message {
+  background: rgba(127, 29, 29, 0.24);
+  border-color: rgba(248, 113, 113, 0.45);
+  color: #fecaca;
+}
+
+:host-context(body.dark-mode) .continue-btn {
+  background: #38a179;
+  color: #f8fafc;
+}
+
+:host-context(body.dark-mode) .continue-btn:hover:not(:disabled) {
+  background: #2f8d66;
+  box-shadow: 0 8px 14px rgba(16, 185, 129, 0.24);
+}
+
+:host-context(body.dark-mode) .continue-btn:disabled {
+  background: #3b4f63;
+  color: #99acc0;
+  opacity: 1;
+}
+
+:host-context(body.dark-mode) .auth-modal-overlay {
+  background: rgba(2, 6, 23, 0.72);
+}
+
+:host-context(body.dark-mode) .auth-modal {
+  background: #1b2532;
+  border-color: #2f4257;
+}
+
+:host-context(body.dark-mode) .auth-modal-header h3 {
+  color: #f8fafc;
+}
+
+:host-context(body.dark-mode) .auth-modal-copy {
+  color: #cbd5e1;
+}
+
+:host-context(body.dark-mode) .auth-close-btn {
+  background: #243447;
+  color: #d7e3f0;
+}
+
+:host-context(body.dark-mode) .btn-secondary-auth {
+  background: #233447;
+  border-color: #3a5269;
+  color: #d9e6f2;
+}
+
+@media (max-width: 992px) {
+  :host-context(body.dark-mode) .cart-section {
+    background: transparent;
+    box-shadow: none;
+  }
+
+  :host-context(body.dark-mode) .cart-card {
+    background: rgba(18, 31, 45, 0.98);
+    border-color: #2f4257;
+    box-shadow: 0 12px 26px rgba(2, 6, 23, 0.44);
+  }
+}
+
+@media (max-width: 992px) {
+  :host-context(body.dark-mode) .cart-section {
+    background: #1b2532;
+    box-shadow: 0 -8px 18px rgba(2, 6, 23, 0.32);
+  }
+
+  :host-context(body.dark-mode) .cart-card {
+    background: transparent;
   }
 }

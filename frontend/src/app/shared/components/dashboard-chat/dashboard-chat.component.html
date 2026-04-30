@@ -1,0 +1,113 @@
+<section class="chat-page-shell">
+  <header class="chat-page-header">
+    <div>
+      <p class="eyebrow">Belső kommunikáció</p>
+      <h1>{{ pageTitle }}</h1>
+      <p class="chat-page-subtitle">{{ pageSubtitle }}</p>
+    </div>
+  </header>
+
+  <div class="chat-layout" [class.single-thread]="isGroupChat">
+    @if (!isGroupChat) {
+      <aside class="chat-sidebar-panel">
+        <div class="chat-sidebar-header">
+          <h2>Beszélgetések</h2>
+          <span class="conversation-count">{{ conversations.length }}</span>
+        </div>
+
+        <div class="conversation-list">
+          @for (conversation of conversations; track trackConversation($index, conversation)) {
+            <button
+              class="conversation-item"
+              type="button"
+              [class.active]="conversation.id === selectedConversationId"
+              (click)="selectConversation(conversation.id)"
+            >
+              <div class="conversation-avatar">
+                {{ conversation.participantLabel.slice(0, 1) }}
+              </div>
+              <div class="conversation-content">
+                <div class="conversation-topline">
+                  <strong>{{ conversation.title }}</strong>
+                  <span>{{ formatConversationTime(conversation.lastMessageAt) }}</span>
+                </div>
+                <p>{{ conversation.lastMessagePreview }}</p>
+              </div>
+              @if (conversation.unreadCount > 0) {
+                <span class="conversation-badge">{{ conversation.unreadCount }}</span>
+              }
+            </button>
+          } @empty {
+            <div class="chat-empty conversations-empty">
+              <i class="fas fa-comments"></i>
+              <p>Még nincs aktív beszélgetés.</p>
+            </div>
+          }
+        </div>
+      </aside>
+    }
+
+    <section class="chat-thread-panel">
+      @if (selectedConversation) {
+        <header class="chat-thread-header">
+          <div>
+            <h2>{{ selectedConversationHeader }}</h2>
+            <p>{{ selectedConversationSubheader }}</p>
+            @if (isGroupChat) {
+              <span class="group-chat-chip">Owner + staff kozos csatorna</span>
+            }
+          </div>
+          <button class="thread-action" type="button">
+            <i class="fas fa-rotate-right"></i>
+            <span>Frissítés</span>
+          </button>
+        </header>
+
+        <div class="chat-thread-body">
+          @for (message of messages; track trackMessage($index, message)) {
+            <article class="message-bubble" [class.own-message]="isOwnMessage(message)">
+              <div class="message-meta">
+                <div class="message-author">
+                  <span class="message-avatar">
+                    @if (getMessageAvatarUrl(message); as avatarUrl) {
+                      <img [src]="avatarUrl" [alt]="message.senderName" />
+                    } @else {
+                      {{ getMessageInitials(message) }}
+                    }
+                  </span>
+                  <strong>{{ message.senderName }}</strong>
+                </div>
+                <span>{{ formatConversationTime(message.createdAt) }}</span>
+              </div>
+              <p>{{ message.content }}</p>
+            </article>
+          } @empty {
+            <div class="chat-empty thread-empty">
+              <i class="fas fa-paper-plane"></i>
+              <p>Küldj egy első üzenetet ebben a beszélgetésben.</p>
+            </div>
+          }
+        </div>
+
+        <form class="chat-composer" (ngSubmit)="sendMessage()">
+          <textarea
+            name="message"
+            [(ngModel)]="draftMessage"
+            rows="3"
+            placeholder="Írj egy rövid belső üzenetet..."
+          ></textarea>
+          <div class="composer-actions">
+            <span class="composer-hint">Mock adatforrás, backend még nincs bekötve.</span>
+            <button class="send-button" type="submit" [disabled]="!canSendMessage">Küldés</button>
+          </div>
+        </form>
+      } @else {
+        <div class="chat-empty thread-empty large-empty">
+          <i class="fas fa-message"></i>
+          <h2>Válassz egy beszélgetést</h2>
+          <p>A bal oldali listából megnyithatod az owner és staff közötti üzenetváltásokat.</p>
+        </div>
+      }
+    </section>
+  </div>
+</section>

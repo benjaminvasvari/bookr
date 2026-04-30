@@ -1,5 +1,5 @@
 import { ownerGuard } from './core/guards/owner-guard';
-import { Routes } from '@angular/router';
+import { CanDeactivateFn, Routes } from '@angular/router';
 
 
 import { MainPageComponent } from './main-page/main-page.component';
@@ -15,11 +15,20 @@ import { AppointmentPaymentComponent } from './appointment-payment/appointment-p
 import { authGuard } from './core/guards/auth.guard';
 import { roleGuard } from './core/guards/role.guard';
 import { ResetPasswordComponent } from './reset-password/reset-password.component';
+import { SearchResultsComponent } from './search-results/search-results.component';
+
+const settingsLeaveGuard: CanDeactivateFn<{ canDeactivate: () => boolean }> = (component) =>
+  component.canDeactivate();
 
 export const appRoutes: Routes = [
   {
     path: '',
     component: MainPageComponent,
+    data: { showFooter: true },
+  },
+  {
+    path: 'search',
+    component: SearchResultsComponent,
     data: { showFooter: true },
   },
   {
@@ -40,6 +49,14 @@ export const appRoutes: Routes = [
   {
     path: 'verify-email',
     component: VerifyEmailComponent,
+    data: { showFooter: false },
+  },
+  {
+    path: 'staff-invite',
+    loadComponent: () =>
+      import('./staff-invite-page/staff-invite-page.component').then(
+        (m) => m.StaffInvitePageComponent
+      ),
     data: { showFooter: false },
   },
   {
@@ -110,10 +127,31 @@ export const appRoutes: Routes = [
           )
       },
       {
+        path: 'chat',
+        loadComponent: () =>
+          import('./features/staff-dashboard/staff-chat/staff-chat.component').then(
+            (m) => m.StaffChatComponent
+          )
+      },
+      {
+        path: 'work-settings',
+        loadComponent: () =>
+          import('./features/staff-dashboard/staff-work-settings/staff-work-settings.component').then(
+            (m) => m.StaffWorkSettingsComponent
+          )
+      },
+      {
         path: 'profile',
         loadComponent: () =>
           import('./features/staff-dashboard/staff-profile/staff-profile.component').then(
             (m) => m.StaffProfileComponent
+          )
+      },
+      {
+        path: 'setting',
+        loadComponent: () =>
+          import('./features/staff-dashboard/staff-settings/setting.component').then(
+            (m) => m.StaffSettingsComponent
           )
       }
     ]
@@ -131,7 +169,7 @@ export const appRoutes: Routes = [
   {
     path: 'superadmin',
     loadComponent: () =>
-      import('./features/superadmin-dashboard/superadmin-dashboard/superadmin-dashboard.component').then(
+      import('./features/superadmin-dashboard/superadmin-dashboard.component').then(
         (m) => m.SuperadminDashboardComponent
       ),
     canActivate: [authGuard, roleGuard],
@@ -191,7 +229,7 @@ export const appRoutes: Routes = [
   {
     path: 'owner',
     loadComponent: () =>
-      import('./features/owner-dashboard/owner-dashboard/owner-dashboard.component').then(
+      import('./features/owner-dashboard/owner-dashboard.component').then(
         (m) => m.OwnerDashboardComponent
       ),
     canActivate: [authGuard, ownerGuard],
@@ -205,21 +243,21 @@ export const appRoutes: Routes = [
       {
         path: 'overview',
         loadComponent: () =>
-          import('./features/owner-dashboard/pages/overview/overview/overview.component').then(
+          import('./features/owner-dashboard/pages/overview/overview.component').then(
             (m) => m.OverviewComponent
           )
       },
       {
         path: 'calendar',
         loadComponent: () =>
-          import('./features/owner-dashboard/pages/calendar/calendar.component/calendar.component').then(
+          import('./features/owner-dashboard/pages/calendar/calendar.component').then(
             (m) => m.CalendarComponent
           )
       },
       {
         path: 'staff',
         loadComponent: () =>
-          import('./features/owner-dashboard/pages/staff/staff.component/staff.component').then(
+          import('./features/owner-dashboard/pages/staff/staff.component').then(
             (m) => m.StaffComponent
           )
       },
@@ -233,35 +271,43 @@ export const appRoutes: Routes = [
       {
         path: 'clients',
         loadComponent: () =>
-          import('./features/owner-dashboard/pages/clients/clients.component/clients.component').then(
+          import('./features/owner-dashboard/pages/clients/clients.component').then(
             (m) => m.ClientsComponent
           )
       },
       {
         path: 'services',
         loadComponent: () =>
-          import('./features/owner-dashboard/pages/services/services.component/services.component').then(
+          import('./features/owner-dashboard/pages/services/services.component').then(
             (m) => m.ServicesComponent
           )
       },
       {
         path: 'sales',
         loadComponent: () =>
-          import('./features/owner-dashboard/pages/sales/sales.component/sales.component').then(
+          import('./features/owner-dashboard/pages/sales/sales.component').then(
             (m) => m.SalesComponent
           )
       },
       {
         path: 'reviews',
         loadComponent: () =>
-          import('./features/owner-dashboard/pages/reviews/reviews.component/reviews.component').then(
+          import('./features/owner-dashboard/pages/reviews/reviews.component').then(
             (m) => m.ReviewsComponent
           )
       },
       {
-        path: 'settings',
+        path: 'chat',
         loadComponent: () =>
-          import('./features/owner-dashboard/pages/settings/settings.component/settings.component').then(
+          import('./features/owner-dashboard/pages/chat/chat.component').then(
+            (m) => m.OwnerChatPageComponent
+          )
+      },
+      {
+        path: 'settings',
+        canDeactivate: [settingsLeaveGuard],
+        loadComponent: () =>
+          import('./features/owner-dashboard/pages/settings/settings.component').then(
             (m) => m.SettingsComponent
           )
       }

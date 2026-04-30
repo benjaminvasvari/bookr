@@ -1,0 +1,361 @@
+:host {
+  display: block;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell,
+    sans-serif;
+  min-height: 100vh;
+  background: #f8f9fa;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* ── Search Header ───────────────────────────────────────── */
+.search-header {
+  position: sticky;
+  top: 72px; /* navbar magassága alatt */
+  z-index: 50;
+  background: white;
+  border-bottom: 1px solid #e8e8e8;
+  padding: 20px 0 14px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.search-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.back-btn {
+  flex-shrink: 0;
+  background: #f3f6fa;
+  border: none;
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #444;
+  transition: background 0.2s, color 0.2s;
+}
+
+.back-btn:hover {
+  background: #e8f5ee;
+  color: #5dbd8a;
+}
+
+.search-container {
+  position: relative;
+  flex: 1;
+}
+
+.search-input {
+  width: 100%;
+  padding: 13px 50px 13px 20px;
+  border: 2px solid #e0e0e0;
+  border-radius: 30px;
+  font-size: 16px;
+  font-weight: 600;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+  background: #f8f9fa;
+}
+
+.search-input:focus,
+.search-input:not(:placeholder-shown) {
+  border-color: #5dbd8a;
+  background: white;
+}
+
+.search-icon {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.search-icon:hover {
+  color: #5dbd8a;
+}
+
+.results-meta {
+  margin: 10px 0 0;
+  font-size: 14px;
+  color: #666;
+}
+
+.results-count {
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+/* ── Content ─────────────────────────────────────────────── */
+.content {
+  padding: 88px 0 60px;
+}
+
+/* ── Loading ─────────────────────────────────────────────── */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #e0e0e0;
+  border-top-color: #5dbd8a;
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-text {
+  margin-top: 18px;
+  font-size: 15px;
+  color: #888;
+  font-weight: 600;
+}
+
+/* ── Empty State ─────────────────────────────────────────── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  text-align: center;
+}
+
+.empty-icon {
+  margin-bottom: 20px;
+  opacity: 0.5;
+}
+
+.empty-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #444;
+  margin: 0 0 8px;
+}
+
+.empty-sub {
+  font-size: 14px;
+  color: #999;
+  margin: 0;
+}
+
+/* ── Results Grid ────────────────────────────────────────── */
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 24px;
+  margin-top: 12px;
+}
+
+.result-card {
+  background: white;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+}
+
+.result-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.13);
+}
+
+.card-image {
+  width: 100%;
+  height: 180px;
+  overflow: hidden;
+  background: #f3f6fa;
+}
+
+.card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.result-card:hover .card-image img {
+  transform: scale(1.04);
+}
+
+.card-info {
+  display: flex;
+  flex-direction: column;
+  padding: 15px;
+  flex: 1;
+}
+
+.card-name {
+  font-size: 17px;
+  font-weight: 700;
+  color: #2c3e50;
+  margin: 0 0 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+.card-rating {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.rating-value {
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.rating-stars {
+  color: #f59e0b;
+}
+
+.star {
+  font-size: 14px;
+  color: #f59e0b;
+}
+
+.star.star-empty {
+  color: #d1d5db;
+}
+
+.review-count {
+  color: #888;
+  font-size: 13px;
+}
+
+.card-address {
+  color: #777;
+  font-size: 13px;
+  margin: 0 0 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-clamp: 2;
+  overflow: hidden;
+  flex: 1;
+}
+
+.btn-book {
+  width: 100%;
+  background: #e0e0e0;
+  color: #555;
+  border: none;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.btn-book:hover {
+  background: #5dbd8a;
+  color: white;
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .search-header {
+    top: 60px;
+    padding: 14px 0 10px;
+  }
+
+  .content {
+    padding-top: 64px;
+  }
+
+  .results-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .results-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .back-btn {
+    width: 38px;
+    height: 38px;
+  }
+}
+
+/* ── Dark mode ───────────────────────────────────────────── */
+:host-context(body.dark-mode) :host {
+  background: #1a1a2e;
+}
+
+:host-context(body.dark-mode) .search-header {
+  background: #16213e;
+  border-bottom-color: #2a2a4a;
+}
+
+:host-context(body.dark-mode) .search-input {
+  background: #1a1a2e;
+  border-color: #3a3a5a;
+  color: #e0e0e0;
+}
+
+:host-context(body.dark-mode) .search-input:focus,
+:host-context(body.dark-mode) .search-input:not(:placeholder-shown) {
+  border-color: #5dbd8a;
+  background: #16213e;
+}
+
+:host-context(body.dark-mode) .back-btn {
+  background: #1a1a2e;
+  color: #ccc;
+}
+
+:host-context(body.dark-mode) .result-card {
+  background: #16213e;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+:host-context(body.dark-mode) .card-name {
+  color: #e0e0e0;
+}
+
+:host-context(body.dark-mode) .btn-book {
+  background: #2a2a4a;
+  color: #ccc;
+}

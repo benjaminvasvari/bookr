@@ -33,10 +33,17 @@
               id="email"
               formControlName="email"
               placeholder=" "
-              [class.invalid]="registerForm.get('email')?.invalid && registerForm.get('email')?.touched">
+              [class.invalid]="registerForm.get('email')?.invalid && (registerForm.get('email')?.dirty || registerForm.get('email')?.touched)">
             <label for="email">Email cím</label>
             <i class="fas fa-envelope input-icon"></i>
           </div>
+
+          @if (getEmailErrors().length > 0) {
+            <div class="inline-validation-error">
+              <i class="fas fa-exclamation-circle"></i>
+              <span>{{ getEmailErrors()[0] }}</span>
+            </div>
+          }
 
           <div class="input-group">
             <input
@@ -44,10 +51,17 @@
               id="phone"
               formControlName="phone"
               placeholder=" "
-              [class.invalid]="registerForm.get('phone')?.invalid && registerForm.get('phone')?.touched">
+              [class.invalid]="registerForm.get('phone')?.invalid && (registerForm.get('phone')?.dirty || registerForm.get('phone')?.touched)">
             <label for="phone">Telefonszám</label>
             <i class="fas fa-phone input-icon"></i>
           </div>
+
+          @if (getPhoneErrors().length > 0) {
+            <div class="inline-validation-error">
+              <i class="fas fa-exclamation-circle"></i>
+              <span>{{ getPhoneErrors()[0] }}</span>
+            </div>
+          }
 
           <div class="input-group">
             <input
@@ -201,18 +215,32 @@
 
                 @if (currentStep === 1) {
                   <div class="input-group">
-                    <input type="email" id="wizard-email" formControlName="email" placeholder=" " [class.invalid]="registerForm.get('email')?.invalid && registerForm.get('email')?.touched">
+                    <input type="email" id="wizard-email" formControlName="email" placeholder=" " [class.invalid]="registerForm.get('email')?.invalid && (registerForm.get('email')?.dirty || registerForm.get('email')?.touched)">
                     <label for="wizard-email">Email cím</label>
                     <i class="fas fa-envelope input-icon"></i>
                   </div>
+
+                  @if (getEmailErrors().length > 0) {
+                    <div class="inline-validation-error">
+                      <i class="fas fa-exclamation-circle"></i>
+                      <span>{{ getEmailErrors()[0] }}</span>
+                    </div>
+                  }
                 }
 
                 @if (currentStep === 2) {
                   <div class="input-group">
-                    <input type="tel" id="wizard-phone" formControlName="phone" placeholder=" " [class.invalid]="registerForm.get('phone')?.invalid && registerForm.get('phone')?.touched">
+                    <input type="tel" id="wizard-phone" formControlName="phone" placeholder=" " [class.invalid]="registerForm.get('phone')?.invalid && (registerForm.get('phone')?.dirty || registerForm.get('phone')?.touched)">
                     <label for="wizard-phone">Telefonszám</label>
                     <i class="fas fa-phone input-icon"></i>
                   </div>
+
+                  @if (getPhoneErrors().length > 0) {
+                    <div class="inline-validation-error">
+                      <i class="fas fa-exclamation-circle"></i>
+                      <span>{{ getPhoneErrors()[0] }}</span>
+                    </div>
+                  }
                 }
 
                 @if (currentStep === 3) {

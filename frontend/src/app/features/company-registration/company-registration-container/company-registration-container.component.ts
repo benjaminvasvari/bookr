@@ -147,9 +147,8 @@ export class CompanyRegistrationContainerComponent implements OnInit {
         this.cookieService.setCookie('bookr_company_info', data);
         break;
       case 3:
-        data = this.stepImageUpload?.getFormData();
-        this.registrationData.imageUpload = data;
-        this.cookieService.setCookie('bookr_image_upload', data);
+        this.registrationData.imageUpload = this.stepImageUpload?.getFormData();
+        // Képadatokat (base64/File) NEM mentjük cookie-ba – túl nagy, lefagyasztja a böngészőt
         break;
       case 4:
         data = this.stepBusinessDetails?.getFormData();
@@ -177,7 +176,7 @@ export class CompanyRegistrationContainerComponent implements OnInit {
         break;
       case 3:
         this.registrationData.imageUpload = data;
-        this.cookieService.setCookie('bookr_image_upload', data);
+        // Képadatokat NEM mentjük cookie-ba
         break;
       case 4:
         this.registrationData.businessDetails = data;
@@ -237,6 +236,12 @@ export class CompanyRegistrationContainerComponent implements OnInit {
     console.log('📦 Registration data:', this.registrationData);
     console.log('🔐 Is logged in:', this.isUserLoggedIn);
 
+    const phoneValidation = this.validateRegistrationPhones();
+    if (!phoneValidation.valid) {
+      alert(phoneValidation.message);
+      return;
+    }
+
     this.isSubmitting = true;
 
     const payload = this.buildRegistrationPayload();
@@ -288,6 +293,7 @@ export class CompanyRegistrationContainerComponent implements OnInit {
     const ownerInfo = this.registrationData?.ownerInfo || {};
     const companyInfo = this.registrationData?.companyInfo || {};
     const businessDetails = this.registrationData?.businessDetails || {};
+    const normalizedCompanyPhone = this.normalizeHuPhone(companyInfo.phone);
 
     const payload: any = {
       name: companyInfo.name || null,
@@ -296,7 +302,7 @@ export class CompanyRegistrationContainerComponent implements OnInit {
       city: companyInfo.city || null,
       postalCode: companyInfo.postalCode || null,
       country: companyInfo.country || null,
-      phone: companyInfo.phone || null,
+      phone: normalizedCompanyPhone || null,
       email: companyInfo.email || null,
       website: companyInfo.website || null,
       businessCategoryId: companyInfo.businessCategoryId ?? null,
@@ -307,14 +313,80 @@ export class CompanyRegistrationContainerComponent implements OnInit {
     };
 
     if (!this.isUserLoggedIn) {
+      const normalizedOwnerPhone = this.normalizeHuPhone(ownerInfo.phone);
       payload.firstName = ownerInfo.firstName || null;
       payload.lastName = ownerInfo.lastName || null;
       payload.email = ownerInfo.email || payload.email;
-      payload.phone = ownerInfo.phone || payload.phone;
+      payload.phone = normalizedOwnerPhone || payload.phone;
       payload.password = ownerInfo.password || null;
     }
 
     return payload;
+  }
+
+  private validateRegistrationPhones(): { valid: boolean; message: string } {
+    const companyPhone = this.registrationData?.companyInfo?.phone;
+    if (!this.isValidHuPhone(companyPhone)) {
+      return {
+        valid: false,
+        message: 'A ceg telefonszama ervenytelen. Hasznalj valos magyar formatumot (pl. +36301234567).'
+      };
+    }
+
+    if (!this.isUserLoggedIn) {
+      const ownerPhone = this.registrationData?.ownerInfo?.phone;
+      if (!this.isValidHuPhone(ownerPhone)) {
+        return {
+          valid: false,
+          message: 'A tulajdonos telefonszama ervenytelen. Hasznalj valos magyar formatumot (pl. +36301234567).'
+        };
+      }
+    }
+
+    return { valid: true, message: '' };
+  }
+
+  private isValidHuPhone(value: unknown): boolean {
+    const raw = String(value ?? '').trim();
+    if (!raw || !/^[0-9+\s\-()]+$/.test(raw)) {
+      return false;
+    }
+
+    const normalized = this.normalizeHuPhone(raw);
+    return /^\+36\d{8,9}$/.test(normalized);
+  }
+
+  private normalizeHuPhone(value: unknown): string {
+    const raw = String(value ?? '').trim();
+    if (!raw) {
+      return '';
+    }
+
+    const compact = raw.replace(/[\s\-()]/g, '');
+    const digits = compact.replace(/\D/g, '');
+
+    const plusCount = (compact.match(/\+/g) || []).length;
+    if (plusCount > 1 || (compact.includes('+') && !compact.startsWith('+'))) {
+      return raw;
+    }
+
+    if (compact.startsWith('+')) {
+      return `+${digits}`;
+    }
+
+    if (compact.startsWith('00')) {
+      return `+${digits.slice(2)}`;
+    }
+
+    if (compact.startsWith('06')) {
+      return `+36${digits.slice(2)}`;
+    }
+
+    if (compact.startsWith('36')) {
+      return `+${digits}`;
+    }
+
+    return compact;
   }
 
   private parseHoursAhead(value: string | boolean | null | undefined): number | null {

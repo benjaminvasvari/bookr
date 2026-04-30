@@ -45,4 +45,3 @@ it('register valid data', function() {
   cy.get('#confirmPassword').type('Cypress123@');
   cy.get('button.btn-submit').click();
 });
-

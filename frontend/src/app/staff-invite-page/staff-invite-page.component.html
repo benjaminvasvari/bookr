@@ -1,0 +1,59 @@
+<div class="invite-container">
+  <div class="invite-content">
+    <div class="invite-wrapper">
+      <h1 class="invite-title">STAFF MEGHÍVÓ</h1>
+
+      <div class="invite-box">
+        @if (isCheckingAuth) {
+          <p class="state-text">Jogosultság ellenőrzése...</p>
+        } @else {
+          @if (errorMessage) {
+            <p class="state-text error">{{ errorMessage }}</p>
+          }
+
+          @if (successMessage) {
+            <p class="state-text success">{{ successMessage }}</p>
+          }
+
+          @if (!actionCompleted) {
+            <p class="description">
+              Bejelentkezés után dönthetsz: elfogadod vagy elutasítod a staff meghívást.
+            </p>
+
+            <div class="actions">
+              <button
+                type="button"
+                class="btn-action"
+                (click)="acceptInvite()"
+                [disabled]="isSubmitting"
+              >
+                @if (!isSubmitting) {
+                  Meghívó elfogadása
+                } @else {
+                  Feldolgozás...
+                }
+              </button>
+
+              <button
+                type="button"
+                class="btn-action btn-secondary"
+                (click)="rejectInvite()"
+                [disabled]="isSubmitting"
+              >
+                Meghívó elutasítása
+              </button>
+            </div>
+          } @else {
+            <div class="actions">
+              <button type="button" class="btn-action" (click)="goToHome()">Tovább a főoldalra</button>
+            </div>
+          }
+        }
+      </div>
+    </div>
+
+    <div class="image-wrapper">
+      <div class="image-overlay"></div>
+    </div>
+  </div>
+</div>

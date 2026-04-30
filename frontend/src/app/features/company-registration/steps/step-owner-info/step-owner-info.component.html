@@ -104,8 +104,8 @@
           @if (ownerForm.get('phone')?.errors?.['required']) {
             A telefonszám megadása kötelező
           }
-          @if (ownerForm.get('phone')?.errors?.['pattern']) {
-            Érvényes magyar telefonszámot adjon meg (+36...)
+          @if (ownerForm.get('phone')?.errors?.['invalidHuPhone']) {
+            Érvényes magyar számot adjon meg (pl. +36301234567 vagy +3612345678)
           }
         </span>
       }

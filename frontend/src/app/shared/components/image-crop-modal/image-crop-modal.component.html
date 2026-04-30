@@ -1,0 +1,60 @@
+@if (visible && imageFile) {
+<div class="crop-modal-backdrop" (click)="onCancel()"></div>
+<div class="crop-modal-shell" role="dialog" aria-modal="true" [attr.aria-label]="title">
+  <div class="crop-modal-card" (click)="$event.stopPropagation()">
+    <div class="crop-modal-header">
+      <h3>{{ title }}</h3>
+      <button type="button" class="crop-modal-close" (click)="onCancel()" aria-label="Bezárás">×</button>
+    </div>
+
+    <div class="crop-modal-body">
+      <div class="crop-zoom-toolbar" aria-label="Kep nagyitas vezerlok">
+        <button type="button" class="zoom-btn" (click)="zoomOut()" aria-label="Kicsinyites">-</button>
+        <input
+          class="zoom-range"
+          type="range"
+          [min]="minZoom"
+          [max]="maxZoom"
+          [step]="zoomStep"
+          [value]="imageTransform.scale || 1"
+          (input)="onZoomSliderInput($event)"
+          aria-label="Nagyitas csuszka"
+        />
+        <button type="button" class="zoom-btn" (click)="zoomIn()" aria-label="Nagyitas">+</button>
+        <button type="button" class="zoom-reset-btn" (click)="resetZoom()">Alaphelyzet</button>
+        <span class="zoom-value">{{ zoomPercent }}%</span>
+      </div>
+
+      <image-cropper
+        [imageFile]="imageFile"
+        [output]="'blob'"
+        [maintainAspectRatio]="maintainAspectRatio"
+        [aspectRatio]="aspectRatio"
+        [cropper]="cropperPosition"
+        [transform]="imageTransform"
+        [containWithinAspectRatio]="containWithinAspectRatio"
+        [roundCropper]="roundCropper"
+        [cropperMaxWidth]="cropperMaxWidth"
+        [cropperMaxHeight]="cropperMaxHeight"
+        [cropperStaticWidth]="computedCropperStaticWidth"
+        [cropperStaticHeight]="computedCropperStaticHeight"
+        [allowMoveImage]="true"
+        [onlyScaleDown]="true"
+        [hideResizeSquares]="false"
+        format="png"
+        (imageLoaded)="onImageLoaded($event)"
+        (imageCropped)="onImageCropped($event)"
+        (transformChange)="onTransformChange($event)"
+        (wheel)="onWheelZoom($event)"
+      ></image-cropper>
+
+      <p class="crop-help-text">Tipp: gorgetovel vagy a csuszkaval tudsz zoomolni, a kepet huzassal mozgatni.</p>
+    </div>
+
+    <div class="crop-modal-footer">
+      <button type="button" class="crop-btn crop-btn-secondary" (click)="onCancel()">Mégse</button>
+      <button type="button" class="crop-btn crop-btn-primary" (click)="onApply()">Kivágás alkalmazása</button>
+    </div>
+  </div>
+</div>
+}

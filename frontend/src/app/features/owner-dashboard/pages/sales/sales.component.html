@@ -1,0 +1,74 @@
+<section class="sales-panel">
+	<header class="sales-topbar">
+		<div>
+			<h1>Pénzügyek</h1>
+			<p class="subtitle">Bevételek, tranzakciók és teljesítmény áttekintése.</p>
+		</div>
+	</header>
+
+	<div class="sales-filters">
+		<div class="date-range">
+			<button class="range-btn" [class.active]="selectedPeriod === 'weekly'" (click)="selectPeriod('weekly')">Heti</button>
+			<button class="range-btn" [class.active]="selectedPeriod === 'monthly'" (click)="selectPeriod('monthly')">Havi</button>
+			<button class="range-btn" [class.active]="selectedPeriod === 'yearly'" (click)="selectPeriod('yearly')">Éves</button>
+		</div>
+	</div>
+
+	<div class="sales-kpis">
+		<article class="kpi-card">
+			<p class="kpi-label">Összbevétel</p>
+			<p class="kpi-value">{{ currentKpi.totalRevenue }}</p>
+			<p class="kpi-trend" [class]="currentKpi.totalRevenueTrendClass">{{ currentKpi.totalRevenueTrend }}</p>
+		</article>
+		<article class="kpi-card">
+			<p class="kpi-label">Átlagos kosárérték</p>
+			<p class="kpi-value">{{ currentKpi.avgBasket }}</p>
+			<p class="kpi-trend" [class]="currentKpi.avgBasketTrendClass">{{ currentKpi.avgBasketTrend }}</p>
+		</article>
+		<article class="kpi-card">
+			<p class="kpi-label">Leadott foglalások</p>
+			<p class="kpi-value">{{ currentKpi.bookings }}</p>
+			<p class="kpi-trend" [class]="currentKpi.bookingsTrendClass">{{ currentKpi.bookingsTrend }}</p>
+		</article>
+		<article class="kpi-card">
+			<p class="kpi-label">Visszatérő ügyfelek</p>
+			<p class="kpi-value">{{ currentKpi.returningClients }}</p>
+			<p class="kpi-trend" [class]="currentKpi.returningTrendClass">{{ currentKpi.returningTrend }}</p>
+		</article>
+	</div>
+
+	<p class="subtitle" *ngIf="isKpiLoading">KPI adatok betöltése...</p>
+	<p class="subtitle" *ngIf="kpiErrorMessage">{{ kpiErrorMessage }}</p>
+
+	<section class="sales-grid">
+		<article class="panel chart-panel">
+			<header class="panel-header">
+				<h2>Bevétel alakulása</h2>
+				<span class="panel-pill">{{ periodLabel }}</span>
+			</header>
+			<app-revenue-chart variant="sales" [bars]="currentBars" [isLoading]="isChartLoading" [caption]="current.chartCaption"></app-revenue-chart>
+		</article>
+
+		<article class="panel summary-panel">
+			<header class="panel-header">
+				<h2>Kiemelt szolgáltatások</h2>
+			</header>
+			<ng-container *ngIf="isTopServicesLoading; else topServicesContent">
+				<div class="loading">Betöltés...</div>
+			</ng-container>
+			<ng-template #topServicesContent>
+				<div *ngIf="topServicesError" class="error">{{ topServicesError }}</div>
+				<ul class="summary-list" *ngIf="!topServicesError">
+					<li *ngFor="let svc of currentTopServices">
+						<div>
+							<strong>{{ svc.name }}</strong>
+							<span class="muted">{{ svc.bookings }} foglalás</span>
+						</div>
+						<span class="badge">{{ svc.revenue }}</span>
+					</li>
+				</ul>
+			</ng-template>
+		</article>
+
+	</section>
+</section>

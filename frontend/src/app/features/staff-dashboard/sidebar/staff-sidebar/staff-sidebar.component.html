@@ -1,17 +1,21 @@
-<aside class="staff-sidebar" [class.is-pinned]="isPinned">
+<aside class="staff-sidebar" [class.is-expanded]="isExpanded">
 	<div class="sidebar-header">
-		<img src="assets/images/logo.png" alt="Bookr" class="brand-icon" />
+		@if (isExpanded) {
+			<div class="brand-block" aria-label="Bookr Staff Panel">
+				<img src="assets/images/logo.png" alt="Bookr" class="brand-icon brand-icon-expanded" />
+				<span class="brand-tagline">Staff Panel</span>
+			</div>
+		} @else {
+			<img src="assets/images/logo.png" alt="Bookr" class="brand-icon" />
+		}
 	</div>
-
-	<button class="pin-btn" type="button" (click)="togglePin()">
-		<i class="fas fa-thumbtack pin-icon"></i>
-	</button>
 
 	<nav class="sidebar-nav">
 		<a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" class="home-link">
 			<i class="fas fa-home"></i>
 			<span class="nav-label">Kezdőlap</span>
 		</a>
+		<div class="nav-divider"></div>
 		<a routerLink="/staff/panel" routerLinkActive="active">
 			<i class="fas fa-chart-line"></i>
 			<span class="nav-label">Vezérlőpult</span>
@@ -24,9 +28,30 @@
 			<i class="fas fa-clipboard-list"></i>
 			<span class="nav-label">Foglalások</span>
 		</a>
+		<a routerLink="/staff/chat" routerLinkActive="active">
+			<i class="fas fa-comments"></i>
+			<span class="nav-label">Chat</span>
+		</a>
+		<a routerLink="/staff/work-settings" routerLinkActive="active">
+			<i class="fas fa-business-time"></i>
+			<span class="nav-label">Munkarend</span>
+		</a>
 		<a routerLink="/staff/profile" routerLinkActive="active">
 			<i class="fas fa-user-circle"></i>
 			<span class="nav-label">Profil</span>
 		</a>
+		<a routerLink="/staff/setting" routerLinkActive="active">
+			<i class="fas fa-cog"></i>
+			<span class="nav-label">Beállítások</span>
+		</a>
+		<div class="nav-divider"></div>
+		<button
+			class="collapse-toggle-btn"
+			type="button"
+			(click)="toggleSidebar()"
+			[attr.aria-label]="isExpanded ? 'Oldalsáv összecsukása' : 'Oldalsáv kinyitása'"
+		>
+			<i class="fas" [class.fa-chevron-left]="isExpanded" [class.fa-chevron-right]="!isExpanded" aria-hidden="true"></i>
+		</button>
 	</nav>
 </aside>
