@@ -6,6 +6,8 @@ package com.vizsgaremek.bookr.model;
 
 import com.vizsgaremek.bookr.DTO.OwnerPanelDTO.ClientsByCompaniesDTO;
 import com.vizsgaremek.bookr.DTO.OwnerPanelDTO.ClientsByCompanyResultWrapper;
+import com.vizsgaremek.bookr.util.StoredProcedureUtil;
+
 import java.io.Serializable;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -48,23 +50,23 @@ import javax.xml.bind.annotation.XmlTransient;
 @Table(name = "users")
 @XmlRootElement
 @NamedQueries({
-    @NamedQuery(name = "Users.findAll", query = "SELECT u FROM Users u"),
-    @NamedQuery(name = "Users.findById", query = "SELECT u FROM Users u WHERE u.id = :id"),
-    @NamedQuery(name = "Users.findByGuid", query = "SELECT u FROM Users u WHERE u.guid = :guid"),
-    @NamedQuery(name = "Users.findByFirstName", query = "SELECT u FROM Users u WHERE u.firstName = :firstName"),
-    @NamedQuery(name = "Users.findByLastName", query = "SELECT u FROM Users u WHERE u.lastName = :lastName"),
-    @NamedQuery(name = "Users.findByEmail", query = "SELECT u FROM Users u WHERE u.email = :email"),
-    @NamedQuery(name = "Users.findByPhone", query = "SELECT u FROM Users u WHERE u.phone = :phone"),
-    @NamedQuery(name = "Users.findByCreatedAt", query = "SELECT u FROM Users u WHERE u.createdAt = :createdAt"),
-    @NamedQuery(name = "Users.findByUpdatedAt", query = "SELECT u FROM Users u WHERE u.updatedAt = :updatedAt"),
-    @NamedQuery(name = "Users.findByDeletedAt", query = "SELECT u FROM Users u WHERE u.deletedAt = :deletedAt"),
-    @NamedQuery(name = "Users.findByIsDeleted", query = "SELECT u FROM Users u WHERE u.isDeleted = :isDeleted"),
-    @NamedQuery(name = "Users.findByLastLogin", query = "SELECT u FROM Users u WHERE u.lastLogin = :lastLogin"),
-    @NamedQuery(name = "Users.findByRegisterFinishedAt", query = "SELECT u FROM Users u WHERE u.registerFinishedAt = :registerFinishedAt"),
-    @NamedQuery(name = "Users.findByIsActive", query = "SELECT u FROM Users u WHERE u.isActive = :isActive"),
-    @NamedQuery(name = "Users.findByTwoFactorEnabled", query = "SELECT u FROM Users u WHERE u.twoFactorEnabled = :twoFactorEnabled"),
-    @NamedQuery(name = "Users.findByTwoFactorSecret", query = "SELECT u FROM Users u WHERE u.twoFactorSecret = :twoFactorSecret"),
-    @NamedQuery(name = "Users.findByTwoFactorConfirmedAt", query = "SELECT u FROM Users u WHERE u.twoFactorConfirmedAt = :twoFactorConfirmedAt")})
+        @NamedQuery(name = "Users.findAll", query = "SELECT u FROM Users u"),
+        @NamedQuery(name = "Users.findById", query = "SELECT u FROM Users u WHERE u.id = :id"),
+        @NamedQuery(name = "Users.findByGuid", query = "SELECT u FROM Users u WHERE u.guid = :guid"),
+        @NamedQuery(name = "Users.findByFirstName", query = "SELECT u FROM Users u WHERE u.firstName = :firstName"),
+        @NamedQuery(name = "Users.findByLastName", query = "SELECT u FROM Users u WHERE u.lastName = :lastName"),
+        @NamedQuery(name = "Users.findByEmail", query = "SELECT u FROM Users u WHERE u.email = :email"),
+        @NamedQuery(name = "Users.findByPhone", query = "SELECT u FROM Users u WHERE u.phone = :phone"),
+        @NamedQuery(name = "Users.findByCreatedAt", query = "SELECT u FROM Users u WHERE u.createdAt = :createdAt"),
+        @NamedQuery(name = "Users.findByUpdatedAt", query = "SELECT u FROM Users u WHERE u.updatedAt = :updatedAt"),
+        @NamedQuery(name = "Users.findByDeletedAt", query = "SELECT u FROM Users u WHERE u.deletedAt = :deletedAt"),
+        @NamedQuery(name = "Users.findByIsDeleted", query = "SELECT u FROM Users u WHERE u.isDeleted = :isDeleted"),
+        @NamedQuery(name = "Users.findByLastLogin", query = "SELECT u FROM Users u WHERE u.lastLogin = :lastLogin"),
+        @NamedQuery(name = "Users.findByRegisterFinishedAt", query = "SELECT u FROM Users u WHERE u.registerFinishedAt = :registerFinishedAt"),
+        @NamedQuery(name = "Users.findByIsActive", query = "SELECT u FROM Users u WHERE u.isActive = :isActive"),
+        @NamedQuery(name = "Users.findByTwoFactorEnabled", query = "SELECT u FROM Users u WHERE u.twoFactorEnabled = :twoFactorEnabled"),
+        @NamedQuery(name = "Users.findByTwoFactorSecret", query = "SELECT u FROM Users u WHERE u.twoFactorSecret = :twoFactorSecret"),
+        @NamedQuery(name = "Users.findByTwoFactorConfirmedAt", query = "SELECT u FROM Users u WHERE u.twoFactorConfirmedAt = :twoFactorConfirmedAt")})
 public class Users implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -131,16 +133,12 @@ public class Users implements Serializable {
     @NotNull
     @Column(name = "two_factor_enabled")
     private boolean twoFactorEnabled;
-    @Size(max = 32)
+    @Size(max = 128)
     @Column(name = "two_factor_secret")
     private String twoFactorSecret;
     @Column(name = "two_factor_confirmed_at")
     @Temporal(TemporalType.TIMESTAMP)
     private Date twoFactorConfirmedAt;
-    @Lob
-    @Size(max = 2147483647)
-    @Column(name = "two_factor_recovery_codes")
-    private String twoFactorRecoveryCodes;
     @OneToMany(mappedBy = "userId")
     private Collection<PendingStaff> pendingStaffCollection;
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "ownerId")
@@ -229,6 +227,22 @@ public class Users implements Serializable {
         }
     }
 
+    // getMe
+    public Users(Integer id, String firstName, String lastName, String email, String phone, Integer companyIdInt, String avatarUrl, String rolesString) {
+        this.id = id;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.email = email;
+        this.phone = phone;
+        this.companyIdInt = companyIdInt;
+        this.imageUrl = avatarUrl;
+        this.rolesString = rolesString;
+
+        if (rolesString != null && !rolesString.isEmpty()) {
+            this.roleName = rolesString.split(",")[0].trim();
+        }
+    }
+
     // getUserByRegToken constructor
     public Users(Integer id, String email, Date registerFinishedAt, boolean isActive) {
         this.id = id;
@@ -298,6 +312,13 @@ public class Users implements Serializable {
         this.lastName = lastName;
         this.email = email;
         this.phone = phone;
+    }
+
+    public Users(Integer id, boolean twoFactorEnabled, String twoFactorSecret, Date twoFactorConfirmedAt) {
+        this.id = id;
+        this.twoFactorEnabled = twoFactorEnabled;
+        this.twoFactorSecret = twoFactorSecret;
+        this.twoFactorConfirmedAt = twoFactorConfirmedAt;
     }
 
     public Integer getId() {
@@ -434,14 +455,6 @@ public class Users implements Serializable {
 
     public void setTwoFactorConfirmedAt(Date twoFactorConfirmedAt) {
         this.twoFactorConfirmedAt = twoFactorConfirmedAt;
-    }
-
-    public String getTwoFactorRecoveryCodes() {
-        return twoFactorRecoveryCodes;
-    }
-
-    public void setTwoFactorRecoveryCodes(String twoFactorRecoveryCodes) {
-        this.twoFactorRecoveryCodes = twoFactorRecoveryCodes;
     }
 
     @XmlTransient
@@ -615,61 +628,6 @@ public class Users implements Serializable {
         }
     }
 
-    public static Users staffRegister(Users staffRegistered) {
-        EntityManager em = emf.createEntityManager();
-
-        try {
-
-            StoredProcedureQuery spq = em.createStoredProcedureQuery("registerStaff");
-            spq.registerStoredProcedureParameter("firstNameIN", String.class, ParameterMode.IN);
-            spq.registerStoredProcedureParameter("lastNameIN", String.class, ParameterMode.IN);
-            spq.registerStoredProcedureParameter("emailIN", String.class, ParameterMode.IN);
-            spq.registerStoredProcedureParameter("passwordIN", String.class, ParameterMode.IN);
-            spq.registerStoredProcedureParameter("phoneIN", String.class, ParameterMode.IN);
-            spq.registerStoredProcedureParameter("companyIdIN", String.class, ParameterMode.IN);
-
-            spq.setParameter("firstNameIN", staffRegistered.getFirstName());
-            spq.setParameter("lastNameIN", staffRegistered.getLastName());
-            spq.setParameter("emailIN", staffRegistered.getEmail());
-            spq.setParameter("passwordIN", staffRegistered.getPassword());
-            spq.setParameter("phoneIN", staffRegistered.getPhone());
-            spq.setParameter("companyIdIN", staffRegistered.getCompanyId());
-
-            spq.execute();
-
-            // Get the result set with user_id, staff_id and reg_token
-            List<Object[]> resultList = spq.getResultList();
-
-            if (resultList.isEmpty()) {
-                return null;
-            }
-
-            Object[] result = resultList.get(0);
-            int userId = Integer.parseInt(result[0].toString());
-            // result[1] is staff_id, we don't need it for RegistrationResult
-            String regToken = result[2].toString();
-
-            return Users.forRegistration(userId, regToken);
-
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            return null;
-        } finally {
-            if (em != null && em.isOpen()) {
-                em.close();
-            }
-        }
-    }
-
-    /**
-     * Login method - retrieves user data by email (password verification
-     * happens in Service layer)
-     *
-     * @param loginUser User object containing email (and password for service
-     * verification)
-     * @return Users object with all data including hashed password and roles as
-     * String
-     */
     public static Users login(Users loginUser) {
         EntityManager em = emf.createEntityManager();
 
@@ -732,6 +690,10 @@ public class Users implements Serializable {
         } catch (Exception ex) {
             ex.printStackTrace();
             return false;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
         }
     }
 
@@ -752,6 +714,10 @@ public class Users implements Serializable {
         } catch (Exception ex) {
             ex.printStackTrace();
             return false;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
         }
     }
 
@@ -962,6 +928,10 @@ public class Users implements Serializable {
         } catch (Exception ex) {
             ex.printStackTrace();
             return false;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
         }
     }
 
@@ -1047,21 +1017,27 @@ public class Users implements Serializable {
         } catch (Exception ex) {
             ex.printStackTrace();
             return false;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
         }
     }
 
-    public static ClientsByCompanyResultWrapper getClientsByCompany(Integer companyId, Integer page, Integer pageSize) {
+    public static ClientsByCompanyResultWrapper getClientsByCompany(Integer companyId, Integer page, Integer pageSize, String search) {
         EntityManager em = emf.createEntityManager();
         try {
             StoredProcedureQuery spq = em.createStoredProcedureQuery("getClientsByCompany");
             spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("pageIN", Integer.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("pageSizeIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("searchIN", String.class, ParameterMode.IN);
             spq.registerStoredProcedureParameter("totalClientsOUT", Integer.class, ParameterMode.OUT);
 
             spq.setParameter("companyIdIN", companyId);
             spq.setParameter("pageIN", page);
             spq.setParameter("pageSizeIN", pageSize);
+            StoredProcedureUtil.setNullableParameter(spq, "searchIN", search);
 
             spq.execute();
 
@@ -1135,6 +1111,120 @@ public class Users implements Serializable {
             );
 
             return user;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static Users getTwoFactorStatus(Integer userId) {
+        EntityManager em = emf.createEntityManager();
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getTwoFactorStatus");
+            spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
+            spq.setParameter("userIdIN", userId);
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+            if (resultList == null || resultList.isEmpty()) {
+                return null;
+            }
+
+            Object[] record = resultList.get(0);
+
+            Users user = new Users(
+                    userId,
+                    record[0].toString().equals("1") || record[0].toString().equalsIgnoreCase("true"),
+                    record[1] != null ? record[1].toString() : null,
+                    record[2] != null ? (Date) record[2] : null
+
+            );
+
+            return user;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static boolean enableTwoFactor(Integer userId, String encryptedSecret) {
+        EntityManager em = emf.createEntityManager();
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("enableTwoFactor");
+            spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("secretIN", String.class, ParameterMode.IN);
+            spq.setParameter("userIdIN", userId);
+            spq.setParameter("secretIN", encryptedSecret);
+            spq.execute();
+            return true;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return false;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static boolean disableTwoFactor(Integer userId) {
+        EntityManager em = emf.createEntityManager();
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("disableTwoFactor");
+            spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
+            spq.setParameter("userIdIN", userId);
+            spq.execute();
+            return true;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return false;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static Users getMe(Integer userId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getMe");
+            spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
+            spq.setParameter("userIdIN", userId);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            Object[] record = resultList.get(0);
+
+            return new Users(
+                    Integer.valueOf(record[0].toString()),       // id
+                    record[1] != null ? record[1].toString() : null, // first_name
+                    record[2] != null ? record[2].toString() : null, // last_name
+                    record[3].toString(),                        // email
+                    record[4].toString(),                        // phone
+                    record[5] == null ? null : Integer.valueOf(record[5].toString()), // company_id
+                    record[6] == null ? null : record[6].toString(), // imageUrl
+                    record[7] == null ? null : record[7].toString()  // roles
+            );
 
         } catch (Exception ex) {
             ex.printStackTrace();

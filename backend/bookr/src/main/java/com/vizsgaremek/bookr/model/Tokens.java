@@ -5,9 +5,12 @@
 package com.vizsgaremek.bookr.model;
 
 import com.vizsgaremek.bookr.DTO.checkStaffInviteTokenDTO;
+
 import static com.vizsgaremek.bookr.model.Users.emf;
 import static com.vizsgaremek.bookr.model.Users.formatter;
+
 import com.vizsgaremek.bookr.util.StoredProcedureUtil;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -45,14 +48,14 @@ import javax.xml.bind.annotation.XmlTransient;
 @Table(name = "tokens")
 @XmlRootElement
 @NamedQueries({
-    @NamedQuery(name = "Tokens.findAll", query = "SELECT t FROM Tokens t"),
-    @NamedQuery(name = "Tokens.findById", query = "SELECT t FROM Tokens t WHERE t.id = :id"),
-    @NamedQuery(name = "Tokens.findByToken", query = "SELECT t FROM Tokens t WHERE t.token = :token"),
-    @NamedQuery(name = "Tokens.findByType", query = "SELECT t FROM Tokens t WHERE t.type = :type"),
-    @NamedQuery(name = "Tokens.findByExpiresAt", query = "SELECT t FROM Tokens t WHERE t.expiresAt = :expiresAt"),
-    @NamedQuery(name = "Tokens.findByIsRevoked", query = "SELECT t FROM Tokens t WHERE t.isRevoked = :isRevoked"),
-    @NamedQuery(name = "Tokens.findByRevokedAt", query = "SELECT t FROM Tokens t WHERE t.revokedAt = :revokedAt"),
-    @NamedQuery(name = "Tokens.findByCreatedAt", query = "SELECT t FROM Tokens t WHERE t.createdAt = :createdAt")})
+        @NamedQuery(name = "Tokens.findAll", query = "SELECT t FROM Tokens t"),
+        @NamedQuery(name = "Tokens.findById", query = "SELECT t FROM Tokens t WHERE t.id = :id"),
+        @NamedQuery(name = "Tokens.findByToken", query = "SELECT t FROM Tokens t WHERE t.token = :token"),
+        @NamedQuery(name = "Tokens.findByType", query = "SELECT t FROM Tokens t WHERE t.type = :type"),
+        @NamedQuery(name = "Tokens.findByExpiresAt", query = "SELECT t FROM Tokens t WHERE t.expiresAt = :expiresAt"),
+        @NamedQuery(name = "Tokens.findByIsRevoked", query = "SELECT t FROM Tokens t WHERE t.isRevoked = :isRevoked"),
+        @NamedQuery(name = "Tokens.findByRevokedAt", query = "SELECT t FROM Tokens t WHERE t.revokedAt = :revokedAt"),
+        @NamedQuery(name = "Tokens.findByCreatedAt", query = "SELECT t FROM Tokens t WHERE t.createdAt = :createdAt")})
 public class Tokens implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -287,11 +290,11 @@ public class Tokens implements Serializable {
         }
     }
 
-    public static Tokens generatePasswordResetToken(Integer userId) {
+    public static Tokens generatePasswordUpdateToken(Integer userId) {
         EntityManager em = emf.createEntityManager();
 
         try {
-            StoredProcedureQuery spq = em.createStoredProcedureQuery("generatePasswordResetToken");
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("generatePasswordUpdateToken");
             spq.registerStoredProcedureParameter("idIN", Integer.class, ParameterMode.IN);
             spq.setParameter("idIN", userId);
 
@@ -487,6 +490,104 @@ public class Tokens implements Serializable {
             if (em != null && em.isOpen()) {
                 em.close();
             }
+        }
+    }
+
+    public String acceptPendingStaffToken(String token) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("acceptPendingStaffToken");
+            spq.registerStoredProcedureParameter("tokenIN", String.class, ParameterMode.IN);
+
+            spq.setParameter("tokenIN", token);
+
+            spq.execute();
+
+            String result = spq.getSingleResult().toString();
+
+            return result;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static Tokens generate2faPendingToken(Integer userId) {
+        EntityManager em = emf.createEntityManager();
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("generate2faPendingToken");
+            spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
+            spq.setParameter("userIdIN", userId);
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+            if (resultList == null || resultList.isEmpty()) {
+                return null;
+            }
+
+            Object[] record = resultList.get(0);
+            Tokens token = new Tokens();
+            token.setToken(record[0].toString());
+            token.setExpiresAt((Date) record[1]);
+            return token;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) em.close();
+        }
+    }
+
+    public static Tokens validate2faPendingToken(String tokenStr) {
+        EntityManager em = emf.createEntityManager();
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("validate2faPendingToken");
+            spq.registerStoredProcedureParameter("tokenIN", String.class, ParameterMode.IN);
+            spq.setParameter("tokenIN", tokenStr);
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+            if (resultList == null || resultList.isEmpty()) {
+                return null;
+            }
+
+            Object[] record = resultList.get(0);
+            Tokens token = new Tokens();
+            token.setUserIdInt(Integer.valueOf(record[0].toString()));
+            token.setExpiresAt((Date) record[1]);
+            token.setIsRevoked(record[2] != null && (
+                    record[2].toString().equals("1") || record[2].toString().equalsIgnoreCase("true")
+            ));
+            return token;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) em.close();
+        }
+    }
+
+    public static boolean revoke2faPendingToken(String tokenStr) {
+        EntityManager em = emf.createEntityManager();
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("revoke2faPendingToken");
+            spq.registerStoredProcedureParameter("tokenIN", String.class, ParameterMode.IN);
+            spq.setParameter("tokenIN", tokenStr);
+            spq.execute();
+            return true;
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return false;
+        } finally {
+            if (em != null && em.isOpen()) em.close();
         }
     }
 }

@@ -250,6 +250,10 @@ public class Favorites implements Serializable {
         } catch (Exception ex) {
             ex.printStackTrace();
             return false;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
         }
     }
 
@@ -272,6 +276,11 @@ public class Favorites implements Serializable {
         } catch (Exception ex) {
             ex.printStackTrace();
             return false;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
         }
     }
+
 }

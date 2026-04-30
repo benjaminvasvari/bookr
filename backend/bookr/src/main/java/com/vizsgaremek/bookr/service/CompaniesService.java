@@ -13,14 +13,23 @@ import com.vizsgaremek.bookr.model.Reviews;
 import com.vizsgaremek.bookr.model.UserXRole;
 import com.vizsgaremek.bookr.model.Users;
 import com.vizsgaremek.bookr.security.JWT;
+
 import static com.vizsgaremek.bookr.util.ErrorResponseBuilder.buildErrorResponseJSON;
+
 import com.vizsgaremek.bookr.util.FileStorageUtil;
+import com.vizsgaremek.bookr.util.ValidationUtil;
+
+import static com.vizsgaremek.bookr.util.ValidationUtil.isValidEmail;
+import static com.vizsgaremek.bookr.util.ValidationUtil.isValidHungarianPhone;
+import static com.vizsgaremek.bookr.util.ValidationUtil.isValidUrl;
+
 import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.Map;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -31,7 +40,6 @@ import org.json.JSONObject;
 public class CompaniesService {
 
     private Companies layer = new Companies();
-    private ServiceCategoryService serviceCategoryService = new ServiceCategoryService();
     private Users Users = new Users();
     private UserXRole UserXRole = new UserXRole();
     private AuditLogService AuditLogService = new AuditLogService();
@@ -60,7 +68,8 @@ public class CompaniesService {
                 return error;
             }
 
-            // 3. SERVICE CATEGORIES (csoportosítva!)  ← JAVÍTVA!
+            // 3. SERVICE CATEGORIES
+            ServiceCategoryService serviceCategoryService = new ServiceCategoryService();
             JSONArray serviceCategories = serviceCategoryService.getServiceCategoriesWithServicesByCompanyId(id);
 
             // 4. REVIEWS
@@ -74,7 +83,7 @@ public class CompaniesService {
                 reviewObj.put("userName", review.getUserName());
                 reviewObj.put("userImage", review.getUserImage());
                 reviewObj.put("rating", review.getRating());
-                reviewObj.put("comment", review.getComment());
+                reviewObj.put("comment", review.getComment() != null ? review.getComment() : JSONObject.NULL);
                 reviewObj.put("date", sdf.format(review.getCreatedAt()));
                 reviews.put(reviewObj);
             }
@@ -589,5 +598,255 @@ public class CompaniesService {
 
             return null;
         }
+    }
+
+    public JSONObject getCompanyById(Integer id) {
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        try {
+
+            // Adatbázis lekérdezés
+            Companies modelResult = Companies.getCompanyById(id);
+
+            // NULL ELLENŐRZÉS
+            if (modelResult == null) {
+                status = "NotFound";
+                statusCode = 404;
+                toReturn.put("status", status);
+                toReturn.put("statusCode", statusCode);
+                toReturn.put("message", "No company found");
+                return toReturn;
+            }
+
+            // Sikeres válasz összeállítása
+            JSONObject result = new JSONObject();
+
+            result.put("id", modelResult.getId());
+            result.put("name", modelResult.getName());
+            result.put("description", modelResult.getDescription());
+            result.put("address", modelResult.getAddress());
+            result.put("city", modelResult.getCity());
+            result.put("postalCode", modelResult.getPostalCode());
+            result.put("country", modelResult.getCountry());
+            result.put("phone", modelResult.getPhone());
+            result.put("email", modelResult.getEmail());
+            result.put("website", modelResult.getWebsite() != null ? modelResult.getWebsite() : JSONObject.NULL);
+            result.put("createdAt", modelResult.getCreatedAt());
+
+            toReturn.put("result", result);
+
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            status = "InternalServerError";
+            statusCode = 500;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+        }
+
+        return toReturn;
+    }
+
+    public JSONObject getCompanyBookingRules(Integer id) {
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        try {
+
+            // Adatbázis lekérdezés
+            Companies modelResult = Companies.getCompanyBookingRules(id);
+
+            // NULL ELLENŐRZÉS
+            if (modelResult == null) {
+                status = "NotFound";
+                statusCode = 404;
+                toReturn.put("status", status);
+                toReturn.put("statusCode", statusCode);
+                toReturn.put("message", "No company found");
+                return toReturn;
+            }
+
+            // Sikeres válasz összeállítása
+            JSONObject result = new JSONObject();
+
+            result.put("bookingAdvanceDays", modelResult.getBookingAdvanceDays());
+            result.put("cancellationHours", modelResult.getCancellationHours());
+            if (modelResult.getAllowSameDayBooking()) {
+                result.put("minimumBookingHoursAhead", modelResult.getMinimumBookingHoursAhead());
+            } else {
+                result.put("minimumBookingHoursAhead", JSONObject.NULL);
+            }
+
+            toReturn.put("result", result);
+
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            status = "InternalServerError";
+            statusCode = 500;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+        }
+
+        return toReturn;
+    }
+
+    public JSONObject updateCompanyBookingRules(Integer id, Companies request) {
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        try {
+
+            if (request.getMinimumBookingHoursAhead() == null) {
+                request.setAllowSameDayBooking(Boolean.FALSE);
+            } else if (request.getMinimumBookingHoursAhead() != null && request.getMinimumBookingHoursAhead() > 0) {
+                request.setAllowSameDayBooking(Boolean.TRUE);
+            }
+
+            // Adatbázis lekérdezés
+            Boolean modelResult = Companies.updateCompanyBookingRules(id, request);
+
+            // NULL ELLENŐRZÉS
+            if (modelResult == null || !modelResult) {
+                status = "NotFound";
+                statusCode = 404;
+                toReturn.put("status", status);
+                toReturn.put("statusCode", statusCode);
+                return toReturn;
+            }
+
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            status = "InternalServerError";
+            statusCode = 500;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+        }
+
+        return toReturn;
+    }
+
+    public JSONObject updateCompany(Integer id, Companies request) {
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        try {
+
+            if (!isValidEmail(request.getEmail())) {
+                return buildErrorResponseJSON(417, "InvalidEmail");
+            }
+            if (!isValidHungarianPhone(request.getPhone())) {
+                return buildErrorResponseJSON(417, "InvalidPhone");
+            }
+            if (request.getWebsite() != null) {
+                if (!isValidUrl(request.getWebsite())) {
+                    return buildErrorResponseJSON(417, "InvalidWebsite");
+                }
+            }
+
+            Boolean modelResult = Companies.updateCompany(id, request);
+
+            // NULL ELLENŐRZÉS
+            if (modelResult == null || !modelResult) {
+                status = "NotFound";
+                statusCode = 404;
+                toReturn.put("status", status);
+                toReturn.put("statusCode", statusCode);
+                return toReturn;
+            }
+
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            status = "InternalServerError";
+            statusCode = 500;
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+        }
+
+        return toReturn;
+    }
+
+    public JSONObject searchCompanies(String query, String pageStr, String pageSizeStr) {
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        try {
+            // Validáció
+            if (query == null || query.isBlank()) {
+                return buildErrorResponseJSON(400, "QueryRequired");
+            }
+
+            int page = 1;
+            int pageSize = 10;
+
+            try {
+                if (pageStr != null && !pageStr.isBlank()) page = Integer.parseInt(pageStr);
+                if (pageSizeStr != null && !pageSizeStr.isBlank()) pageSize = Integer.parseInt(pageSizeStr);
+            } catch (NumberFormatException e) {
+                return buildErrorResponseJSON(400, "InvalidPaginationParams");
+            }
+
+            if (page <= 0 || pageSize <= 0) {
+                return buildErrorResponseJSON(400, "InvalidPaginationParams");
+            }
+
+            // Adatbázis lekérdezés
+            List<Companies> modelResult = Companies.searchCompanies(query.trim(), page, pageSize);
+
+            if (modelResult == null) {
+                return buildErrorResponseJSON(500, "InternalServerError");
+            }
+
+            // Cégek összerakása
+            JSONArray companiesArray = new JSONArray();
+
+            for (Companies company : modelResult) {
+                JSONObject obj = new JSONObject();
+                obj.put("id", company.getId());
+                obj.put("name", company.getName());
+                obj.put("city", company.getCity() != null ? company.getCity() : JSONObject.NULL);
+                obj.put("address", company.getAddress() != null ? company.getAddress() : JSONObject.NULL);
+                obj.put("rating", company.getRating());
+                obj.put("reviewCount", company.getReviewCount());
+                obj.put("imageUrl", FileStorageUtil.buildFullUrl(company.getImageUrl()));
+                companiesArray.put(obj);
+            }
+
+            int total = modelResult.isEmpty() ? 0 : modelResult.get(0).getTotal();
+
+            // Result object
+            JSONObject resultObj = new JSONObject();
+            resultObj.put("total", total);
+            resultObj.put("page", page);
+            resultObj.put("pageSize", pageSize);
+            resultObj.put("data", companiesArray);
+
+            toReturn.put("status", status);
+            toReturn.put("statusCode", statusCode);
+            toReturn.put("result", resultObj);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            toReturn.put("status", "InternalServerError");
+            toReturn.put("statusCode", 500);
+        }
+
+        return toReturn;
     }
 }

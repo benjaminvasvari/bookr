@@ -6,7 +6,9 @@ package com.vizsgaremek.bookr.model;
 
 import static com.vizsgaremek.bookr.model.Users.emf;
 import static com.vizsgaremek.bookr.model.Users.formatter;
+
 import com.vizsgaremek.bookr.util.StoredProcedureUtil;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -45,24 +47,24 @@ import javax.xml.bind.annotation.XmlTransient;
 @Table(name = "companies")
 @XmlRootElement
 @NamedQueries({
-    @NamedQuery(name = "Companies.findAll", query = "SELECT c FROM Companies c"),
-    @NamedQuery(name = "Companies.findById", query = "SELECT c FROM Companies c WHERE c.id = :id"),
-    @NamedQuery(name = "Companies.findByName", query = "SELECT c FROM Companies c WHERE c.name = :name"),
-    @NamedQuery(name = "Companies.findByCity", query = "SELECT c FROM Companies c WHERE c.city = :city"),
-    @NamedQuery(name = "Companies.findByPostalCode", query = "SELECT c FROM Companies c WHERE c.postalCode = :postalCode"),
-    @NamedQuery(name = "Companies.findByCountry", query = "SELECT c FROM Companies c WHERE c.country = :country"),
-    @NamedQuery(name = "Companies.findByPhone", query = "SELECT c FROM Companies c WHERE c.phone = :phone"),
-    @NamedQuery(name = "Companies.findByEmail", query = "SELECT c FROM Companies c WHERE c.email = :email"),
-    @NamedQuery(name = "Companies.findByWebsite", query = "SELECT c FROM Companies c WHERE c.website = :website"),
-    @NamedQuery(name = "Companies.findByBookingAdvanceDays", query = "SELECT c FROM Companies c WHERE c.bookingAdvanceDays = :bookingAdvanceDays"),
-    @NamedQuery(name = "Companies.findByCancellationHours", query = "SELECT c FROM Companies c WHERE c.cancellationHours = :cancellationHours"),
-    @NamedQuery(name = "Companies.findByCreatedAt", query = "SELECT c FROM Companies c WHERE c.createdAt = :createdAt"),
-    @NamedQuery(name = "Companies.findByUpdatedAt", query = "SELECT c FROM Companies c WHERE c.updatedAt = :updatedAt"),
-    @NamedQuery(name = "Companies.findByDeletedAt", query = "SELECT c FROM Companies c WHERE c.deletedAt = :deletedAt"),
-    @NamedQuery(name = "Companies.findByIsDeleted", query = "SELECT c FROM Companies c WHERE c.isDeleted = :isDeleted"),
-    @NamedQuery(name = "Companies.findByIsActive", query = "SELECT c FROM Companies c WHERE c.isActive = :isActive"),
-    @NamedQuery(name = "Companies.findByAllowSameDayBooking", query = "SELECT c FROM Companies c WHERE c.allowSameDayBooking = :allowSameDayBooking"),
-    @NamedQuery(name = "Companies.findByMinimumBookingHoursAhead", query = "SELECT c FROM Companies c WHERE c.minimumBookingHoursAhead = :minimumBookingHoursAhead")})
+        @NamedQuery(name = "Companies.findAll", query = "SELECT c FROM Companies c"),
+        @NamedQuery(name = "Companies.findById", query = "SELECT c FROM Companies c WHERE c.id = :id"),
+        @NamedQuery(name = "Companies.findByName", query = "SELECT c FROM Companies c WHERE c.name = :name"),
+        @NamedQuery(name = "Companies.findByCity", query = "SELECT c FROM Companies c WHERE c.city = :city"),
+        @NamedQuery(name = "Companies.findByPostalCode", query = "SELECT c FROM Companies c WHERE c.postalCode = :postalCode"),
+        @NamedQuery(name = "Companies.findByCountry", query = "SELECT c FROM Companies c WHERE c.country = :country"),
+        @NamedQuery(name = "Companies.findByPhone", query = "SELECT c FROM Companies c WHERE c.phone = :phone"),
+        @NamedQuery(name = "Companies.findByEmail", query = "SELECT c FROM Companies c WHERE c.email = :email"),
+        @NamedQuery(name = "Companies.findByWebsite", query = "SELECT c FROM Companies c WHERE c.website = :website"),
+        @NamedQuery(name = "Companies.findByBookingAdvanceDays", query = "SELECT c FROM Companies c WHERE c.bookingAdvanceDays = :bookingAdvanceDays"),
+        @NamedQuery(name = "Companies.findByCancellationHours", query = "SELECT c FROM Companies c WHERE c.cancellationHours = :cancellationHours"),
+        @NamedQuery(name = "Companies.findByCreatedAt", query = "SELECT c FROM Companies c WHERE c.createdAt = :createdAt"),
+        @NamedQuery(name = "Companies.findByUpdatedAt", query = "SELECT c FROM Companies c WHERE c.updatedAt = :updatedAt"),
+        @NamedQuery(name = "Companies.findByDeletedAt", query = "SELECT c FROM Companies c WHERE c.deletedAt = :deletedAt"),
+        @NamedQuery(name = "Companies.findByIsDeleted", query = "SELECT c FROM Companies c WHERE c.isDeleted = :isDeleted"),
+        @NamedQuery(name = "Companies.findByIsActive", query = "SELECT c FROM Companies c WHERE c.isActive = :isActive"),
+        @NamedQuery(name = "Companies.findByAllowSameDayBooking", query = "SELECT c FROM Companies c WHERE c.allowSameDayBooking = :allowSameDayBooking"),
+        @NamedQuery(name = "Companies.findByMinimumBookingHoursAhead", query = "SELECT c FROM Companies c WHERE c.minimumBookingHoursAhead = :minimumBookingHoursAhead")})
 public class Companies implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -157,6 +159,15 @@ public class Companies implements Serializable {
 
     @Transient
     private Integer ownerIdInt;
+
+    @Transient
+    private String ownerName;
+
+    @Transient
+    private String ownerEmail;
+
+    @Transient
+    private Integer total;
 
     public Companies() {
     }
@@ -261,6 +272,52 @@ public class Companies implements Serializable {
         this.allowSameDayBooking = allowSameDayBooking;
         this.minimumBookingHoursAhead = minimumBookingHoursAhead;
     }
+
+    // getCompanyInfoForEmail
+    public Companies(String name, String ownerName, String ownerEmail) {
+        this.name = name;
+        this.ownerName = ownerName;
+        this.ownerEmail = ownerEmail;
+    }
+
+    public Companies(Integer bookingAdvanceDays, Integer cancellationHours, Boolean allowSameDayBooking, Integer minimumBookingHoursAhead) {
+        this.bookingAdvanceDays = bookingAdvanceDays;
+        this.cancellationHours = cancellationHours;
+        this.allowSameDayBooking = allowSameDayBooking;
+        this.minimumBookingHoursAhead = minimumBookingHoursAhead;
+    }
+
+    // updateRules request
+    public Companies(Integer bookingAdvanceDays, Integer cancellationHours, Integer minimumBookingHoursAhead) {
+        this.bookingAdvanceDays = bookingAdvanceDays;
+        this.cancellationHours = cancellationHours;
+        this.minimumBookingHoursAhead = minimumBookingHoursAhead;
+    }
+
+    public Companies(String name, String description, String address, String city, String postalCode, String country, String phone, String email, String website, Integer businessCategoryIdInt) {
+        this.name = name;
+        this.description = description;
+        this.address = address;
+        this.city = city;
+        this.postalCode = postalCode;
+        this.country = country;
+        this.phone = phone;
+        this.email = email;
+        this.website = website;
+        this.businessCategoryIdInt = businessCategoryIdInt;
+    }
+
+    public Companies(Integer id, String name, String city, String address, Double rating, Integer reviewCount, String imageUrl, Integer total) {
+        this.id = id;
+        this.name = name;
+        this.city = city;
+        this.address = address;
+        this.rating = rating;
+        this.reviewCount = reviewCount;
+        this.imageUrl = imageUrl;
+        this.total = total;
+    }
+
 
     public Integer getId() {
         return id;
@@ -410,6 +467,14 @@ public class Companies implements Serializable {
         return minimumBookingHoursAhead;
     }
 
+    public Integer getTotal() {
+        return total;
+    }
+
+    public void setTotal(Integer total) {
+        this.total = total;
+    }
+
     public void setMinimumBookingHoursAhead(Integer minimumBookingHoursAhead) {
         this.minimumBookingHoursAhead = minimumBookingHoursAhead;
     }
@@ -497,6 +562,22 @@ public class Companies implements Serializable {
         this.ownerIdInt = ownerIdInt;
     }
 
+    public String getOwnerName() {
+        return ownerName;
+    }
+
+    public void setOwnerName(String ownerName) {
+        this.ownerName = ownerName;
+    }
+
+    public String getOwnerEmail() {
+        return ownerEmail;
+    }
+
+    public void setOwnerEmail(String ownerEmail) {
+        this.ownerEmail = ownerEmail;
+    }
+
     @Override
     public int hashCode() {
         int hash = 0;
@@ -552,7 +633,7 @@ public class Companies implements Serializable {
                     record[6].toString(),
                     record[7].toString(),
                     record[8].toString(),
-                    record[9].toString(),
+                    record[9] != null ? record[9].toString() : null,
                     Integer.valueOf(record[10].toString()),
                     Integer.valueOf(record[11].toString()),
                     formatter.parse(record[12].toString()),
@@ -965,6 +1046,221 @@ public class Companies implements Serializable {
         } catch (Exception ex) {
             ex.printStackTrace();
             return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static Companies getCompanyInfoForEmail(Integer companyId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getCompanyInfoForEmail");
+
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("companyIdIN", companyId);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            Object[] record = resultList.get(0);
+
+            Companies company = new Companies(
+                    record[0].toString(),
+                    record[1].toString(),
+                    record[2].toString()
+            );
+
+            return company;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static Companies getCompanyBookingRules(Integer companyId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getCompanyBookingRules");
+
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("companyIdIN", companyId);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            Object[] record = resultList.get(0);
+
+            Companies company = new Companies(
+                    Integer.valueOf(record[0].toString()),
+                    Integer.valueOf(record[1].toString()),
+                    Boolean.parseBoolean(record[2].toString()),
+                    record[3] != null ? Integer.valueOf(record[3].toString()) : null
+            );
+
+            return company;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static Boolean updateCompanyBookingRules(Integer id, Companies request) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("updateCompanyBookingRules");
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("bookingAdvanceDaysIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("cancellationHoursIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("allowSameDayBookingIN", Boolean.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("minimumBookingHoursAheadIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("companyIdIN", id);
+            spq.setParameter("bookingAdvanceDaysIN", request.getBookingAdvanceDays());
+            spq.setParameter("cancellationHoursIN", request.getCancellationHours());
+            spq.setParameter("allowSameDayBookingIN", request.getAllowSameDayBooking());
+            StoredProcedureUtil.setNullableParameter(spq, "minimumBookingHoursAheadIN", request.getMinimumBookingHoursAhead());
+
+            spq.execute();
+
+            Object singleResult = spq.getSingleResult();
+
+            if (singleResult == null) {
+                return null;
+            }
+
+            String result = singleResult.toString();
+
+            return "success".equals(result);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static Boolean updateCompany(Integer id, Companies request) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("updateCompany");
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("nameIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("descriptionIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("addressIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("cityIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("postalCodeIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("countryIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("phoneIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("emailIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("websiteIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("businessCategoryIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("companyIdIN", id);
+            spq.setParameter("nameIN", request.getName());
+            spq.setParameter("descriptionIN", request.getDescription());
+            spq.setParameter("addressIN", request.getAddress());
+            spq.setParameter("cityIN", request.getCity());
+            spq.setParameter("postalCodeIN", request.getPostalCode());
+            spq.setParameter("countryIN", request.getCountry());
+            spq.setParameter("phoneIN", request.getPhone());
+            spq.setParameter("emailIN", request.getEmail());
+            StoredProcedureUtil.setNullableParameter(spq, "websiteIN", request.getWebsite());
+            spq.setParameter("businessCategoryIdIN", request.getBusinessCategoryIdInt());
+
+            spq.execute();
+
+            return true;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static List<Companies> searchCompanies(String query, Integer page, Integer pageSize) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("searchCompanies");
+            spq.registerStoredProcedureParameter("queryIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("pageIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("pageSizeIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("totalOUT", Integer.class, ParameterMode.OUT);
+
+            spq.setParameter("queryIN", query);
+            spq.setParameter("pageIN", page);
+            spq.setParameter("pageSizeIN", pageSize);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            int total = 0;
+            Object totalResult = spq.getOutputParameterValue("totalOUT");
+            if (totalResult != null) {
+                total = Integer.valueOf(totalResult.toString());
+            }
+
+            if (resultList.isEmpty()) {
+                return new ArrayList<>();
+            }
+
+            List<Companies> companiesList = new ArrayList<>();
+
+            for (Object[] record : resultList) {
+                Companies company = new Companies(
+                        Integer.valueOf(record[0].toString()),
+                        record[1].toString(),
+                        record[2] != null ? record[2].toString() : null,
+                        record[3] != null ? record[3].toString() : null,
+                        record[4] != null ? Double.parseDouble(record[4].toString()) : 0.0,
+                        record[5] != null ? Integer.valueOf(record[5].toString()) : 0,
+                        record[6] != null ? record[6].toString() : null,
+                        total
+                );
+                companiesList.add(company);
+            }
+
+            return companiesList;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return new ArrayList<>();
         } finally {
             if (em != null && em.isOpen()) {
                 em.close();

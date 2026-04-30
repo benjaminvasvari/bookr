@@ -5,6 +5,7 @@
 package com.vizsgaremek.bookr.model;
 
 import static com.vizsgaremek.bookr.model.Users.emf;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -43,11 +44,11 @@ import javax.xml.bind.annotation.XmlTransient;
 @Table(name = "service_categories")
 @XmlRootElement
 @NamedQueries({
-    @NamedQuery(name = "ServiceCategories.findAll", query = "SELECT s FROM ServiceCategories s"),
-    @NamedQuery(name = "ServiceCategories.findById", query = "SELECT s FROM ServiceCategories s WHERE s.id = :id"),
-    @NamedQuery(name = "ServiceCategories.findByName", query = "SELECT s FROM ServiceCategories s WHERE s.name = :name"),
-    @NamedQuery(name = "ServiceCategories.findByCreatedAt", query = "SELECT s FROM ServiceCategories s WHERE s.createdAt = :createdAt"),
-    @NamedQuery(name = "ServiceCategories.findByUpdatedAt", query = "SELECT s FROM ServiceCategories s WHERE s.updatedAt = :updatedAt")})
+        @NamedQuery(name = "ServiceCategories.findAll", query = "SELECT s FROM ServiceCategories s"),
+        @NamedQuery(name = "ServiceCategories.findById", query = "SELECT s FROM ServiceCategories s WHERE s.id = :id"),
+        @NamedQuery(name = "ServiceCategories.findByName", query = "SELECT s FROM ServiceCategories s WHERE s.name = :name"),
+        @NamedQuery(name = "ServiceCategories.findByCreatedAt", query = "SELECT s FROM ServiceCategories s WHERE s.createdAt = :createdAt"),
+        @NamedQuery(name = "ServiceCategories.findByUpdatedAt", query = "SELECT s FROM ServiceCategories s WHERE s.updatedAt = :updatedAt")})
 public class ServiceCategories implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -80,7 +81,7 @@ public class ServiceCategories implements Serializable {
     private Collection<ServiceCategoryMap> serviceCategoryMapCollection;
 
     @Transient
-    private int categoryId;
+    private Integer categoryId;
 
     @Transient
     private String categoryName;
@@ -95,7 +96,7 @@ public class ServiceCategories implements Serializable {
     private String serviceName;
 
     @Transient
-    private int durationMinutes;
+    private Integer durationMinutes;
 
     @Transient
     private Double price;
@@ -116,7 +117,7 @@ public class ServiceCategories implements Serializable {
         this.createdAt = createdAt;
     }
 
-    public ServiceCategories(int categoryId, String categoryName, String categoryDescription, Integer serviceId, String serviceName, Integer durationMinutes, Double price, String currency) {
+    public ServiceCategories(Integer categoryId, String categoryName, String categoryDescription, Integer serviceId, String serviceName, Integer durationMinutes, Double price, String currency) {
         this.categoryId = categoryId;
         this.categoryName = categoryName;
         this.categoryDescription = categoryDescription;
@@ -299,9 +300,9 @@ public class ServiceCategories implements Serializable {
                         Integer.parseInt(record[0].toString()),
                         record[1].toString(),
                         record[2] != null ? record[2].toString() : null, // categoryDescription 
-                        Integer.valueOf(record[3].toString()),
-                        record[4].toString(),
-                        Integer.valueOf(record[5].toString()),
+                        record[3] != null ? Integer.valueOf(record[3].toString()) : null,
+                        record[4] != null ? record[4].toString() : null,
+                        record[5] != null ? Integer.valueOf(record[5].toString()) : null,
                         record[6] != null ? Double.parseDouble(record[6].toString()) : null, // price
                         record[7] != null ? record[7].toString() : null // currency
                 );
@@ -320,4 +321,39 @@ public class ServiceCategories implements Serializable {
             }
         }
     }
+
+    public static Integer createServiceCategory(Integer companyId, String name, String description) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("createServiceCategory");
+
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("nameIN", String.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("descriptionIN", String.class, ParameterMode.IN);
+
+            spq.setParameter("companyIdIN", companyId);
+            spq.setParameter("nameIN", name);
+            spq.setParameter("descriptionIN", description);
+
+            spq.execute();
+
+            List<?> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            return ((Number) resultList.get(0)).intValue();
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
 }

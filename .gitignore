@@ -53,6 +53,8 @@ nbactions.xml
 *.iws
 .vscode/
 
+.claude/
+
 # Image uploads
 **/uploads/
 

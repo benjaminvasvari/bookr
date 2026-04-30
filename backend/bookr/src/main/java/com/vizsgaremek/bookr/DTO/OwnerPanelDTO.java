@@ -1,17 +1,10 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.vizsgaremek.bookr.DTO;
 
 import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
-/**
- *
- * @author vben
- */
 public class OwnerPanelDTO {
 
     public static class WeeklyRevenueDTO {
@@ -56,7 +49,6 @@ public class OwnerPanelDTO {
         public Integer getNewClientsThisWeek() {
             return newClientsThisWeek;
         }
-
     }
 
     public static class UpcomingAppointmentsDTO {
@@ -125,7 +117,6 @@ public class OwnerPanelDTO {
         public Integer getYesterdayCount() {
             return yesterdayCount;
         }
-
     }
 
     public static class AverageRatingDTO {
@@ -145,7 +136,6 @@ public class OwnerPanelDTO {
         public Integer getTotalReviews() {
             return totalReviews;
         }
-
     }
 
     public static class AllFutureAppointmentsByCompanyDTO {
@@ -237,7 +227,6 @@ public class OwnerPanelDTO {
         public Date getCreateAt() {
             return createAt;
         }
-
     }
 
     public static class ClientsByCompaniesDTO {
@@ -305,7 +294,6 @@ public class OwnerPanelDTO {
         public String getInternalNote() {
             return internalNote;
         }
-
     }
 
     public static class ClientsByCompanyResultWrapper {
@@ -350,7 +338,6 @@ public class OwnerPanelDTO {
         public String getCurrency() {
             return currency;
         }
-
     }
 
     public static class SalesOverviewAvgBasketDTO {
@@ -376,7 +363,6 @@ public class OwnerPanelDTO {
         public String getCurrency() {
             return currency;
         }
-
     }
 
     public static class SalesOverviewBookingsCount {
@@ -396,7 +382,6 @@ public class OwnerPanelDTO {
         public Integer getPreviousCount() {
             return previousCount;
         }
-
     }
 
     public static class SalesOverviewReturningClientsDTO {
@@ -428,7 +413,6 @@ public class OwnerPanelDTO {
         public int getPreviousReturningClients() {
             return previousReturningClients;
         }
-
     }
 
     public static class SalesRevenueChartDTO {
@@ -460,7 +444,6 @@ public class OwnerPanelDTO {
         public String getCurrency() {
             return currency;
         }
-
     }
 
     public static class SalesTopServicesDTO {
@@ -498,7 +481,6 @@ public class OwnerPanelDTO {
         public String getCurrency() {
             return currency;
         }
-
     }
 
     public static class OwnerReviewsDTO {
@@ -554,7 +536,6 @@ public class OwnerPanelDTO {
         public String getAppointmentDate() {
             return appointmentDate;
         }
-
     }
 
     public static class ReviewsForOwnerResultWrapper {
@@ -574,7 +555,6 @@ public class OwnerPanelDTO {
         public Integer getTotalCount() {
             return totalCount;
         }
-
     }
 
     public static class OwnerReviewsRequest {
@@ -612,6 +592,205 @@ public class OwnerPanelDTO {
         public Integer getPageSize() {
             return pageSize;
         }
+    }
 
+    public static class updateOpeningHoursDTO {
+
+        private Map<String, String> openingHours;
+
+        public Map<String, String> getOpeningHours() {
+            return openingHours;
+        }
+    }
+
+    public static class createTemporaryClosedPeriodDTO {
+
+        private Integer id;
+        private String startDate;
+        private String endDate;
+        private String openTime;
+        private String closeTime;
+        private String reason;
+
+        public createTemporaryClosedPeriodDTO(String startDate, String endDate, String openTime, String closeTime, String reason) {
+            this.startDate = startDate;
+            this.endDate = endDate;
+            this.openTime = openTime;
+            this.closeTime = closeTime;
+            this.reason = reason;
+        }
+
+        public createTemporaryClosedPeriodDTO(Integer id, String startDate, String endDate, String openTime, String closeTime, String reason) {
+            this.id = id;
+            this.startDate = startDate;
+            this.endDate = endDate;
+            this.openTime = openTime;
+            this.closeTime = closeTime;
+            this.reason = reason;
+        }
+
+        public Integer getId() {
+            return id;
+        }
+
+        public String getStartDate() {
+            return startDate;
+        }
+
+        public String getEndDate() {
+            return endDate;
+        }
+
+        public String getOpenTime() {
+            return openTime;
+        }
+
+        public String getCloseTime() {
+            return closeTime;
+        }
+
+        public String getReason() {
+            return reason;
+        }
+    }
+
+    public static class weeklyTCPResponseDTO {
+
+        private Integer id;
+        private String startDate;
+        private String endDate;
+        private String openTime;
+        private String closeTime;
+        private String reason;
+
+        public weeklyTCPResponseDTO(Integer id, String startDate, String endDate, String openTime, String closeTime, String reason) {
+            this.id = id;
+            this.startDate = startDate;
+            this.endDate = endDate;
+            this.openTime = openTime;
+            this.closeTime = closeTime;
+            this.reason = reason;
+        }
+
+        public Integer getId() {
+            return id;
+        }
+
+        public String getStartDate() {
+            return startDate;
+        }
+
+        public String getEndDate() {
+            return endDate;
+        }
+
+        public String getOpenTime() {
+            return openTime;
+        }
+
+        public String getCloseTime() {
+            return closeTime;
+        }
+
+        public String getReason() {
+            return reason;
+        }
+    }
+
+    public static class calendarResponseDTO {
+
+        private Integer appointmentId;
+        private Integer staffId;
+        private String startTime;
+        private String endTime;
+        private String status;
+        private String notes;
+        private Double price;
+        private String currency;
+        private String serviceName;
+        private Integer durationMinutes;
+        private String staffColor;
+        private String staffDisplayName;
+        private String clientName;
+        private String clientPhone;
+        private String clientEmail;
+
+        public calendarResponseDTO(Integer appointmentId, Integer staffId, String startTime, String endTime, String status, String notes, Double price, String currency, String serviceName, Integer durationMinutes, String staffColor, String staffDisplayName, String clientName, String clientPhone, String clientEmail) {
+            this.appointmentId = appointmentId;
+            this.staffId = staffId;
+            this.startTime = startTime;
+            this.endTime = endTime;
+            this.status = status;
+            this.notes = notes;
+            this.price = price;
+            this.currency = currency;
+            this.serviceName = serviceName;
+            this.durationMinutes = durationMinutes;
+            this.staffColor = staffColor;
+            this.staffDisplayName = staffDisplayName;
+            this.clientName = clientName;
+            this.clientPhone = clientPhone;
+            this.clientEmail = clientEmail;
+        }
+
+        public Integer getAppointmentId() {
+            return appointmentId;
+        }
+
+        public Integer getStaffId() {
+            return staffId;
+        }
+
+        public String getStartTime() {
+            return startTime;
+        }
+
+        public String getEndTime() {
+            return endTime;
+        }
+
+        public String getStatus() {
+            return status;
+        }
+
+        public String getNotes() {
+            return notes;
+        }
+
+        public Double getPrice() {
+            return price;
+        }
+
+        public String getCurrency() {
+            return currency;
+        }
+
+        public String getServiceName() {
+            return serviceName;
+        }
+
+        public Integer getDurationMinutes() {
+            return durationMinutes;
+        }
+
+        public String getStaffColor() {
+            return staffColor;
+        }
+
+        public String getStaffDisplayName() {
+            return staffDisplayName;
+        }
+
+        public String getClientName() {
+            return clientName;
+        }
+
+        public String getClientPhone() {
+            return clientPhone;
+        }
+
+        public String getClientEmail() {
+            return clientEmail;
+        }
     }
 }

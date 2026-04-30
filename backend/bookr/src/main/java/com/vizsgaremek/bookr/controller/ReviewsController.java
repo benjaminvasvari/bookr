@@ -68,8 +68,7 @@ public class ReviewsController {
     @GET
     @Path("getOwnerPanelReviews")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response getOwnerPanelReviews(@HeaderParam("Authorization") String authHeader, @QueryParam("companyId") Integer companyId, String body) {
-        JSONObject bodyObject = new JSONObject(body);
+    public Response getOwnerPanelReviews(@HeaderParam("Authorization") String authHeader, @QueryParam("companyId") Integer companyId, @QueryParam("search") String search, @QueryParam("ratingFilter") String ratingFilter, @QueryParam("sortBy") String sortBy, @QueryParam("page") Integer page, @QueryParam("pageSize") Integer pageSize) {
         JSONObject errorResponse = new JSONObject();
 
         // Extract token from "Bearer <token>"
@@ -106,8 +105,11 @@ public class ReviewsController {
                 return buildErrorResponse(403, "forbidden");
             }
 
-            if (bodyObject.getString("sortBy") == null || (!bodyObject.getString("sortBy").equals("newest") && !bodyObject.getString("sortBy").equals("oldest") && !bodyObject.getString("sortBy").equals("highest") && !bodyObject.getString("sortBy").equals("lowest"))) {
-                errorResponse.put("status", "InvalidCredentials");
+            if (sortBy == null
+                    || (!sortBy.equals("newest") && !sortBy.equals("oldest") && !sortBy.equals("highest") && !sortBy.equals("lowest"))
+                    || page == null || page <= 0
+                    || pageSize == null || pageSize <= 0) {
+                errorResponse.put("status", "InvalidParam");
                 errorResponse.put("statusCode", 400);
                 return Response.status(Response.Status.BAD_REQUEST)
                         .entity(errorResponse.toString())
@@ -116,11 +118,11 @@ public class ReviewsController {
             }
 
             OwnerReviewsRequest request = new OwnerReviewsRequest(
-                    bodyObject.isNull("search") ? null : bodyObject.getString("search"),
-                    bodyObject.isNull("ratingFilter") ? null : bodyObject.getString("ratingFilter"),
-                    bodyObject.getString("sortBy"),
-                    bodyObject.getInt("page"),
-                    bodyObject.getInt("pageSize")
+                    search == null ? null : search,
+                    ratingFilter == null ? null : ratingFilter,
+                    sortBy,
+                    page,
+                    pageSize
             );
 
             JSONObject toReturn = layer.getOwnerReviews(companyId, request);

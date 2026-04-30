@@ -8,8 +8,10 @@ import com.vizsgaremek.bookr.model.Tokens;
 import com.vizsgaremek.bookr.model.Users;
 import com.vizsgaremek.bookr.security.JWT;
 import com.vizsgaremek.bookr.util.FileStorageUtil;
+
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -50,6 +52,14 @@ public class UsersService {
         //code
         if (userId > 0) {
             Users modelResult = Users.getUserProfile(userId);
+
+            if (modelResult == null) {
+                status = "NotFound";
+                statusCode = 404;
+                toReturn.put("status", status);
+                toReturn.put("statusCode", statusCode);
+                return toReturn;
+            }
 
             JSONObject result = new JSONObject();
             result.put("id", modelResult.getId());
@@ -185,7 +195,7 @@ public class UsersService {
                             // Log the error but don't fail the registration
                             ex.printStackTrace();
                         }
-                    } else if (performedUserRoles.split(",")[0].trim() == "superadmin") {
+                    } else if (performedUserRoles.split(",")[0].trim().equals("superadmin")) {
                         try {
                             AuditLogs auditLog = new AuditLogs(
                                     performedId,
@@ -288,7 +298,27 @@ public class UsersService {
         }
     }
 
-    public JSONObject getClientsByCompany(Integer companyId, Integer page, Integer pageSize) {
+    public Boolean validateNewUserCreate(String userEmail) {
+
+        try {
+
+            Boolean result = true;
+
+            Users modelResult = Users.checkUserByEmail(userEmail);
+
+            if (modelResult != null) {
+                result = false;
+            }
+
+            return result;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public JSONObject getClientsByCompany(Integer companyId, Integer page, Integer pageSize, String search) {
         JSONObject toReturn = new JSONObject();
         String status = "success";
         Integer statusCode = 200;
@@ -296,7 +326,7 @@ public class UsersService {
         try {
 
             // Adatbázis lekérdezés
-            ClientsByCompanyResultWrapper modelResult = layer.getClientsByCompany(companyId, page, pageSize);
+            ClientsByCompanyResultWrapper modelResult = layer.getClientsByCompany(companyId, page, pageSize, search);
 
             // NULL ELLENŐRZÉS
             if (modelResult == null) {
@@ -369,6 +399,41 @@ public class UsersService {
 
         toReturn.put("status", status);
         toReturn.put("statusCode", statusCode);
+        return toReturn;
+    }
+
+    public JSONObject getMe(String jwt) {
+        JSONObject toReturn = new JSONObject();
+
+        Integer userId = JWT.getUserIdFromAccessToken(jwt);
+
+        if (userId == null) {
+            toReturn.put("status", "InvalidToken");
+            toReturn.put("statusCode", 401);
+            return toReturn;
+        }
+
+        Users user = layer.getMe(userId);
+
+        if (user == null) {
+            toReturn.put("status", "NotFound");
+            toReturn.put("statusCode", 404);
+            return toReturn;
+        }
+
+        JSONObject data = new JSONObject();
+        data.put("id", user.getId());
+        data.put("firstName", user.getFirstName());
+        data.put("lastName", user.getLastName());
+        data.put("email", user.getEmail());
+        data.put("phone", user.getPhone());
+        data.put("companyId", user.getCompanyIdInt() != null ? user.getCompanyIdInt() : JSONObject.NULL);
+        data.put("avatarUrl", user.getImageUrl() != null ? FileStorageUtil.buildFullUrl(user.getImageUrl()) : JSONObject.NULL);
+        data.put("roles", user.getRolesString());
+
+        toReturn.put("data", data);
+        toReturn.put("status", "success");
+        toReturn.put("statusCode", 200);
         return toReturn;
     }
 }

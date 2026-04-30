@@ -5,9 +5,14 @@
 package com.vizsgaremek.bookr.model;
 
 import com.vizsgaremek.bookr.DTO.OwnerPanelDTO;
+import com.vizsgaremek.bookr.DTO.staffPanelDTO;
+
 import static com.vizsgaremek.bookr.model.OpeningHours.timeFormatter;
 import static com.vizsgaremek.bookr.model.Users.emf;
 import static com.vizsgaremek.bookr.model.Users.formatter;
+
+import com.vizsgaremek.bookr.util.StoredProcedureUtil;
+
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
@@ -41,6 +46,7 @@ import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -52,16 +58,16 @@ import org.json.JSONObject;
 @Table(name = "appointments")
 @XmlRootElement
 @NamedQueries({
-    @NamedQuery(name = "Appointments.findAll", query = "SELECT a FROM Appointments a"),
-    @NamedQuery(name = "Appointments.findById", query = "SELECT a FROM Appointments a WHERE a.id = :id"),
-    @NamedQuery(name = "Appointments.findByStartTime", query = "SELECT a FROM Appointments a WHERE a.startTime = :startTime"),
-    @NamedQuery(name = "Appointments.findByEndTime", query = "SELECT a FROM Appointments a WHERE a.endTime = :endTime"),
-    @NamedQuery(name = "Appointments.findByStatus", query = "SELECT a FROM Appointments a WHERE a.status = :status"),
-    @NamedQuery(name = "Appointments.findByPrice", query = "SELECT a FROM Appointments a WHERE a.price = :price"),
-    @NamedQuery(name = "Appointments.findByCurrency", query = "SELECT a FROM Appointments a WHERE a.currency = :currency"),
-    @NamedQuery(name = "Appointments.findByCancelledAt", query = "SELECT a FROM Appointments a WHERE a.cancelledAt = :cancelledAt"),
-    @NamedQuery(name = "Appointments.findByCreatedAt", query = "SELECT a FROM Appointments a WHERE a.createdAt = :createdAt"),
-    @NamedQuery(name = "Appointments.findByUpdatedAt", query = "SELECT a FROM Appointments a WHERE a.updatedAt = :updatedAt")})
+        @NamedQuery(name = "Appointments.findAll", query = "SELECT a FROM Appointments a"),
+        @NamedQuery(name = "Appointments.findById", query = "SELECT a FROM Appointments a WHERE a.id = :id"),
+        @NamedQuery(name = "Appointments.findByStartTime", query = "SELECT a FROM Appointments a WHERE a.startTime = :startTime"),
+        @NamedQuery(name = "Appointments.findByEndTime", query = "SELECT a FROM Appointments a WHERE a.endTime = :endTime"),
+        @NamedQuery(name = "Appointments.findByStatus", query = "SELECT a FROM Appointments a WHERE a.status = :status"),
+        @NamedQuery(name = "Appointments.findByPrice", query = "SELECT a FROM Appointments a WHERE a.price = :price"),
+        @NamedQuery(name = "Appointments.findByCurrency", query = "SELECT a FROM Appointments a WHERE a.currency = :currency"),
+        @NamedQuery(name = "Appointments.findByCancelledAt", query = "SELECT a FROM Appointments a WHERE a.cancelledAt = :cancelledAt"),
+        @NamedQuery(name = "Appointments.findByCreatedAt", query = "SELECT a FROM Appointments a WHERE a.createdAt = :createdAt"),
+        @NamedQuery(name = "Appointments.findByUpdatedAt", query = "SELECT a FROM Appointments a WHERE a.updatedAt = :updatedAt")})
 public class Appointments implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -716,8 +722,8 @@ public class Appointments implements Serializable {
     }
 
     public static Integer createAppointment(Integer companyId, Integer serviceId, Integer staffId,
-            Integer clientId, Timestamp startTime, Timestamp endTime,
-            String notes, BigDecimal price) {
+                                            Integer clientId, Timestamp startTime, Timestamp endTime,
+                                            String notes, BigDecimal price) {
         EntityManager em = emf.createEntityManager();
         try {
             StoredProcedureQuery spq = em.createStoredProcedureQuery("createAppointment");
@@ -764,7 +770,9 @@ public class Appointments implements Serializable {
             ex.printStackTrace();
             return null;
         } finally {
-            em.close();
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
         }
     }
 
@@ -865,6 +873,10 @@ public class Appointments implements Serializable {
         } catch (Exception ex) {
             ex.printStackTrace();
             return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
         }
     }
 
@@ -1283,10 +1295,237 @@ public class Appointments implements Serializable {
                 OwnerPanelDTO.SalesRevenueChartDTO s = new OwnerPanelDTO.SalesRevenueChartDTO(
                         record[0].toString(),
                         record[1].toString(),
-                        Double.parseDouble(record[2].toString()),
+                        record[2] != null ? Double.parseDouble(record[2].toString()) : null,
                         record[3].toString()
                 );
                 toReturn.add(s);
+            }
+            return toReturn;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static ArrayList<OwnerPanelDTO.calendarResponseDTO> getWeeklyCalendarAppointments(Integer companyId, Integer staffId, String weekStartStr) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getWeeklyCalendarAppointments");
+
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("weekStartIN", Date.class, ParameterMode.IN);
+
+            spq.setParameter("companyIdIN", companyId);
+            StoredProcedureUtil.setNullableParameter(spq, "staffIdIN", staffId);
+            spq.setParameter("weekStartIN", java.sql.Date.valueOf(weekStartStr));
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+            ArrayList<OwnerPanelDTO.calendarResponseDTO> toReturn = new ArrayList<>();
+
+            for (Object[] record : resultList) {
+                OwnerPanelDTO.calendarResponseDTO a = new OwnerPanelDTO.calendarResponseDTO(
+                        Integer.valueOf(record[0].toString()),
+                        Integer.valueOf(record[1].toString()),
+                        record[2].toString(),
+                        record[3].toString(),
+                        record[4].toString(),
+                        record[5] != null ? record[5].toString() : null,
+                        Double.parseDouble(record[6].toString()),
+                        record[7].toString(),
+                        record[8].toString(),
+                        Integer.valueOf(record[9].toString()),
+                        record[10] != null ? record[10].toString() : null,
+                        record[11].toString(),
+                        record[12].toString(),
+                        record[13].toString(),
+                        record[14].toString()
+                );
+                toReturn.add(a);
+            }
+            return toReturn;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static Integer getAppointmentsCountByStaff(Integer staffId, String dateFrom, String dateTo) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getAppointmentsCountByStaff");
+
+            spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("dateFromIN", Date.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("dateToIN", Date.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("countOUT", Integer.class, ParameterMode.OUT);
+
+            spq.setParameter("staffIdIN", staffId);
+            StoredProcedureUtil.setNullableParameter(spq, "dateFromIN", dateFrom != null ? java.sql.Date.valueOf(dateFrom) : null);
+            StoredProcedureUtil.setNullableParameter(spq, "dateToIN", dateTo != null ? java.sql.Date.valueOf(dateTo) : null);
+
+            spq.execute();
+
+            // Az OUT paraméter kinyerése
+            Integer count = (Integer) spq.getOutputParameterValue("countOUT");
+
+            return count;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static Integer getUpcomingAppointmentsCountByStaff(Integer staffId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getUpcomingAppointmentsCountByStaff");
+
+            spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("countOUT", Integer.class, ParameterMode.OUT);
+
+            spq.setParameter("staffIdIN", staffId);
+
+            spq.execute();
+
+            // Az OUT paraméter kinyerése
+            Integer count = (Integer) spq.getOutputParameterValue("countOUT");
+
+            return count;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static Integer getPlannedWorkingMinutesByStaff(Integer staffId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getPlannedWorkingMinutesByStaff");
+
+            spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("minutesOUT", Integer.class, ParameterMode.OUT);
+
+            spq.setParameter("staffIdIN", staffId);
+
+            spq.execute();
+
+            // Az OUT paraméter kinyerése
+            Integer minutes = (Integer) spq.getOutputParameterValue("minutesOUT");
+
+            return minutes;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static ArrayList<staffPanelDTO.getTodayAppointmentsByStaffDTO> getTodayAppointmentsByStaff(Integer staffId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getTodayAppointmentsByStaff");
+
+            spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("staffIdIN", staffId);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+            ArrayList<staffPanelDTO.getTodayAppointmentsByStaffDTO> toReturn = new ArrayList<>();
+
+            for (Object[] record : resultList) {
+                staffPanelDTO.getTodayAppointmentsByStaffDTO a = new staffPanelDTO.getTodayAppointmentsByStaffDTO(
+                        Integer.valueOf(record[0].toString()),
+                        record[1].toString(),
+                        record[2].toString(),
+                        record[3].toString(),
+                        record[4].toString(),
+                        record[5] != null ? record[5].toString() : null,
+                        Double.parseDouble(record[6].toString()),
+                        record[7].toString(),
+                        record[8].toString(),
+                        Integer.valueOf(record[9].toString()),
+                        record[10] != null ? record[10].toString() : null,
+                        record[11].toString(),
+                        record[12].toString()
+                );
+                toReturn.add(a);
+            }
+            return toReturn;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+
+    public static ArrayList<staffPanelDTO.getStaffDashboardTodayAppointmentsDTO> getStaffDashboardTodayAppointments(Integer staffId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getStaffDashboardTodayAppointments");
+
+            spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("staffIdIN", staffId);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+            ArrayList<staffPanelDTO.getStaffDashboardTodayAppointmentsDTO> toReturn = new ArrayList<>();
+
+            for (Object[] record : resultList) {
+                staffPanelDTO.getStaffDashboardTodayAppointmentsDTO a = new staffPanelDTO.getStaffDashboardTodayAppointmentsDTO(
+                        Integer.valueOf(record[0].toString()),
+                        record[1].toString(),
+                        record[2].toString(),
+                        record[3].toString(),
+                        Double.parseDouble(record[4].toString()),
+                        record[5].toString(),
+                        record[6].toString(),
+                        Integer.valueOf(record[7].toString()),
+                        record[8] != null ? record[8].toString() : null,
+                        record[9].toString(),
+                        record[10].toString()
+                );
+                toReturn.add(a);
             }
             return toReturn;
 

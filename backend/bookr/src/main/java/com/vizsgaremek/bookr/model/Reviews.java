@@ -270,7 +270,7 @@ public class Reviews implements Serializable {
                         record[1].toString(),
                         record[2] != null ? record[2].toString() : null,
                         Integer.valueOf(record[3].toString()),
-                        record[4].toString(),
+                        record[4] != null ? record[4].toString() : null,
                         formatter.parse(record[5].toString())
                 );
 
@@ -364,7 +364,7 @@ public class Reviews implements Serializable {
                 OwnerPanelDTO.OwnerReviewsDTO dto = new OwnerPanelDTO.OwnerReviewsDTO(
                         Integer.valueOf(record[0].toString()),
                         Integer.valueOf(record[1].toString()),
-                        record[2].toString(),
+                        record[2] != null ? record[2].toString() : null,
                         record[3].toString(),
                         record[4].toString(),
                         record[5] != null ? record[5].toString() : null,

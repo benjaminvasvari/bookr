@@ -6,6 +6,7 @@ package com.vizsgaremek.bookr.model;
 
 import static com.vizsgaremek.bookr.model.Users.emf;
 import static com.vizsgaremek.bookr.model.Users.formatter;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -43,14 +44,14 @@ import javax.xml.bind.annotation.XmlTransient;
 @Table(name = "staff")
 @XmlRootElement
 @NamedQueries({
-    @NamedQuery(name = "Staff.findAll", query = "SELECT s FROM Staff s"),
-    @NamedQuery(name = "Staff.findById", query = "SELECT s FROM Staff s WHERE s.id = :id"),
-    @NamedQuery(name = "Staff.findByDisplayName", query = "SELECT s FROM Staff s WHERE s.displayName = :displayName"),
-    @NamedQuery(name = "Staff.findByColor", query = "SELECT s FROM Staff s WHERE s.color = :color"),
-    @NamedQuery(name = "Staff.findByIsActive", query = "SELECT s FROM Staff s WHERE s.isActive = :isActive"),
-    @NamedQuery(name = "Staff.findByIsDeleted", query = "SELECT s FROM Staff s WHERE s.isDeleted = :isDeleted"),
-    @NamedQuery(name = "Staff.findByCreatedAt", query = "SELECT s FROM Staff s WHERE s.createdAt = :createdAt"),
-    @NamedQuery(name = "Staff.findByUpdatedAt", query = "SELECT s FROM Staff s WHERE s.updatedAt = :updatedAt")})
+        @NamedQuery(name = "Staff.findAll", query = "SELECT s FROM Staff s"),
+        @NamedQuery(name = "Staff.findById", query = "SELECT s FROM Staff s WHERE s.id = :id"),
+        @NamedQuery(name = "Staff.findByDisplayName", query = "SELECT s FROM Staff s WHERE s.displayName = :displayName"),
+        @NamedQuery(name = "Staff.findByColor", query = "SELECT s FROM Staff s WHERE s.color = :color"),
+        @NamedQuery(name = "Staff.findByIsActive", query = "SELECT s FROM Staff s WHERE s.isActive = :isActive"),
+        @NamedQuery(name = "Staff.findByIsDeleted", query = "SELECT s FROM Staff s WHERE s.isDeleted = :isDeleted"),
+        @NamedQuery(name = "Staff.findByCreatedAt", query = "SELECT s FROM Staff s WHERE s.createdAt = :createdAt"),
+        @NamedQuery(name = "Staff.findByUpdatedAt", query = "SELECT s FROM Staff s WHERE s.updatedAt = :updatedAt")})
 public class Staff implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -163,6 +164,26 @@ public class Staff implements Serializable {
         this.lastName = lastName;
         this.imageUrl = imageUrl;
 
+    }
+
+    public Staff(Integer id, String displayName, String specialties, String bio) {
+        this.id = id;
+        this.displayName = displayName;
+        this.specialties = specialties;
+        this.bio = bio;
+    }
+
+    // CheckStaff
+
+    public Staff(Integer id, Boolean isActive, Boolean isDeleted) {
+        this.id = id;
+        this.isActive = isActive;
+        this.isDeleted = isDeleted;
+    }
+
+
+    public Staff(String color) {
+        this.color = color;
     }
 
     public Integer getId() {
@@ -499,6 +520,192 @@ public class Staff implements Serializable {
 
         } finally {
             em.close();
+        }
+    }
+
+    public static Staff createStaff(Integer userId, Integer companyId, String position) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("createStaff");
+
+            spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("specialtiesIN", String.class, ParameterMode.IN);
+
+            spq.setParameter("userIdIN", userId);
+            spq.setParameter("companyIdIN", companyId);
+            spq.setParameter("specialtiesIN", position);
+
+            spq.execute();
+
+            Integer staffId = Integer.valueOf(spq.getSingleResult().toString());
+
+            Staff staff = new Staff(
+                    staffId
+            );
+
+            return staff;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+
+        } finally {
+            em.close();
+        }
+    }
+
+    public static Integer getUserIdByStaffId(Integer staffId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getUserIdByStaffId");
+
+            spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("staffIdIN", staffId);
+
+            spq.execute();
+
+            Integer userId = Integer.valueOf(spq.getSingleResult().toString());
+
+            return userId;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+
+        } finally {
+            em.close();
+        }
+    }
+
+    public static Staff getStaffColor(Integer staffId, Integer companyId) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getStaffColor");
+
+            spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("staffIdIN", staffId);
+            spq.setParameter("companyIdIN", companyId);
+
+            spq.execute();
+
+            String color = spq.getSingleResult() != null ? spq.getSingleResult().toString() : null;
+
+            Staff staff = new Staff(
+                    color
+            );
+
+            return staff;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            em.close();
+        }
+    }
+
+    public static Boolean updateStaffColor(Integer staffId, Integer companyId, String color) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("updateStaffColor");
+
+            spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("companyIdIN", Integer.class, ParameterMode.IN);
+            spq.registerStoredProcedureParameter("colorIN", String.class, ParameterMode.IN);
+
+            spq.setParameter("staffIdIN", staffId);
+            spq.setParameter("companyIdIN", companyId);
+            spq.setParameter("colorIN", color);
+
+            spq.execute();
+
+            return true;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return false;
+
+        } finally {
+            em.close();
+        }
+    }
+
+    public static Staff checkStaff(Integer id) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("checkStaff");
+            spq.registerStoredProcedureParameter("staffIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("staffIdIN", id);
+
+            spq.execute();
+
+            List<Object[]> resultList = spq.getResultList();
+
+            if (resultList.isEmpty()) {
+                return null;
+            }
+
+            Object[] record = resultList.get(0);
+
+            Staff user = new Staff(
+                    Integer.valueOf(record[0].toString()),
+                    Boolean.parseBoolean(record[1].toString()),
+                    Boolean.parseBoolean(record[2].toString())
+            );
+
+            return user;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
+        }
+    }
+    public static Integer getStaffIdByUserId(Integer id) {
+        EntityManager em = emf.createEntityManager();
+
+        try {
+            StoredProcedureQuery spq = em.createStoredProcedureQuery("getStaffIdByUserId");
+            spq.registerStoredProcedureParameter("userIdIN", Integer.class, ParameterMode.IN);
+
+            spq.setParameter("userIdIN", id);
+
+            spq.execute();
+
+            Object result = spq.getSingleResult();
+
+            if (result == null) {
+                return null;
+            }
+
+            Integer staffId = Integer.valueOf(result.toString());
+
+            return staffId;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        } finally {
+            if (em != null && em.isOpen()) {
+                em.close();
+            }
         }
     }
 }

@@ -7,8 +7,12 @@ package com.vizsgaremek.bookr.controller;
 import com.vizsgaremek.bookr.model.Users;
 import com.vizsgaremek.bookr.security.JWT;
 import com.vizsgaremek.bookr.service.UsersService;
+
 import static com.vizsgaremek.bookr.util.ErrorResponseBuilder.buildErrorResponse;
+
 import com.vizsgaremek.bookr.util.RoleChecker;
+
+import java.util.Objects;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.Consumes;
@@ -21,6 +25,7 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+
 import org.json.JSONObject;
 
 /**
@@ -176,7 +181,7 @@ public class UsersController {
     @Path("getClientsByCompany")
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response getClientsByCompany(@HeaderParam("Authorization") String authHeader, @QueryParam("companyId") Integer companyId, @QueryParam("page") Integer page, @QueryParam("pageSize") Integer pageSize) {
+    public Response getClientsByCompany(@HeaderParam("Authorization") String authHeader, @QueryParam("companyId") Integer companyId, @QueryParam("page") Integer page, @QueryParam("pageSize") Integer pageSize, @QueryParam("search") String search) {
 
         // 1. Auth header check
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
@@ -195,30 +200,54 @@ public class UsersController {
         // 3. Role check
         String userRoles = JWT.getRolesFromAccessToken(jwtToken);
         Integer userCompanyId = JWT.getCompanyIdFromAccessToken(jwtToken);
-        
+
         if (RoleChecker.hasAnyRole(userRoles, "owner") && !RoleChecker.hasAnyRole(userRoles, "superadmin")) {
-            if (userCompanyId != companyId) {
+            if (!Objects.equals(userCompanyId, companyId)) {
                 return buildErrorResponse(400, "invalidCompanyId");
             }
         }
-        
-        
+
         boolean hasPermission = RoleChecker.hasAllRoles(userRoles, "client", "owner") || RoleChecker.hasAllRoles(userRoles, "client", "superadmin");
         if (!hasPermission) {
             return buildErrorResponse(403, "forbidden");
         }
 
         // 4. Kötelező mezők validálása
-        if (companyId== null || companyId <= 0 || page== null || page <= 0 || pageSize== null || pageSize <= 0) {
+        if (companyId == null || companyId <= 0 || page == null || page <= 0 || pageSize == null || pageSize <= 0) {
             return buildErrorResponse(400, "invalidParam");
         }
 
+        if (search != null) {
+            if (search.length() > 255) {
+                return buildErrorResponse(400, "invalidParam");
+            }
+        }
+
         // 5. Service hívás
-        JSONObject toReturn = layer.getClientsByCompany(companyId, page, pageSize);
+        JSONObject toReturn = layer.getClientsByCompany(companyId, page, pageSize, search);
 
         return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
                 .entity(toReturn.toString())
                 .type(MediaType.APPLICATION_JSON)
                 .build();
+    }
+
+    @GET
+    @Path("me")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getMe(@HeaderParam("Authorization") String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return buildErrorResponse(401, "missingToken");
+        }
+
+        String jwtToken = authHeader.substring(7);
+        Boolean validJwt = JWT.validateAccessToken(jwtToken);
+
+        if (validJwt == null) return buildErrorResponse(401, "tokenExpired");
+        if (!validJwt) return buildErrorResponse(401, "invalidToken");
+
+        JSONObject toReturn = layer.getMe(jwtToken);
+        return Response.status(Integer.parseInt(toReturn.get("statusCode").toString()))
+                .entity(toReturn.toString()).type(MediaType.APPLICATION_JSON).build();
     }
 }

@@ -5,10 +5,15 @@
 package com.vizsgaremek.bookr.service;
 
 import com.vizsgaremek.bookr.model.Appointments;
+import com.vizsgaremek.bookr.model.AuditLogs;
+import com.vizsgaremek.bookr.model.PendingStaff;
 import com.vizsgaremek.bookr.model.Staff;
+import com.vizsgaremek.bookr.security.JWT;
 import static com.vizsgaremek.bookr.service.AppointmentsService.timeFormatter;
+import com.vizsgaremek.bookr.util.ErrorResponseBuilder;
 import com.vizsgaremek.bookr.util.FileStorageUtil;
 import java.util.ArrayList;
+import java.util.List;
 import javax.enterprise.context.ApplicationScoped;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -21,6 +26,8 @@ import org.json.JSONObject;
 public class StaffService {
 
     private Staff layer = new Staff();
+    private PendingStaff PendingStaff = new PendingStaff();
+    private AuditLogService AuditLogService = new AuditLogService();
 
     public JSONObject getFilteredStaffByServices(Integer companyId, String serviceIds) {
 
@@ -48,7 +55,7 @@ public class StaffService {
                 actualStaffObject.put("userId", actualStaff.getUserIdInt());
                 actualStaffObject.put("displayName", actualStaff.getDisplayName());
                 actualStaffObject.put("specialties", actualStaff.getSpecialties());
-                actualStaffObject.put("bio", actualStaff.getBio());
+                actualStaffObject.put("bio", actualStaff.getBio() != null ? actualStaff.getBio() : JSONObject.NULL);
                 actualStaffObject.put("isActive", actualStaff.getIsActive());
                 actualStaffObject.put("companyId", actualStaff.getCompanyIdInt());
                 actualStaffObject.put("firstName", actualStaff.getFirstName());
@@ -81,15 +88,16 @@ public class StaffService {
         } else if (modelResult.isEmpty()) {
             status = "NoRecordFound";
         } else {
-            JSONArray result = new JSONArray();
+            JSONObject result = new JSONObject();
 
+            JSONArray actualStaffArray = new JSONArray();
             for (Staff actualStaff : modelResult) {
                 JSONObject staffObject = new JSONObject();
                 staffObject.put("id", actualStaff.getId());
                 staffObject.put("userId", actualStaff.getUserIdInt());
                 staffObject.put("displayName", actualStaff.getDisplayName());
                 staffObject.put("specialties", actualStaff.getSpecialties());
-                staffObject.put("bio", actualStaff.getBio());
+                staffObject.put("bio", actualStaff.getBio() != null ? actualStaff.getBio() : JSONObject.NULL);
 
                 if (actualStaff.getColor() == null || actualStaff.getColor().isEmpty()) {
                     staffObject.put("color", JSONObject.NULL);
@@ -121,19 +129,74 @@ public class StaffService {
                         apptObject.put("startTime", timeFormatter.format(appt.getStartTime()));
                         apptObject.put("serviceName", appt.getServiceName());
                         apptObject.put("clientName", appt.getClientName());
-
-                        if (appt.getImageUrl() == null) {
-                            apptObject.put("clientImageUrl", JSONObject.NULL);
-                        } else {
-                            apptObject.put("clientImageUrl", FileStorageUtil.buildFullUrl(appt.getImageUrl()));
-                        }
+                        apptObject.put("clientImageUrl", appt.getImageUrl() == null ? JSONObject.NULL : appt.getImageUrl());
 
                         appointmentsArray.put(apptObject);
                     }
                 }
 
                 staffObject.put("upcomingAppointments", appointmentsArray);
-                result.put(staffObject);
+                actualStaffArray.put(staffObject);
+            }
+
+            // PENDING STAFFs
+            List<PendingStaff> pendingStaffModelResult = PendingStaff.getPendingStaffByCompany(companyId);
+
+            JSONArray pendingStaffArray = new JSONArray();
+            if (!pendingStaffModelResult.isEmpty()) {
+                for (PendingStaff staff : pendingStaffModelResult) {
+
+                    JSONObject pstaffObj = new JSONObject();
+                    pstaffObj.put("id", staff.getId());
+                    pstaffObj.put("email", staff.getEmail());
+                    pstaffObj.put("companyId", staff.getCompanyIdInt());
+                    pstaffObj.put("userId", staff.getUserIdInt() == null ? JSONObject.NULL : staff.getUserIdInt());
+                    pstaffObj.put("position", staff.getPosition());
+                    pstaffObj.put("status", staff.getStatus());
+                    pstaffObj.put("createdAt", staff.getCreatedAt());
+
+                    pendingStaffArray.put(pstaffObj);
+                }
+            }
+            result.put("actualStaff", actualStaffArray);
+            result.put("pendingStaff", pendingStaffArray);
+
+            toReturn.put("result", result);
+        }
+
+        toReturn.put("status", status);
+        toReturn.put("statusCode", statusCode);
+        return toReturn;
+    }
+
+    public JSONObject getStaffByCompanyForIndustryPage(Integer companyId) {
+
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        //code
+        ArrayList<Staff> modelResult = Staff.getAllActiveStaffByCompany(companyId);
+
+        if (modelResult == null) {
+            statusCode = 500;
+            status = "ModelException";
+        } else if (modelResult.isEmpty()) {
+            statusCode = 200;
+            status = "NoRecordFound";
+        } else {
+
+            JSONArray result = new JSONArray();
+
+            for (int i = modelResult.size() - 1; i >= 0; i--) {
+                Staff actualStaff = modelResult.get(i);
+                JSONObject actualStaffObject = new JSONObject();
+                actualStaffObject.put("id", actualStaff.getId());
+                actualStaffObject.put("displayName", actualStaff.getDisplayName());
+                actualStaffObject.put("specialties", actualStaff.getSpecialties());
+                actualStaffObject.put("bio", actualStaff.getBio() != null ? actualStaff.getBio() : JSONObject.NULL);
+                actualStaffObject.put("imageUrl", actualStaff.getImageUrl() != null ? FileStorageUtil.buildFullUrl(actualStaff.getImageUrl()) : null);
+                result.put(actualStaffObject);
             }
 
             toReturn.put("result", result);
@@ -142,5 +205,86 @@ public class StaffService {
         toReturn.put("status", status);
         toReturn.put("statusCode", statusCode);
         return toReturn;
+    }
+
+    public JSONObject updateStaffColor(Integer staffId, Integer companyId, String color, String token) {
+
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        try {
+            //code
+            Staff oldColor = layer.getStaffColor(staffId, companyId);
+
+            if (oldColor == null) {
+                return ErrorResponseBuilder.buildErrorResponseJSON(500, "InternalServerError");
+            }
+
+            Boolean modelResult = Staff.updateStaffColor(staffId, companyId, color);
+
+            if (modelResult == null || !modelResult) {
+                return ErrorResponseBuilder.buildErrorResponseJSON(500, "InternalServerError");
+            }
+
+            // ========== AUDIT LOG ==========
+            try {
+
+                Integer affectedUserId = layer.getUserIdByStaffId(staffId);
+
+                Integer ownerUserId = JWT.getUserIdFromAccessToken(token);
+                String ownerEmail = JWT.getEmailFromAccessToken(token);
+
+                AuditLogs auditLog = new AuditLogs(
+                        ownerUserId,
+                        "owner",
+                        affectedUserId,
+                        ownerEmail,
+                        "staff",
+                        "change_color"
+                );
+
+                auditLog.addOldValue("color", oldColor.getColor());
+                auditLog.addNewValue("color", color);
+
+                AuditLogService.logAudit(auditLog);
+
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                return ErrorResponseBuilder.buildErrorResponseJSON(500, "InternalServerError");
+            }
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return ErrorResponseBuilder.buildErrorResponseJSON(500, "InternalServerError");
+        }
+
+        toReturn.put("status", status);
+        toReturn.put("statusCode", statusCode);
+        return toReturn;
+    }
+
+    public Boolean validateStaffExistById(Integer id) {
+
+        try {
+
+            Boolean result = true;
+
+            Staff modelResult = Staff.checkStaff(id);
+
+            if (modelResult == null) {
+                result = false;
+            } else if (modelResult.getIsActive() == false) {
+                result = false;
+            } else if (modelResult.getIsDeleted() == true) {
+                result = false;
+            }
+
+            return result;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }

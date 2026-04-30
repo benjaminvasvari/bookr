@@ -58,7 +58,7 @@ public class ImagesService {
                 JSONObject actualImageObject = new JSONObject();
 
                 actualImageObject.put("id", actualImage.getId());
-                actualImageObject.put("url", actualImage.getUrl());
+                actualImageObject.put("url", FileStorageUtil.buildFullUrl(actualImage.getUrl()));
                 actualImageObject.put("isMain", actualImage.getIsMain());
                 actualImageObject.put("uploadedAt", actualImage.getUploadedAt());
 
@@ -180,7 +180,6 @@ public class ImagesService {
                 }
             }
 
-            // ezt még néézd át
             FileValidator.validateUploadedFile(filename, fileSize, mimeType);
 
             String uniqueFilename = FileStorageUtil.generateUniqueFilename(filename);
@@ -340,7 +339,7 @@ public class ImagesService {
             return toReturn;
         }
 
-        Boolean modelResult = Images.softDeleteCompanyImage(userId, imageId);
+        Boolean modelResult = Images.softDeleteUserImage(userId);
 
         if (modelResult == false) {
             status = "serverError";

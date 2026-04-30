@@ -1,6 +1,7 @@
 package com.vizsgaremek.bookr.service;
 
 import com.vizsgaremek.bookr.DTO.OwnerPanelDTO;
+import com.vizsgaremek.bookr.DTO.staffPanelDTO;
 import com.vizsgaremek.bookr.model.Appointments;
 import com.vizsgaremek.bookr.model.AuditLogs;
 import com.vizsgaremek.bookr.model.Companies;
@@ -8,6 +9,10 @@ import com.vizsgaremek.bookr.model.Services;
 import com.vizsgaremek.bookr.model.Staff;
 import com.vizsgaremek.bookr.model.Users;
 import com.vizsgaremek.bookr.security.JWT;
+
+import static com.vizsgaremek.bookr.util.ErrorResponseBuilder.buildErrorResponseJSON;
+import com.vizsgaremek.bookr.util.FileStorageUtil;
+
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
@@ -17,6 +22,7 @@ import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -26,7 +32,7 @@ public class AppointmentsService {
     private EmailService EmailService = new EmailService();
     private UsersService UsersService = new UsersService();
     private Companies Companies = new Companies();
-    private Staff Staff = new Staff();
+    private StaffService StaffService = new StaffService();
     private Services Services = new Services();
     private CompaniesService CompaniesService = new CompaniesService();
     private Appointments layer = new Appointments();
@@ -187,8 +193,30 @@ public class AppointmentsService {
         String status = "success";
         Integer statusCode = 200;
 
-        Timestamp startTime = Timestamp.valueOf(startTimeString);
-        Timestamp endTime = Timestamp.valueOf(endTimeString);
+        Timestamp startTime;
+        Timestamp endTime;
+        try {
+            startTime = Timestamp.valueOf(startTimeString);
+            endTime = Timestamp.valueOf(endTimeString);
+        } catch (IllegalArgumentException e) {
+            toReturn.put("status", "InvalidDateFormat");
+            toReturn.put("statusCode", 400);
+            return toReturn;
+        }
+
+        // Múltbeli időpont ellenőrzés
+        if (startTime.before(new Timestamp(System.currentTimeMillis()))) {
+            toReturn.put("status", "StartTimeInThePast");
+            toReturn.put("statusCode", 400);
+            return toReturn;
+        }
+
+        // End nem lehet korábbi vagy egyenlő mint start
+        if (!endTime.after(startTime)) {
+            toReturn.put("status", "EndTimeNotAfterStartTime");
+            toReturn.put("statusCode", 400);
+            return toReturn;
+        }
 
         //code
         Integer appointmentId = layer.createAppointment(companyId, serviceId, staffId, clientId, startTime, endTime, notes, price);
@@ -311,7 +339,7 @@ public class AppointmentsService {
                     group.put("status", rawAppt.getString("status"));
                     group.put("companyId", companyId);
                     group.put("companyName", company.getName());
-                    group.put("companyLogo", company.getImageUrl());
+                    group.put("companyLogo", FileStorageUtil.buildFullUrl(company.getImageUrl()));
                     group.put("staffId", staffId);
                     group.put("staffName", staff.getDisplayName());
                     group.put("services", new JSONArray());
@@ -474,6 +502,9 @@ public class AppointmentsService {
 
             Boolean companyExist = CompaniesService.validateCompanyExist(companyId);
 
+            if (companyExist == null) {
+                return buildErrorResponseJSON(500, "InternalServerError");
+            }
             if (!companyExist) {
                 JSONObject error = new JSONObject();
                 error.put("statusCode", 404);
@@ -517,6 +548,9 @@ public class AppointmentsService {
 
             Boolean companyExist = CompaniesService.validateCompanyExist(companyId);
 
+            if (companyExist == null) {
+                return buildErrorResponseJSON(500, "InternalServerError");
+            }
             if (!companyExist) {
                 JSONObject error = new JSONObject();
                 error.put("statusCode", 404);
@@ -560,6 +594,9 @@ public class AppointmentsService {
 
             Boolean companyExist = CompaniesService.validateCompanyExist(companyId);
 
+            if (companyExist == null) {
+                return buildErrorResponseJSON(500, "InternalServerError");
+            }
             if (!companyExist) {
                 JSONObject error = new JSONObject();
                 error.put("statusCode", 404);
@@ -602,6 +639,9 @@ public class AppointmentsService {
 
             Boolean companyExist = CompaniesService.validateCompanyExist(companyId);
 
+            if (companyExist == null) {
+                return buildErrorResponseJSON(500, "InternalServerError");
+            }
             if (!companyExist) {
                 JSONObject error = new JSONObject();
                 error.put("statusCode", 404);
@@ -648,6 +688,9 @@ public class AppointmentsService {
 
         Boolean companyExist = CompaniesService.validateCompanyExist(companyId);
 
+        if (companyExist == null) {
+            return buildErrorResponseJSON(500, "InternalServerError");
+        }
         if (!companyExist) {
             JSONObject error = new JSONObject();
             error.put("statusCode", 404);
@@ -671,8 +714,283 @@ public class AppointmentsService {
                 JSONObject datObj = new JSONObject();
                 datObj.put("date", record.getDate());
                 datObj.put("dayName", record.getDayName());
-                datObj.put("revenue", record.getRevenue());
+                datObj.put("revenue", record.getRevenue() != null ? record.getRevenue() : JSONObject.NULL);
                 datObj.put("currency", record.getCurrency());
+
+                resultList.add(datObj);
+            }
+
+            toReturn.put("result", resultList);
+        }
+
+        toReturn.put("status", status);
+        toReturn.put("statusCode", statusCode);
+
+        return toReturn;
+    }
+
+    public JSONObject getWeeklyCalendarAppointments(Integer companyId, Integer staffId, String weekStartStr) {
+        JSONObject toReturn = new JSONObject();
+
+        ArrayList<OwnerPanelDTO.calendarResponseDTO> appointments = layer.getWeeklyCalendarAppointments(companyId, staffId, weekStartStr);
+        if (appointments == null) {
+            return buildErrorResponseJSON(500, "ModelException");
+        }
+
+        // Csoportosítás: dátum → staffId → appointments
+        LinkedHashMap<String, LinkedHashMap<Integer, JSONArray>> grouped = new LinkedHashMap<>();
+        LinkedHashMap<Integer, String[]> staffMeta = new LinkedHashMap<>(); // staffId → [name, color]
+
+        for (OwnerPanelDTO.calendarResponseDTO a : appointments) {
+            String date = a.getStartTime().substring(0, 10);
+            grouped.computeIfAbsent(date, k -> new LinkedHashMap<>())
+                    .computeIfAbsent(a.getStaffId(), k -> new JSONArray());
+
+            staffMeta.putIfAbsent(a.getStaffId(), new String[]{a.getStaffDisplayName(), a.getStaffColor()});
+
+            JSONObject entry = new JSONObject();
+            entry.put("id", a.getAppointmentId());
+            entry.put("startTime", a.getStartTime().substring(11));
+            entry.put("endTime", a.getEndTime().substring(11));
+            entry.put("status", a.getStatus());
+            entry.put("notes", a.getNotes() != null ? a.getNotes() : JSONObject.NULL);
+            entry.put("price", a.getPrice());
+            entry.put("currency", a.getCurrency());
+            entry.put("serviceName", a.getServiceName());
+            entry.put("durationMinutes", a.getDurationMinutes());
+            entry.put("clientName", a.getClientName());
+            entry.put("clientPhone", a.getClientPhone());
+            entry.put("clientEmail", a.getClientEmail());
+
+            grouped.get(date).get(a.getStaffId()).put(entry);
+        }
+
+        // Végső struktúra összerakása
+        JSONArray days = new JSONArray();
+        for (Map.Entry<String, LinkedHashMap<Integer, JSONArray>> dayEntry : grouped.entrySet()) {
+            JSONObject dayObj = new JSONObject();
+            dayObj.put("date", dayEntry.getKey());
+
+            JSONArray staffArray = new JSONArray();
+            for (Map.Entry<Integer, JSONArray> staffEntry : dayEntry.getValue().entrySet()) {
+                Integer staffId2 = staffEntry.getKey();
+                String[] meta = staffMeta.get(staffId2);
+                JSONObject staffObj = new JSONObject();
+                staffObj.put("staffId", staffId2);
+                staffObj.put("staffName", meta[0]);
+                staffObj.put("staffColor", meta[1] != null ? meta[1] : JSONObject.NULL);
+                staffObj.put("appointments", staffEntry.getValue());
+                staffArray.put(staffObj);
+            }
+
+            dayObj.put("staffAppointments", staffArray);
+            days.put(dayObj);
+        }
+
+        toReturn.put("status", "success");
+        toReturn.put("statusCode", 200);
+        toReturn.put("data", days);
+        return toReturn;
+    }
+
+    public JSONObject getAppointmentsCountByStaff(Integer staffId, String dateFrom, String dateTo) {
+
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        Boolean staffExist = StaffService.validateStaffExistById(staffId);
+
+        if (staffExist == null) {
+            return buildErrorResponseJSON(500, "InternalServerError");
+        }
+        if (!staffExist) {
+            JSONObject error = new JSONObject();
+            error.put("statusCode", 404);
+            error.put("status", "NotFound");
+            error.put("message", "Staff not found with ID: " + staffId);
+            return error;
+        }
+
+        // Model hívás
+        Integer modelResult = layer.getAppointmentsCountByStaff(staffId, dateFrom, dateTo);
+
+        if (modelResult == null) {
+            statusCode = 500;
+            status = "ModelException";
+            toReturn.put("message", "Internal server error");
+
+        } else {
+            JSONObject result = new JSONObject();
+
+            result.put("count", modelResult);
+
+            toReturn.put("result", result);
+        }
+
+        toReturn.put("status", status);
+        toReturn.put("statusCode", statusCode);
+
+        return toReturn;
+    }
+
+    public JSONObject getUpcomingAppointmentsCountByStaff(Integer staffId) {
+
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        Boolean staffExist = StaffService.validateStaffExistById(staffId);
+
+        if (staffExist == null) {
+            return buildErrorResponseJSON(500, "InternalServerError");
+        }
+        if (!staffExist) {
+            JSONObject error = new JSONObject();
+            error.put("statusCode", 404);
+            error.put("status", "NotFound");
+            error.put("message", "Staff not found with ID: " + staffId);
+            return error;
+        }
+
+        // Model hívás
+        Integer modelResult = layer.getUpcomingAppointmentsCountByStaff(staffId);
+
+        if (modelResult == null) {
+            statusCode = 500;
+            status = "ModelException";
+            toReturn.put("message", "Internal server error");
+
+        } else {
+            JSONObject result = new JSONObject();
+
+            result.put("count", modelResult);
+
+            toReturn.put("result", result);
+        }
+
+        toReturn.put("status", status);
+        toReturn.put("statusCode", statusCode);
+
+        return toReturn;
+    }
+
+    public JSONObject getPlannedWorkingMinutesByStaff(Integer staffId) {
+
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        Boolean staffExist = StaffService.validateStaffExistById(staffId);
+
+        if (staffExist == null) {
+            return buildErrorResponseJSON(500, "InternalServerError");
+        }
+        if (!staffExist) {
+            JSONObject error = new JSONObject();
+            error.put("statusCode", 404);
+            error.put("status", "NotFound");
+            error.put("message", "Staff not found with ID: " + staffId);
+            return error;
+        }
+
+        // Model hívás
+        Integer modelResult = layer.getPlannedWorkingMinutesByStaff(staffId);
+
+        if (modelResult == null) {
+            statusCode = 500;
+            status = "ModelException";
+            toReturn.put("message", "Internal server error");
+
+        } else {
+            JSONObject result = new JSONObject();
+
+            result.put("minutes", modelResult);
+
+            toReturn.put("result", result);
+        }
+
+        toReturn.put("status", status);
+        toReturn.put("statusCode", statusCode);
+
+        return toReturn;
+    }
+
+    public JSONObject getTodayAppointmentsByStaff(Integer userId) {
+
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        Integer staffId = Staff.getStaffIdByUserId(userId);
+
+        // Model hívás
+        ArrayList<staffPanelDTO.getTodayAppointmentsByStaffDTO> modelResult = layer.getTodayAppointmentsByStaff(staffId);
+
+        if (modelResult == null) {
+            statusCode = 500;
+            status = "ModelException";
+            toReturn.put("message", "Internal server error");
+
+        } else {
+            ArrayList resultList = new ArrayList();
+
+            for (staffPanelDTO.getTodayAppointmentsByStaffDTO record : modelResult) {
+                JSONObject datObj = new JSONObject();
+                datObj.put("id", record.getId());
+                datObj.put("startTime", record.getStartTime());
+                datObj.put("endTime", record.getEndTime());
+                datObj.put("status", record.getStatus());
+                datObj.put("note", record.getNote());
+                datObj.put("internalNotes", record.getInternalNotes());
+                datObj.put("price", record.getPrice());
+                datObj.put("currency", record.getCurrency());
+                datObj.put("serviceName", record.getServiceName());
+                datObj.put("durationMinutes", record.getDurationMinutes());
+                datObj.put("clientName", record.getClientName());
+
+                resultList.add(datObj);
+            }
+
+            toReturn.put("result", resultList);
+        }
+
+        toReturn.put("status", status);
+        toReturn.put("statusCode", statusCode);
+
+        return toReturn;
+    }
+
+    public JSONObject getStaffDashboardTodayAppointments(Integer userId) {
+
+        JSONObject toReturn = new JSONObject();
+        String status = "success";
+        Integer statusCode = 200;
+
+        Integer staffId = Staff.getStaffIdByUserId(userId);
+
+        // Model hívás
+        ArrayList<staffPanelDTO.getStaffDashboardTodayAppointmentsDTO> modelResult = layer.getStaffDashboardTodayAppointments(staffId);
+
+        if (modelResult == null) {
+            statusCode = 500;
+            status = "ModelException";
+            toReturn.put("message", "Internal server error");
+
+        } else {
+            ArrayList resultList = new ArrayList();
+
+            for (staffPanelDTO.getStaffDashboardTodayAppointmentsDTO record : modelResult) {
+                JSONObject datObj = new JSONObject();
+                datObj.put("id", record.getId());
+                datObj.put("startTime", record.getStartTime());
+                datObj.put("endTime", record.getEndTime());
+                datObj.put("status", record.getStatus());
+                datObj.put("price", record.getPrice());
+                datObj.put("currency", record.getCurrency());
+                datObj.put("serviceName", record.getServiceName());
+                datObj.put("durationMinutes", record.getDurationMinutes());
+                datObj.put("clientName", record.getClientName());
 
                 resultList.add(datObj);
             }
