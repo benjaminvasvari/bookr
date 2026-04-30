@@ -67,7 +67,7 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
     budapest: { lat: 47.4979, lng: 19.0402 },
     pecs: { lat: 46.0727, lng: 18.2323 },
     debrecen: { lat: 47.5316, lng: 21.6273 },
-    szeged: { lat: 46.2530, lng: 20.1414 },
+    szeged: { lat: 46.253, lng: 20.1414 },
     gyor: { lat: 47.6875, lng: 17.6504 },
     miskolc: { lat: 48.1035, lng: 20.7784 },
     nyiregyhaza: { lat: 47.9495, lng: 21.7244 },
@@ -90,7 +90,7 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
     private companiesService: CompaniesService,
     private title: Title,
     private favoritesService: FavoritesService,
-    private staffService: StaffService
+    private staffService: StaffService,
   ) {}
 
   ngOnInit(): void {
@@ -104,7 +104,7 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
 
     this.favoritesSubscription = combineLatest([
       this.favoritesService.favorites$,
-      this.favoritesService.favoritesLoaded$
+      this.favoritesService.favoritesLoaded$,
     ]).subscribe(([favorites, loaded]) => {
       this.favorites = favorites;
       this.favoritesLoaded = loaded;
@@ -222,7 +222,7 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
   }
 
   private mapStaffToTeamMember(
-    staffMember: IndustryPageStaffResponse['result'][number]
+    staffMember: IndustryPageStaffResponse['result'][number],
   ): TeamMember {
     const displayName = staffMember.displayName?.trim() || 'Névtelen munkatárs';
 
@@ -283,7 +283,7 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
     }
 
     this.isFavorite = this.favorites.some(
-      (favorite) => favorite.company.companyId === this.companyId
+      (favorite) => favorite.company.companyId === this.companyId,
     );
   }
 
@@ -531,7 +531,7 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
 
   private async resolveCoordinates(
     address: string,
-    fallbackCoordinates: { lat: number; lng: number }
+    fallbackCoordinates: { lat: number; lng: number },
   ): Promise<{ lat: number; lng: number }> {
     try {
       const geocodedCoordinates = await Promise.race([
@@ -553,9 +553,9 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
 
   private async getLeaflet(): Promise<LeafletModule> {
     if (!this.leaflet) {
-      this.leaflet = await import('leaflet');
+      const mod = await import('leaflet');
+      this.leaflet = (mod.default || mod) as LeafletModule;
     }
-
     return this.leaflet;
   }
 
@@ -575,7 +575,9 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
     return null;
   }
 
-  private async geocodeWithNominatim(address: string): Promise<{ lat: number; lng: number } | null> {
+  private async geocodeWithNominatim(
+    address: string,
+  ): Promise<{ lat: number; lng: number } | null> {
     try {
       const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`;
       const response = await this.fetchWithTimeout(url, {
@@ -718,5 +720,4 @@ export class SelIndustryComponent implements OnInit, OnDestroy {
       this.map = undefined;
     }
   }
-
 }

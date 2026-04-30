@@ -3,6 +3,11 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../../../core/services/auth.service';
 import { CompaniesService } from '../../../../core/services/companies.service';
+import {
+  CreateServiceCategoryRequest,
+  CreateServiceRequest,
+  ServicesService,
+} from '../../../../core/services/services.service';
 import { ServiceCategory, Service as ApiService } from '../../../../core/models/service.model';
 
 interface DashboardServiceItem {
@@ -23,6 +28,20 @@ interface DashboardServiceGroup {
   inactiveCount: number;
 }
 
+interface NewServiceFormModel {
+  name: string;
+  categoryId: number | null;
+  durationMinutes: number;
+  price: number;
+  description: string;
+  isActive: boolean;
+}
+
+interface NewCategoryFormModel {
+  name: string;
+  description: string;
+}
+
 @Component({
   selector: 'app-services.component',
   standalone: true,
@@ -32,28 +51,38 @@ interface DashboardServiceGroup {
 })
 export class ServicesComponent implements OnInit {
   showNewServiceModal = false;
+  showNewCategoryModal = false;
   showEditServiceModal = false;
   selectedCategory: string = 'Összes';
   isLoading = false;
+  isSavingNewService = false;
+  isSavingNewCategory = false;
   errorMessage = '';
+  categoryFormError = '';
   
   selectedService: DashboardServiceItem | null = null;
   
-  newService: Partial<DashboardServiceItem> = {
+  newService: NewServiceFormModel = {
     name: '',
-    category: '',
-    duration: '30 perc',
+    categoryId: null,
+    durationMinutes: 30,
     price: 0,
     description: '',
-    currency: 'HUF',
-    status: 'active'
+    isActive: true,
+  };
+
+  newCategory: NewCategoryFormModel = {
+    name: '',
+    description: '',
   };
 
   services: DashboardServiceItem[] = [];
+  serviceCategories: ServiceCategory[] = [];
 
   constructor(
     private authService: AuthService,
-    private companiesService: CompaniesService
+    private companiesService: CompaniesService,
+    private servicesService: ServicesService
   ) {}
 
   ngOnInit(): void {
@@ -140,35 +169,115 @@ export class ServicesComponent implements OnInit {
   openNewServiceModal(): void {
     this.newService = {
       name: '',
-      category: '',
-      duration: '30 perc',
+      categoryId: null,
+      durationMinutes: 30,
       price: 0,
       description: '',
-      currency: 'HUF',
-      status: 'active'
+      isActive: true,
     };
     this.showNewServiceModal = true;
   }
 
+  openNewCategoryModal(): void {
+    this.newCategory = {
+      name: '',
+      description: '',
+    };
+    this.categoryFormError = '';
+    this.showNewCategoryModal = true;
+  }
+
   closeNewServiceModal(): void {
+    if (this.isSavingNewService) {
+      return;
+    }
     this.showNewServiceModal = false;
   }
 
-  saveNewService(): void {
-    if (this.newService.name && this.newService.category) {
-      const newId = (this.services.length > 0 ? Math.max(...this.services.map((service) => service.id)) : 0) + 1;
-      this.services.push({
-        id: newId,
-        name: this.newService.name,
-        category: this.newService.category,
-        duration: this.newService.duration || '30 perc',
-        price: this.newService.price || 0,
-        description: this.newService.description || '',
-        currency: this.newService.currency || 'HUF',
-        status: this.newService.status || 'active'
-      });
-      this.closeNewServiceModal();
+  closeNewCategoryModal(): void {
+    if (this.isSavingNewCategory) {
+      return;
     }
+    this.showNewCategoryModal = false;
+  }
+
+  canSaveNewService(): boolean {
+    const name = this.newService.name.trim();
+    const categoryId = this.newService.categoryId;
+    const durationMinutes = Number(this.newService.durationMinutes);
+    const price = Number(this.newService.price);
+
+    return !!name && !!categoryId && Number.isFinite(durationMinutes) && durationMinutes > 0 && Number.isFinite(price) && price >= 0;
+  }
+
+  saveNewService(): void {
+    const name = this.newService.name.trim();
+    const description = this.newService.description.trim();
+    const categoryId = this.newService.categoryId;
+    const durationMinutes = Number(this.newService.durationMinutes);
+    const price = Number(this.newService.price);
+
+    if (!name || !categoryId || durationMinutes <= 0 || !Number.isFinite(durationMinutes) || price < 0) {
+      this.errorMessage = 'Az uj szolgaltatas adatai ervenytelenek.';
+      return;
+    }
+
+    const payload: CreateServiceRequest = {
+      name,
+      categoryId,
+      durationMinutes,
+      price,
+      desciption: description,
+      isActive: this.newService.isActive,
+    };
+
+    this.isSavingNewService = true;
+    this.errorMessage = '';
+
+    this.servicesService.createService(payload).subscribe({
+      next: () => {
+        this.isSavingNewService = false;
+        this.showNewServiceModal = false;
+        this.loadServices();
+      },
+      error: (error) => {
+        this.isSavingNewService = false;
+        console.error('Service create error:', error);
+        this.errorMessage = 'Nem sikerult letrehozni a szolgaltatast.';
+      },
+    });
+  }
+
+  saveNewCategory(): void {
+    const name = this.newCategory.name.trim();
+    const description = this.newCategory.description.trim();
+
+    if (!name || !description) {
+      this.categoryFormError = 'A kategori nev es leiras megadasa kotelezo.';
+      return;
+    }
+
+    const payload: CreateServiceCategoryRequest = {
+      name,
+      description,
+    };
+
+    this.isSavingNewCategory = true;
+    this.categoryFormError = '';
+    this.errorMessage = '';
+
+    this.servicesService.createServiceCategory(payload).subscribe({
+      next: () => {
+        this.isSavingNewCategory = false;
+        this.showNewCategoryModal = false;
+        this.loadServices();
+      },
+      error: (error) => {
+        this.isSavingNewCategory = false;
+        console.error('Service category create error:', error);
+        this.categoryFormError = 'Nem sikerult letrehozni a kategoriat.';
+      },
+    });
   }
 
   openEditServiceModal(service: DashboardServiceItem): void {
@@ -205,6 +314,7 @@ export class ServicesComponent implements OnInit {
 
     this.companiesService.getServiceCategoriesWithServices(user.companyId).subscribe({
       next: (categories: ServiceCategory[]) => {
+        this.serviceCategories = categories;
         this.services = categories.flatMap((category) =>
           (category.services || []).map((service) => this.mapServiceFromApi(service, category))
         );
@@ -213,6 +323,7 @@ export class ServicesComponent implements OnInit {
       error: (error) => {
         console.error('Services load error:', error);
         this.errorMessage = 'Nem sikerült betölteni a szolgáltatásokat.';
+        this.serviceCategories = [];
         this.services = [];
         this.isLoading = false;
       },

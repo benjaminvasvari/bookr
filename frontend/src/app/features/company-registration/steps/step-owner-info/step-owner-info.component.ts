@@ -24,6 +24,7 @@ export class StepOwnerInfoComponent implements OnInit, OnChanges {
   }
 
   ngOnInit() {
+    this.setupPhoneNormalization();
     this.updateFormBasedOnLoginStatus();
     
     if (this.initialData) {
@@ -46,10 +47,24 @@ export class StepOwnerInfoComponent implements OnInit, OnChanges {
       firstName: ['', [Validators.required, Validators.minLength(2)]],
       lastName: ['', [Validators.required, Validators.minLength(2)]],
       email: ['', [Validators.required, Validators.email]],
-      phone: ['', [Validators.required, Validators.pattern(/^\+36[0-9]{9}$/)]],
+      phone: ['', [Validators.required, this.huPhoneValidator]],
       password: ['', [Validators.required, Validators.minLength(8), this.passwordStrengthValidator]],
       confirmPassword: ['', [Validators.required]]
     }, { validators: this.passwordMatchValidator });
+  }
+
+  private setupPhoneNormalization(): void {
+    const phoneControl = this.ownerForm.get('phone');
+    if (!phoneControl) {
+      return;
+    }
+
+    phoneControl.valueChanges.subscribe((value) => {
+      const normalized = this.normalizeHuPhone(value);
+      if (value !== normalized) {
+        phoneControl.setValue(normalized, { emitEvent: false });
+      }
+    });
   }
 
   private updateFormBasedOnLoginStatus(): void {
@@ -116,6 +131,61 @@ export class StepOwnerInfoComponent implements OnInit, OnChanges {
     const passwordValid = hasUpperCase && hasLowerCase && hasNumeric;
 
     return !passwordValid ? { passwordStrength: true } : null;
+  }
+
+  huPhoneValidator = (control: AbstractControl): ValidationErrors | null => {
+    const rawValue = String(control.value ?? '').trim();
+    if (!rawValue) {
+      return null;
+    }
+
+    if (this.hasInvalidPhoneChars(rawValue)) {
+      return { invalidHuPhone: true };
+    }
+
+    const normalized = this.normalizeHuPhone(rawValue);
+    return /^\+36\d{8,9}$/.test(normalized) ? null : { invalidHuPhone: true };
+  };
+
+  private normalizeHuPhone(value: unknown): string {
+    const raw = String(value ?? '').trim();
+    if (!raw) {
+      return '';
+    }
+
+    if (this.hasInvalidPhoneChars(raw)) {
+      return raw;
+    }
+
+    const compact = raw.replace(/[\s\-()]/g, '');
+    const digits = compact.replace(/\D/g, '');
+
+    const plusCount = (compact.match(/\+/g) || []).length;
+    if (plusCount > 1 || (compact.includes('+') && !compact.startsWith('+'))) {
+      return raw;
+    }
+
+    if (compact.startsWith('+')) {
+      return `+${digits}`;
+    }
+
+    if (compact.startsWith('00')) {
+      return `+${digits.slice(2)}`;
+    }
+
+    if (compact.startsWith('06')) {
+      return `+36${digits.slice(2)}`;
+    }
+
+    if (compact.startsWith('36')) {
+      return `+${digits}`;
+    }
+
+    return compact;
+  }
+
+  private hasInvalidPhoneChars(value: string): boolean {
+    return !/^[0-9+\s\-()]+$/.test(value);
   }
 
   passwordMatchValidator(control: AbstractControl): ValidationErrors | null {

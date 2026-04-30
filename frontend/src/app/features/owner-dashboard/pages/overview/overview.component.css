@@ -294,6 +294,52 @@
 	color: #2d3748;
 }
 
+:host-context(body.dark-mode) .dashboard-header,
+:host-context(body.dark-mode) .kpi-card,
+:host-context(body.dark-mode) .panel,
+:host-context(body.dark-mode) .list li {
+	background: linear-gradient(180deg, #1f2d3f 0%, #1b2737 100%) !important;
+	border-color: #304459 !important;
+	box-shadow: 0 10px 24px rgba(2, 6, 23, 0.3) !important;
+}
+
+:host-context(body.dark-mode) .dashboard-header h1,
+:host-context(body.dark-mode) .panel-header h2,
+:host-context(body.dark-mode) .kpi-value,
+:host-context(body.dark-mode) .list li strong,
+:host-context(body.dark-mode) .review-rating-value {
+	color: #f8fafc !important;
+}
+
+:host-context(body.dark-mode) .subtitle,
+:host-context(body.dark-mode) .kpi-label,
+:host-context(body.dark-mode) .kpi-trend,
+:host-context(body.dark-mode) .muted,
+:host-context(body.dark-mode) .empty-state,
+:host-context(body.dark-mode) .status-text {
+	color: #c7d3e0 !important;
+}
+
+:host-context(body.dark-mode) .badge,
+:host-context(body.dark-mode) .review-rating {
+	background: #253549;
+	border-color: #36506a;
+	color: #d8e6f4;
+}
+
+:host-context(body.dark-mode) .star-empty .star-icon,
+:host-context(body.dark-mode) .star-half .star-icon {
+	color: #617489;
+}
+
+:host-context(body.dark-mode) .link-btn {
+	color: #6ee7bf;
+}
+
+:host-context(body.dark-mode) .link-btn:hover {
+	color: #34d399;
+}
+
 @media (max-width: 900px) {
 	.dashboard-grid {
 		grid-template-columns: 1fr 1fr;

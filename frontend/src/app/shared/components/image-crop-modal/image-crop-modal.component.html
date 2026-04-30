@@ -8,12 +8,30 @@
     </div>
 
     <div class="crop-modal-body">
+      <div class="crop-zoom-toolbar" aria-label="Kep nagyitas vezerlok">
+        <button type="button" class="zoom-btn" (click)="zoomOut()" aria-label="Kicsinyites">-</button>
+        <input
+          class="zoom-range"
+          type="range"
+          [min]="minZoom"
+          [max]="maxZoom"
+          [step]="zoomStep"
+          [value]="imageTransform.scale || 1"
+          (input)="onZoomSliderInput($event)"
+          aria-label="Nagyitas csuszka"
+        />
+        <button type="button" class="zoom-btn" (click)="zoomIn()" aria-label="Nagyitas">+</button>
+        <button type="button" class="zoom-reset-btn" (click)="resetZoom()">Alaphelyzet</button>
+        <span class="zoom-value">{{ zoomPercent }}%</span>
+      </div>
+
       <image-cropper
         [imageFile]="imageFile"
         [output]="'blob'"
         [maintainAspectRatio]="maintainAspectRatio"
         [aspectRatio]="aspectRatio"
         [cropper]="cropperPosition"
+        [transform]="imageTransform"
         [containWithinAspectRatio]="containWithinAspectRatio"
         [roundCropper]="roundCropper"
         [cropperMaxWidth]="cropperMaxWidth"
@@ -26,7 +44,11 @@
         format="png"
         (imageLoaded)="onImageLoaded($event)"
         (imageCropped)="onImageCropped($event)"
+        (transformChange)="onTransformChange($event)"
+        (wheel)="onWheelZoom($event)"
       ></image-cropper>
+
+      <p class="crop-help-text">Tipp: gorgetovel vagy a csuszkaval tudsz zoomolni, a kepet huzassal mozgatni.</p>
     </div>
 
     <div class="crop-modal-footer">

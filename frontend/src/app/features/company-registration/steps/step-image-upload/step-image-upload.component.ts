@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Output, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { ReactiveFormsModule } from '@angular/forms';
 import { ImageUploadService } from '../../../../core/services/image-upload.service';
 import { ImageCropModalComponent } from '../../../../shared/components/image-crop-modal/image-crop-modal.component';
 
@@ -16,37 +16,24 @@ export class StepImageUploadComponent implements OnInit {
   @Output() formData = new EventEmitter<any>();
   @Input() initialData: any;
 
-  imageForm: FormGroup;
-
-  imageSlots = [
-    { id: 'main', preview: null as string | null, file: null as File | null, isMain: true },
-    { id: 'image2', preview: null as string | null, file: null as File | null, isMain: false },
-    { id: 'image3', preview: null as string | null, file: null as File | null, isMain: false },
-    { id: 'image4', preview: null as string | null, file: null as File | null, isMain: false }
-  ];
-
-  draggedSlotId: string | null = null;
+  mainImagePreview: string | null = null;
+  mainImageFile: File | null = null;
   cropSourceFile: File | null = null;
-  cropTargetSlotId: string | null = null;
   showCropModal = false;
 
-  constructor(private fb: FormBuilder, private imageUploadService: ImageUploadService) {
-    // Az image upload opcionális - nincs kötelező validáció
-    this.imageForm = this.fb.group({
-      // Üres form, csak az optional képek miatt
-    });
-  }
+  constructor(private imageUploadService: ImageUploadService) {}
 
   ngOnInit() {
     // Ha van initial data (visszatérés az előző oldalról vagy cookie-ból)
     if (this.initialData) {
-      if (this.initialData.images && Array.isArray(this.initialData.images)) {
-        this.initialData.images.forEach((img: any, index: number) => {
-          if (this.imageSlots[index] && img.preview) {
-            this.imageSlots[index].preview = img.preview;
-            // File objektum nem lehet cookie-ba, így csak a preview kerül ott el
-          }
-        });
+      if (typeof this.initialData.mainImagePreview === 'string') {
+        this.mainImagePreview = this.initialData.mainImagePreview;
+      } else if (
+        Array.isArray(this.initialData.images) &&
+        this.initialData.images[0] &&
+        typeof this.initialData.images[0].preview === 'string'
+      ) {
+        this.mainImagePreview = this.initialData.images[0].preview;
       }
     }
 
@@ -57,16 +44,11 @@ export class StepImageUploadComponent implements OnInit {
   emitFormStatus() {
     // Az image upload opcionális, így mindig valid
     this.formValid.emit(true);
-    
+
     // Kibocsátja az adatokat
     this.formData.emit({
-      images: this.imageSlots
-        .filter(slot => slot.file !== null)
-        .map(slot => ({
-          file: slot.file,
-          isMain: slot.isMain,
-          preview: slot.preview
-        }))
+      mainImageFile: this.mainImageFile,
+      mainImagePreview: this.mainImagePreview
     });
   }
 
@@ -74,7 +56,7 @@ export class StepImageUploadComponent implements OnInit {
   // KÉPFELTÖLTÉS KEZELÉS
   // ============================================
 
-  onImageSelected(event: Event, slotId: string): void {
+  onImageSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
 
@@ -85,7 +67,6 @@ export class StepImageUploadComponent implements OnInit {
     try {
       this.imageUploadService.validateImageType(file);
       this.cropSourceFile = file;
-      this.cropTargetSlotId = slotId;
       this.showCropModal = true;
     } catch (error) {
       alert(error instanceof Error ? error.message : 'A kep feldolgozasa sikertelen.');
@@ -96,25 +77,15 @@ export class StepImageUploadComponent implements OnInit {
 
   closeCropModal(): void {
     this.cropSourceFile = null;
-    this.cropTargetSlotId = null;
     this.showCropModal = false;
   }
 
   async applyCrop(file: File): Promise<void> {
-    if (!this.cropTargetSlotId) {
-      this.closeCropModal();
-      return;
-    }
-
     try {
       const processedImage = await this.imageUploadService.prepareImage(file);
-      const slot = this.imageSlots.find(s => s.id === this.cropTargetSlotId);
-
-      if (slot) {
-        slot.preview = processedImage.previewUrl;
-        slot.file = processedImage.file;
-        this.emitFormStatus();
-      }
+      this.mainImagePreview = processedImage.previewUrl;
+      this.mainImageFile = processedImage.file;
+      this.emitFormStatus();
     } catch (error) {
       alert(error instanceof Error ? error.message : 'A kep feldolgozasa sikertelen.');
     } finally {
@@ -122,69 +93,22 @@ export class StepImageUploadComponent implements OnInit {
     }
   }
 
-  triggerFileInput(slotId: string) {
-    const inputId = `file-input-${slotId}`;
+  triggerFileInput() {
+    const inputId = 'file-input-main';
     const input = document.getElementById(inputId) as HTMLInputElement;
     input?.click();
   }
 
-  deleteImage(slotId: string) {
-    const slot = this.imageSlots.find(s => s.id === slotId);
-    if (slot) {
-      slot.preview = null;
-      slot.file = null;
-      this.emitFormStatus();
-    }
-  }
-
-  onDragStart(event: DragEvent, slotId: string) {
-    this.draggedSlotId = slotId;
-    event.dataTransfer!.effectAllowed = 'move';
-    (event.target as HTMLElement).classList.add('dragstart');
-  }
-
-  onDragEnd(event: DragEvent) {
-    (event.target as HTMLElement).classList.remove('dragstart');
-  }
-
-  onDragOver(event: DragEvent) {
-    event.preventDefault();
-    event.dataTransfer!.dropEffect = 'move';
-  }
-
-  onDrop(event: DragEvent, targetSlotId: string) {
-    event.preventDefault();
-    
-    if (this.draggedSlotId && this.draggedSlotId !== targetSlotId) {
-      const draggedSlot = this.imageSlots.find(s => s.id === this.draggedSlotId);
-      const targetSlot = this.imageSlots.find(s => s.id === targetSlotId);
-      
-      if (draggedSlot && targetSlot) {
-        const tempPreview = draggedSlot.preview;
-        const tempFile = draggedSlot.file;
-        
-        draggedSlot.preview = targetSlot.preview;
-        draggedSlot.file = targetSlot.file;
-        
-        targetSlot.preview = tempPreview;
-        targetSlot.file = tempFile;
-        
-        this.emitFormStatus();
-      }
-    }
-    
-    this.draggedSlotId = null;
+  deleteImage() {
+    this.mainImagePreview = null;
+    this.mainImageFile = null;
+    this.emitFormStatus();
   }
 
   getFormData() {
     return {
-      images: this.imageSlots
-        .filter(slot => slot.file !== null)
-        .map(slot => ({
-          file: slot.file,
-          isMain: slot.isMain,
-          preview: slot.preview
-        }))
+      mainImageFile: this.mainImageFile,
+      mainImagePreview: this.mainImagePreview
     };
   }
 

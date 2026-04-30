@@ -394,6 +394,132 @@
 	color: #6b7280;
 }
 
+:host-context(body.dark-mode) .chart-placeholder {
+	background: linear-gradient(180deg, #1b2532 0%, #172130 100%);
+	border-color: #2b3b4d;
+}
+
+:host-context(body.dark-mode) .overview-stat-card {
+	background: linear-gradient(180deg, #223346 0%, #1d2b3c 100%);
+	border-color: #355069;
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+:host-context(body.dark-mode) .overview-stat-card.highlight {
+	background: linear-gradient(135deg, #21423d 0%, #1a3732 100%);
+	border-color: #2d6a5b;
+}
+
+:host-context(body.dark-mode) .overview-stat-label,
+:host-context(body.dark-mode) .overview-bars-eyebrow,
+:host-context(body.dark-mode) .overview-bar-status {
+	color: #98adbe;
+}
+
+:host-context(body.dark-mode) .overview-stat-value,
+:host-context(body.dark-mode) .overview-stat-inline,
+:host-context(body.dark-mode) .overview-bars-head h3,
+:host-context(body.dark-mode) .overview-bar-day {
+	color: #e4edf6;
+}
+
+:host-context(body.dark-mode) .overview-bars-panel {
+	border-color: #32495f;
+	background:
+		radial-gradient(circle at top right, rgba(52, 211, 153, 0.16), transparent 34%),
+		linear-gradient(180deg, #203244 0%, #1b2a3a 100%);
+}
+
+:host-context(body.dark-mode) .overview-bars-badge {
+	background: #27483f;
+	color: #bdf3de;
+}
+
+:host-context(body.dark-mode) .overview-bar-value {
+	border-color: #3c556e;
+	background: #233244;
+	color: #e1ebf5;
+	box-shadow: 0 6px 14px rgba(2, 6, 23, 0.32);
+}
+
+:host-context(body.dark-mode) .overview-bar-track {
+	border-color: #36516a;
+	background:
+		linear-gradient(180deg, rgba(42, 62, 80, 0.98) 0%, rgba(33, 49, 65, 1) 100%),
+		repeating-linear-gradient(
+			to top,
+			rgba(129, 156, 179, 0.16) 0,
+			rgba(129, 156, 179, 0.16) 1px,
+			transparent 1px,
+			transparent 33%
+		);
+}
+
+:host-context(body.dark-mode) .overview-bar-fill {
+	background: linear-gradient(180deg, #4fd1a1 0%, #21855e 100%);
+	box-shadow: 0 10px 18px rgba(16, 185, 129, 0.24);
+}
+
+:host-context(body.dark-mode) .overview-bar-column.peak .overview-bar-fill {
+	background: linear-gradient(180deg, #34d399 0%, #0f766e 100%);
+	box-shadow: 0 12px 20px rgba(20, 184, 166, 0.26);
+}
+
+:host-context(body.dark-mode) .overview-bar-column.closed .overview-bar-fill {
+	background: linear-gradient(180deg, #5f7488 0%, #425769 100%);
+}
+
+:host-context(body.dark-mode) .sales-chart-chip {
+	background: #213244;
+	border-color: #35506b;
+	color: #d3e4f3;
+}
+
+:host-context(body.dark-mode) .sales-chart-chip.highlight {
+	background: #1f3d37;
+	border-color: #2e6b5a;
+	color: #b9f3de;
+}
+
+:host-context(body.dark-mode) .sales-bar-value {
+	background: #182431;
+	border-color: #31475d;
+	color: #d9e7f3;
+	box-shadow: 0 8px 14px rgba(2, 6, 23, 0.34);
+}
+
+:host-context(body.dark-mode) .sales-bar-track {
+	border-color: #2e4256;
+	background:
+		linear-gradient(180deg, rgba(36, 51, 65, 0.96) 0%, rgba(27, 38, 50, 0.98) 100%),
+		repeating-linear-gradient(
+			to top,
+			rgba(129, 156, 179, 0.16) 0,
+			rgba(129, 156, 179, 0.16) 1px,
+			transparent 1px,
+			transparent 25%
+		);
+}
+
+:host-context(body.dark-mode) .sales-bar-fill {
+	background: linear-gradient(180deg, #4fd1a1 0%, #21855e 100%);
+	box-shadow: 0 12px 20px rgba(16, 185, 129, 0.24);
+}
+
+:host-context(body.dark-mode) .sales-bar-column.peak .sales-bar-fill {
+	background: linear-gradient(180deg, #34d399 0%, #0f766e 100%);
+	box-shadow: 0 14px 22px rgba(20, 184, 166, 0.26);
+}
+
+:host-context(body.dark-mode) .sales-bar-column.closed .sales-bar-fill {
+	background: linear-gradient(180deg, #5f7488 0%, #425769 100%);
+}
+
+:host-context(body.dark-mode) .sales-bar-label,
+:host-context(body.dark-mode) .chart-caption {
+	color: #b7c6d6;
+}
+
 @media (max-width: 768px) {
 	.overview-summary {
 		grid-template-columns: 1fr;

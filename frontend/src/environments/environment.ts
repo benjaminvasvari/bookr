@@ -1,6 +1,6 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://api.bookr-project.hu/api',
+  apiUrl: '/api',
   appName: 'Bookr',
   version: '1.0.0'
 };

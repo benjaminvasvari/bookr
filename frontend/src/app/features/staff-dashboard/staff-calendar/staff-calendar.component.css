@@ -635,6 +635,230 @@
 	background: #e2e8f0;
 }
 
+:host-context(body.dark-mode) .calendar-container {
+	background: #111b27;
+	border-color: #2f4257;
+}
+
+:host-context(body.dark-mode) .calendar-header {
+	background: #1b2532;
+	border-bottom-color: #2f4257;
+}
+
+:host-context(body.dark-mode) .header-left h1 {
+	color: #f8fafc;
+}
+
+:host-context(body.dark-mode) .week-info {
+	color: #c0cede;
+}
+
+:host-context(body.dark-mode) .nav-btn {
+	background: #243447;
+	border-color: #3a5269;
+	color: #d6e2ef;
+}
+
+:host-context(body.dark-mode) .nav-btn:hover {
+	background: #2a3c52;
+	border-color: #4b6783;
+}
+
+:host-context(body.dark-mode) .nav-btn-today {
+	background: #38a179;
+	border-color: #38a179;
+	color: #f8fafc;
+}
+
+:host-context(body.dark-mode) .calendar-grid {
+	background: #152231;
+	border-right-color: #2f4257;
+}
+
+:host-context(body.dark-mode) .calendar-grid::-webkit-scrollbar-track,
+:host-context(body.dark-mode) .calendar-grid::-webkit-scrollbar-corner {
+	background: #182636;
+}
+
+:host-context(body.dark-mode) .calendar-grid::-webkit-scrollbar-thumb {
+	background: #3c546c;
+	border-color: #182636;
+}
+
+:host-context(body.dark-mode) .calendar-grid::-webkit-scrollbar-thumb:hover {
+	background: #4d6883;
+}
+
+:host-context(body.dark-mode) .time-column,
+:host-context(body.dark-mode) .time-header {
+	background: #1b2838;
+	border-right-color: #2f4257;
+	border-bottom-color: #2f4257;
+}
+
+:host-context(body.dark-mode) .time-slot {
+	color: #9fb1c4;
+	border-bottom-color: #243749;
+}
+
+:host-context(body.dark-mode) .day-column {
+	background: #162434;
+	border-right-color: #2f4257;
+}
+
+:host-context(body.dark-mode) .day-column.day-unfocused {
+	background: #1a2838;
+}
+
+:host-context(body.dark-mode) .day-column.day-unfocused:hover {
+	background: #223245;
+}
+
+:host-context(body.dark-mode) .day-column.day-today {
+	background: rgba(56, 161, 121, 0.14);
+}
+
+:host-context(body.dark-mode) .day-column.day-today.day-unfocused {
+	background: #1f3344;
+}
+
+:host-context(body.dark-mode) .day-column.day-today:hover.day-unfocused {
+	background: #294257;
+}
+
+:host-context(body.dark-mode) .day-column.day-today .day-header {
+	background: linear-gradient(to bottom, #1d2f40 0%, #20394a 100%);
+	border-bottom-color: #3d5f79;
+}
+
+:host-context(body.dark-mode) .day-column.day-closed {
+	background: repeating-linear-gradient(
+		-45deg,
+		rgba(22, 32, 46, 0.96),
+		rgba(22, 32, 46, 0.96) 8px,
+		rgba(29, 42, 58, 0.96) 8px,
+		rgba(29, 42, 58, 0.96) 16px
+	);
+}
+
+:host-context(body.dark-mode) .day-header {
+	background: #1b2a3a;
+	border-bottom-color: #2f4257;
+	box-shadow: none;
+}
+
+:host-context(body.dark-mode) .day-header.header-clickable:hover {
+	background: linear-gradient(to bottom, #223447 0%, #1f3042 100%);
+}
+
+:host-context(body.dark-mode) .day-header.header-closed {
+	background: #1b2a3a;
+}
+
+:host-context(body.dark-mode) .day-name,
+:host-context(body.dark-mode) .day-short-name {
+	color: #aebfd1;
+}
+
+:host-context(body.dark-mode) .day-date {
+	color: #e7eef7;
+}
+
+:host-context(body.dark-mode) .day-column.day-closed .day-date {
+	color: #fda4af;
+}
+
+:host-context(body.dark-mode) .day-hours {
+	color: #91a4b8;
+}
+
+:host-context(body.dark-mode) .closed-badge {
+	color: #fecaca;
+	background: rgba(185, 28, 28, 0.28);
+	border: 1px solid rgba(248, 113, 113, 0.45);
+}
+
+:host-context(body.dark-mode) .grid-cell {
+	border-bottom-color: #243749;
+}
+
+:host-context(body.dark-mode) .apt-time {
+	color: #eaf2fb;
+}
+
+:host-context(body.dark-mode) .apt-title {
+	color: #bfd0e2;
+}
+
+:host-context(body.dark-mode) .appointment-block.selected {
+	box-shadow: 0 0 0 2px #111b27, 0 0 0 3px var(--border-color);
+}
+
+:host-context(body.dark-mode) .current-time-line::before {
+	border-color: #111b27;
+}
+
+:host-context(body.dark-mode) .details-sidebar {
+	background: #1b2532;
+	border-left-color: #2f4257;
+	box-shadow: -2px 0 12px rgba(2, 6, 23, 0.32);
+}
+
+:host-context(body.dark-mode) .sidebar-header {
+	background: #1f2d3d;
+	border-bottom-color: #2f4257;
+}
+
+:host-context(body.dark-mode) .sidebar-header h3 {
+	color: #f8fafc;
+}
+
+:host-context(body.dark-mode) .close-btn {
+	color: #aabacc;
+}
+
+:host-context(body.dark-mode) .close-btn:hover {
+	background: #2a3b4f;
+	color: #e6eef8;
+}
+
+:host-context(body.dark-mode) .detail-row label {
+	color: #9eb0c4;
+}
+
+:host-context(body.dark-mode) .detail-value {
+	background: #243447;
+	border-color: #3a5269;
+	color: #e2ebf5;
+}
+
+:host-context(body.dark-mode) .detail-value.badge-primary {
+	background: rgba(67, 56, 202, 0.2);
+	color: #c7d2fe;
+	border-color: rgba(129, 140, 248, 0.4);
+}
+
+:host-context(body.dark-mode) .detail-value.price {
+	background: rgba(16, 185, 129, 0.2);
+	color: #bbf7d0;
+	border-color: rgba(52, 211, 153, 0.42);
+}
+
+:host-context(body.dark-mode) .sidebar-actions {
+	border-top-color: #2f4257;
+	background: #1b2532;
+}
+
+:host-context(body.dark-mode) .btn-cancel {
+	background: #243447;
+	color: #d9e6f2;
+	border-color: #3a5269;
+}
+
+:host-context(body.dark-mode) .btn-cancel:hover {
+	background: #2b3e52;
+}
+
 @media (max-width: 1100px) {
 	.calendar-grid-container {
 		flex-direction: column;

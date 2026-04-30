@@ -52,6 +52,14 @@ export const appRoutes: Routes = [
     data: { showFooter: false },
   },
   {
+    path: 'staff-invite',
+    loadComponent: () =>
+      import('./staff-invite-page/staff-invite-page.component').then(
+        (m) => m.StaffInvitePageComponent
+      ),
+    data: { showFooter: false },
+  },
+  {
     path: 'profile',
     component: ProfileComponent,
     data: { showFooter: false },

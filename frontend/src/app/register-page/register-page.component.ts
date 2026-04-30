@@ -53,7 +53,7 @@ export class RegisterComponent implements OnInit, OnDestroy {
         lastName: ['', [Validators.required, CustomValidators.name()]],
         firstName: ['', [Validators.required, CustomValidators.name()]],
         email: ['', [Validators.required, CustomValidators.email()]],
-        phone: ['', [Validators.required, CustomValidators.phone()]],
+        phone: ['', [Validators.required, CustomValidators.hungarianPhone()]],
         password: ['', [Validators.required, passwordValidator()]],
         confirmPassword: ['', Validators.required],
       },
@@ -143,6 +143,22 @@ export class RegisterComponent implements OnInit, OnDestroy {
     const confirmControl = this.registerForm.get('confirmPassword');
     if (confirmControl?.errors && confirmControl.touched) {
       return getPasswordErrorMessages(confirmControl.errors);
+    }
+    return [];
+  }
+
+  getEmailErrors(): string[] {
+    const emailControl = this.registerForm.get('email');
+    if (emailControl?.errors && (emailControl.dirty || emailControl.touched)) {
+      return getValidationErrorMessages(emailControl.errors, 'email cím');
+    }
+    return [];
+  }
+
+  getPhoneErrors(): string[] {
+    const phoneControl = this.registerForm.get('phone');
+    if (phoneControl?.errors && (phoneControl.dirty || phoneControl.touched)) {
+      return getValidationErrorMessages(phoneControl.errors, 'telefonszám');
     }
     return [];
   }

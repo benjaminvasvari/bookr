@@ -112,7 +112,7 @@ export class CustomValidators {
    */
   static email(): ValidatorFn {
     return (control: AbstractControl): ValidationErrors | null => {
-      const value = control.value;
+      const value = String(control.value ?? '').trim();
 
       if (!value) {
         return null;
@@ -120,10 +120,36 @@ export class CustomValidators {
 
       const errors: ValidationErrors = {};
 
-      // Kötelező: valami@valami.com vagy valami@valami.hu
-      const emailPattern = /^[^\s@]+@[^\s@]+\.(com|hu)$/i;
+      if (value.length > 254) {
+        errors['maxLength'] = { requiredLength: 254, actualLength: value.length };
+        return errors;
+      }
 
-      if (!emailPattern.test(value)) {
+      const atIndex = value.indexOf('@');
+      const lastAtIndex = value.lastIndexOf('@');
+      if (atIndex <= 0 || atIndex !== lastAtIndex || atIndex === value.length - 1) {
+        errors['invalidEmail'] = true;
+        return errors;
+      }
+
+      const localPart = value.slice(0, atIndex);
+      const domainPart = value.slice(atIndex + 1);
+
+      if (localPart.length > 64 || domainPart.length > 253) {
+        errors['invalidEmail'] = true;
+        return errors;
+      }
+
+      const localPartPattern = /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+$/;
+      const domainPattern = /^(?=.{1,253}$)(?:(?!-)[A-Za-z0-9-]{1,63}(?<!-)\.)+[A-Za-z]{2,63}$/;
+
+      if (
+        !localPartPattern.test(localPart) ||
+        localPart.startsWith('.') ||
+        localPart.endsWith('.') ||
+        localPart.includes('..') ||
+        !domainPattern.test(domainPart)
+      ) {
         errors['invalidEmail'] = true;
       }
 
@@ -183,7 +209,7 @@ export function getValidationErrorMessages(
   }
 
   if (errors['invalidEmail']) {
-    messages.push('Az email formátuma: valami@valami.com vagy valami@valami.hu');
+    messages.push('Adj meg ervenyes email cimet, peldaul nev@domain.hu');
   }
 
   if (errors['email']) {

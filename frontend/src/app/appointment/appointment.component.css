@@ -1,13 +1,12 @@
 .appointment-container {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr) 400px;
   gap: 2rem;
-  max-width: 1400px;
+  max-width: 1320px;
   margin-left: auto;
   margin-right: auto;
   margin-top: 100px;
   padding: 2rem;
-  padding-right: 430px;
   min-height: calc(100vh - 80px);
 
 }
@@ -142,11 +141,11 @@
 
 /* JOBB OLDAL - Kosár */
 .cart-section {
-  position: fixed;
+  position: sticky;
   top: 100px;
-  right: 2rem;
-  width: 400px;
-  z-index: 250;
+  width: 100%;
+  align-self: start;
+  z-index: 20;
 }
 .cart-card {
   background: white;
@@ -160,14 +159,10 @@
   overflow-y: auto;
 }
 
-@media (max-width: 1280px) {
+@media (max-width: 1200px) {
   .appointment-container {
-    padding-right: 390px;
-  }
-
-  .cart-section {
-    right: 1.5rem;
-    width: 360px;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 1.5rem;
   }
 }
 
@@ -322,11 +317,117 @@
   opacity: 0.5;
 }
 
+:host-context(body.dark-mode) .appointment-container {
+  background: transparent;
+}
+
+:host-context(body.dark-mode) .services-section h2,
+:host-context(body.dark-mode) .services-section h3,
+:host-context(body.dark-mode) .service-info h4,
+:host-context(body.dark-mode) .service-price,
+:host-context(body.dark-mode) .company-details h3,
+:host-context(body.dark-mode) .rating span:first-child,
+:host-context(body.dark-mode) .cart-summary,
+:host-context(body.dark-mode) .cart-item-info h4,
+:host-context(body.dark-mode) .cart-item-price {
+  color: #f8fafc !important;
+}
+
+:host-context(body.dark-mode) .service-duration,
+:host-context(body.dark-mode) .address,
+:host-context(body.dark-mode) .cart-item-info p,
+:host-context(body.dark-mode) .empty-cart,
+:host-context(body.dark-mode) .no-services {
+  color: #b8c6d6;
+}
+
+:host-context(body.dark-mode) .category-btn {
+  border-color: #3a5269;
+  background: #233447;
+  color: #c7d5e4;
+}
+
+:host-context(body.dark-mode) .category-btn:hover {
+  border-color: #4b6783;
+  color: #e4eef8;
+  background: #2a3e53;
+}
+
+:host-context(body.dark-mode) .category-btn.active {
+  background: #38a179;
+  border-color: #38a179;
+  color: #f8fafc;
+}
+
+:host-context(body.dark-mode) .service-card {
+  background: #1b2a3a;
+  border-color: #2f4257;
+}
+
+:host-context(body.dark-mode) .service-card:hover {
+  border-color: #3f5c79;
+  box-shadow: 0 8px 16px rgba(2, 6, 23, 0.28);
+}
+
+:host-context(body.dark-mode) .add-btn {
+  background: #2b3f54;
+  color: #dbe7f3;
+}
+
+:host-context(body.dark-mode) .add-btn:hover:not(:disabled) {
+  background: #38a179;
+  color: #f8fafc;
+}
+
+:host-context(body.dark-mode) .add-btn:disabled {
+  background: #1f7a52;
+  color: #d9f6e8;
+}
+
+:host-context(body.dark-mode) .cart-card {
+  background: #1b2532;
+  border-color: #2f4257;
+  box-shadow: 0 10px 24px rgba(2, 6, 23, 0.32);
+}
+
+:host-context(body.dark-mode) .company-info,
+:host-context(body.dark-mode) .cart-summary {
+  border-bottom-color: #2f4257;
+}
+
+:host-context(body.dark-mode) .company-image {
+  background: #25364a;
+}
+
+:host-context(body.dark-mode) .cart-item {
+  background: #243447;
+  border: 1px solid #3a5269;
+}
+
+:host-context(body.dark-mode) .continue-btn {
+  background: #38a179;
+  color: #f8fafc;
+}
+
+:host-context(body.dark-mode) .continue-btn:hover:not(:disabled) {
+  background: #2f8d66;
+  box-shadow: 0 8px 14px rgba(16, 185, 129, 0.24);
+}
+
+:host-context(body.dark-mode) .continue-btn:disabled {
+  background: #3b4f63;
+  color: #99acc0;
+  opacity: 1;
+}
+
 /* Responsive */
 @media (max-width: 992px) {
   .appointment-container {
     grid-template-columns: 1fr;
-    padding-right: 2rem;
+    margin-top: 84px;
+    padding: 1rem;
+    padding-bottom: calc(210px + env(safe-area-inset-bottom));
+    min-height: auto;
   }
 
   .cart-section {
@@ -335,15 +436,20 @@
     left: 0;
     right: 0;
     top: auto;
-    background: white;
-    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
-    padding: 1rem;
+    background: transparent;
+    box-shadow: none;
+    padding: 0.75rem;
     z-index: 1000;
   }
 
   .cart-card {
-    border: none;
-    padding: 0;
+    border-radius: 20px;
+    border: 1px solid #d5deea;
+    padding: 0.95rem 1rem calc(0.95rem + env(safe-area-inset-bottom));
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.2);
+    max-height: none;
+    overflow: visible;
   }
 
   .company-info,
@@ -351,14 +457,44 @@
     display: none;
   }
 
+  .cart-summary {
+    padding-bottom: 0.8rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .continue-btn {
+    border-radius: 14px;
+  }
+
   .services-section {
-    padding-bottom: 150px;
+    padding-bottom: 0;
+  }
+
+  .service-card {
+    padding: 1rem;
+    border-radius: 16px;
+  }
+
+  :host-context(body.dark-mode) .cart-section {
+    background: transparent;
+    box-shadow: none;
+  }
+
+  :host-context(body.dark-mode) .cart-card {
+    background: rgba(18, 31, 45, 0.98);
+    border-color: #2f4257;
+    box-shadow: 0 12px 26px rgba(2, 6, 23, 0.44);
   }
 }
 
 @media (max-width: 768px) {
-  .appointment-container {
-    padding: 1rem;
+  .services-section h2 {
+    font-size: 1.45rem;
+    line-height: 1.2;
+  }
+
+  .services-section h3 {
+    font-size: 1.1rem;
   }
 
   .category-buttons {
@@ -368,5 +504,23 @@
   .category-btn {
     padding: 0.4rem 1rem;
     font-size: 0.85rem;
+  }
+
+  .service-info h4 {
+    font-size: 1.02rem;
+  }
+
+  .add-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .cart-section {
+    padding: 0.55rem;
+  }
+
+  .cart-card {
+    border-radius: 16px;
+    padding: 0.8rem 0.85rem calc(0.8rem + env(safe-area-inset-bottom));
   }
 }

@@ -216,3 +216,53 @@ label {
     grid-column: 1;
   }
 }
+
+:host-context(body.dark-mode) .form-description {
+  background: #233447;
+  border-left-color: #38a179;
+}
+
+:host-context(body.dark-mode) .form-description p,
+:host-context(body.dark-mode) label,
+:host-context(body.dark-mode) .logged-in-notice p {
+  color: #d5e1ee;
+}
+
+:host-context(body.dark-mode) .form-control {
+  background: #223244;
+  border-color: #3a5269;
+  color: #e7eef7;
+}
+
+:host-context(body.dark-mode) .form-control:focus {
+  background: #26384b;
+}
+
+:host-context(body.dark-mode) .form-control::placeholder {
+  color: #90a3b8;
+}
+
+:host-context(body.dark-mode) .password-toggle {
+  color: #9fb1c4;
+}
+
+:host-context(body.dark-mode) .password-toggle:hover {
+  color: #a7f3d0;
+}
+
+:host-context(body.dark-mode) .strength-bar {
+  background: #2f4257;
+}
+
+:host-context(body.dark-mode) .logged-in-notice {
+  background: rgba(16, 185, 129, 0.16);
+  border-left-color: rgba(52, 211, 153, 0.55);
+}
+
+:host-context(body.dark-mode) .form-control.readonly,
+:host-context(body.dark-mode) .form-control[readonly] {
+  background: #32485f;
+  color: #a9bbcf;
+  border-color: #455f79;
+  opacity: 1;
+}

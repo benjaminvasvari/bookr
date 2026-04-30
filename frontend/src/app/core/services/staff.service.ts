@@ -9,6 +9,8 @@ import { environment } from '../../../environments/environment';
 import { API_ENDPOINTS } from '../constants/api-endpoints';
 import {
   StaffMember,
+  PendingStaffActionRequest,
+  PendingStaffActionResponse,
   PendingStaffCancelInviteResponse,
   PendingStaffInviteRequest,
   PendingStaffInviteResponse,
@@ -122,6 +124,24 @@ export class StaffService {
   deletePendingStaff(id: number): Observable<PendingStaffCancelInviteResponse> {
     return this.http.delete<PendingStaffCancelInviteResponse>(
       `${this.apiUrl}${API_ENDPOINTS.PENDING_STAFF.CANCEL_INVITE(id)}`
+    );
+  }
+
+  acceptPendingStaffInvite(token: string): Observable<PendingStaffActionResponse> {
+    const payload: PendingStaffActionRequest = { token };
+
+    return this.http.post<PendingStaffActionResponse>(
+      `${this.apiUrl}${API_ENDPOINTS.PENDING_STAFF.ACCEPT_INVITE}`,
+      payload
+    );
+  }
+
+  rejectPendingStaffInvite(token: string): Observable<PendingStaffActionResponse> {
+    const payload: PendingStaffActionRequest = { token };
+
+    return this.http.post<PendingStaffActionResponse>(
+      `${this.apiUrl}${API_ENDPOINTS.PENDING_STAFF.REJECT_INVITE}`,
+      payload
     );
   }
 

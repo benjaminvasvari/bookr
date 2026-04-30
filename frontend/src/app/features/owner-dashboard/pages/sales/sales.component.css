@@ -93,6 +93,7 @@
 	font-weight: 600;
 	color: #6b7280;
 	cursor: pointer;
+	transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .range-btn.active {
@@ -346,6 +347,71 @@
 .status-pill.busy {
 	background: #fff4e5;
 	color: #b45309;
+}
+
+:host-context(body.dark-mode) .sales-topbar h1,
+:host-context(body.dark-mode) .panel-header h2,
+:host-context(body.dark-mode) .kpi-value,
+:host-context(body.dark-mode) .summary-list li strong {
+	color: #f8fafc;
+}
+
+:host-context(body.dark-mode) .subtitle,
+:host-context(body.dark-mode) .kpi-label,
+:host-context(body.dark-mode) .kpi-trend,
+:host-context(body.dark-mode) .muted {
+	color: #cbd5e1;
+}
+
+:host-context(body.dark-mode) .sales-filters,
+:host-context(body.dark-mode) .date-range,
+:host-context(body.dark-mode) .kpi-card,
+:host-context(body.dark-mode) .panel {
+	background: #1b2532;
+	border-color: #2b3b4d;
+	box-shadow: 0 12px 28px rgba(2, 6, 23, 0.35);
+}
+
+:host-context(body.dark-mode) .range-btn {
+	border: 1px solid transparent;
+	color: #b7c5d5;
+}
+
+:host-context(body.dark-mode) .range-btn.active {
+	background: #3aa57c;
+	border-color: rgba(134, 239, 172, 0.45);
+	color: #f5fffa;
+	box-shadow: 0 0 0 2px rgba(58, 165, 124, 0.24);
+}
+
+:host-context(body.dark-mode) .range-btn:not(.active):hover {
+	background: rgba(51, 72, 94, 0.75);
+	color: #e2ebf5;
+}
+
+:host-context(body.dark-mode) .panel-pill {
+	background: #26384d;
+	color: #dbeafe;
+}
+
+:host-context(body.dark-mode) .summary-list li {
+	background: #243447;
+	border-color: #3c556d;
+}
+
+:host-context(body.dark-mode) .summary-list li:hover {
+	background: #234637;
+	border-color: #2f5a47;
+}
+
+:host-context(body.dark-mode) .status-pill.online {
+	background: rgba(34, 197, 94, 0.14);
+	color: #86efac;
+}
+
+:host-context(body.dark-mode) .status-pill.busy {
+	background: rgba(245, 158, 11, 0.14);
+	color: #fcd34d;
 }
 
 @media (max-width: 1200px) {

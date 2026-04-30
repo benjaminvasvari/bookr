@@ -393,6 +393,94 @@
 	color: #64748b;
 }
 
+:host-context(body.dark-mode) {
+	--bg-1: #0f1720;
+	--bg-2: #0b1320;
+	--panel-bg: #1b2532;
+	--panel-border: #2f4257;
+	--text-main: #f8fafc;
+	--text-muted: #b8c6d6;
+	--chip-bg: #25364a;
+	--chip-text: #d8e3ef;
+	color: var(--text-main);
+}
+
+:host-context(body.dark-mode) .staff-dashboard-shell {
+	background: linear-gradient(180deg, #122032 0%, #0f1b2b 100%);
+	border: 1px solid rgba(62, 84, 108, 0.6);
+}
+
+:host-context(body.dark-mode) .metric,
+:host-context(body.dark-mode) .panel,
+:host-context(body.dark-mode) .state-card {
+	background: var(--panel-bg);
+	border-color: var(--panel-border);
+	box-shadow: 0 10px 24px rgba(2, 6, 23, 0.32);
+}
+
+:host-context(body.dark-mode) .state-card.error {
+	background: rgba(127, 29, 29, 0.25);
+	border-color: rgba(248, 113, 113, 0.45);
+	color: #fecaca;
+}
+
+:host-context(body.dark-mode) .metric-appointments,
+:host-context(body.dark-mode) .metric-upcoming,
+:host-context(body.dark-mode) .metric-services,
+:host-context(body.dark-mode) .metric-hours {
+	border-top-color: #4c647d;
+}
+
+:host-context(body.dark-mode) .panel-header h3,
+:host-context(body.dark-mode) .metric-value,
+:host-context(body.dark-mode) .name,
+:host-context(body.dark-mode) .spotlight-time,
+:host-context(body.dark-mode) .spotlight-service,
+:host-context(body.dark-mode) .row-title {
+	color: var(--text-main);
+}
+
+:host-context(body.dark-mode) .metric-label,
+:host-context(body.dark-mode) .metric-foot,
+:host-context(body.dark-mode) .company,
+:host-context(body.dark-mode) .spotlight-date,
+:host-context(body.dark-mode) .spotlight-client,
+:host-context(body.dark-mode) .row-sub,
+:host-context(body.dark-mode) .empty-note {
+	color: var(--text-muted);
+}
+
+:host-context(body.dark-mode) .timeline-panel {
+	background: #1a2839;
+	border-color: #31485f;
+	border-top-color: #526a82;
+}
+
+:host-context(body.dark-mode) .upcoming-panel {
+	background: #1b2939;
+	border-color: #31485f;
+	border-top-color: #526a82;
+}
+
+:host-context(body.dark-mode) .avatar {
+	background: #2a3a4e;
+	color: #e6eef8;
+}
+
+:host-context(body.dark-mode) .service-item,
+:host-context(body.dark-mode) .spotlight-card,
+:host-context(body.dark-mode) .appointment-item {
+	background: #243447;
+	border-color: #3a5269;
+}
+
+:host-context(body.dark-mode) .chip,
+:host-context(body.dark-mode) .pill {
+	background: var(--chip-bg);
+	color: var(--chip-text);
+	border-color: #3f5a73;
+}
+
 @media (max-width: 1200px) {
 	.metrics-grid {
 		grid-template-columns: repeat(2, minmax(0, 1fr));

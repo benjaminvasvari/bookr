@@ -173,3 +173,36 @@
     top: 21px;
   }
 }
+
+:host-context(body.dark-mode) .step-number {
+  background: #33485f;
+  color: #c8d6e5;
+  border-color: #33485f;
+}
+
+:host-context(body.dark-mode) .step-item.active .step-number,
+:host-context(body.dark-mode) .step-item.completed .step-number {
+  background: #38a179;
+  border-color: #38a179;
+  color: #f8fafc;
+}
+
+:host-context(body.dark-mode) .step-title {
+  color: #9fb1c4;
+}
+
+:host-context(body.dark-mode) .step-item.active .step-title {
+  color: #a7f3d0;
+}
+
+:host-context(body.dark-mode) .step-item.completed .step-title {
+  color: #dbe7f3;
+}
+
+:host-context(body.dark-mode) .step-connector {
+  background: #304457;
+}
+
+:host-context(body.dark-mode) .step-connector.completed {
+  background: #38a179;
+}

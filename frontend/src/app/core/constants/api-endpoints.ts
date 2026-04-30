@@ -35,9 +35,11 @@ export const API_ENDPOINTS = {
 
   SERVICES: {
     LIST: '/services',
+    CREATE: '/services/createService',
+    CREATE_CATEGORY: '/serviceCategory/createServiceCategory',
     DETAIL: (id: number) => `/services/${id}`,
     BY_COMPANY: (companyId: number) =>
-      `/services/getServiceCategoriesWithServicesByCompanyId?id=${companyId}`,
+      `/serviceCategory/getServiceCategoriesWithServicesByCompanyId?id=${companyId}`,
     CATEGORIES: '/services/categories',
     STAFF_SERVICES: '/services/getStaffServices',
     UPDATE_STAFF_SERVICE: '/services/updateStaffServices',
@@ -128,6 +130,8 @@ export const API_ENDPOINTS = {
   PENDING_STAFF: {
     INVITE: '/pending-staff/invite',
     CANCEL_INVITE: (id: number) => `/pending-staff/cancel-invite?id=${id}`,
+    ACCEPT_INVITE: '/pending-staff/accept-invite',
+    REJECT_INVITE: '/pending-staff/reject-invite',
   },
   DASHBOARDS: {
     OWNER: '/dashboards/owner',

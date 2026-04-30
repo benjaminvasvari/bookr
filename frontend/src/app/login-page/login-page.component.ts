@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { LoginTwoFactorRequiredResponse } from '../core/models';
 import { AuthService } from '../core/services/auth.service';
 
@@ -21,13 +21,22 @@ export class LoginPageComponent {
   twoFactorPendingToken = '';
   isTwoFactorStep = false;
   isSubmitted = false;
+  private returnUrl = '/';
 
-  constructor(private fb: FormBuilder, private router: Router, private authService: AuthService) {
+  constructor(
+    private fb: FormBuilder,
+    private router: Router,
+    private route: ActivatedRoute,
+    private authService: AuthService
+  ) {
     this.loginForm = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(8)]],
       verificationCode: [''],
     });
+
+    const requestedReturnUrl = this.route.snapshot.queryParamMap.get('returnUrl') || '/';
+    this.returnUrl = requestedReturnUrl.startsWith('/') ? requestedReturnUrl : '/';
   }
 
   // Getter-ek az error message-ekhez és validációhoz
@@ -108,7 +117,7 @@ export class LoginPageComponent {
         }
 
         if (response.status === 'success') {
-          this.router.navigate(['/']);
+          this.router.navigateByUrl(this.returnUrl);
         } else {
           this.errorMessage = 'Rossz email cím vagy jelszó.';
         }
@@ -177,7 +186,7 @@ export class LoginPageComponent {
           this.isLoading = false;
 
           if (response.status === 'success') {
-            this.router.navigate(['/']);
+            this.router.navigateByUrl(this.returnUrl);
             return;
           }
 

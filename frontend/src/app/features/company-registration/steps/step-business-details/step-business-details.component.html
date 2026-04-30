@@ -16,12 +16,20 @@
       <div class="form-grid">
         <!-- Maximális előre foglalás -->
         <div class="form-group">
-          <label for="maxAdvanceBookingDays">
-            Maximum előre foglalás <span class="required">*</span>
-            <span class="info-icon" title="Maximum hány nappal előre lehet időpontot foglalni">
-              <i class="fas fa-info-circle"></i>
-            </span>
-          </label>
+          <div class="label-with-help">
+            <label for="maxAdvanceBookingDays">
+              Maximum előre foglalás <span class="required">*</span>
+            </label>
+            <button
+              type="button"
+              class="info-icon-btn"
+              [matTooltip]="'Ennyivel előre foglalhat az ügyfél időpontot. Példa: 3 hónap esetén legfeljebb 90 nappal előre látható minden szabad időpont.'"
+              matTooltipPosition="above"
+              aria-label="Maximum előre foglalás súgó"
+            >
+              <i class="fas fa-info-circle" aria-hidden="true"></i>
+            </button>
+          </div>
           <select
             id="maxAdvanceBookingDays"
             formControlName="maxAdvanceBookingDays"
@@ -41,12 +49,20 @@
 
         <!-- Lemondási határidő (órákban) -->
         <div class="form-group">
-          <label for="cancellationHours">
-            Lemondási határidő <span class="required">*</span>
-            <span class="info-icon" title="Hány órával az időpont előtt lehet lemondani díjmentesen">
-              <i class="fas fa-info-circle"></i>
-            </span>
-          </label>
+          <div class="label-with-help">
+            <label for="cancellationHours">
+              Lemondási határidő <span class="required">*</span>
+            </label>
+            <button
+              type="button"
+              class="info-icon-btn"
+              [matTooltip]="'Eddig az időpont előtt mondhatja le az ügyfél díjmentesen a foglalást. Példa: 24 óra esetén aznapi foglalás már nem mondható le 24 órán belül.'"
+              matTooltipPosition="above"
+              aria-label="Lemondási határidő súgó"
+            >
+              <i class="fas fa-info-circle" aria-hidden="true"></i>
+            </button>
+          </div>
           <select
             id="cancellationHours"
             formControlName="cancellationHours"
@@ -66,12 +82,42 @@
 
         <!-- Minimum előzetes foglalás (ugyanazon a napon) -->
         <div class="form-group">
-          <label for="minBookingHoursSameDay">
-            Minimum előzetes foglalás (ugyanazon a napon) <span class="required">*</span>
-            <span class="info-icon" title="Hány órával előre kell foglalni ugyanazon a napon (pl. 02:00 = 2 óra)">
-              <i class="fas fa-info-circle"></i>
-            </span>
-          </label>
+          <div class="label-with-help label-with-help--top">
+            <label for="minBookingHoursSameDay">
+              Minimum előzetes foglalás (ugyanazon a napon) <span class="required">*</span>
+            </label>
+            <button
+              type="button"
+              class="info-icon-btn"
+              [matTooltip]="'Megadható, hogy az ügyfél ugyanarra a napra minimum hány órával korábban foglalhat. Ha a Nincs minimum opció aktív, akkor aznap bármikor foglalhat.'"
+              matTooltipPosition="above"
+              aria-label="Minimum előzetes foglalás súgó"
+            >
+              <i class="fas fa-info-circle" aria-hidden="true"></i>
+            </button>
+          </div>
+          <div class="same-day-mode-toggle" role="group" aria-label="Minimum előzetes foglalás módja">
+            <button
+              type="button"
+              class="mode-btn"
+              [class.active]="isSameDayNone()"
+              [attr.aria-pressed]="isSameDayNone()"
+              (click)="setSameDayMode(true)"
+            >
+              <i class="fas fa-ban"></i>
+              Nincs minimum
+            </button>
+            <button
+              type="button"
+              class="mode-btn"
+              [class.active]="!isSameDayNone()"
+              [attr.aria-pressed]="!isSameDayNone()"
+              (click)="setSameDayMode(false)"
+            >
+              <i class="fas fa-clock"></i>
+              Idő megadása
+            </button>
+          </div>
           <div class="input-row">
             <input
               id="minBookingHoursSameDay"
@@ -82,16 +128,18 @@
               (ngModelChange)="onMinBookingHoursSameDayPickerChange($event)"
               class="form-control"
               max="12:00"
-              [disabled]="businessForm.get('minBookingSameDayNone')?.value"
+              [disabled]="isSameDayNone()"
               [class.error]="isFieldInvalid('minBookingHoursSameDay')"
               readonly
             />
             <mat-timepicker #minBookingPicker></mat-timepicker>
-            <label class="checkbox-inline">
-              <input type="checkbox" formControlName="minBookingSameDayNone" />
-              Nincs
-            </label>
           </div>
+          @if (isSameDayNone()) {
+            <p class="same-day-mode-hint same-day-mode-hint--none">
+              <i class="fas fa-info-circle"></i>
+              Ugyanazon a napon bármikor lehet foglalni, nincs időkorlát.
+            </p>
+          }
           @if (isFieldInvalid('minBookingHoursSameDay')) {
             <span class="error-message">
               @if (businessForm.get('minBookingHoursSameDay')?.hasError('maxSameDayHours')) {

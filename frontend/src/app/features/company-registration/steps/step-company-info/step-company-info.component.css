@@ -418,6 +418,56 @@ select.form-control:focus {
   background: #38a179;
 }
 
+:host-context(body.dark-mode) .form-description {
+  background: #233447;
+  border-left-color: #38a179;
+}
+
+:host-context(body.dark-mode) .form-description p,
+:host-context(body.dark-mode) label,
+:host-context(body.dark-mode) .images-section > label {
+  color: #d5e1ee;
+}
+
+:host-context(body.dark-mode) .optional,
+:host-context(body.dark-mode) .char-counter {
+  color: #9cb0c4;
+}
+
+:host-context(body.dark-mode) .form-left,
+:host-context(body.dark-mode) .form-right {
+  background: #1f2d3d;
+  border-color: #304457;
+  box-shadow: none;
+}
+
+:host-context(body.dark-mode) .form-control,
+:host-context(body.dark-mode) select.form-control {
+  background-color: #223244;
+  border-color: #3a5269;
+  color: #e7eef7;
+}
+
+:host-context(body.dark-mode) .form-control:focus {
+  background: #26384b;
+}
+
+:host-context(body.dark-mode) .loading-spinner {
+  background: #223244;
+  border-color: #3a5269;
+  color: #b8c6d6;
+}
+
+:host-context(body.dark-mode) .slots-container,
+:host-context(body.dark-mode) .slot {
+  background: #223244;
+  border-color: #3a5269;
+}
+
+:host-context(body.dark-mode) .slot-empty {
+  color: #9fb1c4;
+}
+
 .slot-edit:hover {
   background: #2a7d5f;
   transform: translateY(-2px);

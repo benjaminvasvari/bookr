@@ -208,6 +208,85 @@
 	background: #fafbfd;
 }
 
+:host-context(body.dark-mode) {
+	--bg: #0f1720;
+	--surface: #1b2532;
+	--border: #2f4257;
+	--text: #f8fafc;
+	--muted: #b8c6d6;
+	--confirmed: #a7f3d0;
+	--confirmed-bg: rgba(5, 150, 105, 0.2);
+	--pending: #fde68a;
+	--pending-bg: rgba(217, 119, 6, 0.2);
+	--cancelled: #fecaca;
+	--cancelled-bg: rgba(185, 28, 28, 0.22);
+}
+
+:host-context(body.dark-mode) .staff-bookings-page {
+	background: transparent;
+}
+
+:host-context(body.dark-mode) .page-header,
+:host-context(body.dark-mode) .bookings-panel {
+	background: linear-gradient(180deg, #1b2939 0%, #172434 100%);
+	border-color: var(--border);
+	box-shadow: 0 10px 24px rgba(2, 6, 23, 0.32);
+}
+
+:host-context(body.dark-mode) .page-title h1,
+:host-context(body.dark-mode) .panel-header h2,
+:host-context(body.dark-mode) .booking-content h3 {
+	color: var(--text);
+}
+
+:host-context(body.dark-mode) .page-title p,
+:host-context(body.dark-mode) .panel-header p,
+:host-context(body.dark-mode) .empty-state p,
+:host-context(body.dark-mode) .booking-content p,
+:host-context(body.dark-mode) .booking-counter-label {
+	color: var(--muted);
+}
+
+:host-context(body.dark-mode) .booking-counter {
+	border-left-color: var(--border);
+}
+
+:host-context(body.dark-mode) .booking-counter strong {
+	background: #27384b;
+	color: #e5edf7;
+}
+
+:host-context(body.dark-mode) .booking-row {
+	background: #243447;
+	border-color: #3a5269;
+}
+
+:host-context(body.dark-mode) .booking-time {
+	background: #2a3d52;
+	color: #f1f6fc;
+}
+
+:host-context(body.dark-mode) .status-pill.confirmed {
+	border-color: rgba(16, 185, 129, 0.38);
+}
+
+:host-context(body.dark-mode) .status-pill.pending {
+	border-color: rgba(245, 158, 11, 0.35);
+}
+
+:host-context(body.dark-mode) .status-pill.cancelled {
+	border-color: rgba(248, 113, 113, 0.35);
+}
+
+:host-context(body.dark-mode) .empty-state {
+	background: #1f2f42;
+	border-color: #3a5269;
+}
+
+:host-context(body.dark-mode) .empty-state h3 {
+	color: var(--text);
+}
+
 @media (max-width: 760px) {
 	.staff-bookings-page {
 		padding: 16px;

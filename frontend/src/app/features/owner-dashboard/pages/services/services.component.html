@@ -6,6 +6,7 @@
 				<p class="subtitle">Árak, időtartamok és elérhetőségek kezelése.</p>
 			</div>
 			<div class="actions">
+				<button class="btn ghost" (click)="openNewCategoryModal()">Új kategória</button>
 				<button class="btn primary" (click)="openNewServiceModal()">Új szolgáltatás</button>
 			</div>
 		</div>
@@ -120,7 +121,7 @@
 		<div class="modal-content" (click)="$event.stopPropagation()">
 			<div class="modal-header">
 				<h2>Új szolgáltatás</h2>
-				<button class="close-btn" (click)="closeNewServiceModal()">&times;</button>
+				<button class="close-btn" (click)="closeNewServiceModal()" [disabled]="isSavingNewService">&times;</button>
 			</div>
 			<div class="modal-body">
 				<div class="form-group">
@@ -129,19 +130,17 @@
 				</div>
 				<div class="form-group">
 					<label>Kategória *</label>
-					<select [(ngModel)]="newService.category">
+					<select [(ngModel)]="newService.categoryId">
 						<option value="">Válassz kategóriát</option>
-						@for (category of categories; track category) {
-							@if (category !== 'Összes') {
-								<option [value]="category">{{ category }}</option>
-							}
+						@for (category of serviceCategories; track category.id) {
+							<option [ngValue]="category.id">{{ category.name }}</option>
 						}
 					</select>
 				</div>
 				<div class="form-row">
 					<div class="form-group">
-						<label>Időtartam *</label>
-						<input type="text" [(ngModel)]="newService.duration" placeholder="pl. 45 perc" />
+						<label>Időtartam (perc) *</label>
+						<input type="number" [(ngModel)]="newService.durationMinutes" min="5" step="5" />
 					</div>
 					<div class="form-group">
 						<label>Ár (Ft) *</label>
@@ -154,15 +153,52 @@
 				</div>
 				<div class="form-group">
 					<label>Státusz</label>
-					<select [(ngModel)]="newService.status">
-						<option value="active">Aktív</option>
-						<option value="inactive">Szünetel</option>
+					<select [(ngModel)]="newService.isActive">
+						<option [ngValue]="true">Aktív</option>
+						<option [ngValue]="false">Szünetel</option>
 					</select>
 				</div>
 			</div>
 			<div class="modal-footer">
-				<button class="btn ghost" (click)="closeNewServiceModal()">Mégse</button>
-				<button class="btn primary" (click)="saveNewService()">Mentés</button>
+				<button class="btn ghost" (click)="closeNewServiceModal()" [disabled]="isSavingNewService">Mégse</button>
+				<button class="btn primary" (click)="saveNewService()" [disabled]="isSavingNewService || !canSaveNewService()">
+					{{ isSavingNewService ? 'Mentés...' : 'Szolgáltatás mentése' }}
+				</button>
+			</div>
+		</div>
+	</div>
+}
+
+<!-- Új kategória modal -->
+@if (showNewCategoryModal) {
+	<div class="modal-overlay" (click)="closeNewCategoryModal()">
+		<div class="modal-content" (click)="$event.stopPropagation()">
+			<div class="modal-header">
+				<h2>Új kategória</h2>
+				<button class="close-btn" (click)="closeNewCategoryModal()" [disabled]="isSavingNewCategory">&times;</button>
+			</div>
+			<div class="modal-body">
+				<div class="form-group">
+					<label>Kategória neve *</label>
+					<input type="text" [(ngModel)]="newCategory.name" placeholder="pl. Masszázs" />
+				</div>
+				<div class="form-group">
+					<label>Leírás *</label>
+					<textarea [(ngModel)]="newCategory.description" rows="3" placeholder="Rövid kategória leírás"></textarea>
+				</div>
+				@if (categoryFormError) {
+					<div class="services-state error">{{ categoryFormError }}</div>
+				}
+			</div>
+			<div class="modal-footer">
+				<button class="btn ghost" (click)="closeNewCategoryModal()" [disabled]="isSavingNewCategory">Mégse</button>
+				<button
+					class="btn primary"
+					(click)="saveNewCategory()"
+					[disabled]="isSavingNewCategory || !newCategory.name.trim() || !newCategory.description.trim()"
+				>
+					{{ isSavingNewCategory ? 'Mentés...' : 'Mentés' }}
+				</button>
 			</div>
 		</div>
 	</div>

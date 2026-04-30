@@ -131,3 +131,13 @@ export interface PendingStaffCancelInviteResponse {
   status: string;
   statusCode: number;
 }
+
+export interface PendingStaffActionRequest {
+  token: string;
+}
+
+export interface PendingStaffActionResponse {
+  status: string;
+  statusCode: number;
+  message?: string;
+}

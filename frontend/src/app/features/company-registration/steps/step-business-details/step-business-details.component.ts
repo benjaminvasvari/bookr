@@ -5,11 +5,12 @@ import { FormsModule } from '@angular/forms';
 import { MatInputModule } from '@angular/material/input';
 import { MatTimepickerModule } from '@angular/material/timepicker';
 import { MatNativeDateModule } from '@angular/material/core';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-step-business-details',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule, MatInputModule, MatTimepickerModule, MatNativeDateModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, MatInputModule, MatTimepickerModule, MatNativeDateModule, MatTooltipModule],
   templateUrl: './step-business-details.component.html',
   styleUrls: ['./step-business-details.component.css']
 })
@@ -169,6 +170,21 @@ export class StepBusinessDetailsComponent implements OnInit {
 
     this.minBookingHoursSameDayPickerModel = value;
     this.businessForm.get('minBookingHoursSameDay')?.setValue(formatted);
+  }
+
+  isSameDayNone(): boolean {
+    return this.businessForm.get('minBookingSameDayNone')?.value === true;
+  }
+
+  setSameDayMode(isNone: boolean): void {
+    const control = this.businessForm.get('minBookingSameDayNone');
+    if (!control) {
+      return;
+    }
+
+    if (control.value !== isNone) {
+      control.setValue(isNone);
+    }
   }
 
   private parseTimeString(value: string): Date | null {

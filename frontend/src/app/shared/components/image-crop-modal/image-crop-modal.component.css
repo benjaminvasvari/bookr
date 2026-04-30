@@ -75,14 +75,68 @@
 .crop-modal-body {
   padding: 20px;
   overflow: auto;
+  overscroll-behavior: contain;
   background:
     radial-gradient(circle at top left, rgba(92, 161, 135, 0.12), transparent 26%),
     radial-gradient(circle at top right, rgba(124, 156, 191, 0.16), transparent 24%),
     linear-gradient(180deg, #f8fafc 0%, #eef5f2 100%);
 }
 
+.crop-zoom-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(124, 156, 191, 0.24);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.zoom-btn,
+.zoom-reset-btn {
+  border: 1px solid rgba(124, 156, 191, 0.26);
+  background: #ffffff;
+  color: #0f172a;
+  border-radius: 8px;
+  height: 34px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.zoom-btn {
+  width: 34px;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.zoom-reset-btn {
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.zoom-btn:hover,
+.zoom-reset-btn:hover {
+  background: rgba(92, 161, 135, 0.12);
+  border-color: rgba(56, 161, 121, 0.4);
+}
+
+.zoom-range {
+  flex: 1;
+  min-width: 120px;
+}
+
+.zoom-value {
+  min-width: 48px;
+  text-align: right;
+  font-size: 13px;
+  color: #334155;
+  font-weight: 700;
+}
+
 image-cropper {
   display: block;
+  width: 100%;
   max-height: 68vh;
   --cropper-outline-color: rgba(45, 55, 72, 0.72);
   --cropper-overlay-color: rgba(255, 255, 255, 0.92);
@@ -113,6 +167,12 @@ image-cropper {
 :host ::ng-deep image-cropper .ngx-ic-cropper:focus .ngx-ic-resize .ngx-ic-square {
   background: var(--light-green-color);
   border-color: rgba(255, 255, 255, 0.98);
+}
+
+.crop-help-text {
+  margin: 10px 2px 0;
+  font-size: 12px;
+  color: #334155;
 }
 
 .crop-btn {
@@ -169,5 +229,14 @@ image-cropper {
   .crop-modal-footer {
     flex-direction: column-reverse;
     align-items: stretch;
+  }
+
+  .crop-zoom-toolbar {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .zoom-value {
+    min-width: auto;
   }
 }

@@ -25,6 +25,20 @@ interface StaffServicesResponse {
   statusCode: number;
 }
 
+export interface CreateServiceRequest {
+  name: string;
+  categoryId: number;
+  durationMinutes: number;
+  price: number;
+  desciption: string;
+  isActive: boolean;
+}
+
+export interface CreateServiceCategoryRequest {
+  name: string;
+  description: string;
+}
+
 export interface UpdateStaffServiceAssignmentRequest {
   serviceId: number;
   isAssigned: boolean;
@@ -76,6 +90,14 @@ export class ServicesService {
 
   updateStaffServiceAssignment(payload: UpdateStaffServiceAssignmentRequest): Observable<unknown> {
     return this.http.put(`${this.apiUrl}${API_ENDPOINTS.SERVICES.UPDATE_STAFF_SERVICE}`, payload);
+  }
+
+  createService(payload: CreateServiceRequest): Observable<unknown> {
+    return this.http.post(`${this.apiUrl}${API_ENDPOINTS.SERVICES.CREATE}`, payload);
+  }
+
+  createServiceCategory(payload: CreateServiceCategoryRequest): Observable<unknown> {
+    return this.http.post(`${this.apiUrl}${API_ENDPOINTS.SERVICES.CREATE_CATEGORY}`, payload);
   }
 
   /**

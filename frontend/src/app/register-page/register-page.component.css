@@ -232,6 +232,21 @@
   pointer-events: none;
 }
 
+.inline-validation-error {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: -0.1rem 0 0.55rem;
+  padding: 0 0.85rem;
+  color: #f44336;
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.inline-validation-error i {
+  flex-shrink: 0;
+}
+
 /* KÖZPONTI VALIDÁCIÓS HIBAÜZENET */
 .validation-error-message {
   background-color: rgba(255, 152, 0, 0.1);

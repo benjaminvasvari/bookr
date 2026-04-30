@@ -328,3 +328,87 @@
   }
 }
 
+:host-context(body.dark-mode) .form-description {
+  background: #233447;
+  border-left-color: #38a179;
+}
+
+:host-context(body.dark-mode) .form-description p,
+:host-context(body.dark-mode) .day-name,
+:host-context(body.dark-mode) .time-label,
+:host-context(body.dark-mode) .hours-info,
+:host-context(body.dark-mode) .switch-text {
+  color: #d5e1ee;
+}
+
+:host-context(body.dark-mode) .individual-note {
+  background: rgba(217, 119, 6, 0.18);
+  border-left-color: rgba(245, 158, 11, 0.55);
+  color: #fde68a;
+}
+
+:host-context(body.dark-mode) .individual-note i {
+  color: #fbbf24;
+}
+
+:host-context(body.dark-mode) .hours-container {
+  background: #1f2d3d;
+  border-color: #304457;
+  box-shadow: none;
+}
+
+:host-context(body.dark-mode) .day-row {
+  border-bottom-color: #304457;
+}
+
+:host-context(body.dark-mode) .day-row:hover {
+  background: #243447;
+}
+
+:host-context(body.dark-mode) .day-row.closed {
+  background: #2a3040;
+  opacity: 1;
+}
+
+:host-context(body.dark-mode) .day-row.closed .day-name,
+:host-context(body.dark-mode) .closed-text {
+  color: #a8b7c8;
+}
+
+:host-context(body.dark-mode) .time-input {
+  background: #223244;
+  border-color: #3a5269;
+  color: #e7eef7;
+}
+
+:host-context(body.dark-mode) .time-input:hover {
+  border-color: #4b6783;
+  background: #26384b;
+}
+
+:host-context(body.dark-mode) .time-input:focus {
+  background: #26384b;
+}
+
+:host-context(body.dark-mode) .time-separator {
+  color: #8fa3b9;
+}
+
+:host-context(body.dark-mode) .switch-slider {
+  background: #5f7489;
+  box-shadow: inset 0 0 0 1px #4d6277;
+}
+
+:host-context(body.dark-mode) .switch-text.closed {
+  color: #fcb6b6;
+}
+
+:host-context(body.dark-mode) .hours-info {
+  background: #233447;
+  border-left-color: #38a179;
+}
+
+:host-context(body.dark-mode) .hours-info i {
+  color: #4fd1a1;
+}
+
