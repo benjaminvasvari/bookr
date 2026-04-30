@@ -35,7 +35,3 @@ bookr/
 | Vasvári Benjámin | Project Manager & Backend Developer |
 | Sándor László | Frontend Developer |
 | Ujhelyi Hunor | Frontend & Database Developer |
-
-## 📄 License
-
-This project was developed for educational and internship purposes at **IAKK NKft** in collaboration with **Széchenyi István Technikum**.
